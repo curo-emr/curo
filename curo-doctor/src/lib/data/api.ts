@@ -130,6 +130,11 @@ export async function getPrescriptionsByEncounter(encounterId: string): Promise<
   return rxs.filter(r => r.encounterId === encounterId);
 }
 
+export async function getPrescriptionsByPatient(patientId: string): Promise<Prescription[]> {
+  const rxs = await readJsonFile<Prescription>('prescriptions.json');
+  return rxs.filter(r => r.patientId === patientId);
+}
+
 export async function createPrescription(rx: Prescription): Promise<void> {
   const rxs = await readJsonFile<Prescription>('prescriptions.json');
   rxs.push(rx);

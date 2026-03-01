@@ -1,6 +1,6 @@
 "use client";
 
-import { Patient, Encounter, Allergy, Problem, LabOrder } from "@/types";
+import { Patient, Encounter, Allergy, Problem, LabOrder, Prescription } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +14,10 @@ interface Props {
   allergies: Allergy[];
   problems: Problem[];
   labOrders: LabOrder[];
+  prescriptions: Prescription[];
 }
 
-export function PatientChartTabs({ patient, encounters, allergies, problems, labOrders }: Props) {
+export function PatientChartTabs({ patient, encounters, allergies, problems, labOrders, prescriptions }: Props) {
   const getStatusBadge = (status: string) => {
     switch(status) {
       case 'in_progress': return <Badge variant="default" className="bg-blue-100 text-blue-700">In Progress</Badge>;
@@ -213,15 +214,120 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
           </Card>
         </TabsContent>
 
-        {/* Placeholder tabs for Meds and Labs */}
-        <TabsContent value="medications" className="outline-none py-12 text-center text-slate-500 bg-slate-50 rounded-lg border border-slate-200 border-dashed">
-          <Pill className="h-8 w-8 mx-auto mb-3 text-slate-300" />
-          Medications detailed view coming soon.
+        {/* MEDICATIONS TAB */}
+        <TabsContent value="medications" className="outline-none">
+          <Card className="shadow-sm border-slate-200">
+            <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Pill className="h-5 w-5 text-emerald-600" /> Prescriptions History
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-100">
+                {prescriptions.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500">No prescriptions on record.</div>
+                ) : (
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-50/50 text-slate-600 hidden md:table-header-group">
+                      <tr>
+                        <th className="px-6 py-3 font-medium">Date</th>
+                        <th className="px-6 py-3 font-medium">Medication</th>
+                        <th className="px-6 py-3 font-medium">Directions</th>
+                        <th className="px-6 py-3 font-medium text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 block md:table-row-group">
+                      {prescriptions.flatMap(rx => 
+                        rx.items.map(item => (
+                          <tr key={`${rx.id}-${item.id}`} className="hover:bg-slate-50 block md:table-row w-full p-4 md:p-0 border-b md:border-b-0 last:border-0">
+                            <td className="md:px-6 md:py-4 align-top block md:table-cell mb-2 md:mb-0">
+                              <span className="md:hidden font-semibold mr-2">Date:</span>
+                              {formatDate(rx.createdAt)}
+                            </td>
+                            <td className="md:px-6 md:py-4 align-top block md:table-cell mb-2 md:mb-0 font-medium text-slate-900">
+                              <span className="md:hidden font-semibold mr-2 text-slate-500 font-normal">Med:</span>
+                              {item.displayName}
+                            </td>
+                            <td className="md:px-6 md:py-4 align-top block md:table-cell mb-2 md:mb-0 text-slate-600">
+                              <span className="md:hidden font-semibold mr-2 text-slate-500">Sig:</span>
+                              {item.dose} {item.route} {item.frequency} for {item.durationDays} days. Qty: {item.quantity}. {item.instructions}
+                            </td>
+                            <td className="md:px-6 md:py-4 align-top block md:table-cell text-left md:text-right">
+                              <span className="md:hidden font-semibold mr-2 text-slate-500">Status:</span>
+                              <Badge variant="outline" className={`${rx.status === 'sent_to_pharmacy' ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}`}>
+                                {rx.status.replace(/_/g, ' ').toUpperCase()}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="labs" className="outline-none py-12 text-center text-slate-500 bg-slate-50 rounded-lg border border-slate-200 border-dashed">
-          <Beaker className="h-8 w-8 mx-auto mb-3 text-slate-300" />
-          {labOrders.length} lab orders found. Detailed view coming soon.
+        {/* LABS TAB */}
+        <TabsContent value="labs" className="outline-none">
+          <Card className="shadow-sm border-slate-200">
+            <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Beaker className="h-5 w-5 text-purple-600" /> Lab Orders & Reports
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-100">
+                {labOrders.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500">No lab orders on record.</div>
+                ) : (
+                  labOrders.map(lo => (
+                    <div key={lo.id} className="p-6 hover:bg-slate-50 transition-colors">
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="font-semibold text-slate-900">Order {formatDate(lo.createdAt)}</span>
+                            {lo.priority === 'urgent' && <Badge className="bg-red-50 text-red-700 border-red-200">Urgent</Badge>}
+                            <Badge variant="outline" className={`${
+                              lo.status === 'results_pending' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
+                              lo.status === 'sent_to_lab' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {lo.status.replace(/_/g, ' ').toUpperCase()}
+                            </Badge>
+                          </div>
+                          {lo.notesToLab && (
+                            <p className="text-sm text-slate-600 bg-white p-2 border border-slate-100 rounded inline-block mb-3">
+                              <span className="font-medium">Notes:</span> {lo.notesToLab}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {lo.tests.map(t => (
+                              <Badge key={t.testId} variant="secondary" className="bg-white border-slate-200 text-slate-700">
+                                {t.testId} - {t.status.toUpperCase()}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="shrink-0 flex items-center">
+                          {lo.status === 'results_pending' && !lo.review.isReviewed && (
+                            <button className="text-sm px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium rounded-md border border-indigo-200 transition-colors">
+                              Review Results
+                            </button>
+                          )}
+                          {lo.review.isReviewed && (
+                            <span className="text-sm text-green-700 flex items-center gap-1 bg-green-50 px-2 py-1 rounded border border-green-200">
+                              <Activity className="h-3 w-3" /> Reviewed
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
       </div>
