@@ -5,7 +5,8 @@ import {
   getAllergies, 
   getProblems, 
   getLabOrders,
-  getPrescriptionsByEncounter
+  getPrescriptionsByEncounter,
+  getPrescriptionsByPatient
 } from "@/lib/data/api";
 import { calculateAge } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -33,12 +34,7 @@ export default async function PatientChartPage({ params }: { params: { patientId
   const problems = await getProblems(patientId);
   const labOrdersAll = await getLabOrders();
   const labOrders = labOrdersAll.filter(l => l.patientId === patientId);
-
-  // Note: we can pass serialized data to a client component for interactive tabs, 
-  // or use Server Component for each tab. Given shadcn Tabs uses context, the wrapper can be client, 
-  // but let's just use the server components directly in Tabs if Tabs are client components, or create a wrapper.
-  // Actually, shadcn Tabs are client, but they can children Server Components in React 18+.
-  // So we can define PatientChartTabs as a client component and pass the data.
+  const prescriptions = await getPrescriptionsByPatient(patientId);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -95,6 +91,7 @@ export default async function PatientChartPage({ params }: { params: { patientId
         allergies={allergies} 
         problems={problems} 
         labOrders={labOrders} 
+        prescriptions={prescriptions}
       />
     </div>
   );

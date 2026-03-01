@@ -39,10 +39,39 @@ export function EncounterEditor({ patient, appointmentId, icd10Catalog, medicati
   const [labNotes, setLabNotes] = useState("");
   const [isSignLoading, setIsSignLoading] = useState(false);
 
-  // Search states
+  // Initial states
   const [icdQuery, setIcdQuery] = useState("");
-  const [medQuery, setMedQuery] = useState("");
-  const [labQuery, setLabQuery] = useState("");
+  const [newMed, setNewMed] = useState({ name: "", dose: "", frequency: "", durationDays: 1, quantity: 1, instructions: "" });
+  const [newTest, setNewTest] = useState({ name: "", notes: "" });
+
+  const addMedication = () => {
+    if (!newMed.name.trim()) return;
+    setPrescriptions([
+      ...prescriptions, 
+      { 
+        id: `rx-${Date.now()}`, 
+        medicationId: `custom-${Date.now()}`, 
+        displayName: newMed.name, 
+        dose: newMed.dose, 
+        route: "oral", 
+        frequency: newMed.frequency, 
+        durationDays: newMed.durationDays, 
+        quantity: newMed.quantity, 
+        instructions: newMed.instructions, 
+        substitutes: []
+      }
+    ]);
+    setNewMed({ name: "", dose: "", frequency: "", durationDays: 1, quantity: 1, instructions: "" });
+  };
+
+  const addLabTest = () => {
+    if (!newTest.name.trim()) return;
+    setTests([
+      ...tests,
+      { testId: `custom-${Date.now()}`, name: newTest.name + (newTest.notes ? ` - ${newTest.notes}` : ""), status: 'ordered' }
+    ]);
+    setNewTest({ name: "", notes: "" });
+  };
 
   const bmi = vitals.heightCm && vitals.weightKg ? calculateBMI(vitals.heightCm, vitals.weightKg) : null;
 
@@ -245,40 +274,32 @@ export function EncounterEditor({ patient, appointmentId, icd10Catalog, medicati
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              <div className="relative">
-                <Label htmlFor="med-search" className="sr-only">Search Medications</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                  <Input 
-                    id="med-search" 
-                    value={medQuery} 
-                    onChange={e => setMedQuery(e.target.value)} 
-                    placeholder="Search medications by name or generic..." 
-                    className="pl-9"
-                    autoComplete="off"
-                  />
-                </div>
-                {medQuery && (
-                  <div className="absolute top-11 left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg z-20 max-h-60 overflow-y-auto">
-                    {medicationsCatalog.filter(m => m.name.toLowerCase().includes(medQuery.toLowerCase()) || m.genericName.toLowerCase().includes(medQuery.toLowerCase())).slice(0, 5).map(med => (
-                      <button 
-                        key={med.id} 
-                        type="button" 
-                        onClick={() => {
-                          setPrescriptions([...prescriptions, { 
-                            id: `rx-${Date.now()}`, medicationId: med.id, displayName: med.name, 
-                            dose: "", route: "oral", frequency: "", durationDays: 1, quantity: 1, instructions: "", substitutes: []
-                          }]);
-                          setMedQuery("");
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm border-b last:border-0"
-                      >
-                        <div className="font-medium">{med.name}</div>
-                        <div className="text-xs text-slate-500">{med.genericName} • {med.strength}</div>
-                      </button>
-                    ))}
+              <div className="bg-slate-50 border border-slate-200 rounded-md p-4">
+                <div className="flex flex-col md:flex-row items-end gap-3">
+                  <div className="space-y-1 flex-1 w-full md:w-auto min-w-[200px]">
+                    <Label className="text-xs text-slate-600">Medicine Name</Label>
+                    <Input value={newMed.name} onChange={e => setNewMed({...newMed, name: e.target.value})} placeholder="e.g. Amoxicillin 500mg" className="h-9 bg-white" />
                   </div>
-                )}
+                  <div className="space-y-1 w-full md:w-24">
+                    <Label className="text-xs text-slate-600">Dose</Label>
+                    <Input value={newMed.dose} onChange={e => setNewMed({...newMed, dose: e.target.value})} placeholder="500mg" className="h-9 bg-white" />
+                  </div>
+                  <div className="space-y-1 w-full md:w-24">
+                    <Label className="text-xs text-slate-600">Freq</Label>
+                    <Input value={newMed.frequency} onChange={e => setNewMed({...newMed, frequency: e.target.value})} placeholder="TID" className="h-9 bg-white" />
+                  </div>
+                  <div className="space-y-1 w-full md:w-20">
+                    <Label className="text-xs text-slate-600">Days</Label>
+                    <Input type="number" value={newMed.durationDays} onChange={e => setNewMed({...newMed, durationDays: parseInt(e.target.value) || 1})} className="h-9 bg-white" />
+                  </div>
+                  <div className="space-y-1 flex-1 w-full md:w-auto min-w-[150px]">
+                    <Label className="text-xs text-slate-600">Instructions</Label>
+                    <Input value={newMed.instructions} onChange={e => setNewMed({...newMed, instructions: e.target.value})} placeholder="Instructions..." className="h-9 bg-white" />
+                  </div>
+                  <Button type="button" onClick={addMedication} className="h-9 bg-emerald-600 hover:bg-emerald-700 w-full md:w-12 shrink-0 p-0 font-bold">
+                    <Plus className="h-5 w-5 md:mr-0 mr-2" /> <span className="md:hidden">Add Medication</span>
+                  </Button>
+                </div>
               </div>
 
               {prescriptions.length > 0 && (
@@ -328,36 +349,20 @@ export function EncounterEditor({ patient, appointmentId, icd10Catalog, medicati
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              <div className="relative">
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                  <Input 
-                    value={labQuery} 
-                    onChange={e => setLabQuery(e.target.value)} 
-                    placeholder="Search lab tests..." 
-                    className="pl-9"
-                    autoComplete="off"
-                  />
-                </div>
-                {labQuery && (
-                  <div className="absolute top-11 left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg z-20 max-h-60 overflow-y-auto">
-                    {labTestsCatalog.filter(t => t.name.toLowerCase().includes(labQuery.toLowerCase()) || t.code.toLowerCase().includes(labQuery.toLowerCase())).map(test => (
-                      <button 
-                        key={test.id} 
-                        type="button" 
-                        onClick={() => {
-                          if (!tests.some(t => t.testId === test.code)) {
-                            setTests([...tests, { testId: test.code, name: test.name, status: 'ordered' }]);
-                          }
-                          setLabQuery("");
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm border-b last:border-0"
-                      >
-                        <span className="font-medium">{test.name}</span> <span className="text-xs text-slate-500">({test.code})</span>
-                      </button>
-                    ))}
+              <div className="bg-slate-50 border border-slate-200 rounded-md p-4">
+                <div className="flex flex-col md:flex-row items-end gap-3">
+                  <div className="space-y-1 flex-1">
+                    <Label className="text-xs text-slate-600">Test Name</Label>
+                    <Input value={newTest.name} onChange={e => setNewTest({...newTest, name: e.target.value})} placeholder="e.g. Complete Blood Count (CBC)" className="h-9 bg-white" />
                   </div>
-                )}
+                  <div className="space-y-1 flex-1">
+                    <Label className="text-xs text-slate-600">Specific Instructions</Label>
+                    <Input value={newTest.notes} onChange={e => setNewTest({...newTest, notes: e.target.value})} placeholder="e.g. Fasting required" className="h-9 bg-white" />
+                  </div>
+                  <Button type="button" onClick={addLabTest} className="h-9 bg-purple-600 hover:bg-purple-700 w-full md:w-12 shrink-0 p-0 font-bold">
+                    <Plus className="h-5 w-5 md:mr-0 mr-2" /> <span className="md:hidden">Add Test</span>
+                  </Button>
+                </div>
               </div>
 
               {tests.length > 0 && (
