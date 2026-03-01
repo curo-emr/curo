@@ -1,0 +1,24 @@
+[
+  {
+    "id": "task_1",
+    "doctorId": "doc_9001",
+    "title": "Review HbA1c for Nimal Perera",
+    "description": "Patient completed lab tests yesterday, please review and call if needed.",
+    "dueDate": "2026-03-01",
+    "priority": "high",
+    "status": "open",
+    "relatedPatientId": "pat_1001",
+    "createdAt": "2026-02-28T14:00:00+05:30"
+  },
+  {
+    "id": "task_2",
+    "doctorId": "doc_9001",
+    "title": "Prescription Refill Request: Sajani Fernando",
+    "description": "Pharmacy requesting refill for Salbutamol inhaler.",
+    "dueDate": "2026-03-02",
+    "priority": "medium",
+    "status": "open",
+    "relatedPatientId": "pat_1002",
+    "createdAt": "2026-03-01T08:00:00+05:30"
+  }
+]

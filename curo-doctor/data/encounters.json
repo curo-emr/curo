@@ -1,0 +1,67 @@
+[
+  {
+    "id": "enc_8001",
+    "patientId": "pat_1001",
+    "doctorId": "doc_9001",
+    "appointmentId": "apt_7002",
+    "status": "completed",
+    "startedAt": "2026-02-15T10:05:00+05:30",
+    "endedAt": "2026-02-15T10:25:00+05:30",
+    "chiefComplaint": "Routine diabetes follow-up",
+    "soap": {
+      "subjective": "Feels generally well. Reports occasional thirst. No chest pain. No dizziness.",
+      "objective": "Vitals stable. Foot exam normal. No edema.",
+      "assessment": "T2DM; consider optimizing diet. Hypertension controlled.",
+      "plan": "Continue metformin. Order HbA1c + fasting glucose + lipid profile. Follow up in 3 months."
+    },
+    "vitals": {
+      "pulseBpm": 78,
+      "respirationRpm": 16,
+      "bpSystolic": 126,
+      "bpDiastolic": 82,
+      "temperatureC": 36.8,
+      "spo2Percent": 98,
+      "heightCm": 172,
+      "weightKg": 82
+    },
+    "diagnoses": [
+      { "icdCode": "E11.9", "name": "Type 2 diabetes mellitus without complications", "isPrimary": true },
+      { "icdCode": "I10", "name": "Essential (primary) hypertension", "isPrimary": false }
+    ],
+    "prescriptionIds": ["rx_6001"],
+    "labOrderIds": ["lab_4001"],
+    "auditTrailIds": ["aud_11001", "aud_11002", "aud_11003"]
+  },
+  {
+    "id": "enc_8002",
+    "patientId": "pat_1002",
+    "doctorId": "doc_9001",
+    "appointmentId": "apt_7001",
+    "status": "in_progress",
+    "startedAt": "2026-03-01T09:35:00+05:30",
+    "endedAt": null,
+    "chiefComplaint": "Wheezing and cough for 2 days",
+    "soap": {
+      "subjective": "Shortness of breath at night. Wheezing. No fever. Mild chest tightness.",
+      "objective": "Wheezing on auscultation. No cyanosis.",
+      "assessment": "Possible asthma exacerbation.",
+      "plan": "Start bronchodilator. Order CBC + CRP. Review in 48 hours."
+    },
+    "vitals": {
+      "pulseBpm": 96,
+      "respirationRpm": 20,
+      "bpSystolic": 118,
+      "bpDiastolic": 76,
+      "temperatureC": 37.1,
+      "spo2Percent": 95,
+      "heightCm": 160,
+      "weightKg": 56
+    },
+    "diagnoses": [
+      { "icdCode": "J45.901", "name": "Unspecified asthma with (acute) exacerbation", "isPrimary": true }
+    ],
+    "prescriptionIds": [],
+    "labOrderIds": ["lab_4002"],
+    "auditTrailIds": ["aud_11004"]
+  }
+]
