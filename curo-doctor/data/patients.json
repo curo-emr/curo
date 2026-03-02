@@ -64,5 +64,71 @@
     "tags": ["asthma"],
     "createdAt": "2026-02-18T14:05:00+05:30",
     "updatedAt": "2026-03-01T08:10:00+05:30"
+  },
+  {
+    "id": "pat_1003",
+    "mrn": "CURO-0001003",
+    "name": {
+      "first": "Kamal",
+      "last": "Silva",
+      "full": "Kamal Silva"
+    },
+    "dob": "1975-04-10",
+    "sex": "male",
+    "bloodType": "B+",
+    "phone": "+94 77 555 6666",
+    "email": "kamal.silva@example.com",
+    "address": {
+      "line1": "78, Main St",
+      "line2": "",
+      "city": "Colombo",
+      "district": "Colombo",
+      "postalCode": "00100",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "Sunil Silva",
+      "relationship": "Brother",
+      "phone": "+94 77 555 7777"
+    },
+    "allergies": [],
+    "problemList": ["prob_3004"],
+    "currentMedications": [],
+    "tags": ["hypertensive"],
+    "createdAt": "2026-02-25T10:00:00+05:30",
+    "updatedAt": "2026-03-01T10:00:00+05:30"
+  },
+  {
+    "id": "pat_1004",
+    "mrn": "CURO-0001004",
+    "name": {
+      "first": "Priyanka",
+      "last": "Rajapakse",
+      "full": "Priyanka Rajapakse"
+    },
+    "dob": "1990-11-20",
+    "sex": "female",
+    "bloodType": "O-",
+    "phone": "+94 71 888 9999",
+    "email": "priyanka.r@example.com",
+    "address": {
+      "line1": "12, Park Rd",
+      "line2": "",
+      "city": "Kandy",
+      "district": "Kandy",
+      "postalCode": "20000",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "Ruwan Rajapakse",
+      "relationship": "Husband",
+      "phone": "+94 71 888 1111"
+    },
+    "allergies": [],
+    "problemList": [],
+    "currentMedications": [],
+    "tags": [],
+    "createdAt": "2026-02-28T14:30:00+05:30",
+    "updatedAt": "2026-03-01T11:00:00+05:30"
   }
 ]

@@ -3,22 +3,25 @@ import {
   getEncounterById, 
   getPatientById,
   getPrescriptionsByEncounter,
-  getLabOrdersByEncounter
+  getLabOrdersByEncounter,
+  getLabTestCatalog
 } from "@/lib/data/api";
-import { calculateBMI, formatDate } from "@/lib/utils";
+import { calculateBMI, formatDate, formatStatus, getBMICategory } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { ArrowLeft, Stethoscope, FileText, Pill, Beaker, CheckCircle2, Droplet, Thermometer, Box, FileSignature, Activity } from "lucide-react";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ArrowLeft, Stethoscope, Pill, Beaker, FileSignature, Activity } from "lucide-react";
 
-export default async function EncounterDetailsPage({ params }: { params: { patientId: string, encounterId: string } }) {
+export default async function EncounterDetailsPage({ params }: { params: Promise<{ patientId: string; encounterId: string }> }) {
   const { patientId, encounterId } = await params;
   
-  const [encounter, patient, prescriptions, labOrders] = await Promise.all([
+  const [encounter, patient, prescriptions, labOrders, labTestCatalog] = await Promise.all([
     getEncounterById(encounterId),
     getPatientById(patientId),
     getPrescriptionsByEncounter(encounterId),
-    getLabOrdersByEncounter(encounterId)
+    getLabOrdersByEncounter(encounterId),
+    getLabTestCatalog(),
   ]);
 
   if (!encounter || !patient) {
@@ -28,13 +31,11 @@ export default async function EncounterDetailsPage({ params }: { params: { patie
   const bmi = encounter.vitals?.heightCm && encounter.vitals?.weightKg 
     ? calculateBMI(encounter.vitals.heightCm, encounter.vitals.weightKg) 
     : null;
+  const bmiCategory = bmi ? getBMICategory(bmi) : null;
 
-  const getStatusBadge = (status: string) => {
-    switch(status) {
-      case 'in_progress': return <Badge variant="default" className="bg-blue-100 text-blue-700">In Progress</Badge>;
-      case 'completed': return <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Completed</Badge>;
-      default: return <Badge variant="outline">{status}</Badge>;
-    }
+  const getTestName = (testId: string) => {
+    const t = labTestCatalog.find(t => t.id === testId);
+    return t ? `${t.name} (${t.code})` : testId;
   };
 
   return (
@@ -46,7 +47,7 @@ export default async function EncounterDetailsPage({ params }: { params: { patie
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Encounter Details</h1>
-            {getStatusBadge(encounter.status)}
+            <StatusBadge status={encounter.status} />
           </div>
           <p className="text-sm text-muted-foreground flex items-center gap-2">
             <span className="font-semibold">{patient.name.full}</span> • {formatDate(encounter.startedAt)}
@@ -66,22 +67,17 @@ export default async function EncounterDetailsPage({ params }: { params: { patie
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-slate-100">
-                <div className="p-5">
-                  <h4 className="font-semibold text-slate-900 mb-2">Subjective</h4>
-                  <p className="text-sm text-slate-600 whitespace-pre-wrap">{encounter.soap.subjective || "No notes."}</p>
-                </div>
-                <div className="p-5 bg-slate-50/30">
-                  <h4 className="font-semibold text-slate-900 mb-2">Objective</h4>
-                  <p className="text-sm text-slate-600 whitespace-pre-wrap">{encounter.soap.objective || "No notes."}</p>
-                </div>
-                <div className="p-5">
-                  <h4 className="font-semibold text-slate-900 mb-2">Assessment</h4>
-                  <p className="text-sm text-slate-600 whitespace-pre-wrap">{encounter.soap.assessment || "No notes."}</p>
-                </div>
-                <div className="p-5 bg-slate-50/30">
-                  <h4 className="font-semibold text-slate-900 mb-2">Plan</h4>
-                  <p className="text-sm text-slate-600 whitespace-pre-wrap">{encounter.soap.plan || "No notes."}</p>
-                </div>
+                {[
+                  { label: 'Subjective', value: encounter.soap.subjective, tinted: false },
+                  { label: 'Objective', value: encounter.soap.objective, tinted: true },
+                  { label: 'Assessment', value: encounter.soap.assessment, tinted: false },
+                  { label: 'Plan', value: encounter.soap.plan, tinted: true },
+                ].map(({ label, value, tinted }) => (
+                  <div key={label} className={`p-5 ${tinted ? 'bg-slate-50/30' : ''}`}>
+                    <h4 className="font-semibold text-slate-900 mb-2">{label}</h4>
+                    <p className="text-sm text-slate-600 whitespace-pre-wrap">{value || 'No notes.'}</p>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -125,38 +121,28 @@ export default async function EncounterDetailsPage({ params }: { params: { patie
             </CardHeader>
             <CardContent className="p-5">
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-slate-400 text-xs mb-1">Blood Pressure</div>
-                  <div className="font-medium">{encounter.vitals?.bpSystolic}/{encounter.vitals?.bpDiastolic} mmHg</div>
-                </div>
-                <div>
-                  <div className="text-slate-400 text-xs mb-1">Pulse</div>
-                  <div className="font-medium">{encounter.vitals?.pulseBpm} bpm</div>
-                </div>
-                <div>
-                  <div className="text-slate-400 text-xs mb-1">Respiration</div>
-                  <div className="font-medium">{encounter.vitals?.respirationRpm} rpm</div>
-                </div>
-                <div>
-                  <div className="text-slate-400 text-xs mb-1">Temperature</div>
-                  <div className="font-medium">{encounter.vitals?.temperatureC} °C</div>
-                </div>
-                <div>
-                  <div className="text-slate-400 text-xs mb-1">SpO2</div>
-                  <div className="font-medium">{encounter.vitals?.spo2Percent}%</div>
-                </div>
-                <div>
-                  <div className="text-slate-400 text-xs mb-1">Weight</div>
-                  <div className="font-medium">{encounter.vitals?.weightKg} kg</div>
-                </div>
-                <div>
-                  <div className="text-slate-400 text-xs mb-1">Height</div>
-                  <div className="font-medium">{encounter.vitals?.heightCm} cm</div>
-                </div>
-                <div>
-                  <div className="text-slate-400 text-xs mb-1">BMI</div>
-                  <div className="font-medium">{bmi || '--'}</div>
-                </div>
+                {[
+                  { label: 'Blood Pressure', value: `${encounter.vitals?.bpSystolic}/${encounter.vitals?.bpDiastolic} mmHg` },
+                  { label: 'Pulse', value: `${encounter.vitals?.pulseBpm} bpm` },
+                  { label: 'Respiration', value: `${encounter.vitals?.respirationRpm} rpm` },
+                  { label: 'Temperature', value: `${encounter.vitals?.temperatureC} °C` },
+                  { label: 'SpO2', value: `${encounter.vitals?.spo2Percent}%` },
+                  { label: 'Weight', value: `${encounter.vitals?.weightKg} kg` },
+                  { label: 'Height', value: `${encounter.vitals?.heightCm} cm` },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <div className="text-slate-400 text-xs mb-1">{label}</div>
+                    <div className="font-medium">{value}</div>
+                  </div>
+                ))}
+                {bmi && (
+                  <div>
+                    <div className="text-slate-400 text-xs mb-1">BMI</div>
+                    <div className="font-medium">
+                      {bmi} <span className="text-xs text-slate-400 capitalize">({bmiCategory})</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -173,7 +159,7 @@ export default async function EncounterDetailsPage({ params }: { params: { patie
                   <div key={rx.id} className="p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Badge variant="outline" className={rx.status === 'sent_to_pharmacy' ? 'border-green-200 bg-green-50 text-green-700' : ''}>
-                        {rx.status.split('_').join(' ').toUpperCase()}
+                        {formatStatus(rx.status)}
                       </Badge>
                       <span className="text-xs text-slate-400">{formatDate(rx.createdAt)}</span>
                     </div>
@@ -202,19 +188,19 @@ export default async function EncounterDetailsPage({ params }: { params: { patie
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-               <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100">
                 {labOrders.map(lab => (
                   <div key={lab.id} className="p-4">
-                     <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2">
                       <Badge variant="outline" className={lab.status === 'results_pending' ? 'border-orange-200 bg-orange-50 text-orange-700' : ''}>
-                        {lab.status.split('_').join(' ').toUpperCase()}
+                        {formatStatus(lab.status)}
                       </Badge>
                       {lab.priority === 'urgent' && <Badge className="bg-red-50 text-red-700 border-red-200">URGENT</Badge>}
                     </div>
                     <div className="text-sm font-medium text-slate-900 mb-1">Tests Ordered:</div>
                     <ul className="list-disc pl-5 text-sm text-slate-600 mb-2">
                       {lab.tests.map((t, index) => (
-                        <li key={index}>{t.testId} - <span className="text-slate-400 text-xs">({t.status})</span></li>
+                        <li key={index}>{getTestName(t.testId)} — <span className="text-slate-400 text-xs capitalize">{t.status}</span></li>
                       ))}
                     </ul>
                     {lab.notesToLab && <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded mt-2">Note: {lab.notesToLab}</div>}

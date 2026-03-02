@@ -3,6 +3,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { User, Shield, Bell, Key, Mail, Phone, MapPin } from "lucide-react";
 
 export default function SettingsPage() {
@@ -98,19 +105,29 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div className="space-y-2">
-                <Label>Default View on Login</Label>
-                <select className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                  <option>Dashboard - Today's Schedule</option>
-                  <option>Patient Directory</option>
-                  <option>Pending Labs</option>
-                </select>
+                <Label htmlFor="default-view">Default View on Login</Label>
+                <Select defaultValue="dashboard">
+                  <SelectTrigger id="default-view">
+                    <SelectValue placeholder="Select default view" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dashboard">Dashboard — Today&apos;s Schedule</SelectItem>
+                    <SelectItem value="patients">Patient Directory</SelectItem>
+                    <SelectItem value="labs">Pending Labs</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label>Time Format</Label>
-                <select className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                  <option>24-hour (e.g., 14:00)</option>
-                  <option>12-hour (e.g., 2:00 PM)</option>
-                </select>
+                <Label htmlFor="time-format">Time Format</Label>
+                <Select defaultValue="24h">
+                  <SelectTrigger id="time-format">
+                    <SelectValue placeholder="Select time format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24h">24-hour (e.g., 14:00)</SelectItem>
+                    <SelectItem value="12h">12-hour (e.g., 2:00 PM)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
             <CardFooter className="bg-slate-50/50 border-t border-slate-100 py-4 flex justify-end">
@@ -137,7 +154,7 @@ export default function SettingsPage() {
         <TabsContent value="security" className="space-y-6">
           <Card className="shadow-sm border-slate-200">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-              <CardTitle>Security & Password</CardTitle>
+              <CardTitle>Security &amp; Password</CardTitle>
               <CardDescription>Manage your password and security settings.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-4">

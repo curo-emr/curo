@@ -1,12 +1,15 @@
 "use client";
 
-import { Patient, Encounter, Allergy, Problem, LabOrder, Prescription } from "@/types";
+import { useState } from "react";
+import { Patient, Encounter, Allergy, Problem, LabOrder, Prescription, LabTestCatalogItem } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { formatDate, formatStatus } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
-import { ChevronRight, FileText, Beaker, Pill, AlertTriangle, Activity, Calendar } from "lucide-react";
+import { ChevronRight, Beaker, Pill, AlertTriangle, Activity, Calendar } from "lucide-react";
 
 interface Props {
   patient: Patient;
@@ -15,21 +18,30 @@ interface Props {
   problems: Problem[];
   labOrders: LabOrder[];
   prescriptions: Prescription[];
+  labTestCatalog: LabTestCatalogItem[];
+  initialTab?: string;
 }
 
-export function PatientChartTabs({ patient, encounters, allergies, problems, labOrders, prescriptions }: Props) {
-  const getStatusBadge = (status: string) => {
-    switch(status) {
-      case 'in_progress': return <Badge variant="default" className="bg-blue-100 text-blue-700">In Progress</Badge>;
-      case 'completed': return <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Completed</Badge>;
-      case 'scheduled': return <Badge variant="outline" className="text-slate-600 border-slate-200 bg-slate-50">Scheduled</Badge>;
-      default: return <Badge variant="outline">{status.replace('_', ' ')}</Badge>;
-    }
+export function PatientChartTabs({
+  patient,
+  encounters,
+  allergies,
+  problems,
+  labOrders,
+  prescriptions,
+  labTestCatalog,
+  initialTab = "overview",
+}: Props) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  const getTestName = (testId: string): string => {
+    const test = labTestCatalog.find(t => t.id === testId);
+    return test ? `${test.name} (${test.code})` : testId;
   };
 
   return (
-    <Tabs defaultValue="overview" className="w-full">
-      <TabsList className="bg-white border-b border-slate-200 px-2 py-0 h-auto w-full justify-start rounded-none space-x-6 overflow-x-auto scollbar-none">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="bg-white border-b border-slate-200 px-2 py-0 h-auto w-full justify-start rounded-none space-x-6 overflow-x-auto scrollbar-none">
         <TabsTrigger value="overview" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-slate-600 data-[state=active]:text-blue-700">Overview</TabsTrigger>
         <TabsTrigger value="encounters" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-slate-600 data-[state=active]:text-blue-700">Encounters ({encounters.length})</TabsTrigger>
         <TabsTrigger value="problems" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-slate-600 data-[state=active]:text-blue-700">Problems ({problems.length})</TabsTrigger>
@@ -75,10 +87,11 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
                   {patient.currentMedications.length === 0 ? (
                     <div className="p-4 text-sm text-slate-500 text-center">No current medications on file.</div>
                   ) : (
-                    // In a real app we'd map these to names via medication list
                     <div className="p-4 text-sm flex gap-2 flex-wrap">
                       <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-200">{patient.currentMedications.length} Active Meds</Badge>
-                      <span className="text-xs text-slate-500 block mt-1 w-full">See Medications tab for details.</span>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-600 px-2" onClick={() => setActiveTab("medications")}>
+                        View Medications →
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -90,9 +103,9 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
                 <CardTitle className="text-base flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-indigo-500" /> Recent Encounters
                 </CardTitle>
-                <Link href="#" onClick={(e) => { e.preventDefault(); document.querySelector('[value="encounters"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })); }} className="text-sm text-blue-600 hover:underline">
-                  View All
-                </Link>
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 px-2" onClick={() => setActiveTab("encounters")}>
+                  View All →
+                </Button>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y divide-slate-100">
@@ -101,7 +114,7 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-semibold text-slate-900 group-hover:text-blue-600">{formatDate(e.startedAt)}</span>
-                          {getStatusBadge(e.status)}
+                          <StatusBadge status={e.status} />
                         </div>
                         <p className="text-sm text-slate-600">{e.chiefComplaint}</p>
                       </div>
@@ -126,13 +139,13 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg text-slate-900 group-hover:text-blue-600">{formatDate(e.startedAt)}</h3>
-                      {getStatusBadge(e.status)}
+                      <StatusBadge status={e.status} />
                     </div>
                     <p className="text-slate-600 mb-2">{e.chiefComplaint}</p>
                     <div className="flex flex-wrap gap-2 mt-3">
                       {e.diagnoses.map(d => (
                         <Badge key={d.icdCode} variant="secondary" className="bg-slate-100 text-slate-600 text-xs">
-                          {d.icdCode} - {d.name}
+                          {d.icdCode} — {d.name}
                         </Badge>
                       ))}
                     </div>
@@ -189,16 +202,16 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
                 ) : (
                   allergies.map(a => (
                     <div key={a.id} className="p-6">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <AlertTriangle className="h-4 w-4 text-red-500" />
                             <h4 className="font-semibold text-slate-900">{a.substance}</h4>
-                            <Badge variant="outline" className={`
-                              ${a.severity === 'severe' ? 'text-red-700 border-red-200 bg-red-50' : 
-                                a.severity === 'moderate' ? 'text-orange-700 border-orange-200 bg-orange-50' : 
-                                'text-blue-700 border-blue-200 bg-blue-50'}
-                            `}>
+                            <Badge variant="outline" className={
+                              a.severity === 'severe' ? 'text-red-700 border-red-200 bg-red-50' :
+                              a.severity === 'moderate' ? 'text-orange-700 border-orange-200 bg-orange-50' :
+                              'text-blue-700 border-blue-200 bg-blue-50'
+                            }>
                               {a.severity.toUpperCase()}
                             </Badge>
                           </div>
@@ -237,7 +250,7 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 block md:table-row-group">
-                      {prescriptions.flatMap(rx => 
+                      {prescriptions.flatMap(rx =>
                         rx.items.map(item => (
                           <tr key={`${rx.id}-${item.id}`} className="hover:bg-slate-50 block md:table-row w-full p-4 md:p-0 border-b md:border-b-0 last:border-0">
                             <td className="md:px-6 md:py-4 align-top block md:table-cell mb-2 md:mb-0">
@@ -254,8 +267,8 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
                             </td>
                             <td className="md:px-6 md:py-4 align-top block md:table-cell text-left md:text-right">
                               <span className="md:hidden font-semibold mr-2 text-slate-500">Status:</span>
-                              <Badge variant="outline" className={`${rx.status === 'sent_to_pharmacy' ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}`}>
-                                {rx.status.replace(/_/g, ' ').toUpperCase()}
+                              <Badge variant="outline" className={rx.status === 'sent_to_pharmacy' ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}>
+                                {formatStatus(rx.status)}
                               </Badge>
                             </td>
                           </tr>
@@ -289,11 +302,12 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
                           <div className="flex items-center gap-3 mb-2">
                             <span className="font-semibold text-slate-900">Order {formatDate(lo.createdAt)}</span>
                             {lo.priority === 'urgent' && <Badge className="bg-red-50 text-red-700 border-red-200">Urgent</Badge>}
-                            <Badge variant="outline" className={`${
-                              lo.status === 'results_pending' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
-                              lo.status === 'sent_to_lab' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700'
-                            }`}>
-                              {lo.status.replace(/_/g, ' ').toUpperCase()}
+                            <Badge variant="outline" className={
+                              lo.status === 'results_pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              lo.status === 'sent_to_lab' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              'bg-slate-100 text-slate-700'
+                            }>
+                              {formatStatus(lo.status)}
                             </Badge>
                           </div>
                           {lo.notesToLab && (
@@ -304,12 +318,12 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
                           <div className="flex flex-wrap gap-2 mt-2">
                             {lo.tests.map(t => (
                               <Badge key={t.testId} variant="secondary" className="bg-white border-slate-200 text-slate-700">
-                                {t.testId} - {t.status.toUpperCase()}
+                                {getTestName(t.testId)} — {t.status.toUpperCase()}
                               </Badge>
                             ))}
                           </div>
                         </div>
-                        <div className="shrink-0 flex items-center">
+                        <div className="shrink-0 flex items-center gap-2">
                           {lo.status === 'results_pending' && !lo.review.isReviewed && (
                             <button className="text-sm px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium rounded-md border border-indigo-200 transition-colors">
                               Review Results

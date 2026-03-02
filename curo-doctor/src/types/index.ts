@@ -168,7 +168,7 @@ export interface LabTestCatalogItem {
 
 export interface LabOrderTest {
   testId: string;
-  status: 'ordered' | 'collected' | 'completed';
+  status: 'ordered' | 'collected' | 'completed' | 'results_available';
   result: string | null;
 }
 
@@ -190,6 +190,7 @@ export interface LabOrder {
   notesToLab: string;
   tests: LabOrderTest[];
   review: LabOrderReview;
+  showResultsToPatient: boolean;
 }
 
 export interface Task {
