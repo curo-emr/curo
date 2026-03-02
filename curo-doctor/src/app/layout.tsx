@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,13 +28,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen overflow-hidden flex bg-muted/20`}>
-        <Sidebar />
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
-          <Topbar />
-          <main className="flex-1 overflow-y-auto p-6 relative">
-            {children}
-          </main>
-        </div>
+        <TooltipProvider>
+          <Sidebar />
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <Topbar />
+            <main className="flex-1 overflow-y-auto p-6 relative">
+              {children}
+            </main>
+          </div>
+        </TooltipProvider>
       </body>
     </html>
   );

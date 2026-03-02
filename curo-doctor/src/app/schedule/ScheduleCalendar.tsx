@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Appointment } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface Props {
   appointments: Appointment[];
@@ -20,7 +20,7 @@ export function ScheduleCalendar({ appointments, selectedDate, onDateSelect }: P
   }, {} as Record<string, number>);
 
   return (
-    <Card className="shadow-sm border-slate-200 h-full">
+    <Card className="shadow-sm border-slate-200 w-full">
       <CardContent className="p-4 flex justify-center">
         <Calendar
           mode="single"
@@ -45,27 +45,37 @@ export function ScheduleCalendar({ appointments, selectedDate, onDateSelect }: P
               
               // Format date to match JSON format (YYYY-MM-DD)
               const dateObj = day.date;
-              // Prevent hydration mismatch by calculating local timezone offset manually or just utilizing basic string formatting
               const formattedDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
               
               const count = appointmentCounts[formattedDate] || 0;
               const isSelected = modifiers.selected;
+              const isToday = modifiers.today;
 
               return (
                 <button
-                   {...buttonProps}
-                  className={`
-                    h-full relative flex flex-col items-center justify-start pt-2 w-full rounded-md transition-colors
-                    ${isSelected ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 text-slate-900'}
-                    ${modifiers.today && !isSelected ? 'bg-blue-50 font-bold' : ''}
-                    ${modifiers.outside ? 'text-slate-400 opacity-50' : ''}
-                  `}
+                  {...buttonProps}
+                  className={cn(
+                    "group h-full w-full relative flex flex-col items-center justify-start pt-2 rounded-xl transition-all duration-200 border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                    isSelected 
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-200" 
+                      : "hover:bg-slate-50 hover:border-slate-200 text-slate-700",
+                    isToday && !isSelected ? "bg-blue-50 border-blue-100 text-blue-900 font-bold" : "",
+                    modifiers.outside ? "text-slate-400 opacity-40 hover:bg-transparent" : "font-medium"
+                  )}
                 >
-                  <span>{dateObj.getDate()}</span>
-                  {count > 0 && (
-                    <div className="absolute bottom-1 w-full flex justify-center pb-1">
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-white text-blue-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {count} {count === 1 ? 'visit' : 'visits'}
+                  <span className="text-sm sm:text-base">
+                    {dateObj.getDate()}
+                  </span>
+                  
+                  {count > 0 && !modifiers.outside && (
+                    <div className="absolute bottom-1 w-full flex justify-center px-1">
+                      <span className={cn(
+                        "text-[10px] font-bold px-1.5 py-0.5 rounded-full truncate max-w-full transition-colors", 
+                        isSelected 
+                          ? "bg-white/20 text-white" 
+                          : isToday ? "bg-blue-200 text-blue-800" : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                      )}>
+                        {count} {count === 1 ? 'vst' : 'vsts'}
                       </span>
                     </div>
                   )}

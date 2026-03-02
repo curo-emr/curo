@@ -1,10 +1,13 @@
-import { getPatients } from "@/lib/data/api";
+import { Suspense } from "react";
+import { getPatients, getAllAllergies } from "@/lib/data/api";
 import { PatientList } from "@/components/features/patients/PatientList";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function PatientsDirectoryPage() {
   const patients = await getPatients();
+  const allAllergies = await getAllAllergies();
+  const allergyMap = Object.fromEntries(allAllergies.map(a => [a.id, a]));
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -19,7 +22,10 @@ export default async function PatientsDirectoryPage() {
         </Button>
       </div>
 
-      <PatientList initialPatients={patients} />
+      {/* Suspense required because PatientList uses useSearchParams() */}
+      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading patients...</div>}>
+        <PatientList initialPatients={patients} allergyMap={allergyMap} />
+      </Suspense>
     </div>
   );
 }

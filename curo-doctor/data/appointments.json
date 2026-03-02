@@ -34,5 +34,29 @@
     "status": "completed",
     "room": "Room 2",
     "notes": "Completed at 10:45"
+  },
+  {
+    "id": "apt_7004",
+    "date": "2026-03-01",
+    "time": "11:00",
+    "doctorId": "doc_9001",
+    "patientId": "pat_1003",
+    "reason": "Routine Checkup",
+    "visitType": "OPD",
+    "status": "scheduled",
+    "room": "Room 1",
+    "notes": "First visit"
+  },
+  {
+    "id": "apt_7005",
+    "date": "2026-03-01",
+    "time": "11:30",
+    "doctorId": "doc_9001",
+    "patientId": "pat_1004",
+    "reason": "Fever and minor cough",
+    "visitType": "OPD",
+    "status": "arrived",
+    "room": "Room 3",
+    "notes": "Patient waiting in lobby"
   }
 ]

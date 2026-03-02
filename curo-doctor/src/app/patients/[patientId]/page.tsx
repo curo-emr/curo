@@ -3,42 +3,38 @@ import {
   getPatientById, 
   getEncountersByPatient, 
   getAllergies, 
-  getProblems, 
-  getLabOrders,
-  getPrescriptionsByEncounter,
-  getPrescriptionsByPatient
+  getProblems,
+  getLabOrdersByPatient,
+  getPrescriptionsByPatient,
+  getLabTestCatalog
 } from "@/lib/data/api";
 import { calculateAge } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, User, Phone, MapPin, Activity, Droplet, Clock, Plus, FileText, Pill } from "lucide-react";
+import { AlertTriangle, User, Phone, MapPin, Droplet, Plus } from "lucide-react";
 import Link from "next/link";
 import { PatientChartTabs } from "@/components/features/patients/PatientChartTabs";
 
-export default async function PatientChartPage({ params }: { params: { patientId: string } }) {
-  // Wait for params if Next.js 15+ (in Next 15 `params` might be a promise, but for now we assume simple object or await it)
-  // Let's await it to be safe for Next 15 App Router
+export default async function PatientChartPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = await params;
   
   const patient = await getPatientById(patientId);
-  
-  if (!patient) {
-    notFound();
-  }
+  if (!patient) notFound();
 
   const age = calculateAge(patient.dob);
-  const encounters = await getEncountersByPatient(patientId);
-  const allergies = await getAllergies(patientId);
-  const problems = await getProblems(patientId);
-  const labOrdersAll = await getLabOrders();
-  const labOrders = labOrdersAll.filter(l => l.patientId === patientId);
-  const prescriptions = await getPrescriptionsByPatient(patientId);
+
+  const [encounters, allergies, problems, labOrders, prescriptions, labTestCatalog] = await Promise.all([
+    getEncountersByPatient(patientId),
+    getAllergies(patientId),
+    getProblems(patientId),
+    getLabOrdersByPatient(patientId),
+    getPrescriptionsByPatient(patientId),
+    getLabTestCatalog(),
+  ]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header Summary */}
+      {/* Patient Header */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
         <div className="flex flex-col md:flex-row gap-6 items-start justify-between">
           <div className="flex gap-6 items-start">
@@ -47,7 +43,7 @@ export default async function PatientChartPage({ params }: { params: { patientId
             </div>
             
             <div className="space-y-1">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-3xl font-bold text-slate-900">{patient.name.full}</h1>
                 <Badge variant="outline" className="text-slate-500 font-mono tracking-wide">{patient.mrn}</Badge>
               </div>
@@ -71,12 +67,12 @@ export default async function PatientChartPage({ params }: { params: { patientId
           </div>
         </div>
         
-        {/* Clinical Alerts Area */}
+        {/* Clinical Alerts */}
         {allergies.length > 0 && (
           <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-md flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-red-800 tracking-tight text-sm">Allergies Found</h4>
+              <h4 className="font-semibold text-red-800 tracking-tight text-sm">Allergies on Record</h4>
               <p className="text-sm text-red-700 mt-0.5">
                 {allergies.map(a => `${a.substance} (${a.reaction})`).join(", ")}
               </p>
@@ -92,6 +88,7 @@ export default async function PatientChartPage({ params }: { params: { patientId
         problems={problems} 
         labOrders={labOrders} 
         prescriptions={prescriptions}
+        labTestCatalog={labTestCatalog}
       />
     </div>
   );

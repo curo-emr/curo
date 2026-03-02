@@ -18,7 +18,8 @@
       "isReviewed": false,
       "reviewedAt": null,
       "reviewedBy": null
-    }
+    },
+    "showResultsToPatient": false
   },
   {
     "id": "lab_4002",
@@ -38,6 +39,7 @@
       "isReviewed": false,
       "reviewedAt": null,
       "reviewedBy": null
-    }
+    },
+    "showResultsToPatient": true
   }
 ]

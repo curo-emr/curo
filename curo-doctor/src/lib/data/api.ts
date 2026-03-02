@@ -8,7 +8,7 @@ import {
 // Helper to get raw data path
 const getDataPath = (filename: string) => path.join(process.cwd(), 'data', filename);
 
-// Generic reader
+// Generic reader — returns empty array on failure
 async function readJsonFile<T>(filename: string): Promise<T[]> {
   try {
     const filePath = getDataPath(filename);
@@ -20,14 +20,10 @@ async function readJsonFile<T>(filename: string): Promise<T[]> {
   }
 }
 
-// Generic writer
+// Generic writer — throws on failure so callers can handle errors
 async function writeJsonFile<T>(filename: string, data: T[]): Promise<void> {
-  try {
-    const filePath = getDataPath(filename);
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (error) {
-    console.error(`Error writing ${filename}:`, error);
-  }
+  const filePath = getDataPath(filename);
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 // --- PATIENTS ---
@@ -66,9 +62,9 @@ export async function getEncounters(): Promise<Encounter[]> {
 
 export async function getEncountersByPatient(patientId: string): Promise<Encounter[]> {
   const encs = await getEncounters();
-  return encs.filter(e => e.patientId === patientId).sort((a, b) => 
-    new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-  );
+  return encs
+    .filter(e => e.patientId === patientId)
+    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
 }
 
 export async function getEncounterById(id: string): Promise<Encounter | null> {
@@ -92,6 +88,10 @@ export async function updateEncounter(updated: Encounter): Promise<void> {
 }
 
 // --- ALLERGIES ---
+export async function getAllAllergies(): Promise<Allergy[]> {
+  return readJsonFile<Allergy>('allergies.json');
+}
+
 export async function getAllergies(patientId: string): Promise<Allergy[]> {
   const allergies = await readJsonFile<Allergy>('allergies.json');
   return allergies.filter(a => a.patientId === patientId);
@@ -106,6 +106,11 @@ export async function getProblems(patientId: string): Promise<Problem[]> {
 // --- LABS ---
 export async function getLabOrders(): Promise<LabOrder[]> {
   return readJsonFile<LabOrder>('lab-orders.json');
+}
+
+export async function getLabOrdersByPatient(patientId: string): Promise<LabOrder[]> {
+  const labs = await getLabOrders();
+  return labs.filter(l => l.patientId === patientId);
 }
 
 export async function getPendingLabOrders(): Promise<LabOrder[]> {
@@ -124,6 +129,15 @@ export async function createLabOrder(order: LabOrder): Promise<void> {
   await writeJsonFile('lab-orders.json', labs);
 }
 
+export async function updateLabOrder(updated: LabOrder): Promise<void> {
+  const labs = await getLabOrders();
+  const index = labs.findIndex(l => l.id === updated.id);
+  if (index >= 0) {
+    labs[index] = updated;
+    await writeJsonFile('lab-orders.json', labs);
+  }
+}
+
 // --- PRESCRIPTIONS ---
 export async function getPrescriptionsByEncounter(encounterId: string): Promise<Prescription[]> {
   const rxs = await readJsonFile<Prescription>('prescriptions.json');
@@ -139,6 +153,15 @@ export async function createPrescription(rx: Prescription): Promise<void> {
   const rxs = await readJsonFile<Prescription>('prescriptions.json');
   rxs.push(rx);
   await writeJsonFile('prescriptions.json', rxs);
+}
+
+export async function updatePrescription(updated: Prescription): Promise<void> {
+  const rxs = await readJsonFile<Prescription>('prescriptions.json');
+  const index = rxs.findIndex(r => r.id === updated.id);
+  if (index >= 0) {
+    rxs[index] = updated;
+    await writeJsonFile('prescriptions.json', rxs);
+  }
 }
 
 // --- CATALOGS ---
