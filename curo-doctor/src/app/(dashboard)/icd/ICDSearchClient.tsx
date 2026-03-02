@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { ICD10 } from "@/types";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { Search, Activity, Hash, Tag } from "lucide-react";
 
 interface Props {
