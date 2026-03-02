@@ -7,7 +7,7 @@ import {
   getLabTestCatalog
 } from "@/lib/data/api";
 import { calculateBMI, formatDate, formatStatus, getBMICategory } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";

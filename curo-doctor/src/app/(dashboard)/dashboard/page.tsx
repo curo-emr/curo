@@ -2,7 +2,7 @@ import { getAppointments, getPendingLabOrders, getOpenTasks, getPatients } from 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, FileText, Users, FlaskConical } from "lucide-react";
+import { Calendar, Clock } from "lucide-react";
 import Link from "next/link";
 import { calculateAge, getTodayString } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
               <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Calendar className="h-5 w-5 text-blue-600" />
-                  Today's Schedule
+                  Today&apos;s Schedule
                 </CardTitle>
                 <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-50">
                   {todaysSchedule.length} Appointment{todaysSchedule.length !== 1 ? 's' : ''}

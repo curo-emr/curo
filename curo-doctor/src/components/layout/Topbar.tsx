@@ -2,13 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, LogOut, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Topbar() {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const { user, logout } = useAuth();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +35,20 @@ export function Topbar() {
         </form>
       </div>
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="relative">
+        <div className="flex items-center gap-2 mr-4 border-r pr-4">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="h-4 w-4 text-primary" />
+          </div>
+          <span className="text-sm font-medium hidden sm:inline-block">
+            {user?.name || "Doctor"}
+          </span>
+        </div>
+        <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
           <Bell className="h-5 w-5" />
           <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={logout} title="Log out" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+          <LogOut className="h-5 w-5" />
         </Button>
       </div>
     </header>
