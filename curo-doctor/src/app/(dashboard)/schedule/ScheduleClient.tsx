@@ -1,17 +1,245 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Appointment, Patient } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, Clock, User, FileText, ChevronLeft, ChevronRight, Activity } from "lucide-react";
 import Link from "next/link";
-import { cn, getTodayString, getPatientName, getPatientMeta, getStatusBorderClass } from "@/lib/utils";
-import { ROUTES, APPOINTMENT_STATUS } from "@/lib/constants";
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  ChevronRight,
+} from "lucide-react";
+import { Appointment, Patient } from "@/types";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { ScheduleCalendar } from "./ScheduleCalendar";
+import {
+  cn,
+  getPatientName,
+  getPatientMeta,
+  getTodayString,
+} from "@/lib/utils";
+import { ROUTES, APPOINTMENT_STATUS } from "@/lib/constants";
+import {
+  CuroCalendar,
+  CalendarEvent,
+  formatDateStr,
+  getRelativeDayLabel,
+} from "@/components/ui/CuroCalendar";
+import type { CalendarEventColor } from "@/components/ui/CuroCalendar";
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function statusToColor(status: Appointment["status"]): CalendarEventColor {
+  switch (status) {
+    case "waiting":      return "yellow";
+    case "in_progress":  return "blue";
+    case "completed":    return "green";
+    case "cancelled":
+    case "no_show":      return "gray";
+    default:             return "blue";
+  }
+}
+
+function formatTime(time: string) {
+  const [h, m] = time.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+// Status → left-border color
+const STATUS_BORDER: Record<string, string> = {
+  waiting:     "border-l-amber-400",
+  in_progress: "border-l-blue-500",
+  completed:   "border-l-green-500",
+  cancelled:   "border-l-slate-300",
+  no_show:     "border-l-slate-300",
+};
+
+// ---------------------------------------------------------------------------
+// Appointment card
+// ---------------------------------------------------------------------------
+function AppointmentCard({
+  apt,
+  patients,
+}: {
+  apt: Appointment;
+  patients: Patient[];
+}) {
+  const name = getPatientName(apt.patientId, patients);
+  const meta = getPatientMeta(apt.patientId, patients);
+  const initial = name.charAt(0).toUpperCase();
+  const borderColor = STATUS_BORDER[apt.status] ?? "border-l-slate-200";
+
+  const isInProgress = apt.status === APPOINTMENT_STATUS.IN_PROGRESS;
+  const isCompleted  = apt.status === APPOINTMENT_STATUS.COMPLETED;
+
+  return (
+    <div
+      className={cn(
+        "group bg-white rounded-xl border border-slate-200 border-l-[3px] p-4",
+        "hover:border-slate-300 hover:shadow-sm transition-all duration-150 flex flex-col gap-3",
+        borderColor
+      )}
+    >
+      {/* Row 1 — time + status */}
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-sm font-bold text-slate-800 tabular-nums">
+          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          {formatTime(apt.time)}
+        </span>
+        <StatusBadge status={apt.status} />
+      </div>
+
+      {/* Row 2 — patient */}
+      <div className="flex items-center gap-2.5">
+        <div
+          className={cn(
+            "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold select-none",
+            isInProgress
+              ? "bg-blue-100 text-blue-700"
+              : "bg-slate-100 text-slate-600"
+          )}
+        >
+          {initial}
+        </div>
+        <div className="min-w-0">
+          <Link
+            href={ROUTES.PATIENT(apt.patientId)}
+            className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors block truncate"
+          >
+            {name}
+          </Link>
+          <p className="text-xs text-slate-400 mt-0.5 truncate">
+            {meta ? `${meta.age}y ${meta.sex.charAt(0).toUpperCase()}  ·  ` : ""}
+            {apt.visitType}
+            {apt.room ? `  ·  ${apt.room}` : ""}
+          </p>
+        </div>
+      </div>
+
+      {/* Row 3 — reason (single line, muted) */}
+      <p className="text-xs text-slate-500 truncate leading-relaxed">
+        {apt.reason}
+      </p>
+
+      {/* Row 4 — actions */}
+      <div className="flex items-center gap-2 pt-0.5">
+        {!isCompleted && !isInProgress && (
+          <Link
+            href={`${ROUTES.NEW_ENCOUNTER(apt.patientId)}?appointmentId=${apt.id}`}
+            className="flex-1"
+          >
+            <Button
+              size="sm"
+              className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+            >
+              Start Visit
+            </Button>
+          </Link>
+        )}
+        {isInProgress && (
+          <Link
+            href={`${ROUTES.NEW_ENCOUNTER(apt.patientId)}?appointmentId=${apt.id}`}
+            className="flex-1"
+          >
+            <Button
+              size="sm"
+              className="w-full h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
+            >
+              Resume Visit
+            </Button>
+          </Link>
+        )}
+        <Link href={ROUTES.PATIENT(apt.patientId)}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs bg-white hover:bg-slate-50 gap-0.5 px-3"
+          >
+            Chart <ChevronRight className="w-3 h-3" />
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Day appointments section (below calendar)
+// ---------------------------------------------------------------------------
+function DayAppointments({
+  selectedDate,
+  appointments,
+  patients,
+}: {
+  selectedDate: Date;
+  appointments: Appointment[];
+  patients: Patient[];
+}) {
+  const dateStr = formatDateStr(selectedDate);
+  const todayStr = getTodayString();
+
+  const daily = useMemo(
+    () =>
+      appointments
+        .filter((a) => a.date === dateStr)
+        .sort((a, b) => a.time.localeCompare(b.time)),
+    [appointments, dateStr]
+  );
+
+  const relativeLabel = getRelativeDayLabel(selectedDate);
+
+  return (
+    <div>
+      {/* Section header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-base font-bold text-slate-900">
+            {selectedDate.toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </h2>
+          {relativeLabel && (
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+              {relativeLabel}
+            </span>
+          )}
+        </div>
+        <span className="text-sm text-slate-400">
+          {daily.length === 0
+            ? "No visits"
+            : `${daily.length} ${daily.length === 1 ? "visit" : "visits"}`}
+        </span>
+      </div>
+
+      {/* Cards or empty state */}
+      {daily.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+            <CalendarIcon className="w-5 h-5 text-slate-300" />
+          </div>
+          <p className="text-sm font-medium text-slate-500">
+            {dateStr === todayStr
+              ? "Clear schedule — enjoy your day."
+              : "No visits scheduled."}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {daily.map((apt) => (
+            <AppointmentCard key={apt.id} apt={apt} patients={patients} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Root
+// ---------------------------------------------------------------------------
 interface Props {
   appointments: Appointment[];
   patients: Patient[];
@@ -20,155 +248,48 @@ interface Props {
 export function ScheduleClient({ appointments, patients }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  const formattedSelectedDate = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-  const todayStr = getTodayString();
-  const isToday = formattedSelectedDate === todayStr;
-
-  const dailyAppointments = useMemo(() => {
-    return appointments
-      .filter(a => a.date === formattedSelectedDate)
-      .sort((a, b) => a.time.localeCompare(b.time));
-  }, [appointments, formattedSelectedDate]);
-
-  const handlePreviousDay = () => {
-    const prev = new Date(selectedDate);
-    prev.setDate(prev.getDate() - 1);
-    setSelectedDate(prev);
-  };
-
-  const handleNextDay = () => {
-    const next = new Date(selectedDate);
-    next.setDate(next.getDate() + 1);
-    setSelectedDate(next);
-  };
+  const calendarEvents: CalendarEvent[] = useMemo(
+    () =>
+      appointments.map((apt) => ({
+        id: apt.id,
+        date: apt.date,
+        title: getPatientName(apt.patientId, patients),
+        subtitle: apt.time,
+        color: statusToColor(apt.status),
+        appointment: apt,
+      })),
+    [appointments, patients]
+  );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Schedule</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage and view your upcoming appointments.</p>
-        </div>
-        <div className="flex items-center gap-3 bg-white p-1 rounded-lg border border-slate-200 shadow-sm inline-flex">
-          <Button variant="ghost" size="icon" onClick={handlePreviousDay} className="h-8 w-8 text-slate-600 hover:bg-slate-100">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={isToday ? "default" : "ghost"}
-            className={cn(
-              "h-8 px-3 text-sm font-medium",
-              isToday
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "text-slate-700 hover:bg-slate-100"
-            )}
-            onClick={() => setSelectedDate(new Date())}
-            disabled={isToday}
-          >
-            Today
-          </Button>
-          <Button variant="ghost" size="icon" onClick={handleNextDay} className="h-8 w-8 text-slate-600 hover:bg-slate-100">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+    <div className="flex flex-col gap-6 pb-8 max-w-screen-xl mx-auto">
+      {/* Page title */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          Schedule
+        </h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          Your appointments, at a glance.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-        {/* Left Column - Monthly Calendar */}
-        <div className="lg:col-span-2">
-          <ScheduleCalendar
-            appointments={appointments}
-            selectedDate={selectedDate}
-            onDateSelect={(date) => setSelectedDate(date)}
-          />
-        </div>
+      {/* Full-width calendar */}
+      <CuroCalendar
+        events={calendarEvents}
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
+        maxEventsPerDay={3}
+      />
 
-        {/* Right Column - Daily Schedule List */}
-        <div className="lg:col-span-3 flex flex-col">
-          <Card className="shadow-sm border-slate-200 flex-1 flex flex-col bg-slate-50/30">
-            <CardHeader className="bg-white border-b border-slate-200 px-6 pt-6 rounded-t-xl">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <span className="bg-blue-100/50 p-2 rounded-lg">
-                    <CalendarIcon className="h-5 w-5 text-blue-600" />
-                  </span>
-                  {selectedDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </CardTitle>
-                <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-1 text-sm font-medium self-start sm:self-auto">
-                  {dailyAppointments.length} Visit{dailyAppointments.length !== 1 ? 's' : ''}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 lg:p-8 flex-1">
-              <div className="flex flex-col gap-4">
-                {dailyAppointments.length === 0 ? (
-                  <div className="py-20 text-center text-slate-500 flex flex-col items-center justify-center h-full bg-white rounded-xl border border-dashed border-slate-300">
-                    <div className="bg-slate-50 p-4 rounded-full mb-4">
-                      <CalendarIcon className="h-10 w-10 text-slate-300" />
-                    </div>
-                    <p className="text-lg font-medium text-slate-700">
-                      No appointments on {selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}
-                    </p>
-                    <p className="mt-1 text-sm">Select another date or add a new appointment.</p>
-                  </div>
-                ) : (
-                  dailyAppointments.map(apt => {
-                    const patientMeta = getPatientMeta(apt.patientId, patients);
-                    return (
-                      <div
-                        key={apt.id}
-                        className={cn(
-                          "bg-white border border-slate-200 rounded-xl p-5 sm:p-6 transition-all hover:border-slate-300 hover:shadow-md flex flex-col sm:flex-row gap-5 sm:items-center justify-between group relative",
-                          getStatusBorderClass(apt.status)
-                        )}
-                      >
-                        <div className="flex items-start gap-5 sm:gap-6">
-                          <div className="w-16 sm:w-20 shrink-0 flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 text-slate-700 border border-slate-100 group-hover:bg-blue-50 group-hover:text-blue-900 group-hover:border-blue-100 transition-colors">
-                            <span className="text-base sm:text-lg font-bold tracking-tight">{apt.time}</span>
-                          </div>
-                          <div className="space-y-2.5">
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                              <Link href={ROUTES.PATIENT(apt.patientId)} className="text-lg sm:text-xl font-bold text-slate-900 hover:text-blue-600 transition-colors">
-                                {getPatientName(apt.patientId, patients)}
-                              </Link>
-                              <StatusBadge status={apt.status} />
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-600">
-                              <span className="flex items-center gap-1.5 font-medium"><User className="h-4 w-4 text-slate-400" /> {patientMeta?.age}y, {patientMeta?.sex.charAt(0).toUpperCase()}{patientMeta?.sex.slice(1)}</span>
-                              <span className="flex items-center gap-1.5"><Activity className="h-4 w-4 text-slate-400" /> {apt.visitType} — {apt.reason}</span>
-                              <span className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-slate-400" /> {apt.room || 'No Room Assigned'}</span>
-                            </div>
-                            {apt.notes && (
-                              <div className="text-sm text-slate-600 bg-amber-50/50 p-3 rounded-lg border border-amber-100/50 max-w-2xl mt-3 flex items-start gap-2">
-                                <FileText className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                                <span><span className="font-semibold text-slate-700">Note: </span>{apt.notes}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex flex-row sm:flex-col gap-2 mt-4 sm:mt-0 w-full sm:w-auto shrink-0 border-t sm:border-t-0 border-slate-100 pt-4 sm:pt-0">
-                          {apt.status !== APPOINTMENT_STATUS.IN_PROGRESS && apt.status !== APPOINTMENT_STATUS.COMPLETED && (
-                            <Link href={`${ROUTES.NEW_ENCOUNTER(apt.patientId)}?appointmentId=${apt.id}`} className="w-full">
-                              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">Start Visit</Button>
-                            </Link>
-                          )}
-                          {apt.status === APPOINTMENT_STATUS.IN_PROGRESS && (
-                            <Link href={`${ROUTES.NEW_ENCOUNTER(apt.patientId)}?appointmentId=${apt.id}`} className="w-full">
-                              <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white shadow-sm">Resume Visit</Button>
-                            </Link>
-                          )}
-                          <Link href={ROUTES.PATIENT(apt.patientId)} className="w-full">
-                            <Button variant="outline" className="w-full bg-white hover:bg-slate-50">Open Chart</Button>
-                          </Link>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Divider */}
+      <div className="border-t border-slate-100" />
+
+      {/* Day appointments */}
+      <DayAppointments
+        selectedDate={selectedDate}
+        appointments={appointments}
+        patients={patients}
+      />
     </div>
   );
 }
