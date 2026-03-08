@@ -1,0 +1,223 @@
+[
+  {
+    "id": "disp_001",
+    "prescriptionId": "rx_5001",
+    "patientId": "pat_1001",
+    "dispensedBy": "staff_001",
+    "verifiedBy": "staff_002",
+    "dispensedAt": "2026-03-01T10:45:00+05:30",
+    "items": [
+      {
+        "prescriptionItemId": "rxi_001",
+        "medicationId": "med_001",
+        "drugNameDispensed": "Metformin 500mg (Glucophage)",
+        "quantityPrescribed": 180,
+        "quantityDispensed": 180,
+        "batchNumber": "MET-2025-0412",
+        "expiryDate": "2027-06-15",
+        "substitution": null,
+        "notes": ""
+      },
+      {
+        "prescriptionItemId": "rxi_002",
+        "medicationId": "med_005",
+        "drugNameDispensed": "Losartan 50mg (Cozaar)",
+        "quantityPrescribed": 90,
+        "quantityDispensed": 90,
+        "batchNumber": "LOS-2025-0715",
+        "expiryDate": "2027-08-25",
+        "substitution": null,
+        "notes": ""
+      }
+    ],
+    "counsellingNotes": "Patient counselled on medication adherence. Advised to monitor blood sugar and blood pressure at home.",
+    "printedInstructions": true,
+    "totalAmount": 1890.00
+  },
+  {
+    "id": "disp_002",
+    "prescriptionId": "rx_5002",
+    "patientId": "pat_1002",
+    "dispensedBy": "staff_003",
+    "verifiedBy": "staff_001",
+    "dispensedAt": "2026-03-02T14:30:00+05:30",
+    "items": [
+      {
+        "prescriptionItemId": "rxi_003",
+        "medicationId": "med_003",
+        "drugNameDispensed": "Amoxicillin 500mg (Generic)",
+        "quantityPrescribed": 21,
+        "quantityDispensed": 21,
+        "batchNumber": "AMX-2025-0621",
+        "expiryDate": "2026-12-30",
+        "substitution": "Brand Amoxil substituted with generic Amoxicillin (approved by prescriber)",
+        "notes": "Generic substitution — cost saving"
+      },
+      {
+        "prescriptionItemId": "rxi_004",
+        "medicationId": "med_007",
+        "drugNameDispensed": "Salbutamol Inhaler 100mcg (Ventolin)",
+        "quantityPrescribed": 1,
+        "quantityDispensed": 1,
+        "batchNumber": "SAL-2025-0901",
+        "expiryDate": "2027-01-20",
+        "substitution": null,
+        "notes": "Demonstrated inhaler technique to patient"
+      }
+    ],
+    "counsellingNotes": "Advised to complete full antibiotic course. Demonstrated inhaler technique. Warned about drowsiness from antihistamines if added.",
+    "printedInstructions": true,
+    "totalAmount": 602.00
+  },
+  {
+    "id": "disp_003",
+    "prescriptionId": "rx_5003",
+    "patientId": "pat_1003",
+    "dispensedBy": "staff_001",
+    "verifiedBy": "staff_002",
+    "dispensedAt": "2026-03-03T12:00:00+05:30",
+    "items": [
+      {
+        "prescriptionItemId": "rxi_005",
+        "medicationId": "med_002",
+        "drugNameDispensed": "Amlodipine 5mg (Norvasc)",
+        "quantityPrescribed": 30,
+        "quantityDispensed": 30,
+        "batchNumber": "AML-2025-0318",
+        "expiryDate": "2027-09-20",
+        "substitution": null,
+        "notes": ""
+      },
+      {
+        "prescriptionItemId": "rxi_006",
+        "medicationId": "med_004",
+        "drugNameDispensed": "Atorvastatin 20mg (Lipitor)",
+        "quantityPrescribed": 30,
+        "quantityDispensed": 30,
+        "batchNumber": "ATV-2025-0512",
+        "expiryDate": "2027-04-10",
+        "substitution": null,
+        "notes": ""
+      }
+    ],
+    "counsellingNotes": "Patient reminded to take statin at bedtime for best efficacy. BP monitoring advised.",
+    "printedInstructions": true,
+    "totalAmount": 690.00
+  },
+  {
+    "id": "disp_004",
+    "prescriptionId": "rx_5004",
+    "patientId": "pat_1005",
+    "dispensedBy": "staff_002",
+    "verifiedBy": "staff_001",
+    "dispensedAt": "2026-03-04T09:30:00+05:30",
+    "items": [
+      {
+        "prescriptionItemId": "rxi_007",
+        "medicationId": "med_001",
+        "drugNameDispensed": "Metformin 500mg (Glucophage)",
+        "quantityPrescribed": 60,
+        "quantityDispensed": 60,
+        "batchNumber": "MET-2025-0412",
+        "expiryDate": "2027-06-15",
+        "substitution": null,
+        "notes": ""
+      },
+      {
+        "prescriptionItemId": "rxi_008",
+        "medicationId": "med_010",
+        "drugNameDispensed": "Aspirin 75mg (Disprin)",
+        "quantityPrescribed": 30,
+        "quantityDispensed": 30,
+        "batchNumber": "ASP-2025-0420",
+        "expiryDate": "2027-05-22",
+        "substitution": null,
+        "notes": ""
+      },
+      {
+        "prescriptionItemId": "rxi_009",
+        "medicationId": "med_011",
+        "drugNameDispensed": "Bisoprolol 5mg (Concor)",
+        "quantityPrescribed": 30,
+        "quantityDispensed": 30,
+        "batchNumber": "BIS-2025-0715",
+        "expiryDate": "2027-02-28",
+        "substitution": null,
+        "notes": ""
+      },
+      {
+        "prescriptionItemId": "rxi_010",
+        "medicationId": "med_012",
+        "drugNameDispensed": "Isosorbide Mononitrate 30mg (Imdur)",
+        "quantityPrescribed": 30,
+        "quantityDispensed": 0,
+        "batchNumber": null,
+        "expiryDate": null,
+        "substitution": null,
+        "notes": "OUT OF STOCK — Patient advised to check back in 2 days. Doctor notified."
+      }
+    ],
+    "counsellingNotes": "Explained partial dispensing — ISMN out of stock. Patient will return for remaining. Advised not to stop other cardiac medications.",
+    "printedInstructions": true,
+    "totalAmount": 810.00
+  },
+  {
+    "id": "disp_005",
+    "prescriptionId": "rx_5011",
+    "patientId": "pat_1004",
+    "dispensedBy": "staff_003",
+    "verifiedBy": "staff_002",
+    "dispensedAt": "2026-02-28T11:30:00+05:30",
+    "items": [
+      {
+        "prescriptionItemId": "rxi_021",
+        "medicationId": "med_013",
+        "drugNameDispensed": "Ferrous Sulfate 200mg (Fefol)",
+        "quantityPrescribed": 30,
+        "quantityDispensed": 30,
+        "batchNumber": "FES-2025-0522",
+        "expiryDate": "2027-10-10",
+        "substitution": null,
+        "notes": ""
+      }
+    ],
+    "counsellingNotes": "Advised to take with vitamin C for better absorption. Warned about black stools (normal side effect).",
+    "printedInstructions": true,
+    "totalAmount": 135.00
+  },
+  {
+    "id": "disp_006",
+    "prescriptionId": "rx_5012",
+    "patientId": "pat_1006",
+    "dispensedBy": "staff_001",
+    "verifiedBy": "staff_002",
+    "dispensedAt": "2026-03-04T15:00:00+05:30",
+    "items": [
+      {
+        "prescriptionItemId": "rxi_022",
+        "medicationId": "med_013",
+        "drugNameDispensed": "Ferrous Sulfate 200mg (Fefol)",
+        "quantityPrescribed": 60,
+        "quantityDispensed": 60,
+        "batchNumber": "FES-2025-0522",
+        "expiryDate": "2027-10-10",
+        "substitution": null,
+        "notes": ""
+      },
+      {
+        "prescriptionItemId": "rxi_023",
+        "medicationId": "med_008",
+        "drugNameDispensed": "Paracetamol 500mg (Panadol)",
+        "quantityPrescribed": 10,
+        "quantityDispensed": 10,
+        "batchNumber": "PCM-2025-1012",
+        "expiryDate": "2027-11-30",
+        "substitution": null,
+        "notes": ""
+      }
+    ],
+    "counsellingNotes": "Continued iron supplementation. Patient showing improvement. Take with vitamin C source.",
+    "printedInstructions": true,
+    "totalAmount": 300.00
+  }
+]

@@ -1,0 +1,206 @@
+[
+  {
+    "id": "pat_1001",
+    "mrn": "CURO-0001001",
+    "nic": "198716403256",
+    "name": {
+      "first": "Nimal",
+      "last": "Perera",
+      "full": "Nimal Perera"
+    },
+    "dob": "1987-06-14",
+    "sex": "male",
+    "bloodType": "O+",
+    "phone": "+94 77 123 4567",
+    "email": "nimal.perera@example.com",
+    "address": {
+      "line1": "No 12, Station Road",
+      "line2": "Negombo",
+      "city": "Negombo",
+      "district": "Gampaha",
+      "postalCode": "11500",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "Kumari Perera",
+      "relationship": "Spouse",
+      "phone": "+94 77 999 8888"
+    },
+    "allergies": ["Penicillin", "Sulfonamides"],
+    "problemList": ["Type 2 Diabetes Mellitus", "Hypertension"],
+    "currentMedications": ["Metformin 500mg BD", "Losartan 50mg OD"],
+    "tags": ["diabetes", "high-risk"],
+    "createdAt": "2026-02-10T09:15:00+05:30",
+    "updatedAt": "2026-03-01T09:30:00+05:30"
+  },
+  {
+    "id": "pat_1002",
+    "mrn": "CURO-0001002",
+    "nic": "199500522345",
+    "name": {
+      "first": "Sajani",
+      "last": "Fernando",
+      "full": "Sajani Fernando"
+    },
+    "dob": "1995-01-22",
+    "sex": "female",
+    "bloodType": "A+",
+    "phone": "+94 71 222 3333",
+    "email": "sajani.fernando@example.com",
+    "address": {
+      "line1": "45, Beach Road",
+      "line2": "",
+      "city": "Wattala",
+      "district": "Gampaha",
+      "postalCode": "11300",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "A. Fernando",
+      "relationship": "Father",
+      "phone": "+94 71 000 1111"
+    },
+    "allergies": ["Aspirin"],
+    "problemList": ["Bronchial Asthma"],
+    "currentMedications": ["Salbutamol Inhaler PRN"],
+    "tags": ["asthma"],
+    "createdAt": "2026-02-18T14:05:00+05:30",
+    "updatedAt": "2026-03-01T08:10:00+05:30"
+  },
+  {
+    "id": "pat_1003",
+    "mrn": "CURO-0001003",
+    "nic": "197510402789",
+    "name": {
+      "first": "Kamal",
+      "last": "Silva",
+      "full": "Kamal Silva"
+    },
+    "dob": "1975-04-10",
+    "sex": "male",
+    "bloodType": "B+",
+    "phone": "+94 77 555 6666",
+    "email": "kamal.silva@example.com",
+    "address": {
+      "line1": "78, Main St",
+      "line2": "",
+      "city": "Colombo",
+      "district": "Colombo",
+      "postalCode": "00100",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "Sunil Silva",
+      "relationship": "Brother",
+      "phone": "+94 77 555 7777"
+    },
+    "allergies": [],
+    "problemList": ["Essential Hypertension", "Hyperlipidemia"],
+    "currentMedications": ["Amlodipine 5mg OD", "Atorvastatin 20mg ON"],
+    "tags": ["hypertensive"],
+    "createdAt": "2026-02-25T10:00:00+05:30",
+    "updatedAt": "2026-03-01T10:00:00+05:30"
+  },
+  {
+    "id": "pat_1004",
+    "mrn": "CURO-0001004",
+    "nic": "199023401567",
+    "name": {
+      "first": "Priyanka",
+      "last": "Rajapakse",
+      "full": "Priyanka Rajapakse"
+    },
+    "dob": "1990-11-20",
+    "sex": "female",
+    "bloodType": "O-",
+    "phone": "+94 71 888 9999",
+    "email": "priyanka.r@example.com",
+    "address": {
+      "line1": "12, Park Rd",
+      "line2": "",
+      "city": "Kandy",
+      "district": "Kandy",
+      "postalCode": "20000",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "Ruwan Rajapakse",
+      "relationship": "Husband",
+      "phone": "+94 71 888 1111"
+    },
+    "allergies": [],
+    "problemList": [],
+    "currentMedications": [],
+    "tags": [],
+    "createdAt": "2026-02-28T14:30:00+05:30",
+    "updatedAt": "2026-03-01T11:00:00+05:30"
+  },
+  {
+    "id": "pat_1005",
+    "mrn": "CURO-0001005",
+    "nic": "196812301234",
+    "name": {
+      "first": "Bandara",
+      "last": "Wijesinghe",
+      "full": "Bandara Wijesinghe"
+    },
+    "dob": "1968-05-12",
+    "sex": "male",
+    "bloodType": "AB+",
+    "phone": "+94 76 444 5555",
+    "email": "bandara.w@example.com",
+    "address": {
+      "line1": "23, Temple Rd",
+      "line2": "Maharagama",
+      "city": "Maharagama",
+      "district": "Colombo",
+      "postalCode": "10280",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "Mala Wijesinghe",
+      "relationship": "Spouse",
+      "phone": "+94 76 444 6666"
+    },
+    "allergies": ["NSAIDs"],
+    "problemList": ["Ischemic Heart Disease", "Type 2 Diabetes Mellitus", "Chronic Kidney Disease Stage 3"],
+    "currentMedications": ["Metformin 500mg BD", "Aspirin 75mg OD", "Bisoprolol 5mg OD", "Isosorbide Mononitrate 30mg OD"],
+    "tags": ["diabetes", "cardiac", "high-risk", "ckd"],
+    "createdAt": "2026-01-15T08:00:00+05:30",
+    "updatedAt": "2026-03-05T14:20:00+05:30"
+  },
+  {
+    "id": "pat_1006",
+    "mrn": "CURO-0001006",
+    "nic": "200134500890",
+    "name": {
+      "first": "Dilini",
+      "last": "Jayawardena",
+      "full": "Dilini Jayawardena"
+    },
+    "dob": "2001-12-15",
+    "sex": "female",
+    "bloodType": "A-",
+    "phone": "+94 70 333 4444",
+    "email": "dilini.j@example.com",
+    "address": {
+      "line1": "56, Lake Rd",
+      "line2": "",
+      "city": "Galle",
+      "district": "Galle",
+      "postalCode": "80000",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "S. Jayawardena",
+      "relationship": "Mother",
+      "phone": "+94 70 333 5555"
+    },
+    "allergies": [],
+    "problemList": ["Iron Deficiency Anemia"],
+    "currentMedications": ["Ferrous Sulfate 200mg OD"],
+    "tags": [],
+    "createdAt": "2026-03-01T10:30:00+05:30",
+    "updatedAt": "2026-03-06T09:15:00+05:30"
+  }
+]

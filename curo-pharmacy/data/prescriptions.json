@@ -1,0 +1,459 @@
+[
+  {
+    "id": "rx_5001",
+    "prescriptionNumber": "RX-2026-0301",
+    "patientId": "pat_1001",
+    "doctorName": "Dr. Nimal Peiris",
+    "doctorRegistration": "SLMC-12345",
+    "priority": "routine",
+    "status": "dispensed",
+    "prescribedAt": "2026-03-01T09:30:00+05:30",
+    "receivedAt": "2026-03-01T10:00:00+05:30",
+    "dispensedAt": "2026-03-01T10:45:00+05:30",
+    "genericAllowed": true,
+    "clinicalNotes": "Continue current diabetes and hypertension management. Review in 3 months.",
+    "diagnosis": "Type 2 Diabetes Mellitus, Essential Hypertension",
+    "items": [
+      {
+        "id": "rxi_001",
+        "medicationId": "med_001",
+        "drugName": "Metformin 500mg",
+        "dose": "500mg",
+        "frequency": "BD (twice daily)",
+        "duration": "90 days",
+        "quantity": 180,
+        "instructions": "Take with meals. Do not crush or chew.",
+        "genericAllowed": true
+      },
+      {
+        "id": "rxi_002",
+        "medicationId": "med_005",
+        "drugName": "Losartan 50mg",
+        "dose": "50mg",
+        "frequency": "OD (once daily)",
+        "duration": "90 days",
+        "quantity": 90,
+        "instructions": "Take in the morning. Monitor blood pressure regularly.",
+        "genericAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "rx_5002",
+    "prescriptionNumber": "RX-2026-0302",
+    "patientId": "pat_1002",
+    "doctorName": "Dr. Chaminda Weerasinghe",
+    "doctorRegistration": "SLMC-23456",
+    "priority": "urgent",
+    "status": "dispensed",
+    "prescribedAt": "2026-03-02T14:00:00+05:30",
+    "receivedAt": "2026-03-02T14:15:00+05:30",
+    "dispensedAt": "2026-03-02T14:30:00+05:30",
+    "genericAllowed": true,
+    "clinicalNotes": "Acute bronchitis with wheezing. Continue asthma management.",
+    "diagnosis": "Acute Bronchitis",
+    "items": [
+      {
+        "id": "rxi_003",
+        "medicationId": "med_003",
+        "drugName": "Amoxicillin 500mg",
+        "dose": "500mg",
+        "frequency": "TDS (three times daily)",
+        "duration": "7 days",
+        "quantity": 21,
+        "instructions": "Complete the full course even if feeling better.",
+        "genericAllowed": true
+      },
+      {
+        "id": "rxi_004",
+        "medicationId": "med_007",
+        "drugName": "Salbutamol Inhaler 100mcg",
+        "dose": "2 puffs",
+        "frequency": "PRN (as needed)",
+        "duration": "30 days",
+        "quantity": 1,
+        "instructions": "Use when experiencing breathlessness. Max 8 puffs per day.",
+        "genericAllowed": false
+      }
+    ]
+  },
+  {
+    "id": "rx_5003",
+    "prescriptionNumber": "RX-2026-0303",
+    "patientId": "pat_1003",
+    "doctorName": "Dr. Nimal Peiris",
+    "doctorRegistration": "SLMC-12345",
+    "priority": "routine",
+    "status": "dispensed",
+    "prescribedAt": "2026-03-03T11:00:00+05:30",
+    "receivedAt": "2026-03-03T11:30:00+05:30",
+    "dispensedAt": "2026-03-03T12:00:00+05:30",
+    "genericAllowed": true,
+    "clinicalNotes": "BP well controlled. Continue current regimen. Cholesterol slightly elevated.",
+    "diagnosis": "Essential Hypertension, Hyperlipidemia",
+    "items": [
+      {
+        "id": "rxi_005",
+        "medicationId": "med_002",
+        "drugName": "Amlodipine 5mg",
+        "dose": "5mg",
+        "frequency": "OD (once daily)",
+        "duration": "30 days",
+        "quantity": 30,
+        "instructions": "Take in the morning.",
+        "genericAllowed": true
+      },
+      {
+        "id": "rxi_006",
+        "medicationId": "med_004",
+        "drugName": "Atorvastatin 20mg",
+        "dose": "20mg",
+        "frequency": "ON (at night)",
+        "duration": "30 days",
+        "quantity": 30,
+        "instructions": "Take at bedtime.",
+        "genericAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "rx_5004",
+    "prescriptionNumber": "RX-2026-0304",
+    "patientId": "pat_1005",
+    "doctorName": "Dr. Ranjith de Mel",
+    "doctorRegistration": "SLMC-34567",
+    "priority": "urgent",
+    "status": "partially_dispensed",
+    "prescribedAt": "2026-03-04T08:45:00+05:30",
+    "receivedAt": "2026-03-04T09:00:00+05:30",
+    "dispensedAt": "2026-03-04T09:30:00+05:30",
+    "genericAllowed": false,
+    "clinicalNotes": "Cardiac patient. Strict medication adherence required. Monitor for side effects. ISMN out of stock — patient informed.",
+    "diagnosis": "Ischemic Heart Disease, Type 2 DM, CKD Stage 3",
+    "items": [
+      {
+        "id": "rxi_007",
+        "medicationId": "med_001",
+        "drugName": "Metformin 500mg",
+        "dose": "500mg",
+        "frequency": "BD (twice daily)",
+        "duration": "30 days",
+        "quantity": 60,
+        "instructions": "Take with meals.",
+        "genericAllowed": false
+      },
+      {
+        "id": "rxi_008",
+        "medicationId": "med_010",
+        "drugName": "Aspirin 75mg",
+        "dose": "75mg",
+        "frequency": "OD (once daily)",
+        "duration": "30 days",
+        "quantity": 30,
+        "instructions": "Take after lunch. Do not take on empty stomach.",
+        "genericAllowed": false
+      },
+      {
+        "id": "rxi_009",
+        "medicationId": "med_011",
+        "drugName": "Bisoprolol 5mg",
+        "dose": "5mg",
+        "frequency": "OD (once daily)",
+        "duration": "30 days",
+        "quantity": 30,
+        "instructions": "Take in the morning. Monitor heart rate.",
+        "genericAllowed": false
+      },
+      {
+        "id": "rxi_010",
+        "medicationId": "med_012",
+        "drugName": "Isosorbide Mononitrate 30mg",
+        "dose": "30mg",
+        "frequency": "OD (once daily)",
+        "duration": "30 days",
+        "quantity": 30,
+        "instructions": "Take in the morning.",
+        "genericAllowed": false
+      }
+    ]
+  },
+  {
+    "id": "rx_5005",
+    "prescriptionNumber": "RX-2026-0305",
+    "patientId": "pat_1004",
+    "doctorName": "Dr. Chaminda Weerasinghe",
+    "doctorRegistration": "SLMC-23456",
+    "priority": "routine",
+    "status": "pending",
+    "prescribedAt": "2026-03-06T10:00:00+05:30",
+    "receivedAt": "2026-03-06T10:30:00+05:30",
+    "dispensedAt": null,
+    "genericAllowed": true,
+    "clinicalNotes": "Mild URTI. Symptomatic treatment.",
+    "diagnosis": "Upper Respiratory Tract Infection",
+    "items": [
+      {
+        "id": "rxi_011",
+        "medicationId": "med_008",
+        "drugName": "Paracetamol 500mg",
+        "dose": "500mg–1g",
+        "frequency": "TDS (three times daily)",
+        "duration": "5 days",
+        "quantity": 15,
+        "instructions": "Take when fever or pain. Do not exceed 4g per day.",
+        "genericAllowed": true
+      },
+      {
+        "id": "rxi_012",
+        "medicationId": "med_009",
+        "drugName": "Cetirizine 10mg",
+        "dose": "10mg",
+        "frequency": "ON (at night)",
+        "duration": "5 days",
+        "quantity": 5,
+        "instructions": "Take at bedtime. May cause drowsiness.",
+        "genericAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "rx_5006",
+    "prescriptionNumber": "RX-2026-0306",
+    "patientId": "pat_1006",
+    "doctorName": "Dr. Nimal Peiris",
+    "doctorRegistration": "SLMC-12345",
+    "priority": "routine",
+    "status": "pending",
+    "prescribedAt": "2026-03-06T15:00:00+05:30",
+    "receivedAt": "2026-03-06T15:30:00+05:30",
+    "dispensedAt": null,
+    "genericAllowed": true,
+    "clinicalNotes": "Iron deficiency anemia. Continue supplementation. Recheck Hb in 3 months.",
+    "diagnosis": "Iron Deficiency Anemia",
+    "items": [
+      {
+        "id": "rxi_013",
+        "medicationId": "med_013",
+        "drugName": "Ferrous Sulfate 200mg",
+        "dose": "200mg",
+        "frequency": "OD (once daily)",
+        "duration": "90 days",
+        "quantity": 90,
+        "instructions": "Take on empty stomach with orange juice for better absorption. Avoid tea/coffee within 2 hours.",
+        "genericAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "rx_5007",
+    "prescriptionNumber": "RX-2026-0307",
+    "patientId": "pat_1003",
+    "doctorName": "Dr. Ranjith de Mel",
+    "doctorRegistration": "SLMC-34567",
+    "priority": "routine",
+    "status": "processing",
+    "prescribedAt": "2026-03-07T09:00:00+05:30",
+    "receivedAt": "2026-03-07T09:30:00+05:30",
+    "dispensedAt": null,
+    "genericAllowed": true,
+    "clinicalNotes": "Gastric discomfort reported. Add PPI cover.",
+    "diagnosis": "Gastroesophageal Reflux Disease",
+    "items": [
+      {
+        "id": "rxi_014",
+        "medicationId": "med_006",
+        "drugName": "Omeprazole 20mg",
+        "dose": "20mg",
+        "frequency": "OD (once daily)",
+        "duration": "14 days",
+        "quantity": 14,
+        "instructions": "Take 30 minutes before breakfast on empty stomach.",
+        "genericAllowed": true
+      },
+      {
+        "id": "rxi_015",
+        "medicationId": "med_018",
+        "drugName": "Domperidone 10mg",
+        "dose": "10mg",
+        "frequency": "TDS (three times daily)",
+        "duration": "7 days",
+        "quantity": 21,
+        "instructions": "Take 15-30 minutes before meals.",
+        "genericAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "rx_5008",
+    "prescriptionNumber": "RX-2026-0308",
+    "patientId": "pat_1001",
+    "doctorName": "Dr. Chaminda Weerasinghe",
+    "doctorRegistration": "SLMC-23456",
+    "priority": "stat",
+    "status": "pending",
+    "prescribedAt": "2026-03-08T08:00:00+05:30",
+    "receivedAt": "2026-03-08T08:10:00+05:30",
+    "dispensedAt": null,
+    "genericAllowed": true,
+    "clinicalNotes": "Suspected UTI. Start empirical antibiotics. Send urine C&S.",
+    "diagnosis": "Urinary Tract Infection",
+    "items": [
+      {
+        "id": "rxi_016",
+        "medicationId": "med_014",
+        "drugName": "Ciprofloxacin 500mg",
+        "dose": "500mg",
+        "frequency": "BD (twice daily)",
+        "duration": "5 days",
+        "quantity": 10,
+        "instructions": "Take with plenty of water. Avoid dairy products within 2 hours. Complete the full course.",
+        "genericAllowed": true
+      },
+      {
+        "id": "rxi_017",
+        "medicationId": "med_008",
+        "drugName": "Paracetamol 500mg",
+        "dose": "1g",
+        "frequency": "TDS (three times daily)",
+        "duration": "3 days",
+        "quantity": 9,
+        "instructions": "Take for fever and pain relief.",
+        "genericAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "rx_5009",
+    "prescriptionNumber": "RX-2026-0309",
+    "patientId": "pat_1005",
+    "doctorName": "Dr. Ranjith de Mel",
+    "doctorRegistration": "SLMC-34567",
+    "priority": "urgent",
+    "status": "on_hold",
+    "prescribedAt": "2026-03-07T16:00:00+05:30",
+    "receivedAt": "2026-03-07T16:30:00+05:30",
+    "dispensedAt": null,
+    "genericAllowed": false,
+    "clinicalNotes": "Increase Bisoprolol dose. Needs Metoprolol as add-on. On hold — Metoprolol low stock, awaiting resupply.",
+    "diagnosis": "Ischemic Heart Disease — Angina worsening",
+    "items": [
+      {
+        "id": "rxi_018",
+        "medicationId": "med_016",
+        "drugName": "Metoprolol 50mg",
+        "dose": "50mg",
+        "frequency": "BD (twice daily)",
+        "duration": "30 days",
+        "quantity": 60,
+        "instructions": "Take with food. Do not abruptly discontinue.",
+        "genericAllowed": false
+      },
+      {
+        "id": "rxi_019",
+        "medicationId": "med_017",
+        "drugName": "Clopidogrel 75mg",
+        "dose": "75mg",
+        "frequency": "OD (once daily)",
+        "duration": "30 days",
+        "quantity": 30,
+        "instructions": "Take in the morning. Do not stop without consulting doctor.",
+        "genericAllowed": false
+      }
+    ]
+  },
+  {
+    "id": "rx_5010",
+    "prescriptionNumber": "RX-2026-0310",
+    "patientId": "pat_1002",
+    "doctorName": "Dr. Nimal Peiris",
+    "doctorRegistration": "SLMC-12345",
+    "priority": "routine",
+    "status": "cancelled",
+    "prescribedAt": "2026-03-05T11:00:00+05:30",
+    "receivedAt": "2026-03-05T11:30:00+05:30",
+    "dispensedAt": null,
+    "genericAllowed": true,
+    "clinicalNotes": "Cancelled — patient allergic to Aspirin. Doctor notified and prescription revised.",
+    "diagnosis": "Headache",
+    "items": [
+      {
+        "id": "rxi_020",
+        "medicationId": "med_015",
+        "drugName": "Diclofenac 50mg",
+        "dose": "50mg",
+        "frequency": "BD (twice daily)",
+        "duration": "5 days",
+        "quantity": 10,
+        "instructions": "Take after meals.",
+        "genericAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "rx_5011",
+    "prescriptionNumber": "RX-2026-0311",
+    "patientId": "pat_1004",
+    "doctorName": "Dr. Ranjith de Mel",
+    "doctorRegistration": "SLMC-34567",
+    "priority": "routine",
+    "status": "dispensed",
+    "prescribedAt": "2026-02-28T10:30:00+05:30",
+    "receivedAt": "2026-02-28T11:00:00+05:30",
+    "dispensedAt": "2026-02-28T11:30:00+05:30",
+    "genericAllowed": true,
+    "clinicalNotes": "Routine antenatal visit. Folic acid and iron supplementation.",
+    "diagnosis": "Pregnancy, routine check",
+    "items": [
+      {
+        "id": "rxi_021",
+        "medicationId": "med_013",
+        "drugName": "Ferrous Sulfate 200mg",
+        "dose": "200mg",
+        "frequency": "OD (once daily)",
+        "duration": "30 days",
+        "quantity": 30,
+        "instructions": "Take on empty stomach.",
+        "genericAllowed": true
+      }
+    ]
+  },
+  {
+    "id": "rx_5012",
+    "prescriptionNumber": "RX-2026-0312",
+    "patientId": "pat_1006",
+    "doctorName": "Dr. Chaminda Weerasinghe",
+    "doctorRegistration": "SLMC-23456",
+    "priority": "routine",
+    "status": "dispensed",
+    "prescribedAt": "2026-03-04T14:00:00+05:30",
+    "receivedAt": "2026-03-04T14:30:00+05:30",
+    "dispensedAt": "2026-03-04T15:00:00+05:30",
+    "genericAllowed": true,
+    "clinicalNotes": "Follow-up for anemia. Patient feeling better. Continue iron supplements.",
+    "diagnosis": "Iron Deficiency Anemia",
+    "items": [
+      {
+        "id": "rxi_022",
+        "medicationId": "med_013",
+        "drugName": "Ferrous Sulfate 200mg",
+        "dose": "200mg",
+        "frequency": "OD (once daily)",
+        "duration": "60 days",
+        "quantity": 60,
+        "instructions": "Take on empty stomach with vitamin C.",
+        "genericAllowed": true
+      },
+      {
+        "id": "rxi_023",
+        "medicationId": "med_008",
+        "drugName": "Paracetamol 500mg",
+        "dose": "500mg",
+        "frequency": "PRN (as needed)",
+        "duration": "7 days",
+        "quantity": 10,
+        "instructions": "Take for headache if needed. Max 4g per day.",
+        "genericAllowed": true
+      }
+    ]
+  }
+]
