@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Curo - Receptionist Dashboard",
+  title: "CuroMD - Receptionist Portal",
   description: "Electronic Medical Record system - Front Desk",
 };
 
