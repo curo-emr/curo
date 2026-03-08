@@ -46,7 +46,7 @@ export function PrescriptionForm({ prescriptions, setPrescriptions }: Prescripti
 
   return (
     <Card className="shadow-sm border">
-      <CardHeader className="bg-muted border-b pb-4">
+      <CardHeader className="bg-muted border-b">
         <CardTitle className="text-lg flex items-center gap-2">
           <Pill className="h-5 w-5 text-status-success-text" /> e-Prescription
         </CardTitle>

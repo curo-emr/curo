@@ -11,7 +11,7 @@ interface MedicationsTabProps {
 export function MedicationsTab({ prescriptions }: MedicationsTabProps) {
   return (
     <Card className="shadow-sm border">
-      <CardHeader className="bg-muted border-b pb-4">
+      <CardHeader className="bg-muted border-b">
         <CardTitle className="text-lg flex items-center gap-2">
           <Pill className="h-5 w-5 text-status-success-text" /> Prescriptions History
         </CardTitle>

@@ -24,7 +24,7 @@ interface ClinicalNotesProps {
 export function ClinicalNotes({ chiefComplaint, setChiefComplaint, soap, setSoap }: ClinicalNotesProps) {
   return (
     <Card className="shadow-sm border">
-      <CardHeader className="bg-muted border-b pb-4">
+      <CardHeader className="bg-muted border-b">
         <CardTitle className="text-lg flex items-center gap-2">
           <FileSignature className="h-5 w-5 text-primary" /> Clinical Notes
         </CardTitle>

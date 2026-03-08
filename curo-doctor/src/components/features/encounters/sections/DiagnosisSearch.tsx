@@ -37,7 +37,7 @@ export function DiagnosisSearch({ icd10Catalog, diagnoses, setDiagnoses }: Diagn
 
   return (
     <Card className="shadow-sm border">
-      <CardHeader className="bg-muted border-b pb-4">
+      <CardHeader className="bg-muted border-b">
         <CardTitle className="text-lg flex items-center gap-2">
           <Stethoscope className="h-5 w-5 text-primary" /> Diagnoses
         </CardTitle>

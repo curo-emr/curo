@@ -30,7 +30,7 @@ export function DashboardSidebar({ tasks, pendingLabs, patients }: Props) {
 
       {/* Tasks & Messages */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <CardTitle className="flex items-center gap-2 text-lg">
             <AlertCircle className="h-5 w-5 text-status-warning-text" />
             Tasks & Messages
@@ -83,7 +83,7 @@ export function DashboardSidebar({ tasks, pendingLabs, patients }: Props) {
 
       {/* Pending Labs */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FlaskConical className="h-5 w-5 text-primary" />
             Pending Labs
@@ -124,7 +124,7 @@ export function DashboardSidebar({ tasks, pendingLabs, patients }: Props) {
 
       {/* Recent Patients */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Users className="h-5 w-5 text-status-success-text" />
             Recent Patients

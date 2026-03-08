@@ -26,6 +26,7 @@ export function Sidebar() {
           <Activity className="h-6 w-6" />
           CuroMD
         </h1>
+        <p className="text-xs text-blue-300 mt-1">Doctor Portal</p>
       </div>
       <nav className="flex-1 space-y-1 px-4 py-4">
         {navItems.map((item) => {
