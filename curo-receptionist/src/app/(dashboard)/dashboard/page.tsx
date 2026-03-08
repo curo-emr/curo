@@ -104,7 +104,7 @@ export default async function DashboardPage() {
 
           {/* Upcoming Appointments */}
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Clock className="h-5 w-5 text-blue-500" />
                 Upcoming

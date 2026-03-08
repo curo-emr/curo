@@ -7,7 +7,7 @@ import { ROUTES } from "@/lib/constants";
 export function QuickActions() {
   return (
     <Card className="shadow-sm border">
-      <CardHeader className="bg-muted/50 border-b pb-4">
+      <CardHeader className="bg-muted/50 border-b">
         <CardTitle className="text-lg">Quick Actions</CardTitle>
       </CardHeader>
       <CardContent className="p-4 space-y-3">
