@@ -61,7 +61,7 @@ export default async function DashboardPage() {
         {/* Main Schedule Column - 2/3 width */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Calendar className="h-5 w-5 text-blue-600" />

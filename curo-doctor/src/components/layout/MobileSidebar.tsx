@@ -40,10 +40,13 @@ export function MobileSidebar() {
         )}
       >
         <div className="p-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Activity className="h-6 w-6" />
-            CuroMD
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Activity className="h-6 w-6" />
+              CuroMD
+            </h1>
+            <p className="text-xs text-blue-300 mt-1">Doctor Portal</p>
+          </div>
           <button onClick={close} className="text-blue-200 hover:text-white">
             <X className="h-5 w-5" />
           </button>

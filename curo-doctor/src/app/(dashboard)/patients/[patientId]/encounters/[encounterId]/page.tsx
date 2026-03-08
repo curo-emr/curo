@@ -60,7 +60,7 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
         <div className="md:col-span-2 space-y-6">
           
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="text-lg flex items-center gap-2">
                 <FileSignature className="h-5 w-5 text-indigo-600" /> SOAP Note
               </CardTitle>
@@ -83,7 +83,7 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
           </Card>
 
           <Card className="shadow-sm border-slate-200 outline outline-1 outline-blue-100">
-            <CardHeader className="bg-blue-50/50 border-b border-blue-100 pb-4">
+            <CardHeader className="bg-blue-50/50 border-b border-blue-100">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Stethoscope className="h-5 w-5 text-blue-600" /> Diagnoses
               </CardTitle>
@@ -114,7 +114,7 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
         <div className="space-y-6">
           
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Activity className="h-5 w-5 text-rose-500" /> Vitals
               </CardTitle>
@@ -148,7 +148,7 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
           </Card>
 
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Pill className="h-5 w-5 text-emerald-500" /> Prescriptions
               </CardTitle>
@@ -182,7 +182,7 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
           </Card>
 
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Beaker className="h-5 w-5 text-purple-500" /> Lab Orders
               </CardTitle>
