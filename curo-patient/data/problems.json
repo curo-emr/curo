@@ -1,0 +1,47 @@
+[
+  {
+    "id": "prob_3001",
+    "patientId": "pat_1001",
+    "icdCode": "E11.9",
+    "name": "Type 2 diabetes mellitus without complications",
+    "status": "active",
+    "onsetDate": "2025-10-15",
+    "notes": "HbA1c monitoring every 3 months. Currently on Metformin 500mg BD."
+  },
+  {
+    "id": "prob_3002",
+    "patientId": "pat_1001",
+    "icdCode": "I10",
+    "name": "Essential (primary) hypertension",
+    "status": "active",
+    "onsetDate": "2026-01-20",
+    "notes": "Started Amlodipine 5mg. Home BP monitoring. Lifestyle modifications."
+  },
+  {
+    "id": "prob_3005",
+    "patientId": "pat_1001",
+    "icdCode": "E78.5",
+    "name": "Hyperlipidemia, unspecified",
+    "status": "active",
+    "onsetDate": "2025-12-05",
+    "notes": "On Atorvastatin 10mg. Repeat lipid panel in 3 months."
+  },
+  {
+    "id": "prob_3003",
+    "patientId": "pat_1002",
+    "icdCode": "J45.909",
+    "name": "Unspecified asthma, uncomplicated",
+    "status": "active",
+    "onsetDate": "2015-01-15",
+    "notes": "Triggers: dust, smoke."
+  },
+  {
+    "id": "prob_3004",
+    "patientId": "pat_1003",
+    "icdCode": "I10",
+    "name": "Essential (primary) hypertension",
+    "status": "active",
+    "onsetDate": "2024-06-01",
+    "notes": "Under monitoring."
+  }
+]

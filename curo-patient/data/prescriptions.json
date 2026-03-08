@@ -1,0 +1,182 @@
+[
+  {
+    "id": "rx_6004",
+    "patientId": "pat_1001",
+    "encounterId": "enc_8006",
+    "doctorId": "doc_9001",
+    "status": "sent_to_pharmacy",
+    "createdAt": "2025-10-15T09:25:00+05:30",
+    "sentAt": "2025-10-15T09:26:00+05:30",
+    "items": [
+      {
+        "id": "rxitem_4",
+        "medicationId": "med_0101",
+        "displayName": "Metformin 500mg Tablet",
+        "dose": "500mg",
+        "route": "oral",
+        "frequency": "twice daily",
+        "durationDays": 60,
+        "quantity": 120,
+        "instructions": "Take after meals. Avoid alcohol.",
+        "substitutes": [
+          {
+            "medicationId": "med_0102",
+            "displayName": "Metformin 850mg Tablet",
+            "notes": "Use 850mg once daily if 500mg not available"
+          }
+        ]
+      }
+    ],
+    "notesToPharmacy": "New patient — first diabetes prescription."
+  },
+  {
+    "id": "rx_6003",
+    "patientId": "pat_1001",
+    "encounterId": "enc_8005",
+    "doctorId": "doc_9001",
+    "status": "sent_to_pharmacy",
+    "createdAt": "2025-12-05T10:50:00+05:30",
+    "sentAt": "2025-12-05T10:51:00+05:30",
+    "items": [
+      {
+        "id": "rxitem_3",
+        "medicationId": "med_0101",
+        "displayName": "Metformin 500mg Tablet",
+        "dose": "500mg",
+        "route": "oral",
+        "frequency": "twice daily",
+        "durationDays": 60,
+        "quantity": 120,
+        "instructions": "Take after meals",
+        "substitutes": []
+      },
+      {
+        "id": "rxitem_5",
+        "medicationId": "med_0301",
+        "displayName": "Atorvastatin 10mg Tablet",
+        "dose": "10mg",
+        "route": "oral",
+        "frequency": "once daily at bedtime",
+        "durationDays": 90,
+        "quantity": 90,
+        "instructions": "Take at bedtime. Report any muscle pain.",
+        "substitutes": [
+          {
+            "medicationId": "med_0302",
+            "displayName": "Rosuvastatin 5mg Tablet",
+            "notes": "Alternative statin if Atorvastatin unavailable"
+          }
+        ]
+      }
+    ],
+    "notesToPharmacy": "Continuing diabetes management and starting cardiovascular risk reduction."
+  },
+  {
+    "id": "rx_6002",
+    "patientId": "pat_1001",
+    "encounterId": "enc_8004",
+    "doctorId": "doc_9001",
+    "status": "sent_to_pharmacy",
+    "createdAt": "2026-01-20T09:20:00+05:30",
+    "sentAt": "2026-01-20T09:21:00+05:30",
+    "items": [
+      {
+        "id": "rxitem_6",
+        "medicationId": "med_0101",
+        "displayName": "Metformin 500mg Tablet",
+        "dose": "500mg",
+        "route": "oral",
+        "frequency": "twice daily",
+        "durationDays": 30,
+        "quantity": 60,
+        "instructions": "Take after meals",
+        "substitutes": []
+      },
+      {
+        "id": "rxitem_7",
+        "medicationId": "med_0301",
+        "displayName": "Atorvastatin 10mg Tablet",
+        "dose": "10mg",
+        "route": "oral",
+        "frequency": "once daily at bedtime",
+        "durationDays": 30,
+        "quantity": 30,
+        "instructions": "Take at bedtime",
+        "substitutes": []
+      },
+      {
+        "id": "rxitem_8",
+        "medicationId": "med_0401",
+        "displayName": "Amlodipine 5mg Tablet",
+        "dose": "5mg",
+        "route": "oral",
+        "frequency": "once daily in the morning",
+        "durationDays": 30,
+        "quantity": 30,
+        "instructions": "Take in the morning. Monitor BP at home.",
+        "substitutes": [
+          {
+            "medicationId": "med_0402",
+            "displayName": "Nifedipine 30mg SR Tablet",
+            "notes": "Alternative calcium channel blocker"
+          }
+        ]
+      }
+    ],
+    "notesToPharmacy": "New antihypertensive added. Patient to monitor BP at home."
+  },
+  {
+    "id": "rx_6001",
+    "patientId": "pat_1001",
+    "encounterId": "enc_8001",
+    "doctorId": "doc_9001",
+    "status": "sent_to_pharmacy",
+    "createdAt": "2026-02-15T10:20:00+05:30",
+    "sentAt": "2026-02-15T10:22:00+05:30",
+    "items": [
+      {
+        "id": "rxitem_1",
+        "medicationId": "med_0101",
+        "displayName": "Metformin 500mg Tablet",
+        "dose": "500mg",
+        "route": "oral",
+        "frequency": "twice daily",
+        "durationDays": 90,
+        "quantity": 180,
+        "instructions": "Take after meals",
+        "substitutes": [
+          {
+            "medicationId": "med_0102",
+            "displayName": "Metformin 850mg Tablet",
+            "notes": "Use 850mg once daily if 500mg not available"
+          }
+        ]
+      },
+      {
+        "id": "rxitem_9",
+        "medicationId": "med_0301",
+        "displayName": "Atorvastatin 10mg Tablet",
+        "dose": "10mg",
+        "route": "oral",
+        "frequency": "once daily at bedtime",
+        "durationDays": 90,
+        "quantity": 90,
+        "instructions": "Take at bedtime",
+        "substitutes": []
+      },
+      {
+        "id": "rxitem_10",
+        "medicationId": "med_0401",
+        "displayName": "Amlodipine 5mg Tablet",
+        "dose": "5mg",
+        "route": "oral",
+        "frequency": "once daily in the morning",
+        "durationDays": 90,
+        "quantity": 90,
+        "instructions": "Take in the morning. Monitor BP at home.",
+        "substitutes": []
+      }
+    ],
+    "notesToPharmacy": "Please dispense generic if available. 3-month supply."
+  }
+]
