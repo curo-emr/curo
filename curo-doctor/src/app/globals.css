@@ -1,43 +1,133 @@
+/* ============================================================================
+ * CURO DESIGN SYSTEM
+ * Preset: aKX4z5c (Blue Mist) — shadcn/ui radix-vega
+ *
+ * Token architecture:
+ *   1. Core tokens (from shadcn preset) — primary, secondary, muted, accent, etc.
+ *   2. Semantic status palette — composable bg/text/border triplets for badges,
+ *      alerts, and status indicators (info, success, warning, error, etc.)
+ *   3. Domain-specific tokens — medical statuses, priorities, severities, clinical
+ *   4. Sidebar tokens — isolated sidebar theme (not modified by design system)
+ *
+ * To add a new status color:
+ *   1. Add --status-<name>-bg / -text / -border values in :root and .dark
+ *   2. Register as --color-status-<name>-* in @theme inline
+ *   3. Use in components as: bg-status-<name>-bg text-status-<name>-text border-status-<name>-border
+ * ============================================================================ */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/* ---------------------------------------------------------------------------
+ * THEME REGISTRATION
+ * Maps CSS custom properties to Tailwind utility classes.
+ * e.g. --color-status-info-bg: var(--status-info-bg) → bg-status-info-bg
+ * --------------------------------------------------------------------------- */
 @theme inline {
+  /* --- Fonts --- */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* --- Core shadcn tokens --- */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* --- Charts --- */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* --- Sidebar --- */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* --- Semantic status palette ---
+   * Composable color triplets for status indicators.
+   * Each has -bg (background), -text (foreground), -border variants.
+   * Usage: bg-status-info-bg text-status-info-text border-status-info-border */
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-info-text: var(--status-info-text);
+  --color-status-info-border: var(--status-info-border);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-text: var(--status-success-text);
+  --color-status-success-border: var(--status-success-border);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-text: var(--status-warning-text);
+  --color-status-warning-border: var(--status-warning-border);
+  --color-status-error-bg: var(--status-error-bg);
+  --color-status-error-text: var(--status-error-text);
+  --color-status-error-border: var(--status-error-border);
+  --color-status-neutral-bg: var(--status-neutral-bg);
+  --color-status-neutral-text: var(--status-neutral-text);
+  --color-status-neutral-border: var(--status-neutral-border);
+  --color-status-purple-bg: var(--status-purple-bg);
+  --color-status-purple-text: var(--status-purple-text);
+  --color-status-purple-border: var(--status-purple-border);
+  --color-status-teal-bg: var(--status-teal-bg);
+  --color-status-teal-text: var(--status-teal-text);
+  --color-status-teal-border: var(--status-teal-border);
+
+  /* --- Medical domain tokens --- */
+  --color-status-waiting-bg: var(--status-waiting-bg);
+  --color-status-waiting-text: var(--status-waiting-text);
+  --color-status-waiting-border: var(--status-waiting-border);
+  --color-status-in-progress-bg: var(--status-in-progress-bg);
+  --color-status-in-progress-text: var(--status-in-progress-text);
+  --color-status-in-progress-border: var(--status-in-progress-border);
+  --color-status-completed-bg: var(--status-completed-bg);
+  --color-status-completed-text: var(--status-completed-text);
+  --color-status-completed-border: var(--status-completed-border);
+  --color-status-cancelled-bg: var(--status-cancelled-bg);
+  --color-status-cancelled-text: var(--status-cancelled-text);
+  --color-status-cancelled-border: var(--status-cancelled-border);
+  --color-priority-urgent-bg: var(--priority-urgent-bg);
+  --color-priority-urgent-text: var(--priority-urgent-text);
+  --color-priority-urgent-border: var(--priority-urgent-border);
+  --color-severity-severe-bg: var(--severity-severe-bg);
+  --color-severity-severe-text: var(--severity-severe-text);
+  --color-severity-severe-border: var(--severity-severe-border);
+  --color-severity-moderate-bg: var(--severity-moderate-bg);
+  --color-severity-moderate-text: var(--severity-moderate-text);
+  --color-severity-moderate-border: var(--severity-moderate-border);
+  --color-severity-mild-bg: var(--severity-mild-bg);
+  --color-severity-mild-text: var(--severity-mild-text);
+  --color-severity-mild-border: var(--severity-mild-border);
+
+  /* --- Clinical section accent colors --- */
+  --color-clinical-notes: var(--clinical-notes);
+  --color-clinical-diagnosis: var(--clinical-diagnosis);
+  --color-clinical-rx: var(--clinical-rx);
+  --color-clinical-lab: var(--clinical-lab);
+  --color-clinical-vitals: var(--clinical-vitals);
+
+  /* --- Border radius scale --- */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -47,80 +137,225 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* ---------------------------------------------------------------------------
+ * LIGHT MODE
+ * --------------------------------------------------------------------------- */
 :root {
   --radius: 0.625rem;
+
+  /* --- Core palette (from shadcn preset aKX4z5c) --- */
   --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --foreground: oklch(0.148 0.004 228.8);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: oklch(0.148 0.004 228.8);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.148 0.004 228.8);
+  --primary: oklch(0.488 0.243 264.376);
+  --primary-foreground: oklch(0.97 0.014 254.604);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.963 0.002 197.1);
+  --muted-foreground: oklch(0.56 0.021 213.5);
+  --accent: oklch(0.963 0.002 197.1);
+  --accent-foreground: oklch(0.218 0.008 223.9);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --border: oklch(0.925 0.005 214.3);
+  --input: oklch(0.925 0.005 214.3);
+  --ring: oklch(0.723 0.014 214.4);
+
+  /* --- Charts (blue shade scale) --- */
+  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-3: oklch(0.546 0.245 262.881);
+  --chart-4: oklch(0.488 0.243 264.376);
+  --chart-5: oklch(0.424 0.199 265.638);
+
+  /* --- Semantic status palette ---
+   * These are the building blocks for all status indicators.
+   * Map your domain-specific statuses to these in components. */
+  --status-info-bg: oklch(0.95 0.03 250);
+  --status-info-text: oklch(0.45 0.15 250);
+  --status-info-border: oklch(0.82 0.06 250);
+  --status-success-bg: oklch(0.96 0.03 155);
+  --status-success-text: oklch(0.42 0.12 155);
+  --status-success-border: oklch(0.85 0.06 155);
+  --status-warning-bg: oklch(0.95 0.04 65);
+  --status-warning-text: oklch(0.5 0.12 55);
+  --status-warning-border: oklch(0.85 0.08 65);
+  --status-error-bg: oklch(0.95 0.04 25);
+  --status-error-text: oklch(0.5 0.18 25);
+  --status-error-border: oklch(0.85 0.08 25);
+  --status-neutral-bg: oklch(0.96 0.005 250);
+  --status-neutral-text: oklch(0.55 0.02 250);
+  --status-neutral-border: oklch(0.9 0.01 250);
+  --status-purple-bg: oklch(0.95 0.03 300);
+  --status-purple-text: oklch(0.45 0.15 300);
+  --status-purple-border: oklch(0.85 0.06 300);
+  --status-teal-bg: oklch(0.95 0.03 180);
+  --status-teal-text: oklch(0.42 0.1 180);
+  --status-teal-border: oklch(0.85 0.06 180);
+
+  /* --- Medical status colors (aliased to semantic palette) --- */
+  --status-waiting-bg: var(--status-warning-bg);
+  --status-waiting-text: var(--status-warning-text);
+  --status-waiting-border: var(--status-warning-border);
+  --status-in-progress-bg: var(--status-info-bg);
+  --status-in-progress-text: var(--status-info-text);
+  --status-in-progress-border: var(--status-info-border);
+  --status-completed-bg: var(--status-success-bg);
+  --status-completed-text: var(--status-success-text);
+  --status-completed-border: var(--status-success-border);
+  --status-cancelled-bg: var(--status-neutral-bg);
+  --status-cancelled-text: var(--status-neutral-text);
+  --status-cancelled-border: var(--status-neutral-border);
+
+  /* --- Priority colors --- */
+  --priority-urgent-bg: var(--status-error-bg);
+  --priority-urgent-text: var(--status-error-text);
+  --priority-urgent-border: var(--status-error-border);
+
+  /* --- Severity colors --- */
+  --severity-severe-bg: var(--status-error-bg);
+  --severity-severe-text: var(--status-error-text);
+  --severity-severe-border: var(--status-error-border);
+  --severity-moderate-bg: var(--status-warning-bg);
+  --severity-moderate-text: var(--status-warning-text);
+  --severity-moderate-border: var(--status-warning-border);
+  --severity-mild-bg: var(--status-info-bg);
+  --severity-mild-text: var(--status-info-text);
+  --severity-mild-border: var(--status-info-border);
+
+  /* --- Clinical section accent colors --- */
+  --clinical-notes: oklch(0.45 0.15 280);
+  --clinical-diagnosis: oklch(0.45 0.15 250);
+  --clinical-rx: oklch(0.45 0.15 155);
+  --clinical-lab: oklch(0.5 0.15 300);
+  --clinical-vitals: oklch(0.55 0.18 15);
+
+  /* --- Sidebar (not modified by design system) --- */
+  --sidebar: oklch(0.987 0.002 197.1);
+  --sidebar-foreground: oklch(0.148 0.004 228.8);
+  --sidebar-primary: oklch(0.546 0.245 262.881);
+  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+  --sidebar-accent: oklch(0.963 0.002 197.1);
+  --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
+  --sidebar-border: oklch(0.925 0.005 214.3);
+  --sidebar-ring: oklch(0.723 0.014 214.4);
 }
 
+/* ---------------------------------------------------------------------------
+ * DARK MODE
+ * --------------------------------------------------------------------------- */
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
+  /* --- Core palette --- */
+  --background: oklch(0.148 0.004 228.8);
+  --foreground: oklch(0.987 0.002 197.1);
+  --card: oklch(0.218 0.008 223.9);
+  --card-foreground: oklch(0.987 0.002 197.1);
+  --popover: oklch(0.218 0.008 223.9);
+  --popover-foreground: oklch(0.987 0.002 197.1);
+  --primary: oklch(0.424 0.199 265.638);
+  --primary-foreground: oklch(0.97 0.014 254.604);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.275 0.011 216.9);
+  --muted-foreground: oklch(0.723 0.014 214.4);
+  --accent: oklch(0.275 0.011 216.9);
+  --accent-foreground: oklch(0.987 0.002 197.1);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+  --ring: oklch(0.56 0.021 213.5);
+
+  /* --- Charts --- */
+  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-3: oklch(0.546 0.245 262.881);
+  --chart-4: oklch(0.488 0.243 264.376);
+  --chart-5: oklch(0.424 0.199 265.638);
+
+  /* --- Semantic status palette (dark mode) --- */
+  --status-info-bg: oklch(0.3 0.03 250);
+  --status-info-text: oklch(0.8 0.1 250);
+  --status-info-border: oklch(0.45 0.05 250);
+  --status-success-bg: oklch(0.3 0.03 155);
+  --status-success-text: oklch(0.8 0.08 155);
+  --status-success-border: oklch(0.45 0.05 155);
+  --status-warning-bg: oklch(0.3 0.04 65);
+  --status-warning-text: oklch(0.8 0.08 55);
+  --status-warning-border: oklch(0.45 0.06 65);
+  --status-error-bg: oklch(0.3 0.04 25);
+  --status-error-text: oklch(0.8 0.12 25);
+  --status-error-border: oklch(0.45 0.06 25);
+  --status-neutral-bg: oklch(0.25 0.005 250);
+  --status-neutral-text: oklch(0.7 0.02 250);
+  --status-neutral-border: oklch(0.4 0.01 250);
+  --status-purple-bg: oklch(0.3 0.03 300);
+  --status-purple-text: oklch(0.8 0.1 300);
+  --status-purple-border: oklch(0.45 0.05 300);
+  --status-teal-bg: oklch(0.3 0.03 180);
+  --status-teal-text: oklch(0.8 0.08 180);
+  --status-teal-border: oklch(0.45 0.05 180);
+
+  /* --- Medical statuses (aliased) --- */
+  --status-waiting-bg: var(--status-warning-bg);
+  --status-waiting-text: var(--status-warning-text);
+  --status-waiting-border: var(--status-warning-border);
+  --status-in-progress-bg: var(--status-info-bg);
+  --status-in-progress-text: var(--status-info-text);
+  --status-in-progress-border: var(--status-info-border);
+  --status-completed-bg: var(--status-success-bg);
+  --status-completed-text: var(--status-success-text);
+  --status-completed-border: var(--status-success-border);
+  --status-cancelled-bg: var(--status-neutral-bg);
+  --status-cancelled-text: var(--status-neutral-text);
+  --status-cancelled-border: var(--status-neutral-border);
+
+  /* --- Priority colors --- */
+  --priority-urgent-bg: var(--status-error-bg);
+  --priority-urgent-text: var(--status-error-text);
+  --priority-urgent-border: var(--status-error-border);
+
+  /* --- Severity colors --- */
+  --severity-severe-bg: var(--status-error-bg);
+  --severity-severe-text: var(--status-error-text);
+  --severity-severe-border: var(--status-error-border);
+  --severity-moderate-bg: var(--status-warning-bg);
+  --severity-moderate-text: var(--status-warning-text);
+  --severity-moderate-border: var(--status-warning-border);
+  --severity-mild-bg: var(--status-info-bg);
+  --severity-mild-text: var(--status-info-text);
+  --severity-mild-border: var(--status-info-border);
+
+  /* --- Clinical section accent colors --- */
+  --clinical-notes: oklch(0.7 0.12 280);
+  --clinical-diagnosis: oklch(0.7 0.12 250);
+  --clinical-rx: oklch(0.7 0.12 155);
+  --clinical-lab: oklch(0.7 0.12 300);
+  --clinical-vitals: oklch(0.75 0.14 15);
+
+  /* --- Sidebar --- */
+  --sidebar: oklch(0.218 0.008 223.9);
+  --sidebar-foreground: oklch(0.987 0.002 197.1);
+  --sidebar-primary: oklch(0.623 0.214 259.815);
+  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+  --sidebar-accent: oklch(0.275 0.011 216.9);
+  --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --sidebar-ring: oklch(0.56 0.021 213.5);
 }
 
+/* ---------------------------------------------------------------------------
+ * BASE STYLES
+ * --------------------------------------------------------------------------- */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
