@@ -106,7 +106,7 @@ export default function AuthLayout({
 
         {/* Footer */}
         <p className="relative z-10 text-white/20 text-xs">
-          © 2025 CuroMD. All rights reserved.
+          © {new Date().getFullYear()} CuroMD. All rights reserved.
         </p>
       </div>
 

@@ -55,3 +55,39 @@ export function getTodayString(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
+
+/**
+ * Look up a patient's full name by ID.
+ */
+export function getPatientName(id: string, patients: { id: string; name: { full: string } }[]): string {
+  return patients.find(p => p.id === id)?.name.full || "Unknown Patient";
+}
+
+/**
+ * Look up a patient's age and sex by ID.
+ */
+export function getPatientMeta(id: string, patients: { id: string; dob: string; sex: string }[]): { age: number; sex: string } | null {
+  const p = patients.find(pat => pat.id === id);
+  if (!p) return null;
+  return { age: calculateAge(p.dob), sex: p.sex };
+}
+
+/**
+ * Look up a lab test display name from catalog by test ID.
+ */
+export function getTestName(testId: string, catalog: { id: string; name: string; code: string }[]): string {
+  const test = catalog.find(t => t.id === testId);
+  return test ? `${test.name} (${test.code})` : testId;
+}
+
+/**
+ * Returns the left-border color class for a given appointment status.
+ */
+export function getStatusBorderClass(status: string): string {
+  switch (status) {
+    case 'waiting': return 'border-l-4 border-l-status-warning-text';
+    case 'in_progress': return 'border-l-4 border-l-primary';
+    case 'completed': return 'border-l-4 border-l-status-success-text';
+    default: return 'border-l-4 border-l-border';
+  }
+}

@@ -2,15 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Search, Bell, LogOut, User } from "lucide-react";
+import { Search, Bell, LogOut, User, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 export function Topbar() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const { user, logout } = useAuth();
+  const { toggle } = useSidebar();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +24,9 @@ export function Topbar() {
 
   return (
     <header className="h-16 border-b bg-background flex items-center px-6 justify-between shrink-0">
+      <Button variant="ghost" size="icon" onClick={toggle} className="lg:hidden mr-2 text-muted-foreground hover:text-foreground">
+        <Menu className="h-5 w-5" />
+      </Button>
       <div className="flex-1 flex items-center max-w-xl">
         <form onSubmit={handleSearch} className="relative w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />

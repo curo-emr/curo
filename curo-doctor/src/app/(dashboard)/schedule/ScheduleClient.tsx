@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon, Clock, User, FileText, ChevronLeft, ChevronRight, Activity } from "lucide-react";
 import Link from "next/link";
-import { cn, getTodayString } from "@/lib/utils";
-import { calculateAge } from "@/lib/utils";
+import { cn, getTodayString, getPatientName, getPatientMeta, getStatusBorderClass } from "@/lib/utils";
+import { ROUTES, APPOINTMENT_STATUS } from "@/lib/constants";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ScheduleCalendar } from "./ScheduleCalendar";
 
@@ -20,13 +20,6 @@ interface Props {
 export function ScheduleClient({ appointments, patients }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  const getPatientName = (id: string) => patients.find(p => p.id === id)?.name.full || "Unknown Patient";
-  const getPatientMetadata = (id: string) => {
-    const p = patients.find(pat => pat.id === id);
-    if (!p) return null;
-    return { age: calculateAge(p.dob), sex: p.sex };
-  };
-
   const formattedSelectedDate = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
   const todayStr = getTodayString();
   const isToday = formattedSelectedDate === todayStr;
@@ -36,15 +29,6 @@ export function ScheduleClient({ appointments, patients }: Props) {
       .filter(a => a.date === formattedSelectedDate)
       .sort((a, b) => a.time.localeCompare(b.time));
   }, [appointments, formattedSelectedDate]);
-
-  const getStatusBorder = (status: string) => {
-    switch (status) {
-      case 'waiting': return 'border-l-4 border-l-orange-400';
-      case 'in_progress': return 'border-l-4 border-l-blue-500';
-      case 'completed': return 'border-l-4 border-l-green-500';
-      default: return 'border-l-4 border-l-slate-200';
-    }
-  };
 
   const handlePreviousDay = () => {
     const prev = new Date(selectedDate);
@@ -128,13 +112,13 @@ export function ScheduleClient({ appointments, patients }: Props) {
                   </div>
                 ) : (
                   dailyAppointments.map(apt => {
-                    const patientMeta = getPatientMetadata(apt.patientId);
+                    const patientMeta = getPatientMeta(apt.patientId, patients);
                     return (
                       <div
                         key={apt.id}
                         className={cn(
                           "bg-white border border-slate-200 rounded-xl p-5 sm:p-6 transition-all hover:border-slate-300 hover:shadow-md flex flex-col sm:flex-row gap-5 sm:items-center justify-between group relative",
-                          getStatusBorder(apt.status)
+                          getStatusBorderClass(apt.status)
                         )}
                       >
                         <div className="flex items-start gap-5 sm:gap-6">
@@ -143,8 +127,8 @@ export function ScheduleClient({ appointments, patients }: Props) {
                           </div>
                           <div className="space-y-2.5">
                             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                              <Link href={`/patients/${apt.patientId}`} className="text-lg sm:text-xl font-bold text-slate-900 hover:text-blue-600 transition-colors">
-                                {getPatientName(apt.patientId)}
+                              <Link href={ROUTES.PATIENT(apt.patientId)} className="text-lg sm:text-xl font-bold text-slate-900 hover:text-blue-600 transition-colors">
+                                {getPatientName(apt.patientId, patients)}
                               </Link>
                               <StatusBadge status={apt.status} />
                             </div>
@@ -162,17 +146,17 @@ export function ScheduleClient({ appointments, patients }: Props) {
                           </div>
                         </div>
                         <div className="flex flex-row sm:flex-col gap-2 mt-4 sm:mt-0 w-full sm:w-auto shrink-0 border-t sm:border-t-0 border-slate-100 pt-4 sm:pt-0">
-                          {apt.status !== 'in_progress' && apt.status !== 'completed' && (
-                            <Link href={`/patients/${apt.patientId}/encounters/new?appointmentId=${apt.id}`} className="w-full">
+                          {apt.status !== APPOINTMENT_STATUS.IN_PROGRESS && apt.status !== APPOINTMENT_STATUS.COMPLETED && (
+                            <Link href={`${ROUTES.NEW_ENCOUNTER(apt.patientId)}?appointmentId=${apt.id}`} className="w-full">
                               <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">Start Visit</Button>
                             </Link>
                           )}
-                          {apt.status === 'in_progress' && (
-                            <Link href={`/patients/${apt.patientId}/encounters/new?appointmentId=${apt.id}`} className="w-full">
+                          {apt.status === APPOINTMENT_STATUS.IN_PROGRESS && (
+                            <Link href={`${ROUTES.NEW_ENCOUNTER(apt.patientId)}?appointmentId=${apt.id}`} className="w-full">
                               <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white shadow-sm">Resume Visit</Button>
                             </Link>
                           )}
-                          <Link href={`/patients/${apt.patientId}`} className="w-full">
+                          <Link href={ROUTES.PATIENT(apt.patientId)} className="w-full">
                             <Button variant="outline" className="w-full bg-white hover:bg-slate-50">Open Chart</Button>
                           </Link>
                         </div>

@@ -7,9 +7,9 @@ import {
 } from "@/lib/data/api";
 import { EncounterEditor } from "@/components/features/encounters/EncounterEditor";
 
-export default async function NewEncounterPage({ params, searchParams }: { params: { patientId: string }, searchParams: { appointmentId?: string } }) {
+export default async function NewEncounterPage({ params, searchParams }: { params: Promise<{ patientId: string }>, searchParams: Promise<{ appointmentId?: string }> }) {
   const { patientId } = await params;
-  const { appointmentId } = await searchParams; // next 15 pattern
+  const { appointmentId } = await searchParams;
   
   const [patient, icd10Catalog, medicationsCatalog, labTestsCatalog] = await Promise.all([
     getPatientById(patientId),
