@@ -27,7 +27,7 @@ export default async function LabReportsPage() {
       {/* Pending Labs */}
       {pendingLabs.length > 0 && (
         <Card className="shadow-sm border-status-warning-border">
-          <CardHeader className="bg-status-warning-bg/50 border-b border-status-warning-border pb-4">
+          <CardHeader className="bg-status-warning-bg/50 border-b border-status-warning-border">
             <div className="flex justify-between items-center">
               <CardTitle className="flex items-center gap-2 text-lg text-status-warning-text">
                 <Clock className="h-5 w-5 text-status-warning-text" />
@@ -77,7 +77,7 @@ export default async function LabReportsPage() {
 
       {/* Completed Labs */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2 text-lg">
               <CheckCircle2 className="h-5 w-5 text-status-success-text" />

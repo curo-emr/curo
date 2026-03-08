@@ -26,7 +26,7 @@ export default async function AppointmentsPage() {
 
       {/* Upcoming Appointments */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Calendar className="h-5 w-5 text-primary" />
@@ -83,7 +83,7 @@ export default async function AppointmentsPage() {
 
       {/* Past Appointments */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2 text-lg text-muted-foreground">
               Past Appointments
