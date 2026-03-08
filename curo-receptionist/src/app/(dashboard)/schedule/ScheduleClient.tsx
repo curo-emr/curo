@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  ChevronRight,
+  CalendarPlus,
+  Stethoscope,
+} from "lucide-react";
 import { Appointment, Patient, Doctor } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,29 +18,250 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Calendar as CalendarIcon,
-  Clock,
-  User,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
-  Activity,
-  CalendarPlus,
-} from "lucide-react";
-import Link from "next/link";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   cn,
-  getTodayString,
   getPatientName,
   getPatientMeta,
-  getStatusBorderClass,
+  getDoctorName,
+  getTodayString,
   formatTime,
 } from "@/lib/utils";
-import { ROUTES } from "@/lib/constants";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { ScheduleCalendar } from "./ScheduleCalendar";
+import { ROUTES, APPOINTMENT_STATUS } from "@/lib/constants";
+import {
+  CuroCalendar,
+  CalendarEvent,
+  formatDateStr,
+  getRelativeDayLabel,
+} from "@/components/ui/CuroCalendar";
+import type { CalendarEventColor } from "@/components/ui/CuroCalendar";
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function statusToColor(status: Appointment["status"]): CalendarEventColor {
+  switch (status) {
+    case "waiting":      return "yellow";
+    case "in_progress":  return "blue";
+    case "completed":    return "green";
+    case "arrived":      return "teal";
+    case "cancelled":
+    case "no_show":      return "gray";
+    default:             return "blue";
+  }
+}
+
+// Status → left-border accent
+const STATUS_BORDER: Record<string, string> = {
+  waiting:     "border-l-amber-400",
+  in_progress: "border-l-blue-500",
+  completed:   "border-l-green-500",
+  arrived:     "border-l-teal-400",
+  cancelled:   "border-l-slate-300",
+  no_show:     "border-l-slate-300",
+};
+
+const canCheckIn = (status: Appointment["status"]) =>
+  status === APPOINTMENT_STATUS.SCHEDULED ||
+  status === APPOINTMENT_STATUS.NOT_ARRIVED;
+
+// ---------------------------------------------------------------------------
+// Appointment card
+// ---------------------------------------------------------------------------
+function AppointmentCard({
+  apt,
+  patients,
+  doctors,
+  selectedDateStr,
+  doctorFilter,
+}: {
+  apt: Appointment;
+  patients: Patient[];
+  doctors: Doctor[];
+  selectedDateStr: string;
+  doctorFilter: string;
+}) {
+  const name = getPatientName(apt.patientId, patients);
+  const meta = getPatientMeta(apt.patientId, patients);
+  const doctorName = getDoctorName(apt.doctorId, doctors);
+  const initial = name.charAt(0).toUpperCase();
+  const borderColor = STATUS_BORDER[apt.status] ?? "border-l-slate-200";
+
+  const checkInUrl = `${ROUTES.QUEUE}?appointmentId=${apt.id}`;
+
+  return (
+    <div
+      className={cn(
+        "group bg-white rounded-xl border border-slate-200 border-l-[3px] p-4",
+        "hover:border-slate-300 hover:shadow-sm transition-all duration-150 flex flex-col gap-3",
+        borderColor
+      )}
+    >
+      {/* Row 1 — time + status */}
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-sm font-bold text-slate-800 tabular-nums">
+          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          {formatTime(apt.time)}
+        </span>
+        <StatusBadge status={apt.status} />
+      </div>
+
+      {/* Row 2 — patient */}
+      <div className="flex items-center gap-2.5">
+        <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 text-sm font-bold select-none">
+          {initial}
+        </div>
+        <div className="min-w-0">
+          <Link
+            href={ROUTES.PATIENT(apt.patientId)}
+            className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors block truncate"
+          >
+            {name}
+          </Link>
+          <p className="text-xs text-slate-400 mt-0.5 truncate">
+            {meta ? `${meta.age}y ${meta.sex.charAt(0).toUpperCase()}  ·  ` : ""}
+            {apt.visitType}
+            {apt.room ? `  ·  ${apt.room}` : ""}
+          </p>
+        </div>
+      </div>
+
+      {/* Row 3 — reason + doctor last name */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-slate-500 truncate">{apt.reason}</p>
+        <span className="text-[11px] text-slate-400 shrink-0 flex items-center gap-1">
+          <Stethoscope className="w-3 h-3" />
+          {doctorName.split(" ").slice(-1)[0]}
+        </span>
+      </div>
+
+      {/* Row 4 — actions */}
+      <div className="flex items-center gap-2 pt-0.5">
+        {canCheckIn(apt.status) && (
+          <Link href={checkInUrl} className="flex-1">
+            <Button
+              size="sm"
+              className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+            >
+              Check In
+            </Button>
+          </Link>
+        )}
+        {apt.status === APPOINTMENT_STATUS.ARRIVED && (
+          <Link href={checkInUrl} className="flex-1">
+            <Button
+              size="sm"
+              className="w-full h-8 text-xs bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
+            >
+              Send to Queue
+            </Button>
+          </Link>
+        )}
+        <Link href={ROUTES.PATIENT(apt.patientId)}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs bg-white hover:bg-slate-50 gap-0.5 px-3"
+          >
+            Patient <ChevronRight className="w-3 h-3" />
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Day appointments section
+// ---------------------------------------------------------------------------
+function DayAppointments({
+  selectedDate,
+  appointments,
+  patients,
+  doctors,
+  doctorFilter,
+}: {
+  selectedDate: Date;
+  appointments: Appointment[];
+  patients: Patient[];
+  doctors: Doctor[];
+  doctorFilter: string;
+}) {
+  const dateStr = formatDateStr(selectedDate);
+  const todayStr = getTodayString();
+
+  const daily = useMemo(
+    () =>
+      appointments
+        .filter((a) => {
+          const matchesDate = a.date === dateStr;
+          const matchesDoctor =
+            doctorFilter === "all" || a.doctorId === doctorFilter;
+          return matchesDate && matchesDoctor;
+        })
+        .sort((a, b) => a.time.localeCompare(b.time)),
+    [appointments, dateStr, doctorFilter]
+  );
+
+  const relativeLabel = getRelativeDayLabel(selectedDate);
+
+  return (
+    <div>
+      {/* Section header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-base font-bold text-slate-900">
+            {selectedDate.toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </h2>
+          {relativeLabel && (
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+              {relativeLabel}
+            </span>
+          )}
+        </div>
+        <span className="text-sm text-slate-400">
+          {daily.length === 0
+            ? "No visits"
+            : `${daily.length} ${daily.length === 1 ? "visit" : "visits"}`}
+        </span>
+      </div>
+
+      {daily.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+            <CalendarIcon className="w-5 h-5 text-slate-300" />
+          </div>
+          <p className="text-sm font-medium text-slate-500">
+            {dateStr === todayStr
+              ? "No visits scheduled for today."
+              : "No visits scheduled for this day."}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {daily.map((apt) => (
+            <AppointmentCard
+              key={apt.id}
+              apt={apt}
+              patients={patients}
+              doctors={doctors}
+              selectedDateStr={dateStr}
+              doctorFilter={doctorFilter}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Root
+// ---------------------------------------------------------------------------
 interface Props {
   appointments: Appointment[];
   patients: Patient[];
@@ -45,43 +272,42 @@ export function ScheduleClient({ appointments, patients, doctors }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [doctorFilter, setDoctorFilter] = useState("all");
 
-  const formattedSelectedDate = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
-  const todayStr = getTodayString();
-  const isToday = formattedSelectedDate === todayStr;
+  const selectedDateStr = formatDateStr(selectedDate);
 
-  const dailyAppointments = useMemo(() => {
-    return appointments
-      .filter((a) => {
-        const matchesDate = a.date === formattedSelectedDate;
-        const matchesDoctor = doctorFilter === "all" || a.doctorId === doctorFilter;
-        return matchesDate && matchesDoctor;
-      })
-      .sort((a, b) => a.time.localeCompare(b.time));
-  }, [appointments, formattedSelectedDate, doctorFilter]);
-
-  const handlePreviousDay = () => {
-    const prev = new Date(selectedDate);
-    prev.setDate(prev.getDate() - 1);
-    setSelectedDate(prev);
-  };
-
-  const handleNextDay = () => {
-    const next = new Date(selectedDate);
-    next.setDate(next.getDate() + 1);
-    setSelectedDate(next);
-  };
+  // Filter calendar events to match the active doctor filter
+  const calendarEvents: CalendarEvent[] = useMemo(
+    () =>
+      appointments
+        .filter(
+          (apt) => doctorFilter === "all" || apt.doctorId === doctorFilter
+        )
+        .map((apt) => ({
+          id: apt.id,
+          date: apt.date,
+          title: getPatientName(apt.patientId, patients),
+          subtitle: apt.time,
+          color: statusToColor(apt.status),
+          appointment: apt,
+        })),
+    [appointments, patients, doctorFilter]
+  );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+    <div className="flex flex-col gap-6 pb-8 max-w-screen-xl mx-auto">
+      {/* ── Page header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Doctor Schedules</h1>
-          <p className="text-sm text-muted-foreground mt-1">View doctor availability and scheduled appointments.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Doctor Schedules
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            View doctor availability and scheduled appointments.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Doctor Filter */}
+
+        <div className="flex items-center gap-2.5 flex-wrap">
           <Select value={doctorFilter} onValueChange={setDoctorFilter}>
-            <SelectTrigger className="w-[200px] bg-white border-slate-200 shadow-sm">
+            <SelectTrigger className="w-[190px] bg-white border-slate-200 shadow-sm text-sm h-9">
               <SelectValue placeholder="All Doctors" />
             </SelectTrigger>
             <SelectContent>
@@ -94,149 +320,40 @@ export function ScheduleClient({ appointments, patients, doctors }: Props) {
             </SelectContent>
           </Select>
 
-          {/* Day Navigation */}
-          <div className="flex items-center bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-            <Button variant="ghost" size="icon" onClick={handlePreviousDay} className="h-8 w-8 text-slate-600 hover:bg-slate-100">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+          <Link
+            href={`${ROUTES.NEW_APPOINTMENT}?date=${selectedDateStr}${doctorFilter !== "all" ? `&doctorId=${doctorFilter}` : ""}`}
+          >
             <Button
-              variant={isToday ? "default" : "ghost"}
-              className={cn(
-                "h-8 px-3 text-sm font-medium",
-                isToday
-                  ? "bg-blue-600 hover:bg-blue-700 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
-              )}
-              onClick={() => setSelectedDate(new Date())}
-              disabled={isToday}
+              size="sm"
+              variant="outline"
+              className="h-9 text-sm text-blue-600 border-blue-200 hover:bg-blue-50 gap-1.5"
             >
-              Today
+              <CalendarPlus className="w-4 h-4" />
+              Book Slot
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleNextDay} className="h-8 w-8 text-slate-600 hover:bg-slate-100">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-        {/* Left Column - Monthly Calendar */}
-        <div className="lg:col-span-2">
-          <ScheduleCalendar
-            appointments={appointments}
-            selectedDate={selectedDate}
-            onDateSelect={(date) => setSelectedDate(date)}
-          />
-        </div>
+      {/* ── Full-width calendar ── */}
+      <CuroCalendar
+        events={calendarEvents}
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
+        maxEventsPerDay={3}
+      />
 
-        {/* Right Column - Daily Schedule List */}
-        <div className="lg:col-span-3 flex flex-col">
-          <Card className="shadow-sm border-slate-200 flex-1 flex flex-col bg-slate-50/30">
-            <CardHeader className="bg-white border-b border-slate-200 px-6 pt-6 rounded-t-xl">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <span className="bg-blue-100/50 p-2 rounded-lg">
-                    <CalendarIcon className="h-5 w-5 text-blue-600" />
-                  </span>
-                  {selectedDate.toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </CardTitle>
-                <div className="flex items-center gap-2 self-start sm:self-auto">
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-1 text-sm font-medium"
-                  >
-                    {dailyAppointments.length} Visit{dailyAppointments.length !== 1 ? "s" : ""}
-                  </Badge>
-                  <Link
-                    href={`${ROUTES.NEW_APPOINTMENT}?date=${formattedSelectedDate}${doctorFilter !== "all" ? `&doctorId=${doctorFilter}` : ""}`}
-                  >
-                    <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50">
-                      <CalendarPlus className="h-4 w-4 mr-1" />
-                      Book Slot
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 lg:p-8 flex-1">
-              <div className="flex flex-col gap-4">
-                {dailyAppointments.length === 0 ? (
-                  <div className="py-20 text-center text-slate-500 flex flex-col items-center justify-center h-full bg-white rounded-xl border border-dashed border-slate-300">
-                    <div className="bg-slate-50 p-4 rounded-full mb-4">
-                      <CalendarIcon className="h-10 w-10 text-slate-300" />
-                    </div>
-                    <p className="text-lg font-medium text-slate-700">
-                      No appointments on{" "}
-                      {selectedDate.toLocaleDateString("en-US", { weekday: "long" })}
-                    </p>
-                    <p className="mt-1 text-sm">Select another date or book a new appointment.</p>
-                  </div>
-                ) : (
-                  dailyAppointments.map((apt) => {
-                    const patientMeta = getPatientMeta(apt.patientId, patients);
-                    return (
-                      <div
-                        key={apt.id}
-                        className={cn(
-                          "bg-white border border-slate-200 rounded-xl p-5 sm:p-6 transition-all hover:border-slate-300 hover:shadow-md flex flex-col sm:flex-row gap-5 sm:items-center justify-between group relative",
-                          getStatusBorderClass(apt.status)
-                        )}
-                      >
-                        <div className="flex items-start gap-5 sm:gap-6">
-                          <div className="w-16 sm:w-20 shrink-0 flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 text-slate-700 border border-slate-100 group-hover:bg-blue-50 group-hover:text-blue-900 group-hover:border-blue-100 transition-colors">
-                            <span className="text-base sm:text-lg font-bold tracking-tight">
-                              {formatTime(apt.time)}
-                            </span>
-                          </div>
-                          <div className="space-y-2.5">
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                              <span className="text-lg sm:text-xl font-bold text-slate-900">
-                                {getPatientName(apt.patientId, patients)}
-                              </span>
-                              <StatusBadge status={apt.status} />
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-600">
-                              {patientMeta && (
-                                <span className="flex items-center gap-1.5 font-medium">
-                                  <User className="h-4 w-4 text-slate-400" /> {patientMeta.age}y,{" "}
-                                  {patientMeta.sex.charAt(0).toUpperCase()}
-                                  {patientMeta.sex.slice(1)}
-                                </span>
-                              )}
-                              <span className="flex items-center gap-1.5">
-                                <Activity className="h-4 w-4 text-slate-400" /> {apt.visitType}
-                                {apt.reason ? ` — ${apt.reason}` : ""}
-                              </span>
-                              <span className="flex items-center gap-1.5">
-                                <Clock className="h-4 w-4 text-slate-400" />{" "}
-                                {apt.room || "No Room Assigned"}
-                              </span>
-                            </div>
-                            {apt.notes && (
-                              <div className="text-sm text-slate-600 bg-amber-50/50 p-3 rounded-lg border border-amber-100/50 max-w-2xl mt-3 flex items-start gap-2">
-                                <FileText className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                                <span>
-                                  <span className="font-semibold text-slate-700">Note: </span>
-                                  {apt.notes}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* ── Divider ── */}
+      <div className="border-t border-slate-100" />
+
+      {/* ── Day appointments ── */}
+      <DayAppointments
+        selectedDate={selectedDate}
+        appointments={appointments}
+        patients={patients}
+        doctors={doctors}
+        doctorFilter={doctorFilter}
+      />
     </div>
   );
 }
