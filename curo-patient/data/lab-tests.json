@@ -1,0 +1,9 @@
+[
+  { "id": "test_100", "code": "CBC", "name": "Complete Blood Count", "category": "Hematology" },
+  { "id": "test_110", "code": "CRP", "name": "C-Reactive Protein", "category": "Biochemistry" },
+  { "id": "test_120", "code": "HbA1c", "name": "Hemoglobin A1c", "category": "Diabetes" },
+  { "id": "test_130", "code": "FBS", "name": "Fasting Blood Sugar", "category": "Diabetes" },
+  { "id": "test_140", "code": "LIPID", "name": "Lipid Profile", "category": "Cardiology" },
+  { "id": "test_150", "code": "RFT", "name": "Renal Function Test", "category": "Nephrology" },
+  { "id": "test_160", "code": "UALB", "name": "Urine Microalbumin", "category": "Nephrology" }
+]
