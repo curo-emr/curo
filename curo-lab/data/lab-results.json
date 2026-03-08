@@ -1,0 +1,170 @@
+[
+  {
+    "id": "res_001",
+    "orderId": "lab_4001",
+    "testId": "test_120",
+    "patientId": "pat_1001",
+    "performedBy": "staff_001",
+    "verifiedBy": "staff_003",
+    "instrumentId": "inst_003",
+    "performedAt": "2026-02-28T11:00:00+05:30",
+    "verifiedAt": "2026-02-28T14:00:00+05:30",
+    "values": [
+      { "componentId": "comp_120_1", "value": 7.8, "flag": "high", "notes": "Above target for diabetic management" }
+    ]
+  },
+  {
+    "id": "res_002",
+    "orderId": "lab_4001",
+    "testId": "test_130",
+    "patientId": "pat_1001",
+    "performedBy": "staff_001",
+    "verifiedBy": "staff_003",
+    "instrumentId": "inst_002",
+    "performedAt": "2026-02-28T10:30:00+05:30",
+    "verifiedAt": "2026-02-28T14:00:00+05:30",
+    "values": [
+      { "componentId": "comp_130_1", "value": 142, "flag": "high", "notes": "Elevated fasting glucose" }
+    ]
+  },
+  {
+    "id": "res_003",
+    "orderId": "lab_4001",
+    "testId": "test_140",
+    "patientId": "pat_1001",
+    "performedBy": "staff_001",
+    "verifiedBy": "staff_003",
+    "instrumentId": "inst_002",
+    "performedAt": "2026-02-28T11:30:00+05:30",
+    "verifiedAt": "2026-02-28T14:00:00+05:30",
+    "values": [
+      { "componentId": "comp_140_1", "value": 235, "flag": "high", "notes": "" },
+      { "componentId": "comp_140_2", "value": 180, "flag": "high", "notes": "" },
+      { "componentId": "comp_140_3", "value": 38, "flag": "low", "notes": "" },
+      { "componentId": "comp_140_4", "value": 161, "flag": "high", "notes": "Significantly elevated" },
+      { "componentId": "comp_140_5", "value": 36, "flag": "normal", "notes": "" }
+    ]
+  },
+  {
+    "id": "res_004",
+    "orderId": "lab_4002",
+    "testId": "test_100",
+    "patientId": "pat_1002",
+    "performedBy": "staff_002",
+    "verifiedBy": "staff_003",
+    "instrumentId": "inst_001",
+    "performedAt": "2026-03-01T10:30:00+05:30",
+    "verifiedAt": "2026-03-01T11:00:00+05:30",
+    "values": [
+      { "componentId": "comp_100_1", "value": 14.2, "flag": "high", "notes": "Leukocytosis" },
+      { "componentId": "comp_100_2", "value": 4.1, "flag": "low", "notes": "" },
+      { "componentId": "comp_100_3", "value": 11.8, "flag": "low", "notes": "Mild anemia" },
+      { "componentId": "comp_100_4", "value": 35.2, "flag": "low", "notes": "" },
+      { "componentId": "comp_100_5", "value": 198, "flag": "normal", "notes": "" },
+      { "componentId": "comp_100_6", "value": 85.9, "flag": "normal", "notes": "" },
+      { "componentId": "comp_100_7", "value": 28.8, "flag": "normal", "notes": "" }
+    ]
+  },
+  {
+    "id": "res_005",
+    "orderId": "lab_4002",
+    "testId": "test_110",
+    "patientId": "pat_1002",
+    "performedBy": "staff_001",
+    "verifiedBy": "staff_003",
+    "instrumentId": "inst_002",
+    "performedAt": "2026-03-01T10:45:00+05:30",
+    "verifiedAt": "2026-03-01T11:00:00+05:30",
+    "values": [
+      { "componentId": "comp_110_1", "value": 48.5, "flag": "critical", "notes": "Critically elevated CRP. Correlate clinically." }
+    ]
+  },
+  {
+    "id": "res_006",
+    "orderId": "lab_4013",
+    "testId": "test_210",
+    "patientId": "pat_1001",
+    "performedBy": "staff_001",
+    "verifiedBy": null,
+    "instrumentId": "inst_002",
+    "performedAt": "2026-03-04T10:00:00+05:30",
+    "verifiedAt": null,
+    "values": [
+      { "componentId": "comp_210_1", "value": 8.1, "flag": "high", "notes": "Elevated uric acid" }
+    ]
+  },
+  {
+    "id": "res_007",
+    "orderId": "lab_4013",
+    "testId": "test_300",
+    "patientId": "pat_1001",
+    "performedBy": "staff_001",
+    "verifiedBy": null,
+    "instrumentId": "inst_002",
+    "performedAt": "2026-03-04T10:15:00+05:30",
+    "verifiedAt": null,
+    "values": [
+      { "componentId": "comp_300_1", "value": 9.2, "flag": "normal", "notes": "" }
+    ]
+  },
+  {
+    "id": "res_008",
+    "orderId": "lab_4014",
+    "testId": "test_190",
+    "patientId": "pat_1003",
+    "performedBy": "staff_002",
+    "verifiedBy": null,
+    "instrumentId": "inst_001",
+    "performedAt": "2026-03-03T12:00:00+05:30",
+    "verifiedAt": null,
+    "values": [
+      { "componentId": "comp_190_1", "value": 35, "flag": "high", "notes": "Elevated ESR" }
+    ]
+  },
+  {
+    "id": "res_009",
+    "orderId": "lab_4015",
+    "testId": "test_220",
+    "patientId": "pat_1002",
+    "performedBy": "staff_001",
+    "verifiedBy": null,
+    "instrumentId": "inst_002",
+    "performedAt": "2026-03-02T14:00:00+05:30",
+    "verifiedAt": null,
+    "values": [
+      { "componentId": "comp_220_1", "value": 45, "flag": "low", "notes": "Low serum iron" },
+      { "componentId": "comp_220_2", "value": 400, "flag": "high", "notes": "Elevated TIBC" },
+      { "componentId": "comp_220_3", "value": 8, "flag": "low", "notes": "Iron deficiency pattern" }
+    ]
+  },
+  {
+    "id": "res_010",
+    "orderId": "lab_4016",
+    "testId": "test_240",
+    "patientId": "pat_1004",
+    "performedBy": "staff_002",
+    "verifiedBy": "staff_003",
+    "instrumentId": "inst_001",
+    "performedAt": "2026-03-01T10:00:00+05:30",
+    "verifiedAt": "2026-03-01T10:30:00+05:30",
+    "values": [
+      { "componentId": "comp_240_1", "value": "O", "flag": "normal", "notes": "" },
+      { "componentId": "comp_240_2", "value": "Negative", "flag": "normal", "notes": "" }
+    ]
+  },
+  {
+    "id": "res_011",
+    "orderId": "lab_4017",
+    "testId": "test_290",
+    "patientId": "pat_1001",
+    "performedBy": "staff_005",
+    "verifiedBy": "staff_003",
+    "instrumentId": "inst_005",
+    "performedAt": "2026-02-27T10:00:00+05:30",
+    "verifiedAt": "2026-02-27T16:00:00+05:30",
+    "values": [
+      { "componentId": "comp_290_1", "value": "E. coli", "flag": "abnormal", "notes": "Sensitive to Nitrofurantoin, Ciprofloxacin" },
+      { "componentId": "comp_290_2", "value": ">100000", "flag": "high", "notes": "Significant bacteriuria" }
+    ]
+  }
+]
