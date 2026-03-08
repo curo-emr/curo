@@ -25,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen overflow-hidden flex bg-muted/20`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="antialiased h-screen overflow-hidden flex bg-muted/20">
         <AuthProvider>
           {children}
           <Toaster position="top-right" richColors />
