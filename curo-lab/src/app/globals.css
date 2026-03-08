@@ -28,7 +28,7 @@
  * --------------------------------------------------------------------------- */
 @theme inline {
   /* --- Fonts --- */
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
   /* --- Core shadcn tokens --- */
@@ -353,9 +353,6 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
+    @apply bg-background text-foreground font-sans;
   }
 }
