@@ -1,0 +1,183 @@
+[
+  {
+    "id": "pat_1001",
+    "mrn": "CURO-0001001",
+    "nic": "198712345678",
+    "name": {
+      "first": "Nimal",
+      "last": "Perera",
+      "full": "Nimal Perera"
+    },
+    "dob": "1987-06-14",
+    "sex": "male",
+    "bloodType": "O+",
+    "nationality": "Sri Lankan",
+    "maritalStatus": "married",
+    "occupation": "Software Engineer",
+    "phone": "+94 77 123 4567",
+    "email": "nimal.perera@example.com",
+    "address": {
+      "line1": "No 12, Station Road",
+      "line2": "Negombo",
+      "city": "Negombo",
+      "district": "Gampaha",
+      "postalCode": "11500",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "Kumari Perera",
+      "relationship": "Spouse",
+      "phone": "+94 77 999 8888"
+    },
+    "insurance": {
+      "provider": "Ceylinco Insurance",
+      "policyNumber": "CYL-2025-78901",
+      "groupNumber": "GRP-456",
+      "expiryDate": "2027-06-30",
+      "holderName": "Nimal Perera",
+      "relationship": "self"
+    },
+    "allergies": ["alg_2001", "alg_2002"],
+    "problemList": ["prob_3001", "prob_3002"],
+    "currentMedications": ["medrec_5001"],
+    "tags": ["diabetes", "high-risk"],
+    "registeredBy": "rec_8001",
+    "registeredAt": "2026-02-10T09:15:00+05:30",
+    "createdAt": "2026-02-10T09:15:00+05:30",
+    "updatedAt": "2026-03-01T09:30:00+05:30"
+  },
+  {
+    "id": "pat_1002",
+    "mrn": "CURO-0001002",
+    "nic": "199522334455",
+    "name": {
+      "first": "Sajani",
+      "last": "Fernando",
+      "full": "Sajani Fernando"
+    },
+    "dob": "1995-01-22",
+    "sex": "female",
+    "bloodType": "A+",
+    "nationality": "Sri Lankan",
+    "maritalStatus": "single",
+    "occupation": "Teacher",
+    "phone": "+94 71 222 3333",
+    "email": "sajani.fernando@example.com",
+    "address": {
+      "line1": "45, Beach Road",
+      "line2": "",
+      "city": "Wattala",
+      "district": "Gampaha",
+      "postalCode": "11300",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "A. Fernando",
+      "relationship": "Father",
+      "phone": "+94 71 000 1111"
+    },
+    "insurance": {
+      "provider": "Sri Lanka Insurance",
+      "policyNumber": "SLI-2026-11234",
+      "groupNumber": "",
+      "expiryDate": "2027-01-31",
+      "holderName": "A. Fernando",
+      "relationship": "child"
+    },
+    "allergies": [],
+    "problemList": ["prob_3003"],
+    "currentMedications": [],
+    "tags": ["asthma"],
+    "registeredBy": "rec_8001",
+    "registeredAt": "2026-02-18T14:05:00+05:30",
+    "createdAt": "2026-02-18T14:05:00+05:30",
+    "updatedAt": "2026-03-01T08:10:00+05:30"
+  },
+  {
+    "id": "pat_1003",
+    "mrn": "CURO-0001003",
+    "nic": "197504101234",
+    "name": {
+      "first": "Kamal",
+      "last": "Silva",
+      "full": "Kamal Silva"
+    },
+    "dob": "1975-04-10",
+    "sex": "male",
+    "bloodType": "B+",
+    "nationality": "Sri Lankan",
+    "maritalStatus": "married",
+    "occupation": "Accountant",
+    "phone": "+94 77 555 6666",
+    "email": "kamal.silva@example.com",
+    "address": {
+      "line1": "78, Main St",
+      "line2": "",
+      "city": "Colombo",
+      "district": "Colombo",
+      "postalCode": "00100",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "Sunil Silva",
+      "relationship": "Brother",
+      "phone": "+94 77 555 7777"
+    },
+    "insurance": null,
+    "allergies": [],
+    "problemList": ["prob_3004"],
+    "currentMedications": [],
+    "tags": ["hypertensive"],
+    "registeredBy": "rec_8001",
+    "registeredAt": "2026-02-25T10:00:00+05:30",
+    "createdAt": "2026-02-25T10:00:00+05:30",
+    "updatedAt": "2026-03-01T10:00:00+05:30"
+  },
+  {
+    "id": "pat_1004",
+    "mrn": "CURO-0001004",
+    "nic": "199011205678",
+    "name": {
+      "first": "Priyanka",
+      "last": "Rajapakse",
+      "full": "Priyanka Rajapakse"
+    },
+    "dob": "1990-11-20",
+    "sex": "female",
+    "bloodType": "O-",
+    "nationality": "Sri Lankan",
+    "maritalStatus": "married",
+    "occupation": "Marketing Executive",
+    "phone": "+94 71 888 9999",
+    "email": "priyanka.r@example.com",
+    "address": {
+      "line1": "12, Park Rd",
+      "line2": "",
+      "city": "Kandy",
+      "district": "Kandy",
+      "postalCode": "20000",
+      "country": "Sri Lanka"
+    },
+    "emergencyContact": {
+      "name": "Ruwan Rajapakse",
+      "relationship": "Husband",
+      "phone": "+94 71 888 1111"
+    },
+    "insurance": {
+      "provider": "AIA Insurance Lanka",
+      "policyNumber": "AIA-2026-55678",
+      "groupNumber": "GRP-120",
+      "expiryDate": "2027-11-30",
+      "holderName": "Priyanka Rajapakse",
+      "relationship": "self"
+    },
+    "allergies": [],
+    "problemList": [],
+    "currentMedications": [],
+    "tags": [],
+    "registeredBy": "rec_8001",
+    "registeredAt": "2026-02-28T14:30:00+05:30",
+    "createdAt": "2026-02-28T14:30:00+05:30",
+    "updatedAt": "2026-03-01T11:00:00+05:30"
+  }
+]
