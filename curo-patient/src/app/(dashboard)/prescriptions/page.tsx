@@ -23,7 +23,7 @@ export default async function PrescriptionsPage() {
       />
 
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Pill className="h-5 w-5 text-status-success-text" />

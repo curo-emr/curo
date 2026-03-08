@@ -42,7 +42,7 @@ export default async function HealthRecordsPage() {
 
       {/* Allergies */}
       <Card className="shadow-sm border-status-error-border">
-        <CardHeader className="bg-status-error-bg/50 border-b border-status-error-border pb-4">
+        <CardHeader className="bg-status-error-bg/50 border-b border-status-error-border">
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2 text-lg text-status-error-text">
               <AlertTriangle className="h-5 w-5 text-status-error-text" />
@@ -88,7 +88,7 @@ export default async function HealthRecordsPage() {
 
       {/* Active Conditions */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2 text-lg">
               <HeartPulse className="h-5 w-5 text-status-warning-text" />
@@ -131,7 +131,7 @@ export default async function HealthRecordsPage() {
       {/* Resolved Conditions */}
       {resolvedProblems.length > 0 && (
         <Card className="shadow-sm border">
-          <CardHeader className="bg-muted/50 border-b pb-4">
+          <CardHeader className="bg-muted/50 border-b">
             <CardTitle className="flex items-center gap-2 text-lg text-muted-foreground">
               <ShieldAlert className="h-5 w-5 text-muted-foreground" />
               Resolved / Inactive Conditions
@@ -159,7 +159,7 @@ export default async function HealthRecordsPage() {
 
       {/* Current Medications */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Pill className="h-5 w-5 text-status-success-text" />
