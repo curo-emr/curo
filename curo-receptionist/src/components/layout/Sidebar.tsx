@@ -13,7 +13,7 @@ import {
   Calendar,
   BarChart3,
   Settings,
-  ClipboardList,
+  Activity,
 } from "lucide-react";
 
 const navItems = [
@@ -34,9 +34,10 @@ export function Sidebar() {
     <div className="hidden lg:flex w-64 bg-gradient-to-b from-blue-900 to-blue-950 h-full flex-col text-white shrink-0">
       <div className="p-6">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <ClipboardList className="h-6 w-6" />
-          Curo
+          <Activity className="h-6 w-6" />
+          CuroMD
         </h1>
+        <p className="text-xs text-blue-300 mt-1">Receptionist Portal</p>
       </div>
       <nav className="flex-1 space-y-1 px-4 py-4">
         {navItems.map((item) => {

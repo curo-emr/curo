@@ -254,7 +254,7 @@ export function ReportsDashboard({
 
       {/* Appointments by Doctor */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <CardTitle className="text-lg">Appointments by Doctor</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -303,7 +303,7 @@ export function ReportsDashboard({
 
       {/* Appointments by Visit Type */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <CardTitle className="text-lg">Appointments by Visit Type</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -323,7 +323,7 @@ export function ReportsDashboard({
 
       {/* Peak Hours */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-4">
+        <CardHeader className="bg-muted/50 border-b">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Clock className="h-5 w-5 text-muted-foreground" />
             Peak Hours

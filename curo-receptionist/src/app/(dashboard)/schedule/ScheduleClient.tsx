@@ -132,7 +132,7 @@ export function ScheduleClient({ appointments, patients, doctors }: Props) {
         {/* Right Column - Daily Schedule List */}
         <div className="lg:col-span-3 flex flex-col">
           <Card className="shadow-sm border-slate-200 flex-1 flex flex-col bg-slate-50/30">
-            <CardHeader className="bg-white border-b border-slate-200 pb-4 px-6 pt-6 rounded-t-xl">
+            <CardHeader className="bg-white border-b border-slate-200 px-6 pt-6 rounded-t-xl">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <CardTitle className="flex items-center gap-2 text-xl">
                   <span className="bg-blue-100/50 p-2 rounded-lg">

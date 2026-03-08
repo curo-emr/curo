@@ -161,7 +161,7 @@ export function BookAppointmentForm({ patients, doctors, appointments }: BookApp
     <div className="space-y-6">
       {/* Section 1: Patient Selection */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border pb-4">
+        <CardHeader className="bg-muted/50 border-b border">
           <CardTitle className="flex items-center gap-2 text-lg">
             <User className="h-5 w-5 text-primary" />
             Patient Selection
@@ -240,7 +240,7 @@ export function BookAppointmentForm({ patients, doctors, appointments }: BookApp
 
       {/* Section 2: Doctor Selection */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border pb-4">
+        <CardHeader className="bg-muted/50 border-b border">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Stethoscope className="h-5 w-5 text-primary" />
             Doctor Selection
@@ -286,7 +286,7 @@ export function BookAppointmentForm({ patients, doctors, appointments }: BookApp
 
       {/* Section 3: Date & Time */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border pb-4">
+        <CardHeader className="bg-muted/50 border-b border">
           <CardTitle className="flex items-center gap-2 text-lg">
             <CalendarDays className="h-5 w-5 text-primary" />
             Date & Time
@@ -362,7 +362,7 @@ export function BookAppointmentForm({ patients, doctors, appointments }: BookApp
 
       {/* Section 4: Visit Details */}
       <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border pb-4">
+        <CardHeader className="bg-muted/50 border-b border">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FileText className="h-5 w-5 text-primary" />
             Visit Details

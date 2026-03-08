@@ -38,7 +38,7 @@ export default function SettingsPage() {
 
         <TabsContent value="profile" className="space-y-6">
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle>Receptionist Profile</CardTitle>
               <CardDescription>Update your personal information.</CardDescription>
             </CardHeader>
@@ -87,7 +87,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-slate-50/50 border-t border-slate-100 py-4 flex justify-end">
+            <CardFooter className="bg-slate-50/50 border-t border-slate-100 flex justify-end">
               <Button className="bg-blue-600 hover:bg-blue-700">Save Changes</Button>
             </CardFooter>
           </Card>
@@ -95,7 +95,7 @@ export default function SettingsPage() {
 
         <TabsContent value="preferences" className="space-y-6">
            <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle>Application Preferences</CardTitle>
               <CardDescription>Customize how Curo looks and behaves.</CardDescription>
             </CardHeader>
@@ -126,7 +126,7 @@ export default function SettingsPage() {
                 </Select>
               </div>
             </CardContent>
-            <CardFooter className="bg-slate-50/50 border-t border-slate-100 py-4 flex justify-end">
+            <CardFooter className="bg-slate-50/50 border-t border-slate-100 flex justify-end">
               <Button className="bg-blue-600 hover:bg-blue-700">Save Preferences</Button>
             </CardFooter>
           </Card>
@@ -134,7 +134,7 @@ export default function SettingsPage() {
 
         <TabsContent value="notifications" className="space-y-6">
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle>Notification Settings</CardTitle>
               <CardDescription>Choose what alerts you receive and how.</CardDescription>
             </CardHeader>
@@ -149,7 +149,7 @@ export default function SettingsPage() {
 
         <TabsContent value="security" className="space-y-6">
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle>Security &amp; Password</CardTitle>
               <CardDescription>Manage your password and security settings.</CardDescription>
             </CardHeader>
@@ -167,7 +167,7 @@ export default function SettingsPage() {
                   <Input id="confirm-pw" type="password" />
                </div>
             </CardContent>
-            <CardFooter className="bg-slate-50/50 border-t border-slate-100 py-4 flex justify-end">
+            <CardFooter className="bg-slate-50/50 border-t border-slate-100 flex justify-end">
               <Button className="bg-blue-600 hover:bg-blue-700">Update Password</Button>
             </CardFooter>
           </Card>
