@@ -1,0 +1,174 @@
+import { getPrescriptions, getMedications, getDispensingRecords } from "@/lib/data/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TrendingUp, Clock, Pill, XCircle } from "lucide-react";
+import { formatStatus, formatCurrency } from "@/lib/utils";
+
+export default async function ReportsPage() {
+  const [prescriptions, medications, dispensingRecords] = await Promise.all([
+    getPrescriptions(),
+    getMedications(),
+    getDispensingRecords(),
+  ]);
+
+  const totalPrescriptions = prescriptions.length;
+  const cancelledCount = prescriptions.filter(p => p.status === 'cancelled').length;
+  const cancellationRate = totalPrescriptions > 0 ? ((cancelledCount / totalPrescriptions) * 100).toFixed(1) : '0';
+
+  const totalRevenue = dispensingRecords.reduce((sum, r) => sum + r.totalAmount, 0);
+
+  // Count dispensed medications
+  const medCounts: Record<string, number> = {};
+  for (const record of dispensingRecords) {
+    for (const item of record.items) {
+      medCounts[item.medicationId] = (medCounts[item.medicationId] || 0) + item.quantityDispensed;
+    }
+  }
+  const topMeds = Object.entries(medCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  const maxMedCount = topMeds.length > 0 ? topMeds[0][1] : 1;
+
+  // Status distribution
+  const statusCounts: Record<string, number> = {};
+  for (const rx of prescriptions) {
+    statusCounts[rx.status] = (statusCounts[rx.status] || 0) + 1;
+  }
+  const statusEntries = Object.entries(statusCounts);
+  const maxStatusCount = Math.max(...statusEntries.map(([, v]) => v), 1);
+
+  const statusColors: Record<string, string> = {
+    pending: 'bg-amber-500',
+    processing: 'bg-blue-500',
+    dispensed: 'bg-green-500',
+    partially_dispensed: 'bg-purple-500',
+    on_hold: 'bg-teal-500',
+    cancelled: 'bg-red-500',
+    expired: 'bg-slate-400',
+  };
+
+  // Category distribution
+  const catCounts: Record<string, number> = {};
+  for (const med of medications) {
+    catCounts[med.category] = (catCounts[med.category] || 0) + 1;
+  }
+  const catEntries = Object.entries(catCounts);
+  const maxCatCount = Math.max(...catEntries.map(([, v]) => v), 1);
+
+  const mostDispensedMed = topMeds.length > 0
+    ? (medications.find(m => m.id === topMeds[0][0])?.genericName || topMeds[0][0])
+    : 'N/A';
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Reports</h1>
+        <p className="text-sm text-muted-foreground">Pharmacy analytics and performance metrics</p>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="rounded-lg border p-4 text-blue-700 bg-blue-50 border-blue-200">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="h-4 w-4" />
+            <p className="text-xs font-medium opacity-80">Total Prescriptions</p>
+          </div>
+          <p className="text-2xl font-bold">{totalPrescriptions}</p>
+        </div>
+        <div className="rounded-lg border p-4 text-green-700 bg-green-50 border-green-200">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="h-4 w-4" />
+            <p className="text-xs font-medium opacity-80">Total Revenue</p>
+          </div>
+          <p className="text-lg font-bold">{formatCurrency(totalRevenue)}</p>
+        </div>
+        <div className="rounded-lg border p-4 text-purple-700 bg-purple-50 border-purple-200">
+          <div className="flex items-center gap-2 mb-1">
+            <Pill className="h-4 w-4" />
+            <p className="text-xs font-medium opacity-80">Most Dispensed</p>
+          </div>
+          <p className="text-lg font-bold truncate">{mostDispensedMed}</p>
+        </div>
+        <div className="rounded-lg border p-4 text-red-700 bg-red-50 border-red-200">
+          <div className="flex items-center gap-2 mb-1">
+            <XCircle className="h-4 w-4" />
+            <p className="text-xs font-medium opacity-80">Cancellation Rate</p>
+          </div>
+          <p className="text-2xl font-bold">{cancellationRate}%</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Dispensed Medications */}
+        <Card className="shadow-sm border">
+          <CardHeader className="bg-muted/50 border-b pb-3">
+            <CardTitle className="text-base">Most Dispensed Medications</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-3">
+            {topMeds.map(([medId, count]) => {
+              const med = medications.find(m => m.id === medId);
+              return (
+                <div key={medId}>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-slate-700">{med?.genericName || medId}</span>
+                    <span className="text-slate-500 font-mono text-xs">{count} units</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full"
+                      style={{ width: `${(count / maxMedCount) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        {/* Prescription Status Distribution */}
+        <Card className="shadow-sm border">
+          <CardHeader className="bg-muted/50 border-b pb-3">
+            <CardTitle className="text-base">Prescription Status Distribution</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-3">
+            {statusEntries.map(([status, count]) => (
+              <div key={status}>
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="text-slate-700">{formatStatus(status)}</span>
+                  <span className="text-slate-500 font-mono text-xs">{count}</span>
+                </div>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${statusColors[status] || 'bg-slate-400'}`}
+                    style={{ width: `${(count / maxStatusCount) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Medication Category Distribution */}
+        <Card className="shadow-sm border lg:col-span-2">
+          <CardHeader className="bg-muted/50 border-b pb-3">
+            <CardTitle className="text-base">Medications by Category</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="flex items-end gap-6 h-40 justify-center flex-wrap">
+              {catEntries.map(([cat, count]) => (
+                <div key={cat} className="flex flex-col items-center gap-2">
+                  <span className="text-xs font-medium text-slate-600">{count}</span>
+                  <div
+                    className="w-16 bg-blue-500 rounded-t-md"
+                    style={{ height: `${(count / maxCatCount) * 120}px` }}
+                  />
+                  <span className="text-xs text-slate-500 text-center">{formatStatus(cat)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
