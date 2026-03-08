@@ -10,7 +10,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/login");
+      router.replace("/login");
     }
   }, [user, isLoading, router]);
 
@@ -23,7 +23,14 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return null; // Will redirect in useEffect
+    return (
+      <div className="flex-1 flex items-center justify-center p-6 bg-background h-screen">
+        <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+          <p>Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
