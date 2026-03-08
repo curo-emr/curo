@@ -44,7 +44,7 @@ export default async function DashboardPage() {
         <div className="space-y-6">
           {/* QC Alerts */}
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 text-base">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
                 QC Alerts
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
 
           {/* Instrument Status */}
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Cpu className="h-4 w-4 text-blue-600" />
                 Instrument Status
