@@ -3,14 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { User, Shield, Bell, Key, Mail, Phone } from "lucide-react";
+import { User, Bell, Key, Mail, Phone } from "lucide-react";
 
 export default function SettingsPage() {
   return (
@@ -21,18 +14,15 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="bg-muted p-1 rounded-md mb-6 w-full md:w-auto h-auto grid grid-cols-2 md:grid-cols-4">
-          <TabsTrigger value="profile" className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2">
-            <User className="h-4 w-4 mr-2" /> Account
+        <TabsList className="inline-flex items-center gap-2 bg-muted/70 py-6 px-2 rounded-2xl mb-6 shadow-inner">
+          <TabsTrigger value="profile" className="flex items-center gap-2 px-5 py-4 text-sm font-medium text-muted-foreground rounded-xl transition-all duration-200 ease-in-out hover:text-foreground hover:bg-white/60 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            <User className="h-4 w-4" /> Account
           </TabsTrigger>
-          <TabsTrigger value="preferences" className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2">
-            <Shield className="h-4 w-4 mr-2" /> Preferences
+          <TabsTrigger value="notifications" className="flex items-center gap-2 px-5 py-4 text-sm font-medium text-muted-foreground rounded-xl transition-all duration-200 ease-in-out hover:text-foreground hover:bg-white/60 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            <Bell className="h-4 w-4" /> Notifications
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2">
-            <Bell className="h-4 w-4 mr-2" /> Notifications
-          </TabsTrigger>
-          <TabsTrigger value="security" className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2">
-            <Key className="h-4 w-4 mr-2" /> Security
+          <TabsTrigger value="security" className="flex items-center gap-2 px-5 py-4 text-sm font-medium text-muted-foreground rounded-xl transition-all duration-200 ease-in-out hover:text-foreground hover:bg-white/60 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            <Key className="h-4 w-4" /> Security
           </TabsTrigger>
         </TabsList>
 
@@ -85,45 +75,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="preferences" className="space-y-6">
-           <Card className="shadow-sm border">
-            <CardHeader className="bg-muted/50 border-b">
-              <CardTitle>Portal Preferences</CardTitle>
-              <CardDescription>Customize how CuroMD Patient Portal works for you.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="default-view">Default View on Login</Label>
-                <Select defaultValue="dashboard">
-                  <SelectTrigger id="default-view">
-                    <SelectValue placeholder="Select default view" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dashboard">Dashboard — Health Summary</SelectItem>
-                    <SelectItem value="appointments">Appointments</SelectItem>
-                    <SelectItem value="prescriptions">Prescriptions</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="time-format">Time Format</Label>
-                <Select defaultValue="12h">
-                  <SelectTrigger id="time-format">
-                    <SelectValue placeholder="Select time format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="24h">24-hour (e.g., 14:00)</SelectItem>
-                    <SelectItem value="12h">12-hour (e.g., 2:00 PM)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-            <CardFooter className="bg-muted/50 border-t flex justify-end">
-              <Button className="bg-primary hover:bg-primary/90">Save Preferences</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="notifications" className="space-y-6">
           <Card className="shadow-sm border">
             <CardHeader className="bg-muted/50 border-b">
@@ -146,18 +97,18 @@ export default function SettingsPage() {
               <CardDescription>Manage your password and security settings.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
-               <div className="space-y-2 max-w-md">
-                  <Label htmlFor="current-pw">Current Password</Label>
-                  <Input id="current-pw" type="password" />
-               </div>
-               <div className="space-y-2 max-w-md">
-                  <Label htmlFor="new-pw">New Password</Label>
-                  <Input id="new-pw" type="password" />
-               </div>
-                <div className="space-y-2 max-w-md">
-                  <Label htmlFor="confirm-pw">Confirm New Password</Label>
-                  <Input id="confirm-pw" type="password" />
-               </div>
+              <div className="space-y-2 max-w-md">
+                <Label htmlFor="current-pw">Current Password</Label>
+                <Input id="current-pw" type="password" />
+              </div>
+              <div className="space-y-2 max-w-md">
+                <Label htmlFor="new-pw">New Password</Label>
+                <Input id="new-pw" type="password" />
+              </div>
+              <div className="space-y-2 max-w-md">
+                <Label htmlFor="confirm-pw">Confirm New Password</Label>
+                <Input id="confirm-pw" type="password" />
+              </div>
             </CardContent>
             <CardFooter className="bg-muted/50 border-t flex justify-end">
               <Button className="bg-primary hover:bg-primary/90">Update Password</Button>
