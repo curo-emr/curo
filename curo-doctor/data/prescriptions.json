@@ -28,5 +28,29 @@
       }
     ],
     "notesToPharmacy": "Please dispense generic if available."
+  },
+  {
+    "id": "rx_6002",
+    "patientId": "pat_1001",
+    "encounterId": "enc_8003",
+    "doctorId": "doc_9001",
+    "status": "sent_to_pharmacy",
+    "createdAt": "2026-03-09T09:20:00+05:30",
+    "sentAt": "2026-03-09T09:22:00+05:30",
+    "items": [
+      {
+        "id": "rxitem_2",
+        "medicationId": "med_0201",
+        "displayName": "Amlodipine 5mg Tablet",
+        "dose": "5mg",
+        "route": "oral",
+        "frequency": "once daily",
+        "durationDays": 30,
+        "quantity": 30,
+        "instructions": "In the morning",
+        "substitutes": []
+      }
+    ],
+    "notesToPharmacy": "Dispense generic Amlodipine if available."
   }
 ]

@@ -25,5 +25,32 @@
     "status": "active",
     "onsetDate": "2015-01-15",
     "notes": "Triggers: dust, smoke."
+  },
+  {
+    "id": "prob_3004",
+    "patientId": "pat_1003",
+    "icdCode": "I10",
+    "name": "Essential (primary) hypertension",
+    "status": "active",
+    "onsetDate": "2019-05-20",
+    "notes": "On Amlodipine 5mg. BP target < 130/80."
+  },
+  {
+    "id": "prob_3005",
+    "patientId": "pat_1004",
+    "icdCode": "E03.9",
+    "name": "Hypothyroidism, unspecified",
+    "status": "active",
+    "onsetDate": "2024-01-10",
+    "notes": "On Levothyroxine 50mcg. Monitor TSH every 6 months."
+  },
+  {
+    "id": "prob_3006",
+    "patientId": "pat_1005",
+    "icdCode": "R07.9",
+    "name": "Chest pain, unspecified",
+    "status": "active",
+    "onsetDate": "2026-03-06",
+    "notes": "Cardiac aetiology under investigation. Troponin and ECG ordered."
   }
 ]
