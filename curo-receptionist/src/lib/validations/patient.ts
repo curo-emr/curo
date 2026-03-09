@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+const allergyEntrySchema = z.object({
+  substance: z.string().min(1, "Substance is required"),
+  reaction: z.string().min(1, "Reaction is required"),
+  severity: z.enum(["mild", "moderate", "severe"]).default("mild"),
+  notes: z.string().optional().default(""),
+});
+
+export type AllergyEntryInput = z.infer<typeof allergyEntrySchema>;
+
 export const patientRegistrationSchema = z.object({
   nic: z.string().min(1, "NIC/Passport number is required"),
   firstName: z.string().min(1, "First name is required"),
@@ -28,6 +37,7 @@ export const patientRegistrationSchema = z.object({
   insuranceHolderName: z.string().optional().default(""),
   insuranceRelationship: z.enum(["self", "spouse", "child", "other"]).optional().default("self"),
   tags: z.string().optional().default(""),
+  allergies: z.array(allergyEntrySchema).optional().default([]),
 });
 
 export type PatientRegistrationInput = z.infer<typeof patientRegistrationSchema>;

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPatientById } from "@/lib/data/api";
+import { getPatientById, getAllergies } from "@/lib/data/api";
 import { PatientEditForm } from "@/components/features/patients/PatientEditForm";
 
 export default async function PatientEditPage({
@@ -9,7 +9,10 @@ export default async function PatientEditPage({
 }) {
   const { patientId } = await params;
 
-  const patient = await getPatientById(patientId);
+  const [patient, existingAllergies] = await Promise.all([
+    getPatientById(patientId),
+    getAllergies(patientId),
+  ]);
   if (!patient) notFound();
 
   return (
@@ -22,7 +25,7 @@ export default async function PatientEditPage({
           Update information for {patient.name.full} ({patient.mrn})
         </p>
       </div>
-      <PatientEditForm patient={patient} />
+      <PatientEditForm patient={patient} existingAllergies={existingAllergies} />
     </div>
   );
 }

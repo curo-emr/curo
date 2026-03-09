@@ -1,9 +1,9 @@
 "use server";
 
-import { createPatient, updatePatient, getPatientById } from "@/lib/data/api";
+import { createPatient, updatePatient, getPatientById, createAllergies, replacePatientAllergies } from "@/lib/data/api";
 import { patientRegistrationSchema, type PatientRegistrationInput } from "@/lib/validations/patient";
 import { generateId, generateMRN } from "@/lib/utils";
-import type { Patient } from "@/types";
+import type { Patient, Allergy } from "@/types";
 
 export async function registerPatient(data: PatientRegistrationInput) {
   const parsed = patientRegistrationSchema.safeParse(data);
@@ -15,6 +15,16 @@ export async function registerPatient(data: PatientRegistrationInput) {
   const patientId = generateId("pat");
   const mrn = generateMRN();
   const now = new Date().toISOString();
+
+  const allergyRecords: Allergy[] = (v.allergies ?? []).map(a => ({
+    id: generateId("alg"),
+    patientId,
+    substance: a.substance,
+    reaction: a.reaction,
+    severity: a.severity,
+    notes: a.notes ?? "",
+    recordedAt: now,
+  }));
 
   const patient: Patient = {
     id: patientId,
@@ -56,7 +66,7 @@ export async function registerPatient(data: PatientRegistrationInput) {
           relationship: v.insuranceRelationship || "self",
         }
       : null,
-    allergies: [],
+    allergies: allergyRecords.map(a => a.id),
     problemList: [],
     currentMedications: [],
     tags: v.tags ? v.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
@@ -68,6 +78,7 @@ export async function registerPatient(data: PatientRegistrationInput) {
 
   // No-op in demo mode — data resets on reload
   await createPatient(patient);
+  await createAllergies(allergyRecords);
 
   return { success: true, patientId };
 }
@@ -88,6 +99,16 @@ export async function updatePatientDemographics(
 
   const v = parsed.data;
   const now = new Date().toISOString();
+
+  const allergyRecords: Allergy[] = (v.allergies ?? []).map(a => ({
+    id: generateId("alg"),
+    patientId,
+    substance: a.substance,
+    reaction: a.reaction,
+    severity: a.severity,
+    notes: a.notes ?? "",
+    recordedAt: now,
+  }));
 
   const updated: Patient = {
     ...existing,
@@ -129,11 +150,13 @@ export async function updatePatientDemographics(
         }
       : null,
     tags: v.tags ? v.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+    allergies: allergyRecords.map(a => a.id),
     updatedAt: now,
   };
 
   // No-op in demo mode — data resets on reload
   await updatePatient(updated);
+  await replacePatientAllergies(patientId, allergyRecords);
 
   return { success: true };
 }
