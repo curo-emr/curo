@@ -4,13 +4,18 @@ import {
   createAppointment,
   getAppointments,
   updateAppointment,
+  createVisit,
+  getVisits,
+  updateVisit,
 } from "@/lib/data/api";
 import {
   bookAppointmentSchema,
   type BookAppointmentInput,
 } from "@/lib/validations/appointment";
 import { generateId } from "@/lib/utils";
-import type { Appointment } from "@/types";
+import type { Appointment, Visit } from "@/types";
+
+type AppointmentStatus = 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
 
 export async function bookNewAppointment(data: BookAppointmentInput) {
   const parsed = bookAppointmentSchema.safeParse(data);
@@ -57,6 +62,68 @@ export async function bookNewAppointment(data: BookAppointmentInput) {
   await createAppointment(appointment);
 
   return { success: true, appointmentId: appointment.id };
+}
+
+export async function updateAppointmentStatus(
+  appointmentId: string,
+  newStatus: AppointmentStatus
+) {
+  const allAppts = await getAppointments();
+  const appt = allAppts.find((a) => a.id === appointmentId);
+  if (!appt) {
+    return { success: false, error: "Appointment not found" };
+  }
+
+  if (newStatus === "arrived") {
+    const now = new Date().toISOString();
+    const visitId = generateId("vis");
+    const visit: Visit = {
+      id: visitId,
+      appointmentId: appt.id,
+      patientId: appt.patientId,
+      doctorId: appt.doctorId,
+      date: appt.date,
+      checkInTime: now,
+      checkOutTime: null,
+      status: "checked_in",
+      notes: appt.reason,
+      createdBy: "rec_8001",
+    };
+    await createVisit(visit);
+    await updateAppointment({
+      ...appt,
+      status: "arrived",
+      checkInTime: now,
+      checkedInBy: "rec_8001",
+      visitId,
+    });
+  } else if (newStatus === "in_progress") {
+    await updateAppointment({ ...appt, status: "in_progress" });
+    if (appt.visitId) {
+      const allVisits = await getVisits();
+      const visit = allVisits.find((v) => v.id === appt.visitId);
+      if (visit) {
+        await updateVisit({ ...visit, status: "with_doctor" });
+      }
+    }
+  } else if (newStatus === "completed") {
+    await updateAppointment({ ...appt, status: "completed" });
+    if (appt.visitId) {
+      const allVisits = await getVisits();
+      const visit = allVisits.find((v) => v.id === appt.visitId);
+      if (visit) {
+        await updateVisit({
+          ...visit,
+          status: "completed",
+          checkOutTime: new Date().toISOString(),
+        });
+      }
+    }
+  } else {
+    await updateAppointment({ ...appt, status: newStatus });
+  }
+
+  return { success: true };
 }
 
 export async function cancelAppointment(appointmentId: string) {

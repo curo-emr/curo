@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo } from "react";
 import type { Appointment, Patient, Doctor } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,21 +20,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Calendar, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import {
   getPatientName,
   getDoctorName,
   formatDate,
   formatTime,
   getTodayString,
+  formatStatus,
 } from "@/lib/utils";
-import { APPOINTMENT_STATUS, ROUTES } from "@/lib/constants";
-import { checkInPatient } from "@/lib/actions/checkin-actions";
-import { cancelAppointment } from "@/lib/actions/appointment-actions";
+import { ROUTES } from "@/lib/constants";
+import { updateAppointmentStatus } from "@/lib/actions/appointment-actions";
 import { toast } from "sonner";
+
+type AppointmentStatus = 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
 
 interface AppointmentListProps {
   appointments: Appointment[];
@@ -53,12 +55,44 @@ const STATUS_OPTIONS = [
   { label: "No Show", value: "no_show" },
 ];
 
+const ALL_STATUSES: { label: string; value: AppointmentStatus }[] = [
+  { label: "Scheduled", value: "scheduled" },
+  { label: "Not Arrived", value: "not_arrived" },
+  { label: "Arrived", value: "arrived" },
+  { label: "Waiting", value: "waiting" },
+  { label: "In Progress", value: "in_progress" },
+  { label: "Completed", value: "completed" },
+  { label: "Cancelled", value: "cancelled" },
+  { label: "No Show", value: "no_show" },
+];
+
+const statusStyles: Record<AppointmentStatus, string> = {
+  waiting:     "bg-status-warning-bg text-status-warning-text border-status-warning-border",
+  in_progress: "bg-status-info-bg text-status-info-text border-status-info-border",
+  completed:   "bg-status-success-bg text-status-success-text border-status-success-border",
+  scheduled:   "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
+  not_arrived: "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
+  arrived:     "bg-status-teal-bg text-status-teal-text border-status-teal-border",
+  cancelled:   "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
+  no_show:     "bg-status-error-bg text-status-error-text border-status-error-border",
+};
+
+const statusLabels: Partial<Record<AppointmentStatus, string>> = {
+  not_arrived: "Not Arrived",
+  in_progress: "In Progress",
+  no_show: "No Show",
+};
+
+function getStatusLabel(status: AppointmentStatus) {
+  return statusLabels[status] ?? formatStatus(status);
+}
+
 export function AppointmentList({ appointments: initialAppointments, patients, doctors }: AppointmentListProps) {
   const [appointments, setAppointments] = useState(initialAppointments);
   const [dateFilter, setDateFilter] = useState(getTodayString());
   const [doctorFilter, setDoctorFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [isPending, startTransition] = useTransition();
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
     return appointments
@@ -75,38 +109,29 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
       });
   }, [appointments, dateFilter, doctorFilter, statusFilter]);
 
-  const handleCheckIn = (appointmentId: string) => {
-    startTransition(async () => {
-      const result = await checkInPatient(appointmentId);
-      if (result.success) {
-        setAppointments((prev) =>
-          prev.map((a) =>
-            a.id === appointmentId
-              ? { ...a, status: "arrived" as const, checkInTime: new Date().toISOString(), checkedInBy: "rec_8001" }
-              : a
-          )
-        );
-        toast.success("Patient checked in successfully");
-      } else {
-        toast.error(result.error || "Failed to check in patient");
-      }
-    });
-  };
+  const handleStatusChange = async (appointmentId: string, newStatus: AppointmentStatus) => {
+    setPendingIds((prev) => new Set(prev).add(appointmentId));
 
-  const handleCancel = (appointmentId: string) => {
-    startTransition(async () => {
-      const result = await cancelAppointment(appointmentId);
-      if (result.success) {
-        setAppointments((prev) =>
-          prev.map((a) =>
-            a.id === appointmentId ? { ...a, status: "cancelled" as const } : a
-          )
-        );
-        toast.success("Appointment cancelled");
-      } else {
-        toast.error(result.error || "Failed to cancel appointment");
-      }
+    // Optimistic update
+    setAppointments((prev) =>
+      prev.map((a) => (a.id === appointmentId ? { ...a, status: newStatus } : a))
+    );
+
+    const result = await updateAppointmentStatus(appointmentId, newStatus);
+
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(appointmentId);
+      return next;
     });
+
+    if (result.success) {
+      toast.success("Status updated");
+    } else {
+      // Revert optimistic update
+      setAppointments(initialAppointments);
+      toast.error(result.error || "Failed to update status");
+    }
   };
 
   return (
@@ -196,68 +221,66 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
                 <TableHead>Type</TableHead>
                 <TableHead>Reason</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((apt) => (
-                <TableRow key={apt.id} className="hover:bg-muted/50 transition-colors">
-                  <TableCell className="text-foreground font-medium">
-                    {formatDate(apt.date)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatTime(apt.time)}
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href={ROUTES.PATIENT(apt.patientId)}
-                      className="text-primary hover:text-primary hover:underline font-medium"
-                    >
-                      {getPatientName(apt.patientId, patients)}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {getDoctorName(apt.doctorId, doctors)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{apt.visitType}</TableCell>
-                  <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                    {apt.reason}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={apt.status} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {apt.status === APPOINTMENT_STATUS.SCHEDULED && (
-                        <Button
-                          size="sm"
-                          className="bg-status-teal-text hover:bg-status-teal-text/90 text-white h-8 text-xs"
-                          onClick={() => handleCheckIn(apt.id)}
-                          disabled={isPending}
+              {filtered.map((apt) => {
+                const isPending = pendingIds.has(apt.id);
+                const status = apt.status as AppointmentStatus;
+                return (
+                  <TableRow key={apt.id} className="hover:bg-muted/50 transition-colors">
+                    <TableCell className="text-foreground font-medium">
+                      {formatDate(apt.date)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatTime(apt.time)}
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={ROUTES.PATIENT(apt.patientId)}
+                        className="text-primary hover:text-primary hover:underline font-medium"
+                      >
+                        {getPatientName(apt.patientId, patients)}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {getDoctorName(apt.doctorId, doctors)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{apt.visitType}</TableCell>
+                    <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                      {apt.reason}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={status}
+                        onValueChange={(val) => handleStatusChange(apt.id, val as AppointmentStatus)}
+                        disabled={isPending}
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            "h-7 w-auto min-w-[110px] text-xs font-medium border rounded-full px-2.5 focus:ring-0 focus:ring-offset-0",
+                            statusStyles[status] ?? "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
+                            status === "cancelled" && "line-through"
+                          )}
                         >
                           {isPending ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : (
-                            "Check In"
+                            <SelectValue>{getStatusLabel(status)}</SelectValue>
                           )}
-                        </Button>
-                      )}
-                      {(apt.status === APPOINTMENT_STATUS.SCHEDULED ||
-                        apt.status === APPOINTMENT_STATUS.NOT_ARRIVED) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-status-error-text border-status-error-border hover:bg-status-error-bg h-8 text-xs"
-                          onClick={() => handleCancel(apt.id)}
-                          disabled={isPending}
-                        >
-                          Cancel
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ALL_STATUSES.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
