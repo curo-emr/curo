@@ -5,7 +5,7 @@ import { Patient, Allergy } from "@/types";
 import { ROUTES } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, User, Phone, MapPin, Droplet, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, User, Phone, MapPin, Droplet, Plus, Pencil, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 
 interface PatientHeaderProps {
@@ -52,6 +52,12 @@ export function PatientHeader({ patient, allergies, age }: PatientHeaderProps) {
         </div>
 
         <div className="flex gap-3 shrink-0">
+          <Link href={ROUTES.EDIT_PATIENT(patient.id)}>
+            <Button variant="outline" className="shadow-sm">
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit Demographics
+            </Button>
+          </Link>
           <Link href={ROUTES.NEW_ENCOUNTER(patient.id)}>
             <Button className="bg-primary hover:bg-primary/90 shadow-sm">
               <Plus className="h-4 w-4 mr-2" />

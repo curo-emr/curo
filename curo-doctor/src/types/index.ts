@@ -19,6 +19,15 @@ export interface EmergencyContact {
   phone: string;
 }
 
+export interface Insurance {
+  provider: string;
+  policyNumber: string;
+  groupNumber: string;
+  expiryDate: string;
+  holderName: string;
+  relationship: "self" | "spouse" | "child" | "other";
+}
+
 export interface Patient {
   id: string;
   mrn: string;
@@ -36,6 +45,11 @@ export interface Patient {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  nic?: string;
+  nationality?: string;
+  maritalStatus?: "single" | "married" | "divorced" | "widowed" | "other";
+  occupation?: string;
+  insurance?: Insurance | null;
 }
 
 export interface Allergy {

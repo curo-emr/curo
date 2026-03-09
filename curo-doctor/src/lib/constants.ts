@@ -5,12 +5,16 @@ export const ROUTES = {
   DASHBOARD: "/dashboard",
   PATIENTS: "/patients",
   PATIENT: (id: string) => `/patients/${id}`,
+  NEW_PATIENT: "/patients/new",
+  EDIT_PATIENT: (id: string) => `/patients/${id}/edit`,
   NEW_ENCOUNTER: (patientId: string) => `/patients/${patientId}/encounters/new`,
   ENCOUNTER: (patientId: string, encounterId: string) => `/patients/${patientId}/encounters/${encounterId}`,
   SCHEDULE: "/schedule",
   ICD: "/icd",
   SETTINGS: "/settings",
 } as const;
+
+export const MARITAL_STATUS = ["single", "married", "divorced", "widowed", "other"] as const;
 
 // Appointment statuses
 export const APPOINTMENT_STATUS = {

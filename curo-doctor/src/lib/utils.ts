@@ -80,6 +80,15 @@ export function getTestName(testId: string, catalog: { id: string; name: string;
   return test ? `${test.name} (${test.code})` : testId;
 }
 
+export function generateId(prefix: string): string {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+export function generateMRN(): string {
+  const num = Math.floor(Math.random() * 9000000) + 1000000;
+  return `CURO-${num}`;
+}
+
 /**
  * Returns the left-border color class for a given appointment status.
  */

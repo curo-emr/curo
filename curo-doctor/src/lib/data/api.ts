@@ -36,6 +36,21 @@ export async function getPatientById(id: string): Promise<Patient | null> {
   return patients.find(p => p.id === id) || null;
 }
 
+export async function createPatient(patient: Patient): Promise<void> {
+  const patients = await getPatients();
+  patients.push(patient);
+  await writeJsonFile('patients.json', patients);
+}
+
+export async function updatePatient(updated: Patient): Promise<void> {
+  const patients = await getPatients();
+  const index = patients.findIndex(p => p.id === updated.id);
+  if (index >= 0) {
+    patients[index] = updated;
+    await writeJsonFile('patients.json', patients);
+  }
+}
+
 // --- APPOINTMENTS ---
 export async function getAppointments(): Promise<Appointment[]> {
   return readJsonFile<Appointment>('appointments.json');
@@ -95,6 +110,20 @@ export async function getAllAllergies(): Promise<Allergy[]> {
 export async function getAllergies(patientId: string): Promise<Allergy[]> {
   const allergies = await readJsonFile<Allergy>('allergies.json');
   return allergies.filter(a => a.patientId === patientId);
+}
+
+export async function createAllergies(allergies: Allergy[]): Promise<void> {
+  const existing = await getAllAllergies();
+  await writeJsonFile('allergies.json', [...existing, ...allergies]);
+}
+
+export async function replacePatientAllergies(
+  patientId: string,
+  allergies: Allergy[]
+): Promise<void> {
+  const existing = await getAllAllergies();
+  const others = existing.filter(a => a.patientId !== patientId);
+  await writeJsonFile('allergies.json', [...others, ...allergies]);
 }
 
 // --- PROBLEMS ---
