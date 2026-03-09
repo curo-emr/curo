@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CuroMD - Pharmacy Dashboard",
+  title: "CuroMD - Pharmacy Portal",
   description: "Electronic Medical Record system - Pharmacy",
 };
 
