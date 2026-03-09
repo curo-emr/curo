@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Shield, Bell, Key, Mail, Phone, MapPin } from "lucide-react";
+import { User, Bell, Key, Mail, Phone, MapPin } from "lucide-react";
 
 export default function SettingsPage() {
   return (
@@ -21,18 +21,15 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="bg-slate-100 p-1 rounded-md mb-6 w-full md:w-auto h-auto grid grid-cols-2 md:grid-cols-4">
-          <TabsTrigger value="profile" className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2">
-            <User className="h-4 w-4 mr-2" /> Profile
+        <TabsList className="inline-flex items-center gap-2 bg-muted/70 py-6 px-2 rounded-2xl mb-6 shadow-inner">
+          <TabsTrigger value="profile" className="flex items-center gap-2 px-5 py-4 text-sm font-medium text-muted-foreground rounded-xl transition-all duration-200 ease-in-out hover:text-foreground hover:bg-white/60 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            <User className="h-4 w-4" /> Profile
           </TabsTrigger>
-          <TabsTrigger value="preferences" className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2">
-            <Shield className="h-4 w-4 mr-2" /> Preferences
+          <TabsTrigger value="notifications" className="flex items-center gap-2 px-5 py-4 text-sm font-medium text-muted-foreground rounded-xl transition-all duration-200 ease-in-out hover:text-foreground hover:bg-white/60 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            <Bell className="h-4 w-4" /> Notifications
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2">
-            <Bell className="h-4 w-4 mr-2" /> Notifications
-          </TabsTrigger>
-          <TabsTrigger value="security" className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2">
-            <Key className="h-4 w-4 mr-2" /> Security
+          <TabsTrigger value="security" className="flex items-center gap-2 px-5 py-4 text-sm font-medium text-muted-foreground rounded-xl transition-all duration-200 ease-in-out hover:text-foreground hover:bg-white/60 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            <Key className="h-4 w-4" /> Security
           </TabsTrigger>
         </TabsList>
 
@@ -93,45 +90,6 @@ export default function SettingsPage() {
             </CardContent>
             <CardFooter className="bg-slate-50/50 border-t border-slate-100 flex justify-end">
               <Button className="bg-blue-600 hover:bg-blue-700">Save Changes</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="preferences" className="space-y-6">
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-              <CardTitle>Application Preferences</CardTitle>
-              <CardDescription>Customize how CuroMD looks and behaves.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="default-view">Default View on Login</Label>
-                <Select defaultValue="dashboard">
-                  <SelectTrigger id="default-view">
-                    <SelectValue placeholder="Select default view" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dashboard">Dashboard</SelectItem>
-                    <SelectItem value="worklist">Worklist</SelectItem>
-                    <SelectItem value="patients">Patient Directory</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="time-format">Time Format</Label>
-                <Select defaultValue="24h">
-                  <SelectTrigger id="time-format">
-                    <SelectValue placeholder="Select time format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="24h">24-hour (e.g., 14:00)</SelectItem>
-                    <SelectItem value="12h">12-hour (e.g., 2:00 PM)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-            <CardFooter className="bg-slate-50/50 border-t border-slate-100 flex justify-end">
-              <Button className="bg-blue-600 hover:bg-blue-700">Save Preferences</Button>
             </CardFooter>
           </Card>
         </TabsContent>
