@@ -98,6 +98,12 @@ export async function getAllergies(patientId: string): Promise<Allergy[]> {
   return allergies.filter(a => a.patientId === patientId);
 }
 
+// No-op: demo mode — data resets on reload
+export async function createAllergies(_allergies: Allergy[]): Promise<void> {}
+
+// No-op: demo mode — data resets on reload
+export async function replacePatientAllergies(_patientId: string, _allergies: Allergy[]): Promise<void> {}
+
 // --- PROBLEMS ---
 export async function getProblems(patientId: string): Promise<Problem[]> {
   const probs = await readJsonFile<Problem>('problems.json');

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, ChevronDown } from "lucide-react";
+import { Loader2, ChevronDown, Plus, Trash2 } from "lucide-react";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -37,6 +37,7 @@ export function PatientRegistrationForm() {
     handleSubmit,
     setValue,
     watch,
+    control,
     formState: { errors },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<PatientRegistrationInput>({
@@ -69,7 +70,13 @@ export function PatientRegistrationForm() {
       insuranceHolderName: "",
       insuranceRelationship: "self",
       tags: "",
+      allergies: [],
     },
+  });
+
+  const { fields: allergyFields, append: appendAllergy, remove: removeAllergy } = useFieldArray({
+    control,
+    name: "allergies",
   });
 
   const onSubmit = async (data: PatientRegistrationInput) => {
@@ -428,6 +435,79 @@ export function PatientRegistrationForm() {
             </div>
           </CardContent>
         )}
+      </Card>
+
+      {/* Allergies */}
+      <Card className="shadow-sm border">
+        <CardHeader className="bg-muted/50 border-b border pb-3">
+          <div className="flex items-center justify-between w-full">
+            <CardTitle className="text-base">Allergies</CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => appendAllergy({ substance: "", reaction: "", severity: "mild", notes: "" })}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Add Allergy
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-5">
+          {allergyFields.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No allergies recorded. Click &apos;Add Allergy&apos; to add one.</p>
+          ) : (
+            <div className="space-y-3">
+              {allergyFields.map((field, index) => (
+                <div key={field.id} className="border rounded-md p-3 bg-muted/20 relative">
+                  <button
+                    type="button"
+                    onClick={() => removeAllergy(index)}
+                    className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-6">
+                    <div className="space-y-1.5">
+                      <Label>Substance *</Label>
+                      <Input {...register(`allergies.${index}.substance`)} placeholder="e.g. Penicillin" />
+                      {errors.allergies?.[index]?.substance && (
+                        <p className="text-xs text-status-error-text">{errors.allergies[index].substance?.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Reaction *</Label>
+                      <Input {...register(`allergies.${index}.reaction`)} placeholder="e.g. Rash, Anaphylaxis" />
+                      {errors.allergies?.[index]?.reaction && (
+                        <p className="text-xs text-status-error-text">{errors.allergies[index].reaction?.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Severity</Label>
+                      <Select
+                        value={watch(`allergies.${index}.severity`) || "mild"}
+                        onValueChange={(val) => setValue(`allergies.${index}.severity`, val as "mild" | "moderate" | "severe")}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select severity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="mild">Mild</SelectItem>
+                          <SelectItem value="moderate">Moderate</SelectItem>
+                          <SelectItem value="severe">Severe</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Notes</Label>
+                      <Input {...register(`allergies.${index}.notes`)} placeholder="Additional notes (optional)" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
       </Card>
 
       {/* Tags */}
