@@ -1,15 +1,24 @@
-import { Suspense } from "react";
-import { getPatients, getAllAllergies } from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect, Suspense } from "react";
 import { PatientList } from "@/components/features/patients/PatientList";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
+import { getPatients } from "@/lib/api/patients";
+import type { Patient } from "@/types";
 
-export default async function PatientsDirectoryPage() {
-  const patients = await getPatients();
-  const allAllergies = await getAllAllergies();
-  const allergyMap = Object.fromEntries(allAllergies.map(a => [a.id, a]));
+export default function PatientsDirectoryPage() {
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getPatients()
+      .then(setPatients)
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -26,10 +35,15 @@ export default async function PatientsDirectoryPage() {
         </Link>
       </div>
 
-      {/* Suspense required because PatientList uses useSearchParams() */}
-      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading patients...</div>}>
-        <PatientList initialPatients={patients} allergyMap={allergyMap} />
-      </Suspense>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-48">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      ) : (
+        <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading patients...</div>}>
+          <PatientList initialPatients={patients} allergyMap={{}} />
+        </Suspense>
+      )}
     </div>
   );
 }

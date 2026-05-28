@@ -1,9 +1,6 @@
-"use server";
-
-import { createPatient, updatePatient, getPatientById, createAllergies, replacePatientAllergies } from "@/lib/data/api";
+import { apiClient } from "@/lib/api/client";
+import { mapFhirPatient, type FhirPatient } from "@/lib/api/mappers";
 import { patientRegistrationSchema, type PatientRegistrationInput } from "@/lib/validations/patient";
-import { generateId, generateMRN } from "@/lib/utils";
-import type { Patient, Allergy } from "@/types";
 
 export async function registerPatient(data: PatientRegistrationInput) {
   const parsed = patientRegistrationSchema.safeParse(data);
@@ -12,72 +9,38 @@ export async function registerPatient(data: PatientRegistrationInput) {
   }
 
   const v = parsed.data;
-  const patientId = generateId("pat");
-  const mrn = generateMRN();
-  const now = new Date().toISOString();
 
-  const allergyRecords: Allergy[] = (v.allergies ?? []).map(a => ({
-    id: generateId("alg"),
-    patientId,
-    substance: a.substance,
-    reaction: a.reaction,
-    severity: a.severity,
-    notes: a.notes ?? "",
-    recordedAt: now,
-  }));
-
-  const patient: Patient = {
-    id: patientId,
-    mrn,
+  const payload = {
+    firstName: v.firstName,
+    lastName: v.lastName,
     nic: v.nic,
-    name: {
-      first: v.firstName,
-      last: v.lastName,
-      full: `${v.firstName} ${v.lastName}`,
-    },
-    dob: v.dob,
-    sex: v.sex,
-    bloodType: v.bloodType || "",
-    nationality: v.nationality || "Sri Lankan",
-    maritalStatus: v.maritalStatus || "single",
-    occupation: v.occupation || "",
+    birthDate: v.dob,
+    gender: v.sex,
     phone: v.phone,
-    email: v.email || "",
-    address: {
-      line1: v.addressLine1,
-      line2: v.addressLine2 || "",
-      city: v.city,
-      district: v.district || "",
-      postalCode: v.postalCode || "",
-      country: v.country || "Sri Lanka",
-    },
-    emergencyContact: {
-      name: v.emergencyContactName,
-      relationship: v.emergencyContactRelationship,
-      phone: v.emergencyContactPhone,
-    },
-    insurance: v.insuranceProvider
-      ? {
-          provider: v.insuranceProvider,
-          policyNumber: v.insurancePolicyNumber || "",
-          groupNumber: v.insuranceGroupNumber || "",
-          expiryDate: v.insuranceExpiryDate || "",
-          holderName: v.insuranceHolderName || "",
-          relationship: v.insuranceRelationship || "self",
-        }
-      : null,
-    allergies: allergyRecords.map(a => a.id),
-    problemList: [],
-    currentMedications: [],
-    tags: v.tags ? v.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-    createdAt: now,
-    updatedAt: now,
+    email: v.email || undefined,
+    bloodType: v.bloodType || undefined,
+    nationality: v.nationality || undefined,
+    maritalStatus: v.maritalStatus || undefined,
+    occupation: v.occupation || undefined,
+    addressLine1: v.addressLine1,
+    addressLine2: v.addressLine2 || undefined,
+    city: v.city,
+    state: v.district || undefined,
+    postalCode: v.postalCode || undefined,
+    country: v.country || "Sri Lanka",
+    emergencyContactName: v.emergencyContactName,
+    emergencyContactRelationship: v.emergencyContactRelationship,
+    emergencyContactPhone: v.emergencyContactPhone,
   };
 
-  await createPatient(patient);
-  await createAllergies(allergyRecords);
-
-  return { success: true, patientId };
+  try {
+    const res = await apiClient.post<FhirPatient>("/patients", payload);
+    const patient = mapFhirPatient(res.data);
+    return { success: true, patientId: patient.id, patientCode: patient.mrn };
+  } catch (err: any) {
+    const msg = err?.response?.data?.message ?? "Failed to register patient";
+    return { success: false, error: { _form: [msg] } };
+  }
 }
 
 export async function updatePatientDemographics(
@@ -89,70 +52,36 @@ export async function updatePatientDemographics(
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
 
-  const existing = await getPatientById(patientId);
-  if (!existing) {
-    return { success: false, error: { _form: ["Patient not found"] } };
-  }
-
   const v = parsed.data;
-  const now = new Date().toISOString();
 
-  const allergyRecords: Allergy[] = (v.allergies ?? []).map(a => ({
-    id: generateId("alg"),
-    patientId,
-    substance: a.substance,
-    reaction: a.reaction,
-    severity: a.severity,
-    notes: a.notes ?? "",
-    recordedAt: now,
-  }));
-
-  const updated: Patient = {
-    ...existing,
+  const payload = {
+    firstName: v.firstName,
+    lastName: v.lastName,
     nic: v.nic,
-    name: {
-      first: v.firstName,
-      last: v.lastName,
-      full: `${v.firstName} ${v.lastName}`,
-    },
-    dob: v.dob,
-    sex: v.sex,
-    bloodType: v.bloodType || "",
-    nationality: v.nationality || "Sri Lankan",
-    maritalStatus: v.maritalStatus || "single",
-    occupation: v.occupation || "",
+    birthDate: v.dob,
+    gender: v.sex,
     phone: v.phone,
-    email: v.email || "",
-    address: {
-      line1: v.addressLine1,
-      line2: v.addressLine2 || "",
-      city: v.city,
-      district: v.district || "",
-      postalCode: v.postalCode || "",
-      country: v.country || "Sri Lanka",
-    },
-    emergencyContact: {
-      name: v.emergencyContactName,
-      relationship: v.emergencyContactRelationship,
-      phone: v.emergencyContactPhone,
-    },
-    insurance: v.insuranceProvider
-      ? {
-          provider: v.insuranceProvider,
-          policyNumber: v.insurancePolicyNumber || "",
-          groupNumber: v.insuranceGroupNumber || "",
-          expiryDate: v.insuranceExpiryDate || "",
-          holderName: v.insuranceHolderName || "",
-          relationship: v.insuranceRelationship || "self",
-        }
-      : null,
-    tags: v.tags ? v.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-    allergies: allergyRecords.map(a => a.id),
-    updatedAt: now,
+    email: v.email || undefined,
+    bloodType: v.bloodType || undefined,
+    nationality: v.nationality || undefined,
+    maritalStatus: v.maritalStatus || undefined,
+    occupation: v.occupation || undefined,
+    addressLine1: v.addressLine1,
+    addressLine2: v.addressLine2 || undefined,
+    city: v.city,
+    state: v.district || undefined,
+    postalCode: v.postalCode || undefined,
+    country: v.country || "Sri Lanka",
+    emergencyContactName: v.emergencyContactName,
+    emergencyContactRelationship: v.emergencyContactRelationship,
+    emergencyContactPhone: v.emergencyContactPhone,
   };
 
-  await updatePatient(updated);
-  await replacePatientAllergies(patientId, allergyRecords);
-
-  return { success: true };
+  try {
+    await apiClient.patch(`/patients/${patientId}`, payload);
+    return { success: true };
+  } catch (err: any) {
+    const msg = err?.response?.data?.message ?? "Failed to update patient";
+    return { success: false, error: { _form: [msg] } };
+  }
 }

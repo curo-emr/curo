@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const { login } = useAuth();
   const router = useRouter();
 
@@ -22,11 +23,12 @@ export default function LoginPage() {
     if (!email || !password) return;
 
     setIsLoading(true);
+    setLoginError(null);
     try {
-      await login(email);
+      await login(email, password);
       router.push("/dashboard");
-    } catch (error) {
-      console.error("Failed to login", error);
+    } catch {
+      setLoginError("Invalid email or password.");
     } finally {
       setIsLoading(false);
     }
@@ -107,6 +109,12 @@ export default function LoginPage() {
             </button>
           </div>
         </div>
+
+        {loginError && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {loginError}
+          </p>
+        )}
 
         {/* Submit */}
         <div className="pt-1">

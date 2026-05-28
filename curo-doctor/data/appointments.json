@@ -238,5 +238,77 @@
     "status": "scheduled",
     "room": "Room 1",
     "notes": ""
+  },
+  {
+    "id": "apt_7021",
+    "date": "2026-03-22",
+    "time": "09:00",
+    "doctorId": "doc_9001",
+    "patientId": "pat_1003",
+    "reason": "Hypertension follow-up",
+    "visitType": "Follow-up",
+    "status": "completed",
+    "room": "Room 2",
+    "notes": "BP well controlled. Continue current regimen."
+  },
+  {
+    "id": "apt_7022",
+    "date": "2026-03-22",
+    "time": "09:30",
+    "doctorId": "doc_9001",
+    "patientId": "pat_1001",
+    "reason": "Diabetes management review",
+    "visitType": "Follow-up",
+    "status": "completed",
+    "room": "Room 1",
+    "notes": "HbA1c improved. Adjusted metformin dose."
+  },
+  {
+    "id": "apt_7023",
+    "date": "2026-03-22",
+    "time": "10:00",
+    "doctorId": "doc_9001",
+    "patientId": "pat_1005",
+    "reason": "Chest pain follow-up",
+    "visitType": "Follow-up",
+    "status": "in_progress",
+    "room": "Room 1",
+    "notes": "Reviewing stress test results"
+  },
+  {
+    "id": "apt_7024",
+    "date": "2026-03-22",
+    "time": "10:30",
+    "doctorId": "doc_9001",
+    "patientId": "pat_1002",
+    "reason": "Asthma medication review",
+    "visitType": "Follow-up",
+    "status": "waiting",
+    "room": "Room 2",
+    "notes": "Patient arrived at 10:20"
+  },
+  {
+    "id": "apt_7025",
+    "date": "2026-03-22",
+    "time": "11:00",
+    "doctorId": "doc_9001",
+    "patientId": "pat_1004",
+    "reason": "Hypothyroid follow-up",
+    "visitType": "Follow-up",
+    "status": "scheduled",
+    "room": "Room 3",
+    "notes": ""
+  },
+  {
+    "id": "apt_7026",
+    "date": "2026-03-22",
+    "time": "11:30",
+    "doctorId": "doc_9001",
+    "patientId": "pat_1006",
+    "reason": "Knee pain follow-up",
+    "visitType": "Follow-up",
+    "status": "scheduled",
+    "room": "Room 1",
+    "notes": ""
   }
 ]
