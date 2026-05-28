@@ -1,21 +1,9 @@
-"use server";
+import { apiClient } from "@/lib/api/client";
+import { mapFhirAppointment, type FhirAppointment } from "@/lib/api/mappers";
+import { bookAppointmentSchema, type BookAppointmentInput } from "@/lib/validations/appointment";
+import type { Appointment } from "@/types";
 
-import {
-  createAppointment,
-  getAppointments,
-  updateAppointment,
-  createVisit,
-  getVisits,
-  updateVisit,
-} from "@/lib/data/api";
-import {
-  bookAppointmentSchema,
-  type BookAppointmentInput,
-} from "@/lib/validations/appointment";
-import { generateId } from "@/lib/utils";
-import type { Appointment, Visit } from "@/types";
-
-type AppointmentStatus = 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+type AppointmentStatus = Appointment["status"];
 
 export async function bookNewAppointment(data: BookAppointmentInput) {
   const parsed = bookAppointmentSchema.safeParse(data);
@@ -25,116 +13,59 @@ export async function bookNewAppointment(data: BookAppointmentInput) {
 
   const v = parsed.data;
 
-  // Check for double-booking
-  const allAppts = await getAppointments();
-  const conflict = allAppts.find(
-    (a) =>
-      a.doctorId === v.doctorId &&
-      a.date === v.date &&
-      a.time === v.time &&
-      a.status !== "cancelled"
-  );
+  // Build ISO datetime strings from date + time
+  const [startHour, startMin] = v.time.split(":").map(Number);
+  const startDt = new Date(v.date);
+  startDt.setHours(startHour, startMin, 0, 0);
+  const endDt = new Date(startDt.getTime() + 30 * 60 * 1000); // 30 min slot
 
-  if (conflict) {
-    return {
-      success: false,
-      error: { time: ["This time slot is already booked"] },
-    };
-  }
-
-  const appointment: Appointment = {
-    id: generateId("apt"),
-    date: v.date,
-    time: v.time,
-    doctorId: v.doctorId,
+  const payload = {
     patientId: v.patientId,
-    reason: v.reason,
-    visitType: v.visitType,
-    status: "scheduled",
-    room: "",
-    notes: v.notes || "",
-    checkInTime: null,
-    checkedInBy: null,
-    visitId: null,
+    practitionerId: v.doctorId,
+    start: startDt.toISOString(),
+    end: endDt.toISOString(),
+    reasonCode: v.reason,
+    serviceType: v.visitType,
+    comment: v.notes || undefined,
   };
 
-  // No-op in demo mode — data resets on reload
-  await createAppointment(appointment);
-
-  return { success: true, appointmentId: appointment.id };
+  try {
+    const res = await apiClient.post<FhirAppointment>("/appointments", payload);
+    const appt = mapFhirAppointment(res.data);
+    return { success: true, appointmentId: appt.id };
+  } catch (err: any) {
+    const msg = err?.response?.data?.message ?? "Failed to book appointment";
+    return { success: false, error: { _form: [msg] } };
+  }
 }
 
 export async function updateAppointmentStatus(
   appointmentId: string,
   newStatus: AppointmentStatus
 ) {
-  const allAppts = await getAppointments();
-  const appt = allAppts.find((a) => a.id === appointmentId);
-  if (!appt) {
-    return { success: false, error: "Appointment not found" };
-  }
+  // Map frontend status to FHIR status
+  const statusMap: Record<AppointmentStatus, string> = {
+    scheduled: "booked",
+    not_arrived: "booked",
+    arrived: "arrived",
+    waiting: "waitlist",
+    in_progress: "arrived",
+    completed: "fulfilled",
+    cancelled: "cancelled",
+    no_show: "noshow",
+  };
 
-  if (newStatus === "arrived") {
-    const now = new Date().toISOString();
-    const visitId = generateId("vis");
-    const visit: Visit = {
-      id: visitId,
-      appointmentId: appt.id,
-      patientId: appt.patientId,
-      doctorId: appt.doctorId,
-      date: appt.date,
-      checkInTime: now,
-      checkOutTime: null,
-      status: "checked_in",
-      notes: appt.reason,
-      createdBy: "rec_8001",
-    };
-    await createVisit(visit);
-    await updateAppointment({
-      ...appt,
-      status: "arrived",
-      checkInTime: now,
-      checkedInBy: "rec_8001",
-      visitId,
+  try {
+    await apiClient.put(`/appointments/${appointmentId}`, {
+      status: statusMap[newStatus] ?? newStatus,
     });
-  } else if (newStatus === "in_progress") {
-    await updateAppointment({ ...appt, status: "in_progress" });
-    if (appt.visitId) {
-      const allVisits = await getVisits();
-      const visit = allVisits.find((v) => v.id === appt.visitId);
-      if (visit) {
-        await updateVisit({ ...visit, status: "with_doctor" });
-      }
-    }
-  } else if (newStatus === "completed") {
-    await updateAppointment({ ...appt, status: "completed" });
-    if (appt.visitId) {
-      const allVisits = await getVisits();
-      const visit = allVisits.find((v) => v.id === appt.visitId);
-      if (visit) {
-        await updateVisit({
-          ...visit,
-          status: "completed",
-          checkOutTime: new Date().toISOString(),
-        });
-      }
-    }
-  } else {
-    await updateAppointment({ ...appt, status: newStatus });
+    return { success: true };
+  } catch (err: any) {
+    const msg = err?.response?.data?.message ?? "Failed to update appointment";
+    return { success: false, error: msg };
   }
-
-  return { success: true };
 }
 
 export async function cancelAppointment(appointmentId: string) {
-  const allAppts = await getAppointments();
-  const appt = allAppts.find((a) => a.id === appointmentId);
-  if (!appt) {
-    return { success: false, error: "Appointment not found" };
-  }
-
-  // No-op in demo mode — data resets on reload
-  await updateAppointment({ ...appt, status: "cancelled" });
-
-  return { success: true };
+  return updateAppointmentStatus(appointmentId, "cancelled");
 }

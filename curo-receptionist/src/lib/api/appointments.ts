@@ -1,0 +1,33 @@
+import { apiClient } from './client';
+import type { Appointment } from '@/types';
+import { mapFhirAppointment, type FhirAppointment } from './mappers';
+
+export async function getAppointments(filters?: {
+  date?: string;
+  practitionerId?: string;
+  patientId?: string;
+}): Promise<Appointment[]> {
+  const res = await apiClient.get<FhirAppointment[]>('/appointments', { params: filters });
+  return res.data.map(mapFhirAppointment);
+}
+
+export async function getAppointmentsByDate(date: string): Promise<Appointment[]> {
+  return getAppointments({ date });
+}
+
+export async function getSchedule(practitionerId: string, date?: string): Promise<Appointment[]> {
+  const params: Record<string, string> = {};
+  if (date) params.date = date;
+  const res = await apiClient.get<FhirAppointment[]>(`/appointments/schedule/${practitionerId}`, { params });
+  return res.data.map(mapFhirAppointment);
+}
+
+export async function updateAppointment(id: string, data: Record<string, unknown>): Promise<Appointment> {
+  const res = await apiClient.put<FhirAppointment>(`/appointments/${id}`, data);
+  return mapFhirAppointment(res.data);
+}
+
+export async function createAppointment(data: Record<string, unknown>): Promise<Appointment> {
+  const res = await apiClient.post<FhirAppointment>('/appointments', data);
+  return mapFhirAppointment(res.data);
+}
