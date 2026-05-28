@@ -1,0 +1,50 @@
+import { Injectable, ForbiddenException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { AuditLog } from '../entities/audit-log.entity';
+
+@Injectable()
+export class AuditService {
+  constructor(
+    @InjectRepository(AuditLog)
+    private auditRepo: Repository<AuditLog>,
+  ) {}
+
+  async log(data: {
+    userId: string;
+    userRole?: string;
+    action: string;
+    resourceType: string;
+    resourceId: string;
+    patientId?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    changes?: Record<string, unknown>;
+    outcome?: string;
+    outcomeDescription?: string;
+  }): Promise<AuditLog> {
+    const log = this.auditRepo.create(data);
+    return this.auditRepo.save(log);
+  }
+
+  async findAll(requestingUser: { role: string }, filters?: {
+    userId?: string;
+    resourceType?: string;
+    patientId?: string;
+    from?: string;
+    to?: string;
+  }): Promise<AuditLog[]> {
+    if (requestingUser.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only super admin can view audit logs');
+    }
+
+    const query = this.auditRepo.createQueryBuilder('a');
+    if (filters?.userId) query.andWhere('a.userId = :uid', { uid: filters.userId });
+    if (filters?.resourceType) query.andWhere('a.resourceType = :rt', { rt: filters.resourceType });
+    if (filters?.patientId) query.andWhere('a.patientId = :pid', { pid: filters.patientId });
+    if (filters?.from) query.andWhere('a.createdAt >= :from', { from: new Date(filters.from) });
+    if (filters?.to) query.andWhere('a.createdAt <= :to', { to: new Date(filters.to) });
+
+    return query.orderBy('a.createdAt', 'DESC').limit(500).getMany();
+  }
+}
