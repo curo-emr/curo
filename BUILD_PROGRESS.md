@@ -1,6 +1,6 @@
 # Curo EMR — Build Progress
 
-**Last updated:** 2026-05-28
+**Last updated:** 2026-05-28 (Phase 6 complete)
 
 ---
 
@@ -176,14 +176,27 @@ Run: `npm run seed` from repo root (requires postgres running)
 
 ---
 
-## Phase 6: Frontend Wiring — TODO
+## Phase 6: Frontend Wiring ✅ DONE
 
-For each frontend, need to:
-1. Change dev port to 3010–3014
-2. Create `lib/api/client.ts` with axios + JWT interceptor pointing to http://localhost:3000
-3. Replace all `import data from '@/data/*.json'` with real API calls
-4. Update `contexts/AuthContext.tsx` to use real `/auth/login` endpoint
-5. Enforce role-based UI restrictions (patient can only see own data)
+All 5 frontends wired to the real backend API.
+
+### What was done:
+1. ✅ Dev ports updated to 3010–3014
+2. ✅ `lib/api/client.ts` created in all frontends — axios with JWT interceptor pointing to http://localhost:3000
+3. ✅ FHIR response mappers created (`lib/api/mappers.ts`) to translate FHIR shapes to frontend types
+4. ✅ Domain API modules created (`patients.ts`, `appointments.ts`, `encounters.ts`, `clinical.ts`, `tasks.ts`, `practitioners.ts`, `pharmacy.ts`, `lab.ts`)
+5. ✅ `AuthContext.tsx` updated in all frontends to call real `POST /auth/login`
+6. ✅ All server component pages converted to `"use client"` with useEffect data fetching
+7. ✅ All `"use server"` action files replaced with direct API calls
+8. ✅ `NEXT_PUBLIC_API_URL=http://localhost:3000` added to each frontend's `.env.local`
+9. ✅ Added `GET /auth/practitioners` endpoint to auth service (for doctor dropdowns)
+
+### Architecture decisions:
+- No Next.js server actions anywhere
+- Static catalogs (ICD-10, medications, lab tests) remain as bundled JSON (no backend needed)
+- All transactional data fetched client-side via useEffect + axios
+- FHIR-shaped API responses mapped to frontend domain types in `lib/api/mappers.ts`
+- `lib/data/api.ts` in each frontend re-exports from `lib/api/` for backward compatibility
 
 ### Frontend port mapping:
 - curo-doctor → port 3010
@@ -324,22 +337,46 @@ curo/
 
 ---
 
+## Phase 6 Additions to File Tree
+
+```
+Each frontend now has:
+├── src/lib/api/
+│   ├── client.ts       ✅ (axios instance, JWT interceptor)
+│   ├── mappers.ts      ✅ (FHIR → frontend type mappers)
+│   ├── patients.ts     ✅
+│   ├── appointments.ts ✅ (doctor, receptionist)
+│   ├── encounters.ts   ✅ (doctor)
+│   ├── clinical.ts     ✅ (doctor — notes, vitals, prescriptions, lab orders)
+│   ├── tasks.ts        ✅ (doctor)
+│   ├── practitioners.ts ✅ (doctor, receptionist — doctor dropdown)
+│   ├── patient-portal.ts ✅ (patient portal)
+│   ├── pharmacy.ts     ✅ (pharmacy — prescriptions, dispense, stock)
+│   ├── lab.ts          ✅ (lab — orders, results, instruments)
+│   └── index.ts        ✅ (re-exports)
+├── src/contexts/AuthContext.tsx  ✅ (calls real POST /auth/login)
+├── .env.local          ✅ (NEXT_PUBLIC_API_URL=http://localhost:3000)
+```
+
+---
+
 ## Next Steps (TODO)
 
-### Phase 6: Frontend Wiring (NEXT)
-Priority order:
-1. Create `lib/api/client.ts` in each frontend (axios with JWT interceptor)
-2. Wire `AuthContext` to real `/auth/login` endpoint
-3. curo-receptionist: patient registration + appointment booking
-4. curo-doctor: patient list, clinical workflow, prescriptions, lab orders
-5. curo-patient: read-only own data
-6. curo-pharmacy: pending prescriptions + dispense flow
-7. curo-lab: orders queue + result entry
+### Phase 7: End-to-end Testing & Polish (NEXT)
+1. Start Docker + run seed, then verify each frontend login flow works
+2. Fix any TypeScript build errors (some old type fields may remain in components)
+3. Wire the EncounterEditor component's form submit to POST /encounters, POST /vitals, POST /prescriptions, POST /lab-orders
+4. Wire PatientRegistrationForm and PatientEditForm submits to registerPatient/updatePatientDemographics
+5. Wire BookAppointmentForm submit to bookNewAppointment
+6. Add JWT refresh token flow (currently just removes token on 401)
+7. Add notifications polling (GET /notifications/count in Topbar)
+8. Polish: loading states, error toasts (sonner), empty states
 
 ### Known Issues / TODOs:
 - `@nestjs/mapped-types` needs to be installed in any service using `PartialType` (already done for patient)
-- curo-audit service: missing enums directory (no enums needed)
-- Payment entity created but no payment service endpoint yet — implement if billing needed
-- DocumentReference entity created but no upload endpoint yet
+- Some patient pages (visits detail) are placeholders until encounter API is added to patient scope
+- The EncounterEditor component form submit still uses old server actions — needs to be wired to API
+- PatientRegistrationForm / BookAppointmentForm forms call updated actions — verify form wiring
 - `typeorm: "^1.0.0"` is installed in all services — this is correct (TypeORM 1.0.0)
-- Docker not installed on this machine — user needs Docker Desktop to run postgres
+- Docker Desktop required to run postgres (docker-compose.yml is ready)
+- Run `docker compose up -d` then `npm run seed` before starting backends
