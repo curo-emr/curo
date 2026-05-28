@@ -1,35 +1,52 @@
-import { getLabOrders, getUrgentLabOrders, getPatients, getLabTestCatalog, getQCLogs, getLabInstruments } from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Loader2, AlertTriangle, Cpu } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LabDashboardStats } from "@/components/features/dashboard/LabDashboardStats";
 import { UrgentOrdersList } from "@/components/features/dashboard/UrgentOrdersList";
 import { RecentActivityFeed } from "@/components/features/dashboard/RecentActivityFeed";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { AlertTriangle, Activity, Cpu } from "lucide-react";
+import { getLabOrders, getLabInstruments, type LabInstrument } from "@/lib/api/lab";
+import { getPatients } from "@/lib/api/patients";
+import { getLabTestCatalog } from "@/lib/data/api";
+import type { LabOrder, Patient, LabTestCatalogItem } from "@/types";
 
-export default async function DashboardPage() {
-  const [orders, urgentOrders, patients, testCatalog, qcLogs, instruments] = await Promise.all([
-    getLabOrders(),
-    getUrgentLabOrders(),
-    getPatients(),
-    getLabTestCatalog(),
-    getQCLogs(),
-    getLabInstruments(),
-  ]);
+export default function DashboardPage() {
+  const [orders, setOrders] = useState<LabOrder[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
+  const [instruments, setInstruments] = useState<LabInstrument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getLabOrders(), getPatients(), getLabTestCatalog(), getLabInstruments()])
+      .then(([ords, pts, catalog, insts]) => {
+        setOrders(ords);
+        setPatients(pts);
+        setTestCatalog(catalog);
+        setInstruments(insts);
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+
+  const urgentOrders = orders.filter(o => o.priority === 'urgent' || o.priority === 'stat');
+  const qcAlerts: never[] = [];
 
   const today = new Date();
   const dateHeading = today.toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  const qcAlerts = qcLogs.filter(l => l.status === 'fail' || l.status === 'warning');
-
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Laboratory Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">{dateHeading}</p>
+          <p className="text-sm text-muted-foreground mt-1">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
       </div>
 
@@ -83,7 +100,7 @@ export default async function DashboardPage() {
                   <div key={inst.id} className="px-4 py-3 flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-slate-700">{inst.name}</p>
-                      <p className="text-xs text-slate-400">{inst.department} - {inst.location}</p>
+                      <p className="text-xs text-slate-400">{inst.model} {inst.location ? `— ${inst.location}` : ''}</p>
                     </div>
                     <Badge variant="outline" className={
                       inst.status === 'operational' ? 'text-green-700 border-green-200 bg-green-50' :

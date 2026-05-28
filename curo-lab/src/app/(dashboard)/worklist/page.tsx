@@ -1,14 +1,25 @@
-import { Suspense } from "react";
-import { getLabOrders, getPatients, getLabTestCatalog, getLabStaff } from "@/lib/data/api";
-import { WorklistTable } from "@/components/features/worklist/WorklistTable";
+"use client";
 
-export default async function WorklistPage() {
-  const [orders, patients, testCatalog, staff] = await Promise.all([
-    getLabOrders(),
-    getPatients(),
-    getLabTestCatalog(),
-    getLabStaff(),
-  ]);
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { WorklistTable } from "@/components/features/worklist/WorklistTable";
+import { getLabOrders } from "@/lib/api/lab";
+import { getPatients } from "@/lib/api/patients";
+import { getLabTestCatalog } from "@/lib/data/api";
+import type { LabOrder, Patient, LabTestCatalogItem } from "@/types";
+
+export default function WorklistPage() {
+  const [orders, setOrders] = useState<LabOrder[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getLabOrders(), getPatients(), getLabTestCatalog()])
+      .then(([ords, pts, catalog]) => { setOrders(ords); setPatients(pts); setTestCatalog(catalog); })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -17,9 +28,11 @@ export default async function WorklistPage() {
         <p className="text-sm text-muted-foreground">Manage lab orders, specimens, and results</p>
       </div>
 
-      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading worklist...</div>}>
-        <WorklistTable orders={orders} patients={patients} testCatalog={testCatalog} staff={staff} />
-      </Suspense>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
+      ) : (
+        <WorklistTable orders={orders} patients={patients} testCatalog={testCatalog} staff={[]} />
+      )}
     </div>
   );
 }
