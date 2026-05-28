@@ -1,13 +1,23 @@
-import { Suspense } from "react";
-import { getDispensingRecords, getPatients, getPharmacyStaff } from "@/lib/data/api";
-import { DispensingLogTable } from "@/components/features/dispensing/DispensingLogTable";
+"use client";
 
-export default async function DispensingLogPage() {
-  const [records, patients, staff] = await Promise.all([
-    getDispensingRecords(),
-    getPatients(),
-    getPharmacyStaff(),
-  ]);
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { DispensingLogTable } from "@/components/features/dispensing/DispensingLogTable";
+import { getDispensingRecords, type DispenseRecord } from "@/lib/api/pharmacy";
+import { getPatients } from "@/lib/api/patients";
+import type { Patient } from "@/types";
+
+export default function DispensingLogPage() {
+  const [records, setRecords] = useState<DispenseRecord[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getDispensingRecords(), getPatients()])
+      .then(([recs, pts]) => { setRecords(recs); setPatients(pts); })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -16,9 +26,11 @@ export default async function DispensingLogPage() {
         <p className="text-sm text-muted-foreground">Complete record of all dispensed medications</p>
       </div>
 
-      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading dispensing records...</div>}>
-        <DispensingLogTable records={records} patients={patients} staff={staff} />
-      </Suspense>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
+      ) : (
+        <DispensingLogTable records={records} patients={patients} staff={[]} />
+      )}
     </div>
   );
 }
