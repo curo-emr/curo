@@ -1,28 +1,42 @@
-import { notFound } from "next/navigation";
-import { getPrescriptionById, getDoctors } from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect, use } from "react";
+import { Loader2, Pill, ArrowLeft, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pill, ArrowLeft, Clock, User } from "lucide-react";
 import Link from "next/link";
-import { formatDate, getDoctorName } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { getMyProfile, getMyPrescriptions } from "@/lib/api/patient-portal";
+import type { Prescription } from "@/types";
 
 interface Props {
   params: Promise<{ prescriptionId: string }>;
 }
 
-export default async function PrescriptionDetailPage({ params }: Props) {
-  const { prescriptionId } = await params;
-  const [prescription, doctors] = await Promise.all([
-    getPrescriptionById(prescriptionId),
-    getDoctors(),
-  ]);
+export default function PrescriptionDetailPage({ params }: Props) {
+  const { prescriptionId } = use(params);
+  const [prescription, setPrescription] = useState<Prescription | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getMyProfile().then(async pt => {
+      if (!pt) { setIsLoading(false); return; }
+      const rxs = await getMyPrescriptions(pt.id);
+      const rx = rxs.find(r => r.id === prescriptionId) ?? null;
+      setPrescription(rx);
+    }).catch(console.error).finally(() => setIsLoading(false));
+  }, [prescriptionId]);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
   if (!prescription) {
-    notFound();
+    return <div className="p-8 text-center text-slate-500">Prescription not found.</div>;
   }
+
+  const doctors: never[] = [];
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
