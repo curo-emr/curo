@@ -1,18 +1,27 @@
-import { getPatientAppointments, getDoctors } from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Loader2, Calendar, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock } from "lucide-react";
-import { formatDate, getDoctorName, formatTime, getTodayString } from "@/lib/utils";
+import { formatDate, formatTime, getTodayString } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { getMyAppointments } from "@/lib/api/patient-portal";
+import type { Appointment } from "@/types";
 
-export default async function AppointmentsPage() {
-  const [appointments, doctors] = await Promise.all([
-    getPatientAppointments(),
-    getDoctors(),
-  ]);
+export default function AppointmentsPage() {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    getMyAppointments().then(setAppointments).catch(console.error).finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+
+  const doctors: never[] = [];
   const today = getTodayString();
   const upcoming = appointments.filter(a => a.date >= today && a.status === "scheduled");
   const past = appointments.filter(a => a.date < today || a.status === "completed" || a.status === "cancelled" || a.status === "no_show");

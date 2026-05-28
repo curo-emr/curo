@@ -1,10 +1,14 @@
-import { getPatientAllergies, getPatientProblems, getPatientPrescriptions } from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Loader2, HeartPulse, AlertTriangle, Pill, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { HeartPulse, AlertTriangle, Pill, ShieldAlert } from "lucide-react";
 import { formatDate, formatStatus } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { getMyProfile, getMyAllergies, getMyConditions, getMyPrescriptions } from "@/lib/api/patient-portal";
+import type { Allergy, Problem, Prescription } from "@/types";
 
 function SeverityBadge({ severity }: { severity: string }) {
   switch (severity) {
@@ -19,17 +23,30 @@ function SeverityBadge({ severity }: { severity: string }) {
   }
 }
 
-export default async function HealthRecordsPage() {
-  const [allergies, problems, prescriptions] = await Promise.all([
-    getPatientAllergies(),
-    getPatientProblems(),
-    getPatientPrescriptions(),
-  ]);
+export default function HealthRecordsPage() {
+  const [allergies, setAllergies] = useState<Allergy[]>([]);
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getMyProfile().then(async pt => {
+      if (!pt) { setIsLoading(false); return; }
+      const [alg, probs, rxs] = await Promise.all([
+        getMyAllergies(pt.id),
+        getMyConditions(pt.id),
+        getMyPrescriptions(pt.id),
+      ]);
+      setAllergies(alg);
+      setProblems(probs);
+      setPrescriptions(rxs);
+    }).catch(console.error).finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
   const activeProblems = problems.filter(p => p.status === "active");
   const resolvedProblems = problems.filter(p => p.status !== "active");
-
-  // Current medications from the latest prescription
   const latestRx = prescriptions[0];
   const currentMedications = latestRx?.items || [];
 

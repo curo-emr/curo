@@ -1,18 +1,34 @@
-import { getPatientLabOrders, getDoctors, getLabTestCatalog } from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Loader2, CheckCircle2, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FlaskConical, CheckCircle2, Clock } from "lucide-react";
-import { formatDate, getDoctorName, getTestName } from "@/lib/utils";
+import { formatDate, getTestName } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { getMyProfile, getMyLabOrders } from "@/lib/api/patient-portal";
+import { getLabTestCatalog } from "@/lib/data/api";
+import type { LabOrder, LabTestCatalogItem } from "@/types";
 
-export default async function LabReportsPage() {
-  const [labOrders, doctors, labTestCatalog] = await Promise.all([
-    getPatientLabOrders(),
-    getDoctors(),
-    getLabTestCatalog(),
-  ]);
+export default function LabReportsPage() {
+  const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
+  const [labTestCatalog, setLabTestCatalog] = useState<LabTestCatalogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getMyProfile().then(async pt => {
+      if (!pt) { setIsLoading(false); return; }
+      const [labs, catalog] = await Promise.all([getMyLabOrders(pt.id), getLabTestCatalog()]);
+      setLabOrders(labs);
+      setLabTestCatalog(catalog);
+    }).catch(console.error).finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+
+  const doctors: never[] = [];
 
   const completedLabs = labOrders.filter(l => l.status === "completed");
   const pendingLabs = labOrders.filter(l => l.status !== "completed");

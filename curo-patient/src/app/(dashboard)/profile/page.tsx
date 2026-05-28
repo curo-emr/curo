@@ -1,27 +1,25 @@
-import { getCurrentPatient } from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Loader2, User, Phone, Mail, MapPin, Heart, Shield, Droplets, Briefcase, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  Heart,
-  Shield,
-  Droplets,
-  Briefcase,
-  Calendar,
-} from "lucide-react";
 import { calculateAge, formatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { getMyProfile } from "@/lib/api/patient-portal";
+import type { Patient } from "@/types";
 
-export default async function ProfilePage() {
-  const patient = await getCurrentPatient();
+export default function ProfilePage() {
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!patient) {
-    return <div className="text-center py-12 text-muted-foreground">Patient data not found.</div>;
-  }
+  useEffect(() => {
+    getMyProfile().then(setPatient).catch(console.error).finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+  if (!patient) return <div className="text-center py-12 text-muted-foreground">Patient data not found.</div>;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">

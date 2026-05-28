@@ -1,20 +1,21 @@
-import { getPatientEncounters, getDoctors } from "@/lib/data/api";
+"use client";
+
+import { Loader2, ClipboardList, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { formatDate, getDoctorName } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-export default async function VisitsPage() {
-  const [encounters, doctors] = await Promise.all([
-    getPatientEncounters(),
-    getDoctors(),
-  ]);
+// Visit history is not yet exposed in the patient portal API
+// This page shows a placeholder until the encounters endpoint is available
+export default function VisitsPage() {
+  const encounters: never[] = [];
+  const doctors: never[] = [];
 
   const completedVisits = encounters.filter(e => e.status === "completed");
 

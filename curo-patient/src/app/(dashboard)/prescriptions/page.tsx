@@ -1,19 +1,33 @@
-import { getPatientPrescriptions, getDoctors } from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Loader2, Pill, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pill, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { formatDate, getDoctorName } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { getMyProfile, getMyPrescriptions } from "@/lib/api/patient-portal";
+import type { Prescription } from "@/types";
 
-export default async function PrescriptionsPage() {
-  const [prescriptions, doctors] = await Promise.all([
-    getPatientPrescriptions(),
-    getDoctors(),
-  ]);
+export default function PrescriptionsPage() {
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getMyProfile().then(async pt => {
+      if (!pt) { setIsLoading(false); return; }
+      const rxs = await getMyPrescriptions(pt.id);
+      setPrescriptions(rxs);
+    }).catch(console.error).finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+
+  const doctors: never[] = [];
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
