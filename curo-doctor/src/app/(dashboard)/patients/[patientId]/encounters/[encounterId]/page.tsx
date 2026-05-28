@@ -1,35 +1,61 @@
-import { notFound } from "next/navigation";
-import { 
-  getEncounterById, 
-  getPatientById,
-  getPrescriptionsByEncounter,
-  getLabOrdersByEncounter,
-  getLabTestCatalog
-} from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect, use } from "react";
+import { Loader2, ArrowLeft, Stethoscope, Pill, Beaker, FileSignature, Activity } from "lucide-react";
 import { calculateBMI, formatDate, formatStatus, getBMICategory } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { ArrowLeft, Stethoscope, Pill, Beaker, FileSignature, Activity } from "lucide-react";
+import { getEncounterById } from "@/lib/api/encounters";
+import { getPatientById } from "@/lib/api/patients";
+import { getPrescriptionsByPatient, getLabOrdersByPatient } from "@/lib/api/clinical";
+import { getLabTestCatalog } from "@/lib/data/api";
+import type { Encounter, Patient, Prescription, LabOrder, LabTestCatalogItem } from "@/types";
 
-export default async function EncounterDetailsPage({ params }: { params: Promise<{ patientId: string; encounterId: string }> }) {
-  const { patientId, encounterId } = await params;
-  
-  const [encounter, patient, prescriptions, labOrders, labTestCatalog] = await Promise.all([
-    getEncounterById(encounterId),
-    getPatientById(patientId),
-    getPrescriptionsByEncounter(encounterId),
-    getLabOrdersByEncounter(encounterId),
-    getLabTestCatalog(),
-  ]);
+export default function EncounterDetailsPage({ params }: { params: Promise<{ patientId: string; encounterId: string }> }) {
+  const { patientId, encounterId } = use(params);
 
-  if (!encounter || !patient) {
-    notFound();
+  const [encounter, setEncounter] = useState<Encounter | null>(null);
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
+  const [labTestCatalog, setLabTestCatalog] = useState<LabTestCatalogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      getEncounterById(encounterId),
+      getPatientById(patientId),
+      getPrescriptionsByPatient(patientId),
+      getLabOrdersByPatient(patientId),
+      getLabTestCatalog(),
+    ])
+      .then(([enc, pt, rxs, labs, catalog]) => {
+        setEncounter(enc);
+        setPatient(pt);
+        setPrescriptions(rxs.filter(rx => rx.encounterId === encounterId));
+        setLabOrders(labs.filter(l => l.encounterId === encounterId));
+        setLabTestCatalog(catalog);
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [patientId, encounterId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
   }
 
-  const bmi = encounter.vitals?.heightCm && encounter.vitals?.weightKg 
-    ? calculateBMI(encounter.vitals.heightCm, encounter.vitals.weightKg) 
+  if (!encounter || !patient) {
+    return <div className="p-8 text-center text-slate-500">Encounter not found.</div>;
+  }
+
+  const bmi = encounter.vitals?.heightCm && encounter.vitals?.weightKg
+    ? calculateBMI(encounter.vitals.heightCm, encounter.vitals.weightKg)
     : null;
   const bmiCategory = bmi ? getBMICategory(bmi) : null;
 
@@ -56,9 +82,7 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Main Content Column (SOAP + Diagnoses) */}
         <div className="md:col-span-2 space-y-6">
-          
           <Card className="shadow-sm border-slate-200">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -82,7 +106,7 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm border-slate-200 outline outline-1 outline-blue-100">
+          <Card className="shadow-sm border-slate-200">
             <CardHeader className="bg-blue-50/50 border-b border-blue-100">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Stethoscope className="h-5 w-5 text-blue-600" /> Diagnoses
@@ -102,17 +126,14 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
                   </div>
                 ))}
                 {encounter.diagnoses.length === 0 && (
-                  <div className="p-4 text-sm text-slate-500 text-center">No diagnoses recorded for this encounter.</div>
+                  <div className="p-4 text-sm text-slate-500 text-center">No diagnoses recorded.</div>
                 )}
               </div>
             </CardContent>
           </Card>
-
         </div>
 
-        {/* Right Sidebar Column (Vitals, Meds, Labs) */}
         <div className="space-y-6">
-          
           <Card className="shadow-sm border-slate-200">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -122,13 +143,12 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
             <CardContent className="p-5">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 {[
-                  { label: 'Blood Pressure', value: `${encounter.vitals?.bpSystolic}/${encounter.vitals?.bpDiastolic} mmHg` },
-                  { label: 'Pulse', value: `${encounter.vitals?.pulseBpm} bpm` },
-                  { label: 'Respiration', value: `${encounter.vitals?.respirationRpm} rpm` },
-                  { label: 'Temperature', value: `${encounter.vitals?.temperatureC} °C` },
-                  { label: 'SpO2', value: `${encounter.vitals?.spo2Percent}%` },
-                  { label: 'Weight', value: `${encounter.vitals?.weightKg} kg` },
-                  { label: 'Height', value: `${encounter.vitals?.heightCm} cm` },
+                  { label: 'Blood Pressure', value: `${encounter.vitals?.bpSystolic ?? '—'}/${encounter.vitals?.bpDiastolic ?? '—'} mmHg` },
+                  { label: 'Pulse', value: `${encounter.vitals?.pulseBpm ?? '—'} bpm` },
+                  { label: 'Temperature', value: `${encounter.vitals?.temperatureC ?? '—'} °C` },
+                  { label: 'SpO2', value: `${encounter.vitals?.spo2Percent ?? '—'}%` },
+                  { label: 'Weight', value: `${encounter.vitals?.weightKg ?? '—'} kg` },
+                  { label: 'Height', value: `${encounter.vitals?.heightCm ?? '—'} cm` },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <div className="text-slate-400 text-xs mb-1">{label}</div>
@@ -138,9 +158,7 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
                 {bmi && (
                   <div>
                     <div className="text-slate-400 text-xs mb-1">BMI</div>
-                    <div className="font-medium">
-                      {bmi} <span className="text-xs text-slate-400 capitalize">({bmiCategory})</span>
-                    </div>
+                    <div className="font-medium">{bmi} <span className="text-xs text-slate-400">({bmiCategory})</span></div>
                   </div>
                 )}
               </div>
@@ -161,21 +179,19 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
                       <Badge variant="outline" className={rx.status === 'sent_to_pharmacy' ? 'border-green-200 bg-green-50 text-green-700' : ''}>
                         {formatStatus(rx.status)}
                       </Badge>
-                      <span className="text-xs text-slate-400">{formatDate(rx.createdAt)}</span>
                     </div>
-                    <ul className="space-y-3">
+                    <ul className="space-y-2">
                       {rx.items.map((item, i) => (
                         <li key={i} className="text-sm">
-                          <div className="font-medium text-slate-900">{item.displayName}</div>
-                          <div className="text-slate-600 mb-1">{item.dose} • {item.route} • {item.frequency} for {item.durationDays} days</div>
-                          <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded">Sig: {item.instructions}</div>
+                          <div className="font-medium">{item.displayName}</div>
+                          <div className="text-slate-500">{item.dose} • {item.frequency}</div>
                         </li>
                       ))}
                     </ul>
                   </div>
                 ))}
                 {prescriptions.length === 0 && (
-                  <div className="p-4 text-sm text-slate-500 text-center">No prescriptions issued.</div>
+                  <div className="p-4 text-sm text-slate-500 text-center">No prescriptions.</div>
                 )}
               </div>
             </CardContent>
@@ -191,19 +207,12 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
               <div className="divide-y divide-slate-100">
                 {labOrders.map(lab => (
                   <div key={lab.id} className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className={lab.status === 'results_pending' ? 'border-orange-200 bg-orange-50 text-orange-700' : ''}>
-                        {formatStatus(lab.status)}
-                      </Badge>
-                      {lab.priority === 'urgent' && <Badge className="bg-red-50 text-red-700 border-red-200">URGENT</Badge>}
-                    </div>
-                    <div className="text-sm font-medium text-slate-900 mb-1">Tests Ordered:</div>
-                    <ul className="list-disc pl-5 text-sm text-slate-600 mb-2">
-                      {lab.tests.map((t, index) => (
-                        <li key={index}>{getTestName(t.testId)} — <span className="text-slate-400 text-xs capitalize">{t.status}</span></li>
+                    <Badge variant="outline">{formatStatus(lab.status)}</Badge>
+                    <ul className="list-disc pl-5 text-sm mt-2 text-slate-600">
+                      {lab.tests.map((t, i) => (
+                        <li key={i}>{getTestName(t.testId)}</li>
                       ))}
                     </ul>
-                    {lab.notesToLab && <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded mt-2">Note: {lab.notesToLab}</div>}
                   </div>
                 ))}
                 {labOrders.length === 0 && (
@@ -212,7 +221,6 @@ export default async function EncounterDetailsPage({ params }: { params: Promise
               </div>
             </CardContent>
           </Card>
-
         </div>
       </div>
     </div>

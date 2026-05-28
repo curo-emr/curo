@@ -2,75 +2,83 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/api/client";
 
-interface User {
+interface AuthUser {
   id: string;
-  name: string;
   email: string;
-  role: "doctor";
+  role: string;
+  patientId?: string | null;
+  practitionerId?: string | null;
+  name?: string;
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   isLoading: boolean;
-  login: (email: string) => Promise<void>;
+  error: string | null;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TOKEN_KEY = "curo_access_token";
+const REFRESH_KEY = "curo_refresh_token";
+const USER_KEY = "curo_user";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Check local storage on initial load
-    const storedUser = localStorage.getItem("curomd_user");
-    if (storedUser) {
+    const stored = localStorage.getItem(USER_KEY);
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (stored && token) {
       try {
-        // eslint-disable-next-line
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse stored user", e);
+        setUser(JSON.parse(stored));
+      } catch {
+        localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(TOKEN_KEY);
       }
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string) => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    
-    // Mock user data
-    const mockUser: User = {
-      id: "doc_9001",
-      name: "Dr. Smith",
-      email: email,
-      role: "doctor",
-    };
-    
-    setUser(mockUser);
-    localStorage.setItem("curomd_user", JSON.stringify(mockUser));
+  const login = async (email: string, password: string) => {
+    setError(null);
+    const res = await apiClient.post<{
+      accessToken: string;
+      refreshToken: string;
+      user: AuthUser;
+    }>("/auth/login", { email, password });
+
+    const { accessToken, refreshToken, user: authUser } = res.data;
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_KEY, refreshToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(authUser));
+    setUser(authUser);
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("curomd_user");
-    router.push("/login"); // Redirect to login page on logout
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(USER_KEY);
+    router.push("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, error, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  return ctx;
 }

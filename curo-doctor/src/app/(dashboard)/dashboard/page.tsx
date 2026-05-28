@@ -1,31 +1,52 @@
-import { getAppointments, getPendingLabOrders, getOpenTasks, getPatients } from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { getPatientName, getPatientMeta, getTodayString } from "@/lib/utils";
 import { ROUTES, APPOINTMENT_STATUS } from "@/lib/constants";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DashboardSidebar } from "@/components/features/dashboard/DashboardSidebar";
+import { getAppointments } from "@/lib/api/appointments";
+import { getOpenTasks } from "@/lib/api/tasks";
+import { getPatients } from "@/lib/api/patients";
+import type { Appointment, Task, Patient } from "@/types";
 
-export default async function DashboardPage() {
+export default function DashboardPage() {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const todayStr = getTodayString();
-  const appointments = await getAppointments();
+
+  useEffect(() => {
+    Promise.all([
+      getAppointments({ date: todayStr }),
+      getOpenTasks(),
+      getPatients(),
+    ])
+      .then(([appts, openTasks, pts]) => {
+        setAppointments(appts);
+        setTasks(openTasks);
+        setPatients(pts);
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [todayStr]);
+
   const todaysSchedule = appointments
     .filter(a => a.date === todayStr)
     .sort((a, b) => a.time.localeCompare(b.time));
 
-  const pendingLabs = await getPendingLabOrders();
-  const tasks = await getOpenTasks();
-  const patients = await getPatients();
-
   const today = new Date();
   const dateHeading = today.toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  // Dashboard summary stats
   const waitingCount = todaysSchedule.filter(a => a.status === APPOINTMENT_STATUS.WAITING).length;
   const inProgressCount = todaysSchedule.filter(a => a.status === APPOINTMENT_STATUS.IN_PROGRESS).length;
   const completedCount = todaysSchedule.filter(a => a.status === APPOINTMENT_STATUS.COMPLETED).length;
@@ -37,6 +58,14 @@ export default async function DashboardPage() {
     { label: "Completed", value: completedCount, color: "text-green-700 bg-green-50 border-green-200" },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
@@ -46,7 +75,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Summary Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {statCards.map(stat => (
           <div key={stat.label} className={`rounded-lg border p-4 ${stat.color}`}>
@@ -57,8 +85,6 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Main Schedule Column - 2/3 width */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="shadow-sm border-slate-200">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100">
@@ -126,8 +152,7 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        {/* Right Sidebar Column */}
-        <DashboardSidebar tasks={tasks} pendingLabs={pendingLabs} patients={patients} />
+        <DashboardSidebar tasks={tasks} pendingLabs={[]} patients={patients} />
       </div>
     </div>
   );
