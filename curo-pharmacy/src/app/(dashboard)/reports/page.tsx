@@ -1,14 +1,26 @@
-import { getPrescriptions, getMedications, getDispensingRecords } from "@/lib/data/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Clock, Pill, XCircle } from "lucide-react";
-import { formatStatus, formatCurrency } from "@/lib/utils";
+"use client";
 
-export default async function ReportsPage() {
-  const [prescriptions, medications, dispensingRecords] = await Promise.all([
-    getPrescriptions(),
-    getMedications(),
-    getDispensingRecords(),
-  ]);
+import { useState, useEffect } from "react";
+import { Loader2, TrendingUp, Clock, Pill, XCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatStatus, formatCurrency } from "@/lib/utils";
+import { getPendingPrescriptions, getDispensingRecords, getStock, type DispenseRecord, type StockItem } from "@/lib/api/pharmacy";
+import type { Prescription } from "@/types";
+
+export default function ReportsPage() {
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [medications, setMedications] = useState<StockItem[]>([]);
+  const [dispensingRecords, setDispensingRecords] = useState<DispenseRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getPendingPrescriptions(), getStock(), getDispensingRecords()])
+      .then(([rxs, meds, records]) => { setPrescriptions(rxs); setMedications(meds); setDispensingRecords(records); })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
   const totalPrescriptions = prescriptions.length;
   const cancelledCount = prescriptions.filter(p => p.status === 'cancelled').length;
@@ -20,7 +32,7 @@ export default async function ReportsPage() {
   const medCounts: Record<string, number> = {};
   for (const record of dispensingRecords) {
     for (const item of record.items) {
-      medCounts[item.medicationId] = (medCounts[item.medicationId] || 0) + item.quantityDispensed;
+      medCounts[item.medicationName] = (medCounts[item.medicationName] || 0) + item.quantity;
     }
   }
   const topMeds = Object.entries(medCounts)
@@ -47,17 +59,16 @@ export default async function ReportsPage() {
     expired: 'bg-slate-400',
   };
 
-  // Category distribution
+  // Category distribution — based on form type from stock
   const catCounts: Record<string, number> = {};
   for (const med of medications) {
-    catCounts[med.category] = (catCounts[med.category] || 0) + 1;
+    const cat = med.form || 'other';
+    catCounts[cat] = (catCounts[cat] || 0) + 1;
   }
   const catEntries = Object.entries(catCounts);
   const maxCatCount = Math.max(...catEntries.map(([, v]) => v), 1);
 
-  const mostDispensedMed = topMeds.length > 0
-    ? (medications.find(m => m.id === topMeds[0][0])?.genericName || topMeds[0][0])
-    : 'N/A';
+  const mostDispensedMed = topMeds.length > 0 ? topMeds[0][0] : 'N/A';
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -105,19 +116,15 @@ export default async function ReportsPage() {
             <CardTitle className="text-base">Most Dispensed Medications</CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
-            {topMeds.map(([medId, count]) => {
-              const med = medications.find(m => m.id === medId);
+            {topMeds.map(([medName, count]) => {
               return (
-                <div key={medId}>
+                <div key={medName}>
                   <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-slate-700">{med?.genericName || medId}</span>
+                    <span className="text-slate-700">{medName}</span>
                     <span className="text-slate-500 font-mono text-xs">{count} units</span>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 rounded-full"
-                      style={{ width: `${(count / maxMedCount) * 100}%` }}
-                    />
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(count / maxMedCount) * 100}%` }} />
                   </div>
                 </div>
               );

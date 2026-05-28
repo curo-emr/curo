@@ -1,19 +1,37 @@
-import { getPrescriptions, getPatients, getMedications, getDispensingRecords } from "@/lib/data/api";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Loader2, Users, Pill } from "lucide-react";
 import { PharmacyDashboardStats } from "@/components/features/dashboard/PharmacyDashboardStats";
 import { PendingPrescriptionsList } from "@/components/features/dashboard/PendingPrescriptionsList";
 import { RecentDispensingFeed } from "@/components/features/dashboard/RecentDispensingFeed";
 import { LowStockAlerts } from "@/components/features/dashboard/LowStockAlerts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Pill } from "lucide-react";
+import { getPendingPrescriptions, getDispensingRecords, getStock, type StockItem, type DispenseRecord } from "@/lib/api/pharmacy";
+import { getPatients } from "@/lib/api/patients";
+import type { Prescription, Patient } from "@/types";
 
-export default async function DashboardPage() {
-  const [prescriptions, patients, medications, dispensingRecords] = await Promise.all([
-    getPrescriptions(),
-    getPatients(),
-    getMedications(),
-    getDispensingRecords(),
-  ]);
+export default function DashboardPage() {
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [medications, setMedications] = useState<StockItem[]>([]);
+  const [dispensingRecords, setDispensingRecords] = useState<DispenseRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getPendingPrescriptions(), getPatients(), getStock(), getDispensingRecords()])
+      .then(([rxs, pts, meds, records]) => {
+        setPrescriptions(rxs);
+        setPatients(pts);
+        setMedications(meds);
+        setDispensingRecords(records);
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
   const today = new Date();
   const dateHeading = today.toLocaleDateString('en-US', {

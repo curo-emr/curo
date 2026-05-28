@@ -1,12 +1,23 @@
-import { Suspense } from "react";
-import { getPrescriptions, getPatients } from "@/lib/data/api";
-import { PrescriptionTable } from "@/components/features/prescriptions/PrescriptionTable";
+"use client";
 
-export default async function PrescriptionsPage() {
-  const [prescriptions, patients] = await Promise.all([
-    getPrescriptions(),
-    getPatients(),
-  ]);
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { PrescriptionTable } from "@/components/features/prescriptions/PrescriptionTable";
+import { getPendingPrescriptions } from "@/lib/api/pharmacy";
+import { getPatients } from "@/lib/api/patients";
+import type { Prescription, Patient } from "@/types";
+
+export default function PrescriptionsPage() {
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getPendingPrescriptions(), getPatients()])
+      .then(([rxs, pts]) => { setPrescriptions(rxs); setPatients(pts); })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -15,9 +26,11 @@ export default async function PrescriptionsPage() {
         <p className="text-sm text-muted-foreground">View and manage incoming e-prescriptions</p>
       </div>
 
-      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading prescriptions...</div>}>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
+      ) : (
         <PrescriptionTable prescriptions={prescriptions} patients={patients} />
-      </Suspense>
+      )}
     </div>
   );
 }

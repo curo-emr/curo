@@ -1,9 +1,17 @@
-import { Suspense } from "react";
-import { getMedications } from "@/lib/data/api";
-import { MedicationList } from "@/components/features/inventory/MedicationList";
+"use client";
 
-export default async function InventoryPage() {
-  const medications = await getMedications();
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { MedicationList } from "@/components/features/inventory/MedicationList";
+import { getStock, type StockItem } from "@/lib/api/pharmacy";
+
+export default function InventoryPage() {
+  const [medications, setMedications] = useState<StockItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getStock().then(setMedications).catch(console.error).finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -12,9 +20,11 @@ export default async function InventoryPage() {
         <p className="text-sm text-muted-foreground">Manage medication stock, track levels, and monitor expiry dates</p>
       </div>
 
-      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading inventory...</div>}>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
+      ) : (
         <MedicationList medications={medications} />
-      </Suspense>
+      )}
     </div>
   );
 }

@@ -1,6 +1,11 @@
-import { notFound } from "next/navigation";
-import { getPatientById, getPrescriptionsByPatient, getDispensingRecordsByPatient, getPharmacyStaff } from "@/lib/data/api";
-import { calculateAge, formatDate, formatDateTime, formatCurrency, getStaffName, formatStatus } from "@/lib/utils";
+"use client";
+
+import { useState, useEffect, use } from "react";
+import { Loader2 } from "lucide-react";
+import { getPatientById } from "@/lib/api/patients";
+import { getPrescriptionsByPatient, getDispensingRecordsByPatient, type DispenseRecord } from "@/lib/api/pharmacy";
+import { calculateAge, formatDate, formatDateTime, formatCurrency, formatStatus } from "@/lib/utils";
+import type { Patient, Prescription } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,19 +15,26 @@ import { User, Phone, Mail, MapPin, Pill, FileText, AlertTriangle } from "lucide
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
-export default async function PatientDetailPage({ params }: { params: Promise<{ patientId: string }> }) {
-  const { patientId } = await params;
-  const patient = await getPatientById(patientId);
-  if (!patient) notFound();
+export default function PatientDetailPage({ params }: { params: Promise<{ patientId: string }> }) {
+  const { patientId } = use(params);
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [dispensingRecords, setDispensingRecords] = useState<DispenseRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    Promise.all([getPatientById(patientId), getPrescriptionsByPatient(patientId), getDispensingRecordsByPatient(patientId)])
+      .then(([pt, rxs, records]) => { setPatient(pt); setPrescriptions(rxs); setDispensingRecords(records); })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [patientId]);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+  if (!patient) return <div className="p-8 text-center text-slate-500">Patient not found.</div>;
+
+  const staff: never[] = [];
   const age = calculateAge(patient.dob);
-  const [prescriptions, dispensingRecords, staff] = await Promise.all([
-    getPrescriptionsByPatient(patientId),
-    getDispensingRecordsByPatient(patientId),
-    getPharmacyStaff(),
-  ]);
-
-  const sortedPrescriptions = [...prescriptions].sort((a, b) => new Date(b.prescribedAt).getTime() - new Date(a.prescribedAt).getTime());
+  const sortedPrescriptions = [...prescriptions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -87,21 +99,14 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="font-mono text-sm font-medium text-slate-900">{rx.prescriptionNumber}</span>
+                        <span className="font-mono text-sm font-medium text-slate-900">{rx.id.slice(0, 8).toUpperCase()}</span>
                         <StatusBadge status={rx.status} />
-                        <Badge variant="outline" className={
-                          rx.priority === 'stat' ? 'text-red-700 border-red-200 bg-red-50' :
-                          rx.priority === 'urgent' ? 'text-amber-700 border-amber-200 bg-amber-50' :
-                          'text-slate-600 border-slate-200 bg-slate-50'
-                        }>
-                          {rx.priority}
-                        </Badge>
                       </div>
                       <p className="text-sm text-slate-600">
-                        {rx.items.map(i => i.drugName).join(', ')}
+                        {rx.items.map(i => i.displayName).join(', ')}
                       </p>
                       <p className="text-xs text-slate-400 mt-1">
-                        {rx.doctorName} | Prescribed: {formatDate(rx.prescribedAt)} | Dx: {rx.diagnosis}
+                        Prescribed: {formatDate(rx.createdAt)}
                       </p>
                     </div>
                     <Link href={ROUTES.PRESCRIPTION(rx.id)}>
@@ -122,26 +127,19 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
               <Card key={record.id} className="shadow-sm border">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-sm text-slate-900">{record.prescriptionId.replace('rx_', 'RX-')}</span>
+                    <span className="font-medium text-sm text-slate-900">Receipt: {record.receiptNumber}</span>
                     <span className="text-xs text-slate-400">{formatDateTime(record.dispensedAt)}</span>
                   </div>
                   <div className="bg-slate-50 rounded-md p-3 space-y-1.5">
-                    {record.items.map(item => (
-                      <div key={item.prescriptionItemId} className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">{item.drugNameDispensed}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-slate-900">x{item.quantityDispensed}</span>
-                          {item.substitution && (
-                            <Badge variant="outline" className="text-xs bg-status-purple-bg text-status-purple-text border-status-purple-border">
-                              Substituted
-                            </Badge>
-                          )}
-                        </div>
+                    {record.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-slate-600">{item.medicationName}</span>
+                        <span className="font-medium text-slate-900">x{item.quantity}</span>
                       </div>
                     ))}
                   </div>
                   <div className="flex items-center justify-between mt-2 text-xs text-slate-400">
-                    <span>Dispensed by: {getStaffName(record.dispensedBy, staff)}</span>
+                    <span>Dispensed by: {record.dispensedBy}</span>
                     <span className="font-medium text-slate-600">{formatCurrency(record.totalAmount)}</span>
                   </div>
                 </CardContent>
