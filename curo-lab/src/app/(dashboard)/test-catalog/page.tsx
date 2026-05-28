@@ -1,8 +1,18 @@
-import { getLabTestCatalog } from "@/lib/data/api";
-import { TestCatalogList } from "@/components/features/test-catalog/TestCatalogList";
+"use client";
 
-export default async function TestCatalogPage() {
-  const tests = await getLabTestCatalog();
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { TestCatalogList } from "@/components/features/test-catalog/TestCatalogList";
+import { getLabTestCatalog } from "@/lib/data/api";
+import type { LabTestCatalogItem } from "@/types";
+
+export default function TestCatalogPage() {
+  const [tests, setTests] = useState<LabTestCatalogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getLabTestCatalog().then(setTests).catch(console.error).finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -11,7 +21,11 @@ export default async function TestCatalogPage() {
         <p className="text-sm text-muted-foreground">Browse available laboratory tests, reference ranges, and pricing</p>
       </div>
 
-      <TestCatalogList tests={tests} />
+      {isLoading ? (
+        <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
+      ) : (
+        <TestCatalogList tests={tests} />
+      )}
     </div>
   );
 }

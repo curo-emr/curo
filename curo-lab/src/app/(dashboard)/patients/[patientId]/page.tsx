@@ -1,6 +1,12 @@
-import { notFound } from "next/navigation";
-import { getPatientById, getLabOrdersByPatient, getLabResultsByPatient, getLabTestCatalog, getLabStaff } from "@/lib/data/api";
-import { calculateAge, formatDate, getTestName, getStaffName, getResultFlagColor, getResultFlagLabel, formatStatus } from "@/lib/utils";
+"use client";
+
+import { useState, useEffect, use } from "react";
+import { Loader2 } from "lucide-react";
+import { getPatientById } from "@/lib/api/patients";
+import { getLabOrdersByPatient, getLabResultsByPatient, type LabResult } from "@/lib/api/lab";
+import { getLabTestCatalog } from "@/lib/data/api";
+import { calculateAge, formatDate, getTestName, formatStatus } from "@/lib/utils";
+import type { Patient, LabOrder, LabTestCatalogItem } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,20 +16,28 @@ import { User, Phone, Mail, MapPin, FlaskConical, FileText } from "lucide-react"
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
-export default async function PatientDetailPage({ params }: { params: Promise<{ patientId: string }> }) {
-  const { patientId } = await params;
-  const patient = await getPatientById(patientId);
-  if (!patient) notFound();
+export default function PatientDetailPage({ params }: { params: Promise<{ patientId: string }> }) {
+  const { patientId } = use(params);
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [orders, setOrders] = useState<LabOrder[]>([]);
+  const [results, setResults] = useState<LabResult[]>([]);
+  const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    Promise.all([getPatientById(patientId), getLabOrdersByPatient(patientId), getLabResultsByPatient(patientId), getLabTestCatalog()])
+      .then(([pt, ords, res, catalog]) => { setPatient(pt); setOrders(ords); setResults(res); setTestCatalog(catalog); })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [patientId]);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+  if (!patient) return <div className="p-8 text-center text-slate-500">Patient not found.</div>;
+
+  const staff: never[] = [];
   const age = calculateAge(patient.dob);
-  const [orders, results, testCatalog, staff] = await Promise.all([
-    getLabOrdersByPatient(patientId),
-    getLabResultsByPatient(patientId),
-    getLabTestCatalog(),
-    getLabStaff(),
-  ]);
 
-  const sortedOrders = [...orders].sort((a, b) => new Date(b.orderedAt).getTime() - new Date(a.orderedAt).getTime());
+  const sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -71,7 +85,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="font-mono text-sm font-medium text-slate-900">{order.accessionNumber}</span>
+                        <span className="font-mono text-sm font-medium text-slate-900">{order.id.slice(0, 8).toUpperCase()}</span>
                         <StatusBadge status={order.status} />
                         <Badge variant="outline" className={
                           order.priority === 'stat' ? 'text-red-700 border-red-200 bg-red-50' :
@@ -85,7 +99,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
                         {order.tests.map(t => getTestName(t.testId, testCatalog)).join(', ')}
                       </p>
                       <p className="text-xs text-slate-400 mt-1">
-                        Ordered: {formatDate(order.orderedAt)} | {order.doctorName}
+                        Ordered: {formatDate(order.createdAt)}
                       </p>
                     </div>
                     <Link href={ROUTES.ORDER(order.id)}>
@@ -102,42 +116,32 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
           {results.length === 0 ? (
             <div className="text-center py-12 text-slate-500">No results available for this patient.</div>
           ) : (
-            results.map(result => {
-              const test = testCatalog.find(t => t.id === result.testId);
-              return (
-                <Card key={result.id} className="shadow-sm border-slate-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-sm text-slate-900">{test?.name || result.testId}</span>
-                      <span className="text-xs text-slate-400">{formatDate(result.performedAt)}</span>
-                    </div>
-                    <div className="bg-slate-50 rounded-md p-3 space-y-1.5">
-                      {result.values.map(val => {
-                        const component = test?.components.find(c => c.id === val.componentId);
-                        return (
-                          <div key={val.componentId} className="flex items-center justify-between text-sm">
-                            <span className="text-slate-600">{component?.name || val.componentId}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-slate-900">{val.value} {component?.unit}</span>
-                              {val.flag !== 'normal' && (
-                                <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${getResultFlagColor(val.flag)}`}>
-                                  {getResultFlagLabel(val.flag)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {result.verifiedBy && (
-                      <p className="text-xs text-slate-400 mt-2">
-                        Verified by: {getStaffName(result.verifiedBy, staff)} | {result.verifiedAt ? formatDate(result.verifiedAt) : ''}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })
+            results.map(result => (
+              <Card key={result.id} className="shadow-sm border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm text-slate-900">Lab Report</span>
+                    <span className="text-xs text-slate-400">{formatDate(result.performedAt)}</span>
+                  </div>
+                  <div className="bg-slate-50 rounded-md p-3 space-y-1.5">
+                    {result.results.map((rr, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="text-slate-600">{rr.testName}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{rr.value} {rr.unit}</span>
+                          {rr.flag && rr.flag !== 'normal' && (
+                            <Badge variant="outline" className={
+                              rr.flag === 'critical' ? 'text-red-700 border-red-200 bg-red-50 text-xs' :
+                              'text-amber-700 border-amber-200 bg-amber-50 text-xs'
+                            }>{rr.flag.toUpperCase()}</Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </TabsContent>
       </Tabs>

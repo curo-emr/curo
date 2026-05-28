@@ -1,12 +1,25 @@
-import { getLabOrders, getLabTestCatalog } from "@/lib/data/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Clock, FlaskConical, XCircle, TrendingUp } from "lucide-react";
+"use client";
 
-export default async function ReportsPage() {
-  const [orders, testCatalog] = await Promise.all([
-    getLabOrders(),
-    getLabTestCatalog(),
-  ]);
+import { useState, useEffect } from "react";
+import { Loader2, Clock, FlaskConical, XCircle, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getLabOrders } from "@/lib/api/lab";
+import { getLabTestCatalog } from "@/lib/data/api";
+import type { LabOrder, LabTestCatalogItem } from "@/types";
+
+export default function ReportsPage() {
+  const [orders, setOrders] = useState<LabOrder[]>([]);
+  const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getLabOrders(), getLabTestCatalog()])
+      .then(([ords, catalog]) => { setOrders(ords); setTestCatalog(catalog); })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
   const totalOrders = orders.length;
   const rejectedOrders = orders.filter(o => o.status === 'rejected').length;
@@ -43,10 +56,11 @@ export default async function ReportsPage() {
     rejected: 'bg-red-500',
   };
 
-  // Dept distribution
+  // Priority distribution
   const deptCounts: Record<string, number> = {};
   for (const order of orders) {
-    deptCounts[order.department] = (deptCounts[order.department] || 0) + 1;
+    const key = order.priority;
+    deptCounts[key] = (deptCounts[key] || 0) + 1;
   }
   const deptEntries = Object.entries(deptCounts);
   const maxDeptCount = Math.max(...deptEntries.map(([, v]) => v), 1);
@@ -147,7 +161,7 @@ export default async function ReportsPage() {
         {/* Department Volume */}
         <Card className="shadow-sm border-slate-200 lg:col-span-2">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-3">
-            <CardTitle className="text-base">Volume by Department</CardTitle>
+            <CardTitle className="text-base">Volume by Priority</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
             <div className="flex items-end gap-6 h-40 justify-center">
