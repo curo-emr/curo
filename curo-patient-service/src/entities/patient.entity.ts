@@ -22,7 +22,7 @@ export class Patient {
   @Column({ nullable: true })
   middleName: string;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: true })
   birthDate: string;
 
   @Column({ type: 'enum', enum: Gender, default: Gender.UNKNOWN })

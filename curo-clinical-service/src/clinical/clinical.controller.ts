@@ -22,7 +22,7 @@ export class ClinicalController {
   @Roles('DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   createEncounter(@Body() dto: CreateEncounterDto, @CurrentUser() user: any) {
-    return this.clinicalService.createEncounter(dto, user.userId);
+    return this.clinicalService.createEncounter(dto, user.practitionerId ?? user.userId);
   }
 
   @Get('encounters/patient/:patientId')
@@ -50,7 +50,7 @@ export class ClinicalController {
   @Post('notes')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   createNote(@Body() dto: CreateNoteDto, @CurrentUser() user: any) {
-    return this.clinicalService.createNote(dto, user.userId);
+    return this.clinicalService.createNote(dto, user.practitionerId ?? user.userId);
   }
 
   @Get('notes/encounter/:encounterId')
@@ -70,7 +70,7 @@ export class ClinicalController {
   @Roles('DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   addVitals(@Body() dto: CreateVitalsDto, @CurrentUser() user: any) {
-    return this.clinicalService.addVitals(dto, user.userId);
+    return this.clinicalService.addVitals(dto, user.practitionerId ?? user.userId);
   }
 
   @Get('vitals/patient/:patientId')
@@ -92,7 +92,7 @@ export class ClinicalController {
   @Roles('DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   createPrescription(@Body() dto: CreatePrescriptionDto, @CurrentUser() user: any) {
-    return this.clinicalService.createPrescription(dto, user.userId);
+    return this.clinicalService.createPrescription(dto, user.practitionerId ?? user.userId);
   }
 
   @Get('prescriptions/patient/:patientId')
@@ -114,7 +114,7 @@ export class ClinicalController {
   @Roles('DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   createLabOrder(@Body() dto: CreateLabOrderDto, @CurrentUser() user: any) {
-    return this.clinicalService.createLabOrder(dto, user.userId);
+    return this.clinicalService.createLabOrder(dto, user.practitionerId ?? user.userId);
   }
 
   @Get('lab-orders')
@@ -135,13 +135,13 @@ export class ClinicalController {
   @Post('tasks')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   createTask(@Body() dto: any, @CurrentUser() user: any) {
-    return this.clinicalService.createTask(dto, user.userId);
+    return this.clinicalService.createTask(dto, user.practitionerId ?? user.userId);
   }
 
   @Get('tasks/mine')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   getDoctorTasks(@CurrentUser() user: any) {
-    return this.clinicalService.getDoctorTasks(user.userId);
+    return this.clinicalService.getDoctorTasks(user.practitionerId ?? user.userId);
   }
 
   @Put('tasks/:id')

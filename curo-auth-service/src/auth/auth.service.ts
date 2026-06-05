@@ -134,7 +134,7 @@ export class AuthService {
   }
 
   private issueTokens(user: User) {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role, practitionerId: user.practitionerId ?? null, patientId: user.patientId ?? null };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const accessToken = this.jwtService.sign(payload as any, {
       secret: process.env.JWT_SECRET || 'curo_jwt_secret_dev_2024_change_in_prod',

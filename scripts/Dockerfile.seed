@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+# One-shot container that seeds the database, then exits.
+FROM node:20-alpine
+RUN apk add --no-cache python3 make g++
+WORKDIR /app
+# install root-level deps (ts-node, typeorm, pg, bcrypt, etc.)
+COPY package*.json ./
+RUN npm ci
+# copy only the scripts folder
+COPY scripts/ ./scripts/
+CMD ["npm", "run", "seed"]

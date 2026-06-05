@@ -1,7 +1,7 @@
-import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
-import { createProxyMiddleware } from 'http-proxy-middleware';
+import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
 
 const SERVICE_MAP: Record<string, string> = {
   '/auth': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
@@ -13,10 +13,8 @@ const SERVICE_MAP: Record<string, string> = {
   '/prescriptions': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
   '/lab-orders': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
   '/tasks': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
-  '/pharmacy': process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
   '/dispense': process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
   '/stock': process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
-  '/lab': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/orders': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/results': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/reports': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
@@ -27,9 +25,27 @@ const SERVICE_MAP: Record<string, string> = {
 
 const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/health'];
 
-function getTargetUrl(path: string): string | null {
+// Pre-create one proxy per unique target URL
+const proxies = new Map<string, RequestHandler>();
+for (const target of new Set(Object.values(SERVICE_MAP))) {
+  proxies.set(target, createProxyMiddleware({
+    target,
+    changeOrigin: true,
+    on: {
+      error: (err: Error, _req: Request, res: any) => {
+        if (!res.headersSent) {
+          res.status(502).json({ message: 'Service temporarily unavailable', error: err.message });
+        }
+      },
+    },
+  }) as RequestHandler);
+}
+
+function getTarget(path: string): string | null {
   for (const [prefix, target] of Object.entries(SERVICE_MAP)) {
-    if (path.startsWith(prefix)) return target;
+    if (path === prefix || path.startsWith(prefix + '/') || path.startsWith(prefix + '?')) {
+      return target;
+    }
   }
   return null;
 }
@@ -56,20 +72,15 @@ export class ProxyMiddleware implements NestMiddleware {
       }
     }
 
-    const target = getTargetUrl(path);
+    const target = getTarget(path);
     if (!target) {
       return res.status(404).json({ message: `No service found for path ${path}` });
     }
 
-    const proxy = createProxyMiddleware({
-      target,
-      changeOrigin: true,
-      on: {
-        error: (err, req, res: any) => {
-          res.status(502).json({ message: 'Service temporarily unavailable', error: err.message });
-        },
-      },
-    });
+    const proxy = proxies.get(target);
+    if (!proxy) {
+      return res.status(502).json({ message: 'Proxy not configured' });
+    }
 
     proxy(req, res, next);
   }

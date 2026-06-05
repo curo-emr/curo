@@ -65,14 +65,8 @@ async function seed() {
     process.exit(0);
   }
 
-  // ---- ORGANIZATIONS ----
-  const [org] = await db.query(`
-    INSERT INTO organizations (id, name, type, phone, email, "addressLine1", city, country, active)
-    VALUES (gen_random_uuid(), 'Curo Medical Center', 'clinic', '+94112345678', 'info@curo.health', '123 Health Avenue', 'Colombo', 'Sri Lanka', true)
-    RETURNING id
-  `);
-  const orgId = org.id;
-  console.log('✅ Organization created');
+  // organizations table is not used by any service — practitioners.organizationId is nullable
+  const orgId: string | null = null;
 
   // ---- SUPER ADMIN USER ----
   const [adminUser] = await db.query(`
