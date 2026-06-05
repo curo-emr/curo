@@ -58,6 +58,7 @@ export interface StockItem {
   id: string;
   medicationName: string;
   genericName: string;
+  brandName?: string;
   form: string;
   strength: string;
   quantity: number;
@@ -67,6 +68,7 @@ export interface StockItem {
   batchNumber: string;
   supplier: string;
   location: string;
+  isActive?: boolean;
 }
 
 export async function getStock(): Promise<StockItem[]> {

@@ -1,10 +1,11 @@
-import { DispensingRecord, Patient } from "@/types";
+import type { DispenseRecord } from "@/lib/api/pharmacy";
+import { Patient } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, ArrowRight } from "lucide-react";
 import { getPatientName, formatDate, formatCurrency } from "@/lib/utils";
 
 interface RecentDispensingFeedProps {
-  records: DispensingRecord[];
+  records: DispenseRecord[];
   patients: Patient[];
 }
 
@@ -31,7 +32,7 @@ export function RecentDispensingFeed({ records, patients }: RecentDispensingFeed
                 <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-foreground truncate">
-                    <span className="font-medium">{record.prescriptionId.replace('rx_', 'RX-')}</span>
+                    <span className="font-medium">{record.prescriptionId.slice(0, 8).toUpperCase()}</span>
                     {' '}<ArrowRight className="h-3 w-3 inline text-muted-foreground" />{' '}
                     {getPatientName(record.patientId, patients)}
                   </p>

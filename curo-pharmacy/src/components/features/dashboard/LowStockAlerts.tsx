@@ -1,4 +1,4 @@
-import { Medication } from "@/types";
+import type { StockItem } from "@/lib/api/pharmacy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 import { formatStatus } from "@/lib/utils";
@@ -6,13 +6,13 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
 interface LowStockAlertsProps {
-  medications: Medication[];
+  medications: StockItem[];
 }
 
 export function LowStockAlerts({ medications }: LowStockAlertsProps) {
   const lowStock = medications
-    .filter(m => m.stockQuantity <= m.reorderLevel && m.isActive)
-    .sort((a, b) => (a.stockQuantity / a.reorderLevel) - (b.stockQuantity / b.reorderLevel));
+    .filter(m => m.quantity <= m.reorderThreshold && m.isActive !== false)
+    .sort((a, b) => (a.quantity / a.reorderThreshold) - (b.quantity / b.reorderThreshold));
 
   return (
     <Card className="shadow-sm border">
@@ -28,8 +28,8 @@ export function LowStockAlerts({ medications }: LowStockAlertsProps) {
         ) : (
           <div className="divide-y">
             {lowStock.map(med => {
-              const ratio = med.stockQuantity / med.reorderLevel;
-              const isOutOfStock = med.stockQuantity === 0;
+              const ratio = med.quantity / med.reorderThreshold;
+              const isOutOfStock = med.quantity === 0;
               return (
                 <div key={med.id} className="px-4 py-3">
                   <div className="flex items-center justify-between mb-1">
@@ -39,11 +39,11 @@ export function LowStockAlerts({ medications }: LowStockAlertsProps) {
                       ratio <= 0.5 ? 'bg-status-error-bg text-status-error-text' :
                       'bg-status-warning-bg text-status-warning-text'
                     }`}>
-                      {isOutOfStock ? 'Out of Stock' : `${med.stockQuantity} left`}
+                      {isOutOfStock ? 'Out of Stock' : `${med.quantity} left`}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {med.brandName} {med.strength} &middot; {formatStatus(med.form)} &middot; Reorder at {med.reorderLevel}
+                    {med.brandName ?? ''} {med.strength} &middot; {formatStatus(med.form)} &middot; Reorder at {med.reorderThreshold}
                   </p>
                 </div>
               );

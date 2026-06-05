@@ -27,16 +27,84 @@ export interface Patient {
   dob: string;
   sex: 'male' | 'female' | 'other';
   bloodType: string;
+  nationality?: string;
+  maritalStatus?: string;
+  occupation?: string;
   phone: string;
   email: string;
   address: Address;
   emergencyContact: EmergencyContact;
+  insurance?: { provider: string; policyNumber: string } | null;
   allergies: string[];
   problemList: string[];
   currentMedications: string[];
   tags: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Allergy {
+  id: string;
+  patientId: string;
+  substance: string;
+  reaction: string;
+  severity: 'mild' | 'moderate' | 'severe';
+  notes: string;
+  recordedAt: string;
+}
+
+export interface Problem {
+  id: string;
+  patientId: string;
+  icdCode: string;
+  name: string;
+  status: 'active' | 'resolved' | 'inactive';
+  onsetDate: string;
+  notes: string;
+}
+
+export interface Appointment {
+  id: string;
+  date: string;
+  time: string;
+  doctorId: string;
+  patientId: string;
+  reason: string;
+  visitType: string;
+  status: 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  room: string;
+  notes: string;
+}
+
+export interface SOAP {
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string;
+}
+
+export interface Encounter {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  appointmentId: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  startedAt: string;
+  endedAt: string | null;
+  chiefComplaint: string;
+  soap: SOAP;
+}
+
+export interface Task {
+  id: string;
+  doctorId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'open' | 'in_progress' | 'completed';
+  relatedPatientId?: string;
+  createdAt: string;
 }
 
 // --- Pharmacy Staff ---
@@ -102,46 +170,35 @@ export interface Medication {
   isActive: boolean;
 }
 
-// --- Prescriptions ---
+// --- Prescriptions (FHIR-mapped) ---
 
-export type PrescriptionStatus =
-  | 'pending'
-  | 'processing'
-  | 'dispensed'
-  | 'partially_dispensed'
-  | 'on_hold'
-  | 'cancelled'
-  | 'expired';
+export type PrescriptionStatus = 'draft' | 'sent_to_pharmacy' | 'active' | 'completed' | 'cancelled';
 
 export type Priority = 'routine' | 'urgent' | 'stat';
 
 export interface PrescriptionItem {
   id: string;
   medicationId: string;
-  drugName: string;
+  displayName: string;
   dose: string;
+  route: string;
   frequency: string;
-  duration: string;
+  durationDays: number;
   quantity: number;
   instructions: string;
-  genericAllowed: boolean;
+  substitutes: unknown[];
 }
 
 export interface Prescription {
   id: string;
-  prescriptionNumber: string;
   patientId: string;
-  doctorName: string;
-  doctorRegistration: string;
-  priority: Priority;
+  encounterId: string;
+  doctorId: string;
   status: PrescriptionStatus;
-  prescribedAt: string;
-  receivedAt: string;
-  dispensedAt: string | null;
-  genericAllowed: boolean;
-  clinicalNotes: string;
-  diagnosis: string;
+  createdAt: string;
+  sentAt: string | null;
   items: PrescriptionItem[];
+  notesToPharmacy: string;
 }
 
 // --- Dispensing Records ---
