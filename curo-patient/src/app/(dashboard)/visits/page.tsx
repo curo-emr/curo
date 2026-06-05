@@ -1,23 +1,51 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Loader2, ClipboardList, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getDoctorName } from "@/lib/utils";
+import type { Encounter } from "@/types";
 import { ROUTES } from "@/lib/constants";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { getMyProfile, getMyEncounters, getPractitioners } from "@/lib/api/patient-portal";
 
-// Visit history is not yet exposed in the patient portal API
-// This page shows a placeholder until the encounters endpoint is available
 export default function VisitsPage() {
-  const encounters: never[] = [];
-  const doctors: never[] = [];
+  const [encounters, setEncounters] = useState<Encounter[]>([]);
+  const [doctors, setDoctors] = useState<{ id: string; name: { full: string } }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const profile = await getMyProfile();
+        if (!profile) return;
+        const [encs, docs] = await Promise.all([
+          getMyEncounters(profile.id),
+          getPractitioners(),
+        ]);
+        setEncounters(encs);
+        setDoctors(docs);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    load();
+  }, []);
 
   const completedVisits = encounters.filter(e => e.status === "completed");
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

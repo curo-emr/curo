@@ -1,7 +1,19 @@
 import type {
   Patient, Allergy, Problem, Appointment, Encounter, Prescription,
-  LabOrder, Task,
+  LabOrder,
 } from '@/types';
+
+interface Task {
+  id: string;
+  doctorId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'open' | 'in_progress' | 'completed';
+  relatedPatientId?: string;
+  createdAt: string;
+}
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
 
@@ -209,13 +221,11 @@ export function mapFhirPatient(fhir: FhirPatient): Patient {
       relationship: emergencyContact?.relationship?.[0]?.text ?? '',
       phone: emergencyContact?.telecom?.[0]?.value ?? '',
     },
-    insurance: null,
+    insurance: undefined,
     allergies: [],
     problemList: [],
     currentMedications: [],
     tags: [],
-    registeredBy: '',
-    registeredAt: fhir.meta?.lastUpdated ?? '',
     createdAt: fhir.meta?.lastUpdated ?? '',
     updatedAt: fhir.meta?.lastUpdated ?? '',
   };
@@ -295,9 +305,6 @@ export function mapFhirAppointment(fhir: FhirAppointment): Appointment {
     status: FHIR_APPT_STATUS_MAP[fhir.status] ?? 'scheduled',
     room: '',
     notes: fhir.comment ?? '',
-    checkInTime: null,
-    checkedInBy: null,
-    visitId: null,
   };
 }
 
@@ -382,9 +389,6 @@ export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
   const patientId = fhir.subject?.reference?.replace('Patient/', '') ?? '';
   const encounterId = fhir.encounter?.reference?.replace('Encounter/', '') ?? '';
   const doctorId = fhir.requester?.reference?.replace('Practitioner/', '') ?? '';
-  const ext = fhir.extension ?? [];
-  const qrCode = ext.find(e => e.url === 'urn:curo:qrCode')?.valueString ?? '';
-
   const statusMap: Record<string, LabOrder['status']> = {
     draft: 'draft', active: 'sent_to_lab', completed: 'completed',
     revoked: 'draft', 'entered-in-error': 'draft', unknown: 'draft',
@@ -410,7 +414,6 @@ export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
     })),
     review: { isReviewed: false, reviewedAt: null, reviewedBy: null },
     showResultsToPatient: false,
-    qrCode,
   };
 }
 

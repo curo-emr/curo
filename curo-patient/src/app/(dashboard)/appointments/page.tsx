@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Loader2, Calendar, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, formatTime, getTodayString } from "@/lib/utils";
+import { formatDate, formatTime, getTodayString, getDoctorName } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -21,7 +21,7 @@ export default function AppointmentsPage() {
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
-  const doctors: never[] = [];
+  const doctors: { id: string; name: { full: string } }[] = [];
   const today = getTodayString();
   const upcoming = appointments.filter(a => a.date >= today && a.status === "scheduled");
   const past = appointments.filter(a => a.date < today || a.status === "completed" || a.status === "cancelled" || a.status === "no_show");

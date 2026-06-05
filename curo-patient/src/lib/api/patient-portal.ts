@@ -1,6 +1,6 @@
 import { apiClient } from './client';
-import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, mapFhirMedicationRequest, mapFhirServiceRequest, mapFhirAppointment, type FhirPatient, type FhirAllergy, type FhirCondition, type FhirMedicationRequest, type FhirServiceRequest, type FhirAppointment } from './mappers';
-import type { Patient, Allergy, Problem, Appointment, Prescription, LabOrder } from '@/types';
+import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, mapFhirMedicationRequest, mapFhirServiceRequest, mapFhirAppointment, mapFhirEncounter, type FhirPatient, type FhirAllergy, type FhirCondition, type FhirMedicationRequest, type FhirServiceRequest, type FhirAppointment, type FhirEncounter } from './mappers';
+import type { Patient, Allergy, Problem, Appointment, Encounter, Prescription, LabOrder } from '@/types';
 
 export async function getMyProfile(): Promise<Patient | null> {
   try {
@@ -34,4 +34,18 @@ export async function getMyPrescriptions(patientId: string): Promise<Prescriptio
 export async function getMyLabOrders(patientId: string): Promise<LabOrder[]> {
   const res = await apiClient.get<FhirServiceRequest[]>('/lab-orders', { params: { patientId } });
   return res.data.map(mapFhirServiceRequest);
+}
+
+export async function getMyEncounters(patientId: string): Promise<Encounter[]> {
+  const res = await apiClient.get<FhirEncounter[]>(`/encounters/patient/${patientId}`);
+  return res.data.map(mapFhirEncounter);
+}
+
+export async function getPractitioners(): Promise<{ id: string; name: { full: string } }[]> {
+  try {
+    const res = await apiClient.get<Array<{ id: string; name: { full: string } }>>('/auth/practitioners?role=DOCTOR');
+    return res.data.map(p => ({ id: p.id, name: { full: p.name.full } }));
+  } catch {
+    return [];
+  }
 }

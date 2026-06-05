@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { Loader2, Pill, ArrowLeft, Clock } from "lucide-react";
+import { Loader2, Pill, ArrowLeft, Clock, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { getMyProfile, getMyPrescriptions } from "@/lib/api/patient-portal";
@@ -36,7 +36,7 @@ export default function PrescriptionDetailPage({ params }: Props) {
     return <div className="p-8 text-center text-slate-500">Prescription not found.</div>;
   }
 
-  const doctors: never[] = [];
+  const doctors: { id: string; name: { full: string } }[] = [];
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">

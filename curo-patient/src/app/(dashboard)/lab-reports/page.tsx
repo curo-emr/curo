@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Loader2, CheckCircle2, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, getTestName } from "@/lib/utils";
+import { formatDate, getTestName, getDoctorName } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -28,7 +28,7 @@ export default function LabReportsPage() {
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
-  const doctors: never[] = [];
+  const doctors: { id: string; name: { full: string } }[] = [];
 
   const completedLabs = labOrders.filter(l => l.status === "completed");
   const pendingLabs = labOrders.filter(l => l.status !== "completed");
