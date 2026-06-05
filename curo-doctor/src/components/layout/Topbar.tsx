@@ -1,18 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Bell, LogOut, User, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { getNotificationCount } from "@/lib/api/notifications";
 
 export function Topbar() {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user, logout } = useAuth();
   const { toggle } = useSidebar();
+
+  useEffect(() => {
+    if (!user) return;
+    getNotificationCount().then(setUnreadCount);
+    const interval = setInterval(() => getNotificationCount().then(setUnreadCount), 30_000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +59,11 @@ export function Topbar() {
         </div>
         <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
           <Bell className="h-5 w-5" />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-white flex items-center justify-center font-medium">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
         </Button>
         <Button variant="ghost" size="icon" onClick={logout} title="Log out" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
           <LogOut className="h-5 w-5" />

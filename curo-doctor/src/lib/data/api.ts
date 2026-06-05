@@ -36,9 +36,9 @@ export {
 } from '@/lib/api/tasks';
 
 // Static catalog readers — bundled at compile time
-import icd10Data from '../../data/icd10.json';
-import medicationsData from '../../data/medications.json';
-import labTestsData from '../../data/lab-tests.json';
+import icd10Data from '../../../data/icd10.json';
+import medicationsData from '../../../data/medications.json';
+import labTestsData from '../../../data/lab-tests.json';
 import type { ICD10, Medication, LabTestCatalogItem } from '@/types';
 
 export async function getICD10Subset(): Promise<ICD10[]> {
