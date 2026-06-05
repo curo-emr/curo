@@ -11,7 +11,6 @@ import { LabOrder, Patient, LabTestCatalogItem } from "@/types";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FlaskConical, Save, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { formatStatus } from "@/lib/utils";
 
 interface ResultsEntryFormProps {
   order: LabOrder;
@@ -53,18 +52,14 @@ export function ResultsEntryForm({ order, patient, testCatalog }: ResultsEntryFo
       {/* Order Summary */}
       <Card className="shadow-sm border">
         <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <p className="text-muted-foreground text-xs">Accession</p>
-              <p className="font-mono font-medium text-foreground">{order.accessionNumber}</p>
+              <p className="text-muted-foreground text-xs">Order ID</p>
+              <p className="font-mono font-medium text-foreground">{order.id.slice(0, 8).toUpperCase()}</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Patient</p>
               <p className="font-medium text-foreground">{patient.name.full}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Specimen</p>
-              <p className="font-medium text-foreground">{formatStatus(order.specimenType)}</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Status</p>
@@ -78,6 +73,7 @@ export function ResultsEntryForm({ order, patient, testCatalog }: ResultsEntryFo
       {order.tests.map(orderTest => {
         const test = testCatalog.find(t => t.id === orderTest.testId);
         if (!test) return null;
+        const components = test.components ?? [];
 
         return (
           <Card key={orderTest.testId} className="shadow-sm border">
@@ -90,7 +86,7 @@ export function ResultsEntryForm({ order, patient, testCatalog }: ResultsEntryFo
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
-                {test.components.map(component => {
+                {components.map(component => {
                   const autoFlag = getAutoFlag(
                     values[component.id] || '',
                     component.referenceRange.low,

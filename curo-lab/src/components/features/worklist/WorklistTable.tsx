@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -14,9 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronRight, Eye } from "lucide-react";
+import { Search, Eye } from "lucide-react";
 import { LabOrder, Patient, LabTestCatalogItem, LabStaff } from "@/types";
-import { getPatientName, formatStatus, getPriorityColor, formatDate } from "@/lib/utils";
+import { getPatientName, formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorklistFilters } from "./WorklistFilters";
 import Link from "next/link";
@@ -24,13 +23,10 @@ import { ROUTES } from "@/lib/constants";
 
 const STATUS_TABS = [
   { label: "All", value: "all" },
-  { label: "Received", value: "received" },
-  { label: "Collected", value: "collected" },
-  { label: "Processing", value: "processing" },
-  { label: "Resulted", value: "resulted" },
-  { label: "Verified", value: "verified" },
-  { label: "Dispatched", value: "dispatched" },
-  { label: "Rejected", value: "rejected" },
+  { label: "Draft", value: "draft" },
+  { label: "Sent to Lab", value: "sent_to_lab" },
+  { label: "Results Pending", value: "results_pending" },
+  { label: "Completed", value: "completed" },
 ];
 
 interface WorklistTableProps {
@@ -40,7 +36,7 @@ interface WorklistTableProps {
   staff: LabStaff[];
 }
 
-export function WorklistTable({ orders, patients, testCatalog, staff }: WorklistTableProps) {
+export function WorklistTable({ orders, patients }: WorklistTableProps) {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
@@ -62,20 +58,19 @@ export function WorklistTable({ orders, patients, testCatalog, staff }: Worklist
       const q = query.toLowerCase().trim();
       const patient = patients.find(p => p.id === o.patientId);
       const matchesQuery = !q || (
-        o.accessionNumber.toLowerCase().includes(q) ||
+        o.id.toLowerCase().includes(q) ||
         (patient?.name.full.toLowerCase().includes(q)) ||
         (patient?.mrn.toLowerCase().includes(q))
       );
       const matchesStatus = statusTab === "all" || o.status === statusTab;
       const matchesPriority = priorityFilter === "all" || o.priority === priorityFilter;
-      const matchesDept = departmentFilter === "all" || o.department === departmentFilter;
-      return matchesQuery && matchesStatus && matchesPriority && matchesDept;
+      return matchesQuery && matchesStatus && matchesPriority;
     }).sort((a, b) => {
       const priorityOrder = { stat: 0, urgent: 1, routine: 2 };
       const pa = priorityOrder[a.priority] ?? 2;
       const pb = priorityOrder[b.priority] ?? 2;
       if (pa !== pb) return pa - pb;
-      return new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [query, statusTab, priorityFilter, departmentFilter, orders, patients]);
 
@@ -112,7 +107,7 @@ export function WorklistTable({ orders, patients, testCatalog, staff }: Worklist
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search by accession, patient name, or MRN..."
+              placeholder="Search by order ID, patient name, or MRN..."
               className="pl-9 bg-muted border"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -141,13 +136,12 @@ export function WorklistTable({ orders, patients, testCatalog, staff }: Worklist
           <TableHeader className="bg-muted">
             <TableRow>
               <TableHead className="w-[30px]"></TableHead>
-              <TableHead>Accession</TableHead>
+              <TableHead>Order ID</TableHead>
               <TableHead>Patient</TableHead>
               <TableHead>Tests</TableHead>
-              <TableHead>Specimen</TableHead>
-              <TableHead>Dept</TableHead>
+              <TableHead>Priority</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Received</TableHead>
+              <TableHead>Created</TableHead>
               <TableHead className="w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -165,7 +159,7 @@ export function WorklistTable({ orders, patients, testCatalog, staff }: Worklist
                       }`} title={order.priority} />
                     </TableCell>
                     <TableCell>
-                      <span className="font-mono text-sm font-medium text-foreground">{order.accessionNumber}</span>
+                      <span className="font-mono text-sm font-medium text-foreground">{order.id.slice(0, 8).toUpperCase()}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
@@ -179,16 +173,13 @@ export function WorklistTable({ orders, patients, testCatalog, staff }: Worklist
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-muted-foreground">{formatStatus(order.specimenType)}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">{order.department}</span>
+                      <span className="text-sm text-muted-foreground capitalize">{order.priority}</span>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={order.status} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(order.receivedAt)}
+                      {formatDate(order.createdAt)}
                     </TableCell>
                     <TableCell>
                       <Link href={ROUTES.ORDER(order.id)}>
@@ -202,7 +193,7 @@ export function WorklistTable({ orders, patients, testCatalog, staff }: Worklist
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="h-32 text-center text-muted-foreground border-dashed">
+                <TableCell colSpan={8} className="h-32 text-center text-muted-foreground border-dashed">
                   No orders match your filters.
                 </TableCell>
               </TableRow>

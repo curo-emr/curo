@@ -10,7 +10,8 @@ import { RecentActivityFeed } from "@/components/features/dashboard/RecentActivi
 import { getLabOrders, getLabInstruments, type LabInstrument } from "@/lib/api/lab";
 import { getPatients } from "@/lib/api/patients";
 import { getLabTestCatalog } from "@/lib/data/api";
-import type { LabOrder, Patient, LabTestCatalogItem } from "@/types";
+import type { LabOrder, Patient, LabTestCatalogItem, QCLog } from "@/types";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export default function DashboardPage() {
   const [orders, setOrders] = useState<LabOrder[]>([]);
@@ -34,7 +35,7 @@ export default function DashboardPage() {
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
   const urgentOrders = orders.filter(o => o.priority === 'urgent' || o.priority === 'stat');
-  const qcAlerts: never[] = [];
+  const qcAlerts: QCLog[] = [];
 
   const today = new Date();
   const dateHeading = today.toLocaleDateString('en-US', {

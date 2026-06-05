@@ -42,7 +42,7 @@ export function PatientList({ patients, orders }: PatientListProps) {
 
   const getPatientOrderInfo = (patientId: string) => {
     const patientOrders = orders.filter(o => o.patientId === patientId);
-    const lastOrder = patientOrders.sort((a, b) => new Date(b.orderedAt).getTime() - new Date(a.orderedAt).getTime())[0];
+    const lastOrder = patientOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
     return { count: patientOrders.length, lastOrder };
   };
 
@@ -103,7 +103,7 @@ export function PatientList({ patients, orders }: PatientListProps) {
                     </TableCell>
                     <TableCell className="text-muted-foreground font-medium">{patient.bloodType}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {lastOrder ? formatDate(lastOrder.orderedAt) : '-'}
+                      {lastOrder ? formatDate(lastOrder.createdAt) : '-'}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{count}</TableCell>
                     <TableCell>
