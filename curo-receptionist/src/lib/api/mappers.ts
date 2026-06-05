@@ -332,11 +332,6 @@ export function mapFhirEncounter(fhir: FhirEncounter): Encounter {
       assessment: ext.find(e => e.url === 'urn:curo:soap:assessment')?.valueString ?? '',
       plan: ext.find(e => e.url === 'urn:curo:soap:plan')?.valueString ?? '',
     },
-    vitals: {},
-    diagnoses: [],
-    prescriptionIds: [],
-    labOrderIds: [],
-    auditTrailIds: [],
   };
 }
 
@@ -382,9 +377,6 @@ export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
   const patientId = fhir.subject?.reference?.replace('Patient/', '') ?? '';
   const encounterId = fhir.encounter?.reference?.replace('Encounter/', '') ?? '';
   const doctorId = fhir.requester?.reference?.replace('Practitioner/', '') ?? '';
-  const ext = fhir.extension ?? [];
-  const qrCode = ext.find(e => e.url === 'urn:curo:qrCode')?.valueString ?? '';
-
   const statusMap: Record<string, LabOrder['status']> = {
     draft: 'draft', active: 'sent_to_lab', completed: 'completed',
     revoked: 'draft', 'entered-in-error': 'draft', unknown: 'draft',
@@ -408,9 +400,7 @@ export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
       status: 'ordered' as const,
       result: null,
     })),
-    review: { isReviewed: false, reviewedAt: null, reviewedBy: null },
     showResultsToPatient: false,
-    qrCode,
   };
 }
 

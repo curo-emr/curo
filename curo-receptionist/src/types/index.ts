@@ -90,6 +90,82 @@ export interface Appointment {
   visitId: string | null;
 }
 
+export interface SOAP {
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string;
+}
+
+export interface Encounter {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  appointmentId: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  startedAt: string;
+  endedAt: string | null;
+  chiefComplaint: string;
+  soap: SOAP;
+}
+
+export interface PrescriptionItem {
+  id: string;
+  medicationId: string;
+  displayName: string;
+  dose: string;
+  route: string;
+  frequency: string;
+  durationDays: number;
+  quantity: number;
+  instructions: string;
+  substitutes: unknown[];
+}
+
+export interface Prescription {
+  id: string;
+  patientId: string;
+  encounterId: string;
+  doctorId: string;
+  status: 'draft' | 'sent_to_pharmacy' | 'active' | 'completed' | 'cancelled';
+  createdAt: string;
+  sentAt: string | null;
+  items: PrescriptionItem[];
+  notesToPharmacy: string;
+}
+
+export interface LabOrderTest {
+  testId: string;
+  status: 'ordered' | 'collected' | 'completed' | 'results_available';
+  result: string | null;
+}
+
+export interface LabOrder {
+  id: string;
+  patientId: string;
+  encounterId: string;
+  doctorId: string;
+  priority: 'routine' | 'urgent' | 'stat';
+  status: 'draft' | 'sent_to_lab' | 'results_pending' | 'completed';
+  createdAt: string;
+  sentToLabAt: string | null;
+  notesToLab: string;
+  tests: LabOrderTest[];
+  showResultsToPatient: boolean;
+}
+
+export interface Task {
+  id: string;
+  doctorId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'open' | 'in_progress' | 'completed';
+  relatedPatientId?: string;
+  createdAt: string;
+}
+
 export interface Doctor {
   id: string;
   name: Name;
