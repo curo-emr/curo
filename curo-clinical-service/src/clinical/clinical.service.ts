@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In, Not } from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Encounter } from '../entities/encounter.entity';
 import { ClinicalNote } from '../entities/clinical-note.entity';
@@ -125,6 +125,15 @@ export class ClinicalService {
   async getPatientEncounters(patientId: string): Promise<any[]> {
     const encounters = await this.encountersRepo.find({
       where: { patientId },
+      order: { createdAt: 'DESC' },
+    });
+    return encounters.map(toFhirEncounter);
+  }
+
+  // List encounters, optionally filtered by patient (GET /encounters?patientId=)
+  async getEncounters(patientId?: string): Promise<any[]> {
+    const encounters = await this.encountersRepo.find({
+      where: patientId ? { patientId } : {},
       order: { createdAt: 'DESC' },
     });
     return encounters.map(toFhirEncounter);
@@ -264,6 +273,17 @@ export class ClinicalService {
 
   async getDoctorTasks(ownerId: string): Promise<any[]> {
     return this.tasksRepo.find({ where: { ownerId }, order: { createdAt: 'DESC' } });
+  }
+
+  // List the current user's tasks (GET /tasks?status=). status=open => non-terminal statuses.
+  async getTasks(ownerId: string, status?: string): Promise<any[]> {
+    const where: any = { ownerId };
+    if (status === 'open') {
+      where.status = Not(In(['completed', 'cancelled', 'failed']));
+    } else if (status) {
+      where.status = status;
+    }
+    return this.tasksRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 
   async updateTask(id: string, update: any): Promise<any> {
