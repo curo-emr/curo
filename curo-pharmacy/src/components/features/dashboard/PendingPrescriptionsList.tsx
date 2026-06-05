@@ -15,11 +15,8 @@ interface PendingPrescriptionsListProps {
 
 export function PendingPrescriptionsList({ prescriptions, patients }: PendingPrescriptionsListProps) {
   const pending = prescriptions
-    .filter(p => ['pending', 'processing', 'on_hold'].includes(p.status))
-    .sort((a, b) => {
-      const priorityOrder = { stat: 0, urgent: 1, routine: 2 };
-      return (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
-    });
+    .filter(p => ['sent_to_pharmacy', 'active'].includes(p.status))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <Card className="shadow-sm border">
@@ -45,18 +42,15 @@ export function PendingPrescriptionsList({ prescriptions, patients }: PendingPre
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="font-semibold text-sm text-foreground">
-                        {rx.prescriptionNumber}
+                        {rx.id.slice(0, 8).toUpperCase()}
                       </span>
-                      <Badge variant="outline" className={rx.priority === 'stat' ? 'text-status-error-text border-status-error-border bg-status-error-bg' : rx.priority === 'urgent' ? 'text-status-warning-text border-status-warning-border bg-status-warning-bg' : 'text-muted-foreground border bg-muted'}>
-                        {rx.priority.toUpperCase()}
-                      </Badge>
                       <StatusBadge status={rx.status} />
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {getPatientName(rx.patientId, patients)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {rx.items.map(i => i.drugName).join(', ')}
+                      {rx.items.map(i => i.displayName).join(', ')}
                     </p>
                   </div>
                   <Link href={ROUTES.PRESCRIPTION(rx.id)}>

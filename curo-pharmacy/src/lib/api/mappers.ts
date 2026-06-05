@@ -1,6 +1,6 @@
 import type {
   Patient, Allergy, Problem, Appointment, Encounter, Prescription,
-  LabOrder, Task,
+  Task,
 } from '@/types';
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
@@ -214,8 +214,6 @@ export function mapFhirPatient(fhir: FhirPatient): Patient {
     problemList: [],
     currentMedications: [],
     tags: [],
-    registeredBy: '',
-    registeredAt: fhir.meta?.lastUpdated ?? '',
     createdAt: fhir.meta?.lastUpdated ?? '',
     updatedAt: fhir.meta?.lastUpdated ?? '',
   };
@@ -295,9 +293,6 @@ export function mapFhirAppointment(fhir: FhirAppointment): Appointment {
     status: FHIR_APPT_STATUS_MAP[fhir.status] ?? 'scheduled',
     room: '',
     notes: fhir.comment ?? '',
-    checkInTime: null,
-    checkedInBy: null,
-    visitId: null,
   };
 }
 
@@ -332,11 +327,6 @@ export function mapFhirEncounter(fhir: FhirEncounter): Encounter {
       assessment: ext.find(e => e.url === 'urn:curo:soap:assessment')?.valueString ?? '',
       plan: ext.find(e => e.url === 'urn:curo:soap:plan')?.valueString ?? '',
     },
-    vitals: {},
-    diagnoses: [],
-    prescriptionIds: [],
-    labOrderIds: [],
-    auditTrailIds: [],
   };
 }
 
@@ -378,41 +368,6 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
   };
 }
 
-export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
-  const patientId = fhir.subject?.reference?.replace('Patient/', '') ?? '';
-  const encounterId = fhir.encounter?.reference?.replace('Encounter/', '') ?? '';
-  const doctorId = fhir.requester?.reference?.replace('Practitioner/', '') ?? '';
-  const ext = fhir.extension ?? [];
-  const qrCode = ext.find(e => e.url === 'urn:curo:qrCode')?.valueString ?? '';
-
-  const statusMap: Record<string, LabOrder['status']> = {
-    draft: 'draft', active: 'sent_to_lab', completed: 'completed',
-    revoked: 'draft', 'entered-in-error': 'draft', unknown: 'draft',
-  };
-  const priorityMap: Record<string, LabOrder['priority']> = {
-    routine: 'routine', urgent: 'urgent', stat: 'stat', asap: 'stat',
-  };
-
-  return {
-    id: fhir.id,
-    patientId,
-    encounterId,
-    doctorId,
-    priority: priorityMap[fhir.priority ?? 'routine'] ?? 'routine',
-    status: statusMap[fhir.status] ?? 'draft',
-    createdAt: fhir.meta?.lastUpdated ?? '',
-    sentToLabAt: fhir.status !== 'draft' ? (fhir.meta?.lastUpdated ?? null) : null,
-    notesToLab: fhir.note?.[0]?.text ?? '',
-    tests: (fhir.code?.coding ?? []).map(c => ({
-      testId: c.code ?? '',
-      status: 'ordered' as const,
-      result: null,
-    })),
-    review: { isReviewed: false, reviewedAt: null, reviewedBy: null },
-    showResultsToPatient: false,
-    qrCode,
-  };
-}
 
 export function mapFhirTask(fhir: FhirTask): Task {
   const patientId = fhir.for?.reference?.replace('Patient/', '') ?? undefined;

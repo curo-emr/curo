@@ -43,7 +43,7 @@ export function PatientList({ patients, prescriptions }: PatientListProps) {
 
   const getPatientRxInfo = (patientId: string) => {
     const patientRx = prescriptions.filter(rx => rx.patientId === patientId);
-    const lastRx = [...patientRx].sort((a, b) => new Date(b.prescribedAt).getTime() - new Date(a.prescribedAt).getTime())[0];
+    const lastRx = [...patientRx].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
     return { count: patientRx.length, lastRx };
   };
 
@@ -110,7 +110,7 @@ export function PatientList({ patients, prescriptions }: PatientListProps) {
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {lastRx ? formatDate(lastRx.prescribedAt) : '-'}
+                      {lastRx ? formatDate(lastRx.createdAt) : '-'}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{count}</TableCell>
                     <TableCell>

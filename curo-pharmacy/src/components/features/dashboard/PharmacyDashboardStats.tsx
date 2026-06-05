@@ -1,15 +1,16 @@
-import { Prescription, Medication } from "@/types";
+import { Prescription } from "@/types";
+import type { StockItem } from "@/lib/api/pharmacy";
 
 interface PharmacyDashboardStatsProps {
   prescriptions: Prescription[];
-  medications: Medication[];
+  medications: StockItem[];
 }
 
 export function PharmacyDashboardStats({ prescriptions, medications }: PharmacyDashboardStatsProps) {
-  const pendingCount = prescriptions.filter(p => p.status === 'pending' || p.status === 'processing').length;
-  const onHoldCount = prescriptions.filter(p => p.status === 'on_hold').length;
-  const dispensedCount = prescriptions.filter(p => p.status === 'dispensed' || p.status === 'partially_dispensed').length;
-  const lowStockCount = medications.filter(m => m.stockQuantity <= m.reorderLevel && m.isActive).length;
+  const pendingCount = prescriptions.filter(p => p.status === 'sent_to_pharmacy' || p.status === 'active').length;
+  const onHoldCount = prescriptions.filter(p => p.status === 'draft').length;
+  const dispensedCount = prescriptions.filter(p => p.status === 'completed').length;
+  const lowStockCount = medications.filter(m => m.quantity <= m.reorderThreshold && m.isActive !== false).length;
 
   const statCards = [
     { label: "Pending Prescriptions", value: pendingCount, color: "text-status-warning-text bg-status-warning-bg border-status-warning-border" },

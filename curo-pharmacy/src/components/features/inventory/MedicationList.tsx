@@ -20,29 +20,23 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
-import { Medication } from "@/types";
+import type { StockItem } from "@/lib/api/pharmacy";
 import { formatStatus, formatCurrency, isLowStock, daysUntilExpiry } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 interface MedicationListProps {
-  medications: Medication[];
+  medications: StockItem[];
 }
 
-function getStockStatus(med: Medication): string {
-  if (med.stockQuantity === 0) return 'out_of_stock';
-  if (med.stockQuantity <= med.reorderLevel) return 'low_stock';
+function getStockStatus(med: StockItem): string {
+  if (med.quantity === 0) return 'out_of_stock';
+  if (med.quantity <= med.reorderThreshold) return 'low_stock';
   return 'in_stock';
 }
 
 export function MedicationList({ medications }: MedicationListProps) {
   const [query, setQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<string>("all");
-
-  const categories = useMemo(() => {
-    const cats = new Set(medications.map(m => m.category));
-    return Array.from(cats).sort();
-  }, [medications]);
 
   const filtered = useMemo(() => {
     return medications.filter(m => {
@@ -50,17 +44,15 @@ export function MedicationList({ medications }: MedicationListProps) {
       if (q) {
         const matchesQuery =
           m.genericName.toLowerCase().includes(q) ||
-          m.brandName.toLowerCase().includes(q) ||
-          m.code.toLowerCase().includes(q) ||
-          m.manufacturer.toLowerCase().includes(q);
+          (m.brandName ?? '').toLowerCase().includes(q) ||
+          m.medicationName.toLowerCase().includes(q);
         if (!matchesQuery) return false;
       }
-      if (categoryFilter !== "all" && m.category !== categoryFilter) return false;
-      if (stockFilter === "low" && !isLowStock(m.stockQuantity, m.reorderLevel)) return false;
-      if (stockFilter === "expiring" && !( daysUntilExpiry(m.expiryDate) <= 90 )) return false;
+      if (stockFilter === "low" && !isLowStock(m.quantity, m.reorderThreshold)) return false;
+      if (stockFilter === "expiring" && !(daysUntilExpiry(m.expiryDate) <= 90)) return false;
       return true;
     });
-  }, [query, categoryFilter, stockFilter, medications]);
+  }, [query, stockFilter, medications]);
 
   return (
     <div className="space-y-4">
@@ -71,23 +63,12 @@ export function MedicationList({ medications }: MedicationListProps) {
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search by name, brand, code, or manufacturer..."
+                placeholder="Search by name or brand..."
                 className="pl-9 bg-muted border"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{formatStatus(cat)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={stockFilter} onValueChange={setStockFilter}>
               <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder="Stock" />
@@ -102,7 +83,7 @@ export function MedicationList({ medications }: MedicationListProps) {
         </CardContent>
       </Card>
 
-      {(query || categoryFilter !== "all" || stockFilter !== "all") && (
+      {(query || stockFilter !== "all") && (
         <p className="text-sm text-muted-foreground px-1">
           {filtered.length} of {medications.length} medications shown
         </p>
@@ -113,11 +94,10 @@ export function MedicationList({ medications }: MedicationListProps) {
           <TableHeader className="bg-muted">
             <TableRow>
               <TableHead>Medication</TableHead>
-              <TableHead>Category</TableHead>
               <TableHead>Form / Strength</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Unit Price</TableHead>
+              <TableHead>Unit Cost</TableHead>
               <TableHead>Expiry</TableHead>
             </TableRow>
           </TableHeader>
@@ -131,29 +111,24 @@ export function MedicationList({ medications }: MedicationListProps) {
                     <TableCell>
                       <div>
                         <p className="font-medium text-foreground">{med.genericName}</p>
-                        <p className="text-xs text-muted-foreground">{med.brandName} &middot; {med.code}</p>
+                        <p className="text-xs text-muted-foreground">{med.brandName ?? ''} &middot; {med.medicationName}</p>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-muted-foreground">
-                        {formatStatus(med.category)}
-                      </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {formatStatus(med.form)} &middot; {med.strength}
                     </TableCell>
                     <TableCell>
                       <span className={`font-medium ${
-                        med.stockQuantity === 0 ? 'text-status-error-text' :
-                        isLowStock(med.stockQuantity, med.reorderLevel) ? 'text-status-warning-text' :
+                        med.quantity === 0 ? 'text-status-error-text' :
+                        isLowStock(med.quantity, med.reorderThreshold) ? 'text-status-warning-text' :
                         'text-foreground'
                       }`}>
-                        {med.stockQuantity.toLocaleString()}
+                        {med.quantity.toLocaleString()}
                       </span>
-                      <span className="text-xs text-muted-foreground ml-1">/ {med.reorderLevel}</span>
+                      <span className="text-xs text-muted-foreground ml-1">/ {med.reorderThreshold}</span>
                     </TableCell>
                     <TableCell><StatusBadge status={stockStatus} /></TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{formatCurrency(med.unitPrice)}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{formatCurrency(med.unitCost)}</TableCell>
                     <TableCell>
                       <span className={`text-sm ${expDays <= 90 ? 'text-status-error-text font-medium' : 'text-muted-foreground'}`}>
                         {new Date(med.expiryDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
@@ -167,7 +142,7 @@ export function MedicationList({ medications }: MedicationListProps) {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                   No medications match your filters.
                 </TableCell>
               </TableRow>
