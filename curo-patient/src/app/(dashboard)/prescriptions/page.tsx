@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -27,7 +27,7 @@ export default function PrescriptionsPage() {
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
-  const doctors: never[] = [];
+  const doctors: { id: string; name: { full: string } }[] = [];
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
