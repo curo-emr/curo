@@ -1,6 +1,33 @@
 # Curo EMR — Build Progress
 
-**Last updated:** 2026-05-29 (Phase 8 complete)
+**Last updated:** 2026-06-05 (Phase 9 complete — full dockerized stack + e2e API verification)
+
+---
+
+## Architecture: domain-driven, not role-driven
+
+The backend is split by **clinical domain**, not by UI role. This is why there is
+**no `curo-doctor-service` or `curo-receptionist-service`** — "doctor" and
+"receptionist" are UI roles that *compose* multiple domain services:
+
+| Frontend            | Backend services it calls                                  |
+|---------------------|------------------------------------------------------------|
+| curo-doctor (3010)  | auth, patient, appointment, **clinical**, notification     |
+| curo-receptionist (3012) | auth, patient, appointment, notification              |
+| curo-patient (3011) | auth, patient, appointment, clinical                       |
+| curo-lab (3013)     | patient, **lab**                                           |
+| curo-pharmacy (3014)| patient, **pharmacy**                                      |
+
+`lab`/`pharmacy` only *look* 1:1 because those roles happen to map to a single
+domain. Doctor and receptionist are cross-domain, so they have no dedicated
+service. Splitting clinical/appointment logic into role services would duplicate
+domain logic — a known microservice anti-pattern. **Decision: keep domain-driven.**
+
+FHIR scope: **pragmatic FHIR-shaped** — every clinical resource carries
+`resourceType` + correct core R4 fields and reference/coding structures; custom
+fields go in `extension`. Not validated against full R4 profiles. The
+`GET /auth/practitioners` endpoint intentionally returns a compact UI-helper
+shape (not a FHIR `Practitioner` resource) consumed by frontend dropdowns.
 
 ---
 
@@ -469,3 +496,59 @@ cd curo-pharmacy && npm run dev -- -p 3014
 | Gateway | POST /auth/login (proxy) | ✅ |
 | Gateway | GET /patients (proxy) | ✅ 10 patients |
 | Gateway | GET /appointments (proxy) | ✅ 7 appointments |
+
+---
+
+## Phase 9: Full dockerized stack + end-to-end API verification ✅ DONE
+
+Brought the **entire stack up in Docker** (`docker compose up -d --build`) for the
+first time — all 9 backends + 5 frontends + postgres + redis + one-shot seed.
+
+### Bugs found & fixed bringing the stack up
+
+- **clinical-service crash-loop** — `qrcode` was only present as `@types/qrcode`
+  (dev type), not as a runtime dependency, so `npm ci --omit=dev` skipped it and
+  the container died with `Cannot find module 'qrcode'`. Added `qrcode@^1.5.4` to
+  `curo-clinical-service` dependencies + lockfile.
+- **`GET /auth/practitioners` 500** — query referenced `p.isActive`, but the
+  Practitioner entity column is `active`. Fixed to `p.active`.
+- **Doctor frontend ↔ clinical route mismatch** — frontend calls
+  `GET /encounters?patientId=` and `GET /tasks[?status=open]`, which the backend
+  did not expose (only `/encounters/patient/:id` and `/tasks/mine`). Added
+  `GET /encounters` and `GET /tasks` routes (status=open ⇒ non-terminal statuses).
+- **Lab frontend ↔ gateway prefix mismatch** — lab frontend called `/lab/orders`,
+  `/lab/results`, etc., but the gateway maps `/orders`,`/results`,`/reports`,
+  `/instruments` (no `/lab` prefix) to the lab service. Dropped the `/lab/` prefix
+  in `curo-lab/src/lib/api/lab.ts`.
+- Removed obsolete `version:` key from `docker-compose.yml`.
+
+### End-to-end API verification (all through the gateway :3000)
+
+**Reads — 28/28 pass** across auth, patient, appointment, clinical, pharmacy, lab,
+notification, audit (login verified for all 6 roles; FHIR `resourceType` present in
+clinical/patient/appointment/lab/pharmacy responses).
+
+**Writes — all pass:**
+
+| Flow | Endpoint | Result |
+|------|----------|--------|
+| Receptionist register patient | POST /patients | ✅ 201 FHIR Patient + CUR code |
+| Receptionist book appointment | POST /appointments | ✅ 201 Appointment |
+| Doctor create encounter | POST /encounters | ✅ 201 Encounter |
+| Doctor SOAP note | POST /notes | ✅ 201 |
+| Doctor vitals | POST /vitals | ✅ 201 Observation |
+| Doctor prescription | POST /prescriptions | ✅ 201 MedicationRequest |
+| Doctor lab order | POST /lab-orders | ✅ 201 ServiceRequest (+QR) |
+| Doctor task | POST /tasks | ✅ 201 |
+| Doctor finish visit | PUT /encounters/:id/status (completed) | ✅ 200, periodEnd set |
+| Pharmacy dispense | POST /dispense | ✅ 201 MedicationDispense + receipt |
+| Lab enter results | POST /results | ✅ 201 DiagnosticReport (final) |
+
+### How to run the whole thing now
+
+```bash
+docker compose up -d --build      # builds + starts everything
+docker compose ps                 # all healthy; curo-seed exits 0
+# Frontends: doctor :3010  patient :3011  receptionist :3012  lab :3013  pharmacy :3014
+# Gateway   :3000   (seed data already present; admin@curo.health / Admin@12345)
+```
