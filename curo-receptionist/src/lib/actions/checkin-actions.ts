@@ -1,7 +1,8 @@
 import { updateAppointmentStatus } from "./appointment-actions";
 
 export async function checkInPatient(appointmentId: string) {
-  return updateAppointmentStatus(appointmentId, "arrived");
+  const result = await updateAppointmentStatus(appointmentId, "arrived");
+  return { ...result, visitId: null };
 }
 
 export async function sendToDoctor(appointmentId: string) {
