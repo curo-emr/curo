@@ -15,7 +15,7 @@ export class JwtAuthGuard implements CanActivate {
       const payload = this.jwtService.verify(token, {
         secret: process.env.JWT_SECRET || 'curo_jwt_secret_dev_2024_change_in_prod',
       });
-      request.user = { userId: payload.sub, email: payload.email, role: payload.role };
+      request.user = { userId: payload.sub, email: payload.email, role: payload.role, practitionerId: payload.practitionerId ?? null, patientId: payload.patientId ?? null };
       return true;
     } catch {
       throw new UnauthorizedException();

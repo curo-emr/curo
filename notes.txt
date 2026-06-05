@@ -1,0 +1,36 @@
+receptionist - register new patient - [x] - add new allergies
+                                    - [ ] - unique id for patients without nic / passport
+                                    - [ ] - when booking an appointment, make doctor selection more user friendly
+                                    - [ ] - when booking an appointment, give preconfigured timeslots (need to know when the clinic is open ), and also the ability to add custom timeslot 
+                                    - [ ] - how are patient accounts created and their credentials handed over to them??
+
+
+doctor - [x] - should be able to add allergies for a patient
+         [ ] - should be able to view pharmacy inventory, if there are multiple pharmacies, then select from filter, should be able to search for meds                            
+         [ ] - charts for vitals
+         [ ] - display full patient info (nic, marital status, etc), take inspiration from the profile tab in the patient portal
+
+
+super admin - [ ] - when creating pharmacy account, include field for pharmacy name
+
+
+patient - [ ] - remove ability to change name, phone, email in settings
+          [ ] -  polish header in the settings page                         
+
+
+laboratory - [ ] - TAT for each lab test in report tab
+
+
+pharmacy - [ ] - after selecting a pending e prescription, there will be a dispense button, when it is clicked, taken to a page where user can tick the meds dispensed, amount will be calculated, account owners name will be recorded.
+
+referal letters - templates - doctor
+
+show trends for patients 
+
+if laboratory uploads pdf? generate pdf from entered lab results from lab and show doctor, he can print to give to patient
+
+when a machine is not working in the lab, it shows in doctors dashboard as well
+
+receptionist - billing - amounts for consultation, laboratory
+for pharmacy - receipt for prescription with discounted full amount
+

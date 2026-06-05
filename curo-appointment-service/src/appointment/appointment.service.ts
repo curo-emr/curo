@@ -47,13 +47,13 @@ export class AppointmentService {
     return toFhirAppointment(saved);
   }
 
-  async findAll(requestingUser: { role: string; userId: string }, filters?: { date?: string; practitionerId?: string; patientId?: string }): Promise<any[]> {
+  async findAll(requestingUser: { role: string; userId: string; practitionerId?: string; patientId?: string }, filters?: { date?: string; practitionerId?: string; patientId?: string }): Promise<any[]> {
     const query = this.appointmentsRepo.createQueryBuilder('a');
 
-    if (requestingUser.role === UserRole.DOCTOR) {
-      query.where('a.practitionerId = :pid', { pid: requestingUser.userId });
-    } else if (requestingUser.role === UserRole.PATIENT) {
-      query.where('a.patientId = :pid', { pid: requestingUser.userId });
+    if (requestingUser.role === UserRole.DOCTOR && requestingUser.practitionerId) {
+      query.where('a.practitionerId = :pid', { pid: requestingUser.practitionerId });
+    } else if (requestingUser.role === UserRole.PATIENT && requestingUser.patientId) {
+      query.where('a.patientId = :pid', { pid: requestingUser.patientId });
     }
 
     if (filters?.date) {

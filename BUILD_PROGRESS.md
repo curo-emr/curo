@@ -1,6 +1,6 @@
 # Curo EMR — Build Progress
 
-**Last updated:** 2026-05-28 (Phase 6 complete)
+**Last updated:** 2026-05-29 (Phase 8 complete)
 
 ---
 
@@ -360,23 +360,112 @@ Each frontend now has:
 
 ---
 
-## Next Steps (TODO)
+---
 
-### Phase 7: End-to-end Testing & Polish (NEXT)
-1. Start Docker + run seed, then verify each frontend login flow works
-2. Fix any TypeScript build errors (some old type fields may remain in components)
-3. Wire the EncounterEditor component's form submit to POST /encounters, POST /vitals, POST /prescriptions, POST /lab-orders
-4. Wire PatientRegistrationForm and PatientEditForm submits to registerPatient/updatePatientDemographics
-5. Wire BookAppointmentForm submit to bookNewAppointment
-6. Add JWT refresh token flow (currently just removes token on 401)
-7. Add notifications polling (GET /notifications/count in Topbar)
-8. Polish: loading states, error toasts (sonner), empty states
+## Phase 7: End-to-end Testing & Polish ✅ DONE
 
-### Known Issues / TODOs:
-- `@nestjs/mapped-types` needs to be installed in any service using `PartialType` (already done for patient)
-- Some patient pages (visits detail) are placeholders until encounter API is added to patient scope
-- The EncounterEditor component form submit still uses old server actions — needs to be wired to API
-- PatientRegistrationForm / BookAppointmentForm forms call updated actions — verify form wiring
-- `typeorm: "^1.0.0"` is installed in all services — this is correct (TypeORM 1.0.0)
-- Docker Desktop required to run postgres (docker-compose.yml is ready)
-- Run `docker compose up -d` then `npm run seed` before starting backends
+### What was done:
+1. ✅ TypeScript compile errors fixed across all 5 frontends (clean `tsc --noEmit`)
+2. ✅ EncounterEditor `handleFinishVisit` wired to real API: creates encounter → saves SOAP note → posts vitals (per LOINC code) → creates prescriptions → creates lab orders → marks encounter completed
+3. ✅ PatientRegistrationForm and BookAppointmentForm were already wired (Phase 6)
+4. ✅ Notifications polling added to all 4 staff Topbars (doctor, receptionist, pharmacy, lab) — polls `GET /notifications/count` every 30s, shows live badge
+5. ✅ Type alignment across all frontends — FHIR-mapped types now consistent with what the API returns
+
+### Key fixes:
+- `mappers.ts` in all 5 frontends — removed stale fields (`registeredBy`, `checkInTime`, `visitId`, `qrCode`, `vitals`, `diagnoses`, `prescriptionIds`, `labOrderIds`)
+- `EncounterEditor.tsx` — full API integration with LOINC-coded vitals, per-item prescriptions, per-test lab orders
+- Pharmacy components updated to use API-returned `StockItem`/`DispenseRecord` instead of old domain types
+- Lab components updated to use FHIR-mapped `LabOrder` instead of old domain types
+- Patient portal pages — missing `getDoctorName` imports and `never[]` type fixes
+- Data JSON import paths fixed in doctor + patient frontends (`../../../data/`)
+
+---
+
+## Phase 8: Production Readiness ✅ DONE
+
+### What was done:
+
+1. ✅ **JWT refresh token flow** — all 5 frontends' `client.ts` updated with full refresh interceptor:
+   - On 401, reads `curo_refresh_token` from localStorage
+   - Calls `POST /auth/refresh` to get new token pair
+   - Retries the original request with new token
+   - Concurrent 401s are queued and all retried after one refresh
+   - Falls back to logout if refresh fails
+
+2. ✅ **Patient portal visits page** — fully wired to real API:
+   - Added `getMyEncounters(patientId)` to `patient-portal.ts`
+   - Added `getPractitioners()` to `patient-portal.ts`
+   - `visits/page.tsx` now fetches encounters + practitioners, shows loading state
+   - GET /encounters/patient/:id now accessible by PATIENT role
+
+3. ✅ **End-to-end smoke testing** — all 9 services verified:
+   - All 6 user types can log in (admin, doctor, receptionist, pharmacist, lab, patient)
+   - JWT refresh works end-to-end
+   - All service endpoints return correct seeded data
+   - Gateway proxy works (POST + GET via gateway)
+
+### Key bugs found and fixed during smoke testing:
+
+- **Empty `main.ts`** — All 7 non-auth services had empty main.ts (scaffold issue). Written for all.
+- **Auth service Patient entity** — Minimal entity created incomplete patients table. Replaced with full entity.
+- **`birthDate` NOT NULL** — Made nullable in patient entity to allow TypeORM ALTER TABLE.
+- **PostgreSQL SCRAM-SHA-256** — Docker bridge IPs get scram-sha-256 auth by default. Fixed by setting `host all all 0.0.0.0/0 trust` in pg_hba.conf and adding `POSTGRES_HOST_AUTH_METHOD: trust` to docker-compose.yml.
+- **JWT payload missing practitionerId** — Auth service JWT only had `{sub, email, role}`. Added `practitionerId` and `patientId` to payload. Updated all 7 service JWT guards to extract them.
+- **Appointment filter using userId instead of practitionerId** — Fixed appointment service to filter by `practitionerId` from JWT token, not `userId`.
+- **Clinical service using userId as practitionerId** — Fixed all create methods to use `practitionerId ?? userId`.
+- **Gateway body-parser** — NestJS body-parser consumed POST bodies before proxy could forward them. Fixed with `bodyParser: false` on gateway app.
+- **Gateway proxy created per-request** — Rewrote proxy middleware to pre-create one proxy per target service at startup (http-proxy-middleware v4 compatible).
+- **Seed organizations table** — Removed organizations insert (table never created); practitioners.organizationId is nullable.
+
+### How to run the full stack (updated):
+
+```bash
+# 1. Start Docker (postgres + redis)
+docker compose up -d
+
+# 2. Start all 9 backend services (from their directories)
+cd curo-auth-service && node dist/main.js &
+cd curo-patient-service && node dist/main.js &
+cd curo-appointment-service && node dist/main.js &
+cd curo-clinical-service && node dist/main.js &
+cd curo-pharmacy-service && node dist/main.js &
+cd curo-lab-service && node dist/main.js &
+cd curo-notification-service && node dist/main.js &
+cd curo-audit-service && node dist/main.js &
+cd curo-api-gateway && node dist/main.js &
+
+# 3. Run seed (after services have started and created tables)
+npm run seed
+
+# 4. Start frontends
+cd curo-doctor && npm run dev -- -p 3010
+cd curo-patient && npm run dev -- -p 3011
+cd curo-receptionist && npm run dev -- -p 3012
+cd curo-lab && npm run dev -- -p 3013
+cd curo-pharmacy && npm run dev -- -p 3014
+```
+
+### Smoke test results (all passing):
+
+| Service | Endpoint | Result |
+|---------|----------|--------|
+| Auth | POST /auth/login (all 6 roles) | ✅ |
+| Auth | POST /auth/refresh | ✅ |
+| Auth | GET /auth/practitioners | ✅ 3 doctors |
+| Patient | GET /patients (doctor) | ✅ 10 patients |
+| Patient | GET /patients/me (patient) | ✅ |
+| Appointment | GET /appointments (doctor filtered) | ✅ 7 appointments |
+| Clinical | GET /encounters | ✅ 3 encounters |
+| Clinical | GET /encounters/patient/:id (patient) | ✅ |
+| Pharmacy | GET /stock | ✅ 20 items |
+| Pharmacy | GET /prescriptions/pending | ✅ 3 pending |
+| Pharmacy | GET /stock/alerts | ✅ 3 low stock |
+| Lab | GET /orders | ✅ 8 orders |
+| Lab | GET /reports | ✅ 5 reports |
+| Lab | GET /instruments | ✅ 2 instruments |
+| Notifications | GET /notifications | ✅ |
+| Notifications | GET /notifications/count | ✅ |
+| Audit | GET /audit (admin) | ✅ |
+| Gateway | POST /auth/login (proxy) | ✅ |
+| Gateway | GET /patients (proxy) | ✅ 10 patients |
+| Gateway | GET /appointments (proxy) | ✅ 7 appointments |

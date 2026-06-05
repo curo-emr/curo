@@ -1,6 +1,31 @@
 version: '3.9'
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared environment fragments
+# ─────────────────────────────────────────────────────────────────────────────
+x-db-env: &db-env
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_USER: curo
+  DB_PASS: curo_secret
+  DB_NAME: curo_db
+
+x-jwt-env: &jwt-env
+  JWT_SECRET: curo_jwt_secret_dev_2024_change_in_prod
+  JWT_REFRESH_SECRET: curo_refresh_secret_dev_2024_change_in_prod
+  JWT_EXPIRES_IN: 15m
+  JWT_REFRESH_EXPIRES_IN: 7d
+
+x-backend-healthcheck: &backend-healthcheck
+  interval: 15s
+  timeout: 5s
+  retries: 10
+  start_period: 40s
+
+# ─────────────────────────────────────────────────────────────────────────────
 services:
+
+  # ── Infrastructure ───────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: curo_postgres
@@ -9,13 +34,14 @@ services:
       POSTGRES_USER: curo
       POSTGRES_PASSWORD: curo_secret
       POSTGRES_DB: curo_db
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U curo -d curo_db']
+      test: ["CMD-SHELL", "pg_isready -U curo -d curo_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,12 +51,314 @@ services:
     container_name: curo_redis
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - "6379:6379"
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ── Backend services ─────────────────────────────────────────────────────────
+  curo-auth-service:
+    build:
+      context: ./curo-auth-service
+      dockerfile: Dockerfile
+    container_name: curo_auth
+    restart: unless-stopped
+    environment:
+      PORT: "3001"
+      <<: [*db-env, *jwt-env]
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 3001 || exit 1"]
+      <<: *backend-healthcheck
+
+  curo-patient-service:
+    build:
+      context: ./curo-patient-service
+      dockerfile: Dockerfile
+    container_name: curo_patient
+    restart: unless-stopped
+    environment:
+      PORT: "3002"
+      <<: [*db-env, *jwt-env]
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 3002 || exit 1"]
+      <<: *backend-healthcheck
+
+  curo-appointment-service:
+    build:
+      context: ./curo-appointment-service
+      dockerfile: Dockerfile
+    container_name: curo_appointment
+    restart: unless-stopped
+    environment:
+      PORT: "3003"
+      <<: [*db-env, *jwt-env]
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 3003 || exit 1"]
+      <<: *backend-healthcheck
+
+  curo-clinical-service:
+    build:
+      context: ./curo-clinical-service
+      dockerfile: Dockerfile
+    container_name: curo_clinical
+    restart: unless-stopped
+    environment:
+      PORT: "3004"
+      <<: [*db-env, *jwt-env]
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 3004 || exit 1"]
+      <<: *backend-healthcheck
+
+  curo-pharmacy-service:
+    build:
+      context: ./curo-pharmacy-service
+      dockerfile: Dockerfile
+    container_name: curo_pharmacy_svc
+    restart: unless-stopped
+    environment:
+      PORT: "3005"
+      <<: [*db-env, *jwt-env]
+    ports:
+      - "3005:3005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 3005 || exit 1"]
+      <<: *backend-healthcheck
+
+  curo-lab-service:
+    build:
+      context: ./curo-lab-service
+      dockerfile: Dockerfile
+    container_name: curo_lab_svc
+    restart: unless-stopped
+    environment:
+      PORT: "3006"
+      <<: [*db-env, *jwt-env]
+    ports:
+      - "3006:3006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 3006 || exit 1"]
+      <<: *backend-healthcheck
+
+  curo-notification-service:
+    build:
+      context: ./curo-notification-service
+      dockerfile: Dockerfile
+    container_name: curo_notification
+    restart: unless-stopped
+    environment:
+      PORT: "3007"
+      <<: [*db-env, *jwt-env]
+    ports:
+      - "3007:3007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 3007 || exit 1"]
+      <<: *backend-healthcheck
+
+  curo-audit-service:
+    build:
+      context: ./curo-audit-service
+      dockerfile: Dockerfile
+    container_name: curo_audit
+    restart: unless-stopped
+    environment:
+      PORT: "3008"
+      <<: [*db-env, *jwt-env]
+    ports:
+      - "3008:3008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 3008 || exit 1"]
+      <<: *backend-healthcheck
+
+  curo-api-gateway:
+    build:
+      context: ./curo-api-gateway
+      dockerfile: Dockerfile
+    container_name: curo_gateway
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      JWT_SECRET: curo_jwt_secret_dev_2024_change_in_prod
+      AUTH_SERVICE_URL: http://curo-auth-service:3001
+      PATIENT_SERVICE_URL: http://curo-patient-service:3002
+      APPOINTMENT_SERVICE_URL: http://curo-appointment-service:3003
+      CLINICAL_SERVICE_URL: http://curo-clinical-service:3004
+      PHARMACY_SERVICE_URL: http://curo-pharmacy-service:3005
+      LAB_SERVICE_URL: http://curo-lab-service:3006
+      NOTIFICATION_SERVICE_URL: http://curo-notification-service:3007
+      AUDIT_SERVICE_URL: http://curo-audit-service:3008
+      # browser-facing origins stay as localhost (host machine ports)
+      FRONTEND_ORIGINS: http://localhost:3010,http://localhost:3011,http://localhost:3012,http://localhost:3013,http://localhost:3014
+    ports:
+      - "3000:3000"
+    depends_on:
+      curo-auth-service:
+        condition: service_healthy
+      curo-patient-service:
+        condition: service_healthy
+      curo-appointment-service:
+        condition: service_healthy
+      curo-clinical-service:
+        condition: service_healthy
+      curo-pharmacy-service:
+        condition: service_healthy
+      curo-lab-service:
+        condition: service_healthy
+      curo-notification-service:
+        condition: service_healthy
+      curo-audit-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 3000 || exit 1"]
+      <<: *backend-healthcheck
+
+  # ── Database seed (runs once, then exits) ────────────────────────────────────
+  curo-seed:
+    build:
+      context: .
+      dockerfile: scripts/Dockerfile.seed
+    container_name: curo_seed
+    restart: "no"
+    environment:
+      <<: *db-env
+    depends_on:
+      # wait for all backends so TypeORM synchronize has created all tables
+      curo-auth-service:
+        condition: service_healthy
+      curo-patient-service:
+        condition: service_healthy
+      curo-appointment-service:
+        condition: service_healthy
+      curo-clinical-service:
+        condition: service_healthy
+      curo-pharmacy-service:
+        condition: service_healthy
+      curo-lab-service:
+        condition: service_healthy
+      curo-notification-service:
+        condition: service_healthy
+      curo-audit-service:
+        condition: service_healthy
+
+  # ── Frontends ─────────────────────────────────────────────────────────────────
+  # NEXT_PUBLIC_API_URL is baked in at build time (browser uses host-exposed port 3000)
+  curo-doctor:
+    build:
+      context: ./curo-doctor
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    container_name: curo_doctor_ui
+    restart: unless-stopped
+    environment:
+      PORT: "3010"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "3010:3010"
+    depends_on:
+      curo-api-gateway:
+        condition: service_healthy
+
+  curo-patient-portal:
+    build:
+      context: ./curo-patient
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    container_name: curo_patient_ui
+    restart: unless-stopped
+    environment:
+      PORT: "3011"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "3011:3011"
+    depends_on:
+      curo-api-gateway:
+        condition: service_healthy
+
+  curo-receptionist:
+    build:
+      context: ./curo-receptionist
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    container_name: curo_receptionist_ui
+    restart: unless-stopped
+    environment:
+      PORT: "3012"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "3012:3012"
+    depends_on:
+      curo-api-gateway:
+        condition: service_healthy
+
+  curo-lab-portal:
+    build:
+      context: ./curo-lab
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    container_name: curo_lab_ui
+    restart: unless-stopped
+    environment:
+      PORT: "3013"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "3013:3013"
+    depends_on:
+      curo-api-gateway:
+        condition: service_healthy
+
+  curo-pharmacy-portal:
+    build:
+      context: ./curo-pharmacy
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    container_name: curo_pharmacy_ui
+    restart: unless-stopped
+    environment:
+      PORT: "3014"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "3014:3014"
+    depends_on:
+      curo-api-gateway:
+        condition: service_healthy
 
 volumes:
   postgres_data:
