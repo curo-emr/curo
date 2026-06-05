@@ -25,6 +25,13 @@ export class ClinicalController {
     return this.clinicalService.createEncounter(dto, user.practitionerId ?? user.userId);
   }
 
+  @Get('encounters')
+  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
+  @Header('Content-Type', 'application/fhir+json')
+  getEncounters(@Query('patientId') patientId?: string) {
+    return this.clinicalService.getEncounters(patientId);
+  }
+
   @Get('encounters/patient/:patientId')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
@@ -136,6 +143,12 @@ export class ClinicalController {
   @Roles('DOCTOR', 'SUPER_ADMIN')
   createTask(@Body() dto: any, @CurrentUser() user: any) {
     return this.clinicalService.createTask(dto, user.practitionerId ?? user.userId);
+  }
+
+  @Get('tasks')
+  @Roles('DOCTOR', 'SUPER_ADMIN')
+  getTasks(@CurrentUser() user: any, @Query('status') status?: string) {
+    return this.clinicalService.getTasks(user.practitionerId ?? user.userId, status);
   }
 
   @Get('tasks/mine')

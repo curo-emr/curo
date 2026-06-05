@@ -112,7 +112,7 @@ export class AuthService {
   }
 
   async getPractitioners(role?: string) {
-    const query = this.practitionersRepo.createQueryBuilder('p').where('p.isActive = true');
+    const query = this.practitionersRepo.createQueryBuilder('p').where('p.active = true');
     if (role) {
       query.andWhere('p.role = :role', { role });
     }
