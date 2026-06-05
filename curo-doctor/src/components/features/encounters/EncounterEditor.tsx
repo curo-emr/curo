@@ -17,6 +17,8 @@ import { DiagnosisSearch } from "./sections/DiagnosisSearch";
 import { PrescriptionForm } from "./sections/PrescriptionForm";
 import { LabOrderForm } from "./sections/LabOrderForm";
 import { VitalsPanel } from "./sections/VitalsPanel";
+import { createEncounter, updateEncounterStatus } from "@/lib/api/encounters";
+import { createNote, createVitals, createPrescription, createLabOrder } from "@/lib/api/clinical";
 
 interface Props {
   patient: Patient;
@@ -26,7 +28,18 @@ interface Props {
   labTestsCatalog: LabTestCatalogItem[];
 }
 
-export function EncounterEditor({ patient, icd10Catalog }: Props) {
+const VITALS_MAP = [
+  { key: 'bpSystolic' as keyof Vitals, code: '8480-6', display: 'Blood Pressure Systolic', unit: 'mmHg' },
+  { key: 'bpDiastolic' as keyof Vitals, code: '8462-4', display: 'Blood Pressure Diastolic', unit: 'mmHg' },
+  { key: 'pulseBpm' as keyof Vitals, code: '8867-4', display: 'Heart rate', unit: 'bpm' },
+  { key: 'temperatureC' as keyof Vitals, code: '8310-5', display: 'Body temperature', unit: 'Cel' },
+  { key: 'spo2Percent' as keyof Vitals, code: '2708-6', display: 'Oxygen saturation', unit: '%' },
+  { key: 'respirationRpm' as keyof Vitals, code: '9279-1', display: 'Respiratory rate', unit: '/min' },
+  { key: 'heightCm' as keyof Vitals, code: '8302-2', display: 'Body height', unit: 'cm' },
+  { key: 'weightKg' as keyof Vitals, code: '29463-7', display: 'Body weight', unit: 'kg' },
+];
+
+export function EncounterEditor({ patient, appointmentId, icd10Catalog }: Props) {
   const router = useRouter();
 
   // State
@@ -53,11 +66,73 @@ export function EncounterEditor({ patient, icd10Catalog }: Props) {
 
     setIsSignLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 800));
+      // 1. Create the encounter
+      const encounter = await createEncounter({
+        patientId: patient.id,
+        appointmentId,
+        reasonCode: chiefComplaint,
+        periodStart: new Date().toISOString(),
+      });
+      const encounterId = encounter.id;
+
+      // 2. Save SOAP note
+      await createNote({
+        patientId: patient.id,
+        encounterId,
+        subjective: soap.subjective || undefined,
+        objective: soap.objective || undefined,
+        assessment: soap.assessment || undefined,
+        plan: soap.plan || undefined,
+        additionalNotes: chiefComplaint,
+      });
+
+      // 3. Post vitals (one observation per filled field)
+      const vitalPayloads = VITALS_MAP
+        .filter(v => vitals[v.key] !== undefined && (vitals[v.key] as number) > 0)
+        .map(v => createVitals({
+          patientId: patient.id,
+          encounterId,
+          code: v.code,
+          display: v.display,
+          valueQuantity: vitals[v.key] as number,
+          valueUnit: v.unit,
+          effectiveDateTime: new Date().toISOString(),
+        }));
+      await Promise.all(vitalPayloads);
+
+      // 4. Create prescriptions
+      await Promise.all(prescriptions.map(rx => createPrescription({
+        patientId: patient.id,
+        encounterId,
+        medicationCode: rx.medicationId,
+        medicationDisplay: rx.displayName,
+        dosageText: rx.dose,
+        route: rx.route,
+        frequency: rx.frequency,
+        durationDays: rx.durationDays,
+        quantityValue: rx.quantity,
+        note: rx.instructions || undefined,
+      })));
+
+      // 5. Create lab orders (one per test)
+      await Promise.all(tests.map(test => createLabOrder({
+        patientId: patient.id,
+        encounterId,
+        code: test.testId,
+        display: test.name,
+        priority: labPriority,
+        note: labNotes || undefined,
+      })));
+
+      // 6. Mark encounter as completed
+      await updateEncounterStatus(encounterId, 'completed');
+
       toast.success("Visit signed and completed");
       router.push(ROUTES.PATIENT(patient.id));
       router.refresh();
-    } catch {
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to complete visit";
+      toast.error(msg);
       setIsSignLoading(false);
     }
   };
