@@ -22,10 +22,13 @@ export interface EmergencyContact {
 export interface Patient {
   id: string;
   mrn: string;
+  nic?: string;
   name: Name;
   dob: string;
   sex: 'male' | 'female' | 'other';
   bloodType: string;
+  nationality?: string;
+  maritalStatus?: string;
   phone: string;
   email: string;
   address: Address;
@@ -36,6 +39,95 @@ export interface Patient {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Allergy {
+  id: string;
+  patientId: string;
+  substance: string;
+  reaction: string;
+  severity: 'mild' | 'moderate' | 'severe';
+  notes: string;
+  recordedAt: string;
+}
+
+export interface Problem {
+  id: string;
+  patientId: string;
+  icdCode: string;
+  name: string;
+  status: 'active' | 'resolved' | 'inactive';
+  onsetDate: string;
+  notes: string;
+}
+
+export interface Appointment {
+  id: string;
+  date: string;
+  time: string;
+  doctorId: string;
+  patientId: string;
+  reason: string;
+  visitType: string;
+  status: 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  room: string;
+  notes: string;
+}
+
+export interface SOAP {
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string;
+}
+
+export interface Encounter {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  appointmentId: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  startedAt: string;
+  endedAt: string | null;
+  chiefComplaint: string;
+  soap: SOAP;
+}
+
+export interface PrescriptionItem {
+  id: string;
+  medicationId: string;
+  displayName: string;
+  dose: string;
+  route: string;
+  frequency: string;
+  durationDays: number;
+  quantity: number;
+  instructions: string;
+  substitutes: unknown[];
+}
+
+export interface Prescription {
+  id: string;
+  patientId: string;
+  encounterId: string;
+  doctorId: string;
+  status: 'draft' | 'sent_to_pharmacy' | 'active' | 'completed' | 'cancelled';
+  createdAt: string;
+  sentAt: string | null;
+  items: PrescriptionItem[];
+  notesToPharmacy: string;
+}
+
+export interface Task {
+  id: string;
+  doctorId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'open' | 'in_progress' | 'completed';
+  relatedPatientId?: string;
+  createdAt: string;
 }
 
 // --- Lab Staff ---
@@ -73,45 +165,48 @@ export interface LabTestCatalogItem {
   id: string;
   code: string;
   name: string;
-  department: string;
-  specimenType: SpecimenType;
-  containerType: string;
-  tat: number; // turnaround time in minutes
-  price: number;
-  isPanel: boolean;
-  components: TestComponent[];
+  category?: string;
+  department?: string;
+  specimenType?: SpecimenType;
+  containerType?: string;
+  tat?: number;
+  price?: number;
+  isPanel?: boolean;
+  components?: TestComponent[];
 }
 
-// --- Lab Orders ---
+// --- Lab Orders (FHIR-mapped) ---
 
-export type LabOrderStatus = 'received' | 'collected' | 'processing' | 'resulted' | 'verified' | 'dispatched' | 'rejected';
+export type LabOrderStatus = 'draft' | 'sent_to_lab' | 'results_pending' | 'completed';
 export type Priority = 'routine' | 'urgent' | 'stat';
 export type SpecimenType = 'whole_blood' | 'serum' | 'urine' | 'csf' | 'swab' | 'other';
-export type SpecimenCondition = 'acceptable' | 'hemolyzed' | 'lipemic' | 'clotted' | 'insufficient' | 'wrong_container';
 export type ResultFlag = 'normal' | 'low' | 'high' | 'critical' | 'abnormal';
 
 export interface LabOrderTest {
   testId: string;
-  resultId: string | null;
+  status: 'ordered' | 'collected' | 'completed' | 'results_available';
+  result: string | null;
+}
+
+export interface LabOrderReview {
+  isReviewed: boolean;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
 }
 
 export interface LabOrder {
   id: string;
-  accessionNumber: string;
   patientId: string;
-  doctorName: string;
+  encounterId: string;
+  doctorId: string;
   priority: Priority;
   status: LabOrderStatus;
-  orderedAt: string;
-  receivedAt: string;
-  collectedAt: string | null;
-  collectedBy: string | null;
-  specimenType: SpecimenType;
-  specimenCondition: SpecimenCondition | null;
-  department: string;
-  clinicalNotes: string;
-  rejectionReason: string | null;
+  createdAt: string;
+  sentToLabAt: string | null;
+  notesToLab: string;
   tests: LabOrderTest[];
+  review: LabOrderReview;
+  showResultsToPatient: boolean;
 }
 
 // --- Lab Results ---
@@ -161,11 +256,14 @@ export type InstrumentStatus = 'operational' | 'maintenance' | 'offline';
 export interface LabInstrument {
   id: string;
   name: string;
-  type: string;
-  department: string;
+  model?: string;
   serialNumber: string;
-  status: InstrumentStatus;
-  lastCalibration: string;
-  nextCalibration: string;
-  location: string;
+  status: string;
+  lastCalibrated?: string;
+  nextCalibrationDue?: string;
+  location?: string;
+  type?: string;
+  department?: string;
+  lastCalibration?: string;
+  nextCalibration?: string;
 }

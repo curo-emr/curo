@@ -39,7 +39,7 @@ export function UrgentOrdersList({ orders, patients, testCatalog }: UrgentOrders
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="font-semibold text-sm text-foreground">
-                        {order.accessionNumber}
+                        {order.id.slice(0, 8).toUpperCase()}
                       </span>
                       <Badge variant="outline" className={order.priority === 'stat' ? 'text-status-error-text border-status-error-border bg-status-error-bg' : 'text-status-warning-text border-status-warning-border bg-status-warning-bg'}>
                         {order.priority.toUpperCase()}

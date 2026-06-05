@@ -22,7 +22,7 @@ export default function ReportsPage() {
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
   const totalOrders = orders.length;
-  const rejectedOrders = orders.filter(o => o.status === 'rejected').length;
+  const rejectedOrders = orders.filter(o => o.status === 'cancelled' as string).length;
   const rejectionRate = totalOrders > 0 ? ((rejectedOrders / totalOrders) * 100).toFixed(1) : '0';
 
   // Count tests

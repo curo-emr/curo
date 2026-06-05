@@ -99,10 +99,10 @@ export function TestCatalogList({ tests }: TestCatalogListProps) {
                         </div>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
                           <span>{test.department}</span>
-                          <span>{formatStatus(test.specimenType)}</span>
+                          <span>{test.specimenType ? formatStatus(test.specimenType) : ''}</span>
                           <span>{test.containerType}</span>
-                          <span>TAT: {formatTAT(test.tat)}</span>
-                          <span>Rs. {test.price.toLocaleString()}</span>
+                          <span>TAT: {formatTAT(test.tat ?? 0)}</span>
+                          <span>Rs. {(test.price ?? 0).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -114,7 +114,7 @@ export function TestCatalogList({ tests }: TestCatalogListProps) {
                   <div className="border-t p-4 bg-muted/50">
                     <p className="text-xs font-medium text-muted-foreground mb-2">Components & Reference Ranges</p>
                     <div className="space-y-1.5">
-                      {test.components.map(comp => (
+                      {(test.components ?? []).map(comp => (
                         <div key={comp.id} className="flex items-center justify-between text-sm bg-white rounded-md px-3 py-2 border">
                           <span className="text-foreground">{comp.name}</span>
                           <div className="flex items-center gap-4 text-muted-foreground">

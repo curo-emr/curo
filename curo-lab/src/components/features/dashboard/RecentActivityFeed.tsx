@@ -11,7 +11,7 @@ interface RecentActivityFeedProps {
 
 export function RecentActivityFeed({ orders, patients }: RecentActivityFeedProps) {
   const recentOrders = [...orders]
-    .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 8);
 
   return (
@@ -31,11 +31,11 @@ export function RecentActivityFeed({ orders, patients }: RecentActivityFeedProps
               }} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-foreground truncate">
-                  <span className="font-medium">{order.accessionNumber}</span>
+                  <span className="font-medium">{order.id.slice(0, 8).toUpperCase()}</span>
                   {' '}<ArrowRight className="h-3 w-3 inline text-muted-foreground" />{' '}
                   {getPatientName(order.patientId, patients)}
                 </p>
-                <p className="text-xs text-muted-foreground">{formatDate(order.receivedAt)}</p>
+                <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
               </div>
               <StatusBadge status={order.status} />
             </div>

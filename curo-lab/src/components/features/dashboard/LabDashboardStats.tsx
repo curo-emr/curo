@@ -5,12 +5,10 @@ interface LabDashboardStatsProps {
 }
 
 export function LabDashboardStats({ orders }: LabDashboardStatsProps) {
-  const pendingCount = orders.filter(o => o.status === 'received' || o.status === 'collected').length;
-  const inProgressCount = orders.filter(o => o.status === 'processing').length;
-  const awaitingVerification = orders.filter(o => o.status === 'resulted').length;
-  const completedToday = orders.filter(o =>
-    (o.status === 'verified' || o.status === 'dispatched')
-  ).length;
+  const pendingCount = orders.filter(o => o.status === 'sent_to_lab').length;
+  const inProgressCount = orders.filter(o => o.status === 'results_pending').length;
+  const awaitingVerification = orders.filter(o => o.status === 'draft').length;
+  const completedToday = orders.filter(o => o.status === 'completed').length;
 
   const statCards = [
     { label: "Pending Orders", value: pendingCount, color: "text-status-warning-text bg-status-warning-bg border-status-warning-border" },
