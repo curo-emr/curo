@@ -356,3 +356,24 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+
+/* Print: show only the e-prescription printable area */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #rx-print,
+  #rx-print * {
+    visibility: visible;
+  }
+  #rx-print {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
