@@ -22,6 +22,7 @@ export interface EmergencyContact {
 export interface Patient {
   id: string;
   mrn: string;
+  phn: string;
   nic: string;
   name: Name;
   dob: string;
