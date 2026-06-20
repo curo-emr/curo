@@ -29,6 +29,9 @@ export function PatientHeader({ patient, allergies, age }: PatientHeaderProps) {
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-3xl font-bold text-foreground">{patient.name.full}</h1>
               <Badge variant="outline" className="text-muted-foreground font-mono tracking-wide">{patient.mrn}</Badge>
+              {patient.phn && (
+                <Badge variant="outline" className="text-muted-foreground font-mono tracking-wide" title="Personal Health Number">PHN {patient.phn}</Badge>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground mt-2">
