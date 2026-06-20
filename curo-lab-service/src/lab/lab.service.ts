@@ -6,6 +6,7 @@ import { DiagnosticReport } from '../entities/diagnostic-report.entity';
 import { Observation } from '../entities/observation.entity';
 import { QrCode } from '../entities/qr-code.entity';
 import { LabInstrument } from '../entities/lab-instrument.entity';
+import { LabTestCatalog } from '../entities/lab-test-catalog.entity';
 import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
 import { ServiceRequestStatus, DiagnosticReportStatus, ObservationStatus, InstrumentStatus } from '../enums';
@@ -57,7 +58,16 @@ export class LabService {
     private qrRepo: Repository<QrCode>,
     @InjectRepository(LabInstrument)
     private instrumentsRepo: Repository<LabInstrument>,
+    @InjectRepository(LabTestCatalog)
+    private catalogRepo: Repository<LabTestCatalog>,
   ) {}
+
+  // Tests a given lab offers (doctors browse before ordering).
+  async getCatalog(organizationId?: string): Promise<LabTestCatalog[]> {
+    const where: any = { active: true };
+    if (organizationId) where.organizationId = organizationId;
+    return this.catalogRepo.find({ where, order: { name: 'ASC' } });
+  }
 
   // Lab orders queue
   async getOrders(status?: string): Promise<any[]> {

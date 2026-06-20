@@ -21,6 +21,13 @@ export class LabController {
     return this.labService.getOrders(status);
   }
 
+  // Test catalog a lab offers — doctors browse before ordering.
+  @Get('catalog')
+  @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
+  getCatalog(@Query('organizationId') organizationId?: string) {
+    return this.labService.getCatalog(organizationId);
+  }
+
   @Get('orders/tat')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
   getTatStats() {

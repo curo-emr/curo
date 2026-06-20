@@ -143,14 +143,11 @@ export class PharmacyService {
   }
 
   // Stock management
-  async getStock(lowOnly?: boolean): Promise<Stock[]> {
-    if (lowOnly) {
-      return this.stockRepo
-        .createQueryBuilder('s')
-        .where('s.quantity <= s.reorderThreshold AND s.active = true')
-        .getMany();
-    }
-    return this.stockRepo.find({ where: { active: true }, order: { medicationName: 'ASC' } });
+  async getStock(lowOnly?: boolean, organizationId?: string): Promise<Stock[]> {
+    const qb = this.stockRepo.createQueryBuilder('s').where('s.active = true');
+    if (lowOnly) qb.andWhere('s.quantity <= s.reorderThreshold');
+    if (organizationId) qb.andWhere('s.organizationId = :org', { org: organizationId });
+    return qb.orderBy('s.medicationName', 'ASC').getMany();
   }
 
   /**
