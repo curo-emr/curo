@@ -64,10 +64,11 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 - [x] Seed payments (past visits)
 - **Verified live:** PHN backfill, pharmacist projection (no NIC/bloodType), income isolation, receptionist PUT→403, admin PUT→200 + audit
 
-### Slice 4 — curo-admin portal (item 1)
-- [ ] Auth-service admin user endpoints (create/list/search/edit/reset, SUPER_ADMIN, audited)
-- [ ] New `curo-admin/` frontend (port 3015): users, income oversight, demographics edit, audit, dashboard
-- [ ] Docker service + gateway `FRONTEND_ORIGINS`
+### Slice 4 — curo-admin portal (item 1) ✅
+- [x] Auth-service AdminModule: `POST/GET /auth/users`, `GET /auth/users/:id`, `PATCH /auth/users/:id`, `POST /auth/users/:id/reset-password` (SUPER_ADMIN, audited; mounted under /auth so no gateway change)
+- [x] New `curo-admin/` frontend (port 3015): SUPER_ADMIN-gated; Users list/search/create/detail (suspend/activate/reset); per-receptionist income oversight with admin amount correction; Audit log; Dashboard (recharts)
+- [x] Docker service (3015) + gateway `FRONTEND_ORIGINS`/default origins
+- **Verified live:** admin create doctor (logs in), suspend (login 401), reset, receptionist 403; curo-admin builds + serves /login (200)
 
 ### Slice 5 — Doctor e-prescription print + vitals charts (items 5, 8)
 - [ ] Prescription print (full/partial) via print stylesheet
