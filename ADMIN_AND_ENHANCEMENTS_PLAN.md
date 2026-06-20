@@ -55,13 +55,14 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 - [x] curo-lab UI: removed bloodType/phone/email; shows PHN for specimen labeling
 - Receptionist/doctor/patient(own)/super-admin unchanged (full). All typecheck clean.
 
-### Slice 3 — Receptionist income (item 3)
-- [ ] Payment entity → appointment-service; payments module
-- [ ] `POST /payments` (immutable), `GET /payments/mine`, `GET /payments/summary`
-- [ ] Admin-only `PUT /payments/:id`
-- [ ] Gateway route `/payments`
-- [ ] Receptionist income entry (locked) + dashboard chart (day/week/month)
-- [ ] Seed payments
+### Slice 3 — Receptionist income (item 3) ✅
+- [x] Payment + AuditLog entities → appointment-service; payments module
+- [x] `POST /payments` (immutable, one per appointment, collectedBy from JWT), `GET /payments/mine`, `GET /payments/summary` (day/week/month buckets)
+- [x] Admin-only `PUT /payments/:id` (audit-logged before/after)
+- [x] Gateway route `/payments`; `CURRENCY` env (default LKR)
+- [x] Receptionist: Income dashboard (recharts bar chart + totals + period filter); per-visit RecordPaymentCell on appointments (locks after submit)
+- [x] Seed payments (past visits)
+- **Verified live:** PHN backfill, pharmacist projection (no NIC/bloodType), income isolation, receptionist PUT→403, admin PUT→200 + audit
 
 ### Slice 4 — curo-admin portal (item 1)
 - [ ] Auth-service admin user endpoints (create/list/search/edit/reset, SUPER_ADMIN, audited)

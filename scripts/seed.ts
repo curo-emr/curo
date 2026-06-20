@@ -286,6 +286,23 @@ async function seed() {
   }
   console.log('✅ 20 appointments created');
 
+  // ---- PAYMENTS (receptionist-collected visit income) ----
+  const consultationFees = [1500, 2000, 2500, 3000, 3500];
+  let paymentCount = 0;
+  for (let i = 0; i < appointmentRows.length; i++) {
+    const appt = appointmentRows[i];
+    if (!appt.isPast) continue; // only collect for completed/past visits
+    const collectedBy = receptionistIds[i % receptionistIds.length];
+    const amount = consultationFees[i % consultationFees.length];
+    const paidAt = daysAgo(i + 1);
+    await db.query(`
+      INSERT INTO payments (id, "patientId", "appointmentId", "collectedBy", type, amount, currency, "paymentMethod", status, "receiptNumber", "paidAt")
+      VALUES (gen_random_uuid(), $1, $2, $3, 'consultation', $4, 'LKR', 'cash', 'paid', $5, $6)
+    `, [appt.patientId, appt.id, collectedBy, amount, `RCP-${Date.now()}-${1000 + i}`, paidAt]);
+    paymentCount++;
+  }
+  console.log(`✅ ${paymentCount} payments created`);
+
   // ---- ENCOUNTERS ----
   const encounterIds: string[] = [];
   for (let i = 0; i < 10; i++) {

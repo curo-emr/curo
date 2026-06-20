@@ -7,6 +7,7 @@ const SERVICE_MAP: Record<string, string> = {
   '/auth': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
   '/patients': process.env.PATIENT_SERVICE_URL || 'http://localhost:3002',
   '/appointments': process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
+  '/payments': process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
   '/encounters': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
   '/notes': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
   '/vitals': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
