@@ -520,11 +520,26 @@ async function seed() {
 
   for (const s of stockData) {
     await db.query(`
-      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", active)
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
-    `, [s.code, s.name, s.generic, s.form, s.strength, s.qty, s.unit, s.expiry, s.threshold, s.price]);
+      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", "batchNumber", active)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
+    `, [s.code, s.name, s.generic, s.form, s.strength, s.qty, s.unit, s.expiry, s.threshold, s.price, `B-${s.code}-A`]);
   }
-  console.log('✅ 20 pharmacy stock items created');
+
+  // Second batches of the same drug with DIFFERENT expiry dates (multi-batch / FEFO demo)
+  // Earlier expiry than the primary batch (above), but still in the future, so
+  // FEFO consumes these "-B" batches first.
+  const secondBatches = [
+    { code: 'paracetamol-500mg', name: 'Paracetamol 500mg', generic: 'Paracetamol', form: 'tablet', strength: '500mg', qty: 400, unit: 'tablets', expiry: '2027-01-31', threshold: 100, price: 3.0 },
+    { code: 'amoxicillin-250mg', name: 'Amoxicillin 250mg', generic: 'Amoxicillin', form: 'capsule', strength: '250mg', qty: 50, unit: 'capsules', expiry: '2027-02-28', threshold: 30, price: 22.0 },
+    { code: 'omeprazole-20mg', name: 'Omeprazole 20mg', generic: 'Omeprazole', form: 'capsule', strength: '20mg', qty: 150, unit: 'capsules', expiry: '2027-03-31', threshold: 20, price: 8.0 },
+  ];
+  for (const s of secondBatches) {
+    await db.query(`
+      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", "batchNumber", active)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
+    `, [s.code, s.name, s.generic, s.form, s.strength, s.qty, s.unit, s.expiry, s.threshold, s.price, `B-${s.code}-B`]);
+  }
+  console.log(`✅ ${stockData.length + secondBatches.length} pharmacy stock items created (incl. multi-batch)`);
 
   // ---- LAB INSTRUMENTS ----
   const instruments = [

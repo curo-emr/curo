@@ -53,6 +53,10 @@ export class MedicationDispense {
   @Column({ nullable: true })
   receiptNumber: string;
 
+  // Batch number(s) the stock was drawn from (FEFO). Comma-separated if split.
+  @Column({ nullable: true })
+  batchNumber: string;
+
   @Column({ nullable: true })
   note: string;
 

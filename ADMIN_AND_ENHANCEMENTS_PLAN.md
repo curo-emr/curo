@@ -77,11 +77,12 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 - [x] Recharts Trends tab: BP/sugar/cholesterol line charts, normal-range band, out-of-range points flagged red + latest-value badges
 - **Verified live:** trends endpoint returns multi-code series; doctor build passes. (Also fixed a multi-service `synchronize` hazard — added PHN column to auth-service Patient entity so it stops dropping the column.)
 
-### Slice 6 — Pharmacy multi-batch stock + dispense (item 7)
-- [ ] `GET /stock/grouped` (FEFO batches)
-- [ ] `dispense()` decrements stock FEFO + records batch
-- [ ] UI grouped batches + expiry highlight
-- [ ] Seed multi-batch drugs
+### Slice 6 — Pharmacy multi-batch stock + dispense (item 7) ✅
+- [x] `GET /stock/grouped` — group by drug, batches sorted FEFO; total qty
+- [x] `dispense()` FEFO-decrements across batches (best-effort, skips expired) + records `batchNumber` on MedicationDispense
+- [x] Pharmacy UI: grouped inventory, expandable batch list, expired/near-expiry highlight
+- [x] Seed multi-batch drugs (future-dated `-B` batches) + live data
+- **Verified live:** dispense drew 10 from earliest-expiring batch B (400→390), batch A untouched; record shows batch
 
 ### Slice 7 — Lab per-test QR (item 9)
 - [ ] QrCode per-test (testCode/testIndex)

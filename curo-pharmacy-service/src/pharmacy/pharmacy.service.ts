@@ -27,6 +27,7 @@ function toFhirDispense(d: MedicationDispense) {
       { url: 'urn:curo:unitPrice', valueDecimal: d.unitPrice },
       { url: 'urn:curo:totalPrice', valueDecimal: d.totalPrice },
       { url: 'urn:curo:receiptNumber', valueString: d.receiptNumber },
+      { url: 'urn:curo:batchNumber', valueString: d.batchNumber },
     ],
   };
 }
@@ -63,6 +64,34 @@ export class PharmacyService {
     }));
   }
 
+  /**
+   * Decrement stock for a drug using FEFO (First-Expiry-First-Out): consume the
+   * earliest-expiring non-expired batches first, across multiple rows if needed.
+   * Best-effort — if no matching stock exists, dispensing still proceeds (returns []).
+   * Returns the batch numbers drawn from.
+   */
+  private async decrementStockFEFO(medicationCode: string, qty: number): Promise<string[]> {
+    const today = new Date().toISOString().slice(0, 10);
+    const batches = await this.stockRepo
+      .createQueryBuilder('s')
+      .where('s.medicationCode = :code AND s.active = true AND s.quantity > 0', { code: medicationCode })
+      .andWhere('(s.expiryDate IS NULL OR s.expiryDate >= :today)', { today })
+      .orderBy('s.expiryDate', 'ASC', 'NULLS LAST')
+      .getMany();
+
+    let remaining = qty;
+    const used: string[] = [];
+    for (const b of batches) {
+      if (remaining <= 0) break;
+      const take = Math.min(b.quantity, remaining);
+      b.quantity -= take;
+      remaining -= take;
+      await this.stockRepo.save(b);
+      if (b.batchNumber) used.push(`${b.batchNumber}×${take}`);
+    }
+    return used;
+  }
+
   async dispense(dto: DispenseMedicationDto, pharmacistId: string): Promise<any> {
     const prescription = await this.medsRepo.findOne({ where: { id: dto.medicationRequestId } });
     if (!prescription) throw new NotFoundException(`Prescription ${dto.medicationRequestId} not found`);
@@ -71,6 +100,9 @@ export class PharmacyService {
     const unitPrice = dto.unitPrice || 0;
     const qty = dto.quantityValue || prescription.quantityValue || 1;
     const totalPrice = unitPrice * qty;
+
+    // FEFO stock decrement (best-effort) — record which batch(es) were used.
+    const usedBatches = await this.decrementStockFEFO(prescription.medicationCode, qty);
 
     const dispense = this.dispenseRepo.create({
       medicationRequestId: dto.medicationRequestId,
@@ -86,6 +118,7 @@ export class PharmacyService {
       unitPrice,
       totalPrice,
       receiptNumber,
+      batchNumber: usedBatches.length ? usedBatches.join(', ') : undefined,
       note: dto.note,
       whenHandedOver: new Date(),
     });
@@ -118,6 +151,45 @@ export class PharmacyService {
         .getMany();
     }
     return this.stockRepo.find({ where: { active: true }, order: { medicationName: 'ASC' } });
+  }
+
+  /**
+   * Stock grouped by drug, with each drug's batches listed by expiry (FEFO order).
+   * Multiple batches of the same drug with different expiry dates are separate rows.
+   */
+  async getGroupedStock(): Promise<any[]> {
+    const rows = await this.stockRepo.find({ where: { active: true }, order: { medicationName: 'ASC' } });
+    const groups = new Map<string, any>();
+    for (const s of rows) {
+      const g = groups.get(s.medicationCode) ?? {
+        medicationCode: s.medicationCode,
+        medicationName: s.medicationName,
+        genericName: s.genericName,
+        form: s.form,
+        strength: s.strength,
+        unit: s.unit,
+        reorderThreshold: s.reorderThreshold,
+        totalQuantity: 0,
+        batches: [],
+      };
+      g.totalQuantity += s.quantity;
+      g.batches.push({
+        id: s.id,
+        batchNumber: s.batchNumber,
+        quantity: s.quantity,
+        expiryDate: s.expiryDate,
+        unitPrice: s.unitPrice,
+        supplier: s.supplier,
+        storageLocation: s.storageLocation,
+      });
+      groups.set(s.medicationCode, g);
+    }
+    // sort each drug's batches earliest-expiry first (FEFO)
+    const result = Array.from(groups.values());
+    for (const g of result) {
+      g.batches.sort((a: any, b: any) => (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999'));
+    }
+    return result;
   }
 
   async addStock(dto: CreateStockDto): Promise<Stock> {

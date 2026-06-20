@@ -46,6 +46,13 @@ export class PharmacyController {
     return this.pharmacyService.getStock(lowOnly === 'true');
   }
 
+  // Stock grouped by drug, with batches (different expiry dates) listed FEFO-first.
+  @Get('stock/grouped')
+  @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
+  getGroupedStock() {
+    return this.pharmacyService.getGroupedStock();
+  }
+
   @Post('stock')
   @Roles('PHARMACIST', 'SUPER_ADMIN')
   addStock(@Body() dto: CreateStockDto) {
