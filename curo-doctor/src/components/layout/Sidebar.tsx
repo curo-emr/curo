@@ -5,12 +5,13 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/lib/constants";
-import { LayoutDashboard, Users, Calendar, Settings, Activity } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Settings, Activity, Building2 } from "lucide-react";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: ROUTES.DASHBOARD },
   { icon: Users, label: "Patients", href: ROUTES.PATIENTS },
   { icon: Calendar, label: "Schedule", href: ROUTES.SCHEDULE },
+  { icon: Building2, label: "Pharmacies & Labs", href: ROUTES.DIRECTORY },
   { icon: Activity, label: "ICD-10", href: ROUTES.ICD },
   { icon: Settings, label: "Settings", href: ROUTES.SETTINGS },
 ];
