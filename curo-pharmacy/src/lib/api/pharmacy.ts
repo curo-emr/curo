@@ -76,6 +76,34 @@ export async function getStock(): Promise<StockItem[]> {
   return res.data;
 }
 
+export interface StockBatch {
+  id: string;
+  batchNumber: string;
+  quantity: number;
+  expiryDate: string;
+  unitPrice: number;
+  supplier: string;
+  storageLocation: string;
+}
+
+export interface GroupedStock {
+  medicationCode: string;
+  medicationName: string;
+  genericName: string;
+  form: string;
+  strength: string;
+  unit: string;
+  reorderThreshold: number;
+  totalQuantity: number;
+  batches: StockBatch[];
+}
+
+// Inventory grouped by drug, with each drug's batches (different expiry dates) FEFO-first.
+export async function getGroupedStock(): Promise<GroupedStock[]> {
+  const res = await apiClient.get<GroupedStock[]>('/stock/grouped');
+  return res.data;
+}
+
 export async function getLowStockAlerts(): Promise<StockItem[]> {
   const res = await apiClient.get<StockItem[]>('/stock/alerts');
   return res.data;
