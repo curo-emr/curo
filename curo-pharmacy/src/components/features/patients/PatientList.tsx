@@ -35,8 +35,7 @@ export function PatientList({ patients, prescriptions }: PatientListProps) {
       return (
         p.name.full.toLowerCase().includes(q) ||
         p.mrn.toLowerCase().includes(q) ||
-        p.nic.toLowerCase().includes(q) ||
-        p.phone.includes(q)
+        (p.phn ?? "").toLowerCase().includes(q)
       );
     });
   }, [query, patients]);
@@ -55,7 +54,7 @@ export function PatientList({ patients, prescriptions }: PatientListProps) {
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search by name, MRN, NIC, or phone..."
+              placeholder="Search by name, MRN, or PHN..."
               className="pl-9 bg-muted border"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
