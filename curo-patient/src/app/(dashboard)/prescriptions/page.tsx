@@ -10,24 +10,24 @@ import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getMyProfile, getMyPrescriptions } from "@/lib/api/patient-portal";
+import { getMyProfile, getMyPrescriptions, getPractitioners } from "@/lib/api/patient-portal";
 import type { Prescription } from "@/types";
 
 export default function PrescriptionsPage() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [doctors, setDoctors] = useState<{ id: string; name: { full: string } }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     getMyProfile().then(async pt => {
       if (!pt) { setIsLoading(false); return; }
-      const rxs = await getMyPrescriptions(pt.id);
+      const [rxs, docs] = await Promise.all([getMyPrescriptions(pt.id), getPractitioners()]);
       setPrescriptions(rxs);
+      setDoctors(docs);
     }).catch(console.error).finally(() => setIsLoading(false));
   }, []);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-
-  const doctors: { id: string; name: { full: string } }[] = [];
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

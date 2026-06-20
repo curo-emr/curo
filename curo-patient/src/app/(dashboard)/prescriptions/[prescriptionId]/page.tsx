@@ -9,7 +9,7 @@ import Link from "next/link";
 import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { getMyProfile, getMyPrescriptions } from "@/lib/api/patient-portal";
+import { getMyProfile, getMyPrescriptions, getPractitioners } from "@/lib/api/patient-portal";
 import type { Prescription } from "@/types";
 
 interface Props {
@@ -19,14 +19,16 @@ interface Props {
 export default function PrescriptionDetailPage({ params }: Props) {
   const { prescriptionId } = use(params);
   const [prescription, setPrescription] = useState<Prescription | null>(null);
+  const [doctors, setDoctors] = useState<{ id: string; name: { full: string } }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     getMyProfile().then(async pt => {
       if (!pt) { setIsLoading(false); return; }
-      const rxs = await getMyPrescriptions(pt.id);
+      const [rxs, docs] = await Promise.all([getMyPrescriptions(pt.id), getPractitioners()]);
       const rx = rxs.find(r => r.id === prescriptionId) ?? null;
       setPrescription(rx);
+      setDoctors(docs);
     }).catch(console.error).finally(() => setIsLoading(false));
   }, [prescriptionId]);
 
@@ -35,8 +37,6 @@ export default function PrescriptionDetailPage({ params }: Props) {
   if (!prescription) {
     return <div className="p-8 text-center text-slate-500">Prescription not found.</div>;
   }
-
-  const doctors: { id: string; name: { full: string } }[] = [];
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">

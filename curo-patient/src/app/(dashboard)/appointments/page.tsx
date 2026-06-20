@@ -8,20 +8,31 @@ import { formatDate, formatTime, getTodayString, getDoctorName } from "@/lib/uti
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getMyAppointments } from "@/lib/api/patient-portal";
+import { getMyAppointments, getPractitioners } from "@/lib/api/patient-portal";
 import type { Appointment } from "@/types";
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [doctors, setDoctors] = useState<{ id: string; name: { full: string } }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getMyAppointments().then(setAppointments).catch(console.error).finally(() => setIsLoading(false));
+    async function load() {
+      try {
+        const [appts, docs] = await Promise.all([getMyAppointments(), getPractitioners()]);
+        setAppointments(appts);
+        setDoctors(docs);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    load();
   }, []);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
-  const doctors: { id: string; name: { full: string } }[] = [];
   const today = getTodayString();
   const upcoming = appointments.filter(a => a.date >= today && a.status === "scheduled");
   const past = appointments.filter(a => a.date < today || a.status === "completed" || a.status === "cancelled" || a.status === "no_show");

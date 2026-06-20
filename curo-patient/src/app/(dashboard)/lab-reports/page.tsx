@@ -8,27 +8,27 @@ import { formatDate, getTestName, getDoctorName } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getMyProfile, getMyLabOrders } from "@/lib/api/patient-portal";
+import { getMyProfile, getMyLabOrders, getPractitioners } from "@/lib/api/patient-portal";
 import { getLabTestCatalog } from "@/lib/data/api";
 import type { LabOrder, LabTestCatalogItem } from "@/types";
 
 export default function LabReportsPage() {
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
   const [labTestCatalog, setLabTestCatalog] = useState<LabTestCatalogItem[]>([]);
+  const [doctors, setDoctors] = useState<{ id: string; name: { full: string } }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     getMyProfile().then(async pt => {
       if (!pt) { setIsLoading(false); return; }
-      const [labs, catalog] = await Promise.all([getMyLabOrders(pt.id), getLabTestCatalog()]);
+      const [labs, catalog, docs] = await Promise.all([getMyLabOrders(pt.id), getLabTestCatalog(), getPractitioners()]);
       setLabOrders(labs);
       setLabTestCatalog(catalog);
+      setDoctors(docs);
     }).catch(console.error).finally(() => setIsLoading(false));
   }, []);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-
-  const doctors: { id: string; name: { full: string } }[] = [];
 
   const completedLabs = labOrders.filter(l => l.status === "completed");
   const pendingLabs = labOrders.filter(l => l.status !== "completed");
