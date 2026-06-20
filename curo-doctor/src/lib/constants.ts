@@ -11,6 +11,7 @@ export const ROUTES = {
   ENCOUNTER: (patientId: string, encounterId: string) => `/patients/${patientId}/encounters/${encounterId}`,
   SCHEDULE: "/schedule",
   ICD: "/icd",
+  DIRECTORY: "/directory",
   SETTINGS: "/settings",
 } as const;
 
