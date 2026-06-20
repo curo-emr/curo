@@ -53,7 +53,8 @@ export function DemographicsTab({ patient, allergies }: DemographicsTabProps) {
         </CardHeader>
         <CardContent className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-6">
-            <InfoRow label="NIC / Passport" value={patient.nic} />
+            <InfoRow label="Personal Health Number" value={patient.phn} />
+            <InfoRow label="NIC / Passport" value={patient.nic || "—"} />
             <InfoRow label="Date of Birth" value={formatDate(patient.dob)} />
             <InfoRow
               label="Sex"

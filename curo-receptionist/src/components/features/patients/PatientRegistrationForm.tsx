@@ -84,7 +84,9 @@ export function PatientRegistrationForm() {
     try {
       const result = await registerPatient(data);
       if (result.success && result.patientId) {
-        toast.success("Patient registered successfully");
+        toast.success("Patient registered successfully", {
+          description: result.phn ? `Personal Health Number: ${result.phn}` : undefined,
+        });
         router.push(ROUTES.PATIENT(result.patientId));
       } else {
         toast.error("Failed to register patient. Please check the form.");
@@ -106,12 +108,15 @@ export function PatientRegistrationForm() {
         <CardContent className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="nic">NIC / Passport *</Label>
+              <Label htmlFor="nic">NIC / Passport</Label>
               <Input
                 id="nic"
                 {...register("nic")}
                 placeholder="e.g. 200012345678"
               />
+              <p className="text-xs text-muted-foreground">
+                Optional — leave blank for minors. A Personal Health Number is generated automatically.
+              </p>
               {errors.nic && (
                 <p className="text-xs text-status-error-text">{errors.nic.message}</p>
               )}

@@ -34,6 +34,7 @@ export function PatientList({ patients, allergies }: PatientListProps) {
       return (
         p.name.full.toLowerCase().includes(q) ||
         p.nic.toLowerCase().includes(q) ||
+        (p.phn ?? "").toLowerCase().includes(q) ||
         p.mrn.toLowerCase().includes(q) ||
         p.phone.includes(q)
       );
@@ -89,7 +90,7 @@ export function PatientList({ patients, allergies }: PatientListProps) {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {patient.nic}
+                    {patient.nic || (patient.phn ? `PHN ${patient.phn}` : "—")}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {calculateAge(patient.dob)}y &bull;{" "}

@@ -31,6 +31,7 @@ export interface Insurance {
 export interface Patient {
   id: string;
   mrn: string;
+  phn: string;
   nic: string;
   name: Name;
   dob: string;
