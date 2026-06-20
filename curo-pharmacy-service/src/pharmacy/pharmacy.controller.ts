@@ -42,8 +42,8 @@ export class PharmacyController {
 
   @Get('stock')
   @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
-  getStock(@Query('lowOnly') lowOnly?: string) {
-    return this.pharmacyService.getStock(lowOnly === 'true');
+  getStock(@Query('lowOnly') lowOnly?: string, @Query('organizationId') organizationId?: string) {
+    return this.pharmacyService.getStock(lowOnly === 'true', organizationId);
   }
 
   // Stock grouped by drug, with batches (different expiry dates) listed FEFO-first.

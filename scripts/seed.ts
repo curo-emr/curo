@@ -86,8 +86,24 @@ async function seed() {
     process.exit(0);
   }
 
-  // organizations table is not used by any service — practitioners.organizationId is nullable
-  const orgId: string | null = null;
+  // ---- ORGANIZATIONS (clinic + pharmacies + labs) ----
+  async function insertOrg(name: string, type: string, city: string, phone: string): Promise<string> {
+    const [o] = await db.query(`
+      INSERT INTO organizations (id, name, type, city, phone, active)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, true) RETURNING id
+    `, [name, type, city, phone]);
+    return o.id;
+  }
+  const orgId = await insertOrg('Curo Central Clinic', 'clinic', 'Colombo', '+94112000000');
+  const pharmacyOrgIds = [
+    await insertOrg('Curo Pharmacy — Colombo', 'pharmacy', 'Colombo', '+94112000111'),
+    await insertOrg('Curo Pharmacy — Kandy', 'pharmacy', 'Kandy', '+94812000222'),
+  ];
+  const labOrgIds = [
+    await insertOrg('Curo Diagnostics — Colombo', 'laboratory', 'Colombo', '+94112000333'),
+    await insertOrg('Curo Diagnostics — Galle', 'laboratory', 'Galle', '+94912000444'),
+  ];
+  console.log('✅ organizations created (1 clinic, 2 pharmacies, 2 labs)');
 
   // ---- SUPER ADMIN USER ----
   const [adminUser] = await db.query(`
@@ -520,9 +536,9 @@ async function seed() {
 
   for (const s of stockData) {
     await db.query(`
-      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", "batchNumber", active)
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
-    `, [s.code, s.name, s.generic, s.form, s.strength, s.qty, s.unit, s.expiry, s.threshold, s.price, `B-${s.code}-A`]);
+      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", "batchNumber", "organizationId", active)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true)
+    `, [s.code, s.name, s.generic, s.form, s.strength, s.qty, s.unit, s.expiry, s.threshold, s.price, `B-${s.code}-A`, pharmacyOrgIds[0]]);
   }
 
   // Second batches of the same drug with DIFFERENT expiry dates (multi-batch / FEFO demo)
@@ -535,11 +551,43 @@ async function seed() {
   ];
   for (const s of secondBatches) {
     await db.query(`
-      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", "batchNumber", active)
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
-    `, [s.code, s.name, s.generic, s.form, s.strength, s.qty, s.unit, s.expiry, s.threshold, s.price, `B-${s.code}-B`]);
+      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", "batchNumber", "organizationId", active)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true)
+    `, [s.code, s.name, s.generic, s.form, s.strength, s.qty, s.unit, s.expiry, s.threshold, s.price, `B-${s.code}-B`, pharmacyOrgIds[0]]);
   }
-  console.log(`✅ ${stockData.length + secondBatches.length} pharmacy stock items created (incl. multi-batch)`);
+  // Give the second pharmacy a small inventory too (subset of drugs)
+  for (const s of stockData.slice(0, 8)) {
+    await db.query(`
+      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", "batchNumber", "organizationId", active)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true)
+    `, [s.code, s.name, s.generic, s.form, s.strength, Math.floor(s.qty / 2), s.unit, s.expiry, s.threshold, s.price, `B2-${s.code}-A`, pharmacyOrgIds[1]]);
+  }
+  console.log(`✅ ${stockData.length + secondBatches.length + 8} pharmacy stock items created (incl. multi-batch, 2 pharmacies)`);
+
+  // ---- LAB TEST CATALOG (per lab) ----
+  const catalogTests = [
+    { code: '718-7', name: 'Hemoglobin', category: 'Hematology', specimen: 'Whole Blood', price: 350 },
+    { code: '30521-6', name: 'RBC Count', category: 'Hematology', specimen: 'Whole Blood', price: 350 },
+    { code: '26515-7', name: 'Platelet Count', category: 'Hematology', specimen: 'Whole Blood', price: 400 },
+    { code: '2345-7', name: 'Glucose (Fasting)', category: 'Biochemistry', specimen: 'Serum', price: 250 },
+    { code: '2093-3', name: 'Total Cholesterol', category: 'Biochemistry', specimen: 'Serum', price: 600 },
+    { code: '2085-9', name: 'HDL Cholesterol', category: 'Biochemistry', specimen: 'Serum', price: 650 },
+    { code: '17856-6', name: 'HbA1c', category: 'Biochemistry', specimen: 'Whole Blood', price: 1200 },
+    { code: '14749-6', name: 'Liver Function Panel', category: 'Biochemistry', specimen: 'Serum', price: 1800 },
+  ];
+  let catalogCount = 0;
+  for (let li = 0; li < labOrgIds.length; li++) {
+    // lab 0 offers all tests, lab 1 offers a subset
+    const offered = li === 0 ? catalogTests : catalogTests.slice(0, 5);
+    for (const t of offered) {
+      await db.query(`
+        INSERT INTO lab_test_catalog (id, "organizationId", code, name, category, specimen, price, active)
+        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, true)
+      `, [labOrgIds[li], t.code, t.name, t.category, t.specimen, t.price]);
+      catalogCount++;
+    }
+  }
+  console.log(`✅ ${catalogCount} lab catalog tests created`);
 
   // ---- LAB INSTRUMENTS ----
   const instruments = [

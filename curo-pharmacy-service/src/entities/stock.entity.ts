@@ -47,6 +47,10 @@ export class Stock {
   @Column({ nullable: true })
   storageLocation: string;
 
+  // Which pharmacy this stock belongs to (doctors browse a specific pharmacy's inventory).
+  @Column({ nullable: true })
+  organizationId: string;
+
   @Column({ default: true })
   active: boolean;
 

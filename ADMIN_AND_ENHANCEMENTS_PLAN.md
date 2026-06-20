@@ -92,12 +92,13 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 - [x] Lab UI: printable per-test sample labels (QR + patient + order) with `@media print`
 - **Verified live:** 15 per-test QR rows; scan of a test URL resolved order + Hemoglobin; lab getOrder returns qr per test
 
-### Slice 8 — Doctor pharmacy/lab inventory lookup (item 6) — last, time-boxed
-- [ ] Organization dimension (seed pharmacies/labs)
-- [ ] nullable `organizationId` on Stock + backfill default pharmacy
-- [ ] Lab catalog → lab-service (seeded per-lab)
-- [ ] Read-only org/inventory/catalog endpoints + gateway route
-- [ ] Doctor pharmacy/lab selectors
+### Slice 8 — Doctor pharmacy/lab inventory lookup (item 6) ✅
+- [x] Organization entity + module in auth-service; `GET /organizations?type=` ; seed 1 clinic + 2 pharmacies + 2 labs
+- [x] nullable `organizationId` on Stock + backfill existing stock to default pharmacy; `GET /stock?organizationId=`
+- [x] LabTestCatalog table in lab-service (seeded per-lab); `GET /catalog?organizationId=`
+- [x] Gateway routes `/organizations`, `/catalog`
+- [x] Doctor "Pharmacies & Labs" page: pharmacy selector → inventory availability search; lab selector → available tests
+- **Verified live:** orgs list, stock filtered by pharmacy (22), catalog filtered by lab (8); doctor build passes
 
 ---
 

@@ -5,6 +5,7 @@ import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
 
 const SERVICE_MAP: Record<string, string> = {
   '/auth': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
+  '/organizations': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
   '/patients': process.env.PATIENT_SERVICE_URL || 'http://localhost:3002',
   '/appointments': process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
   '/payments': process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
@@ -17,6 +18,7 @@ const SERVICE_MAP: Record<string, string> = {
   '/dispense': process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
   '/stock': process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
   '/orders': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
+  '/catalog': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/results': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/reports': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/instruments': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
