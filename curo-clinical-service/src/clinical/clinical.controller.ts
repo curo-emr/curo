@@ -107,6 +107,14 @@ export class ClinicalController {
     return this.clinicalService.getVitalsTrend(patientId, code);
   }
 
+  // Multi-code, category-agnostic trend for charts (BP + glucose + cholesterol, etc.)
+  @Get('vitals/patient/:patientId/trends')
+  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
+  @Header('Content-Type', 'application/fhir+json')
+  getObservationsTrend(@Param('patientId') patientId: string, @Query('codes') codes: string) {
+    return this.clinicalService.getObservationsTrend(patientId, (codes || '').split(',').map((c) => c.trim()).filter(Boolean));
+  }
+
   // Prescriptions
   @Post('prescriptions')
   @Roles('DOCTOR', 'SUPER_ADMIN')
