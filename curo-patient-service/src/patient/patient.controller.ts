@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Put, Body, Param, Query,
+  Controller, Get, Post, Put, Patch, Body, Param, Query,
   UseGuards, Request, Header,
 } from '@nestjs/common';
 import { PatientService } from './patient.service';
@@ -55,6 +55,13 @@ export class PatientController {
   @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   update(@Param('id') id: string, @Body() dto: UpdatePatientDto, @CurrentUser() user: any) {
+    return this.patientService.update(id, dto, user);
+  }
+
+  @Patch(':id')
+  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN')
+  @Header('Content-Type', 'application/fhir+json')
+  patch(@Param('id') id: string, @Body() dto: UpdatePatientDto, @CurrentUser() user: any) {
     return this.patientService.update(id, dto, user);
   }
 
