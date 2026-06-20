@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { Loader2, User, FlaskConical, Clock, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Loader2, User, FlaskConical, Clock, ArrowLeft, CheckCircle2, QrCode, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -140,6 +140,50 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
               </div>
             </CardContent>
           </Card>
+
+          {/* Sample QR labels — print and stick on each specimen tube */}
+          {order.testQrs && order.testQrs.length > 0 && (
+            <Card className="shadow-sm border-slate-200 no-print">
+              <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-3 flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <QrCode className="h-4 w-4 text-blue-600" />Sample Labels ({order.testQrs.length})
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={() => window.print()}>
+                  <Printer className="h-4 w-4 mr-2" />Print labels
+                </Button>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {order.testQrs.map((t, i) => (
+                    <div key={`${t.testCode}-${i}`} className="border rounded-md p-3 text-center">
+                      {t.qrBase64
+                        ? <img src={t.qrBase64} alt={`QR ${t.display}`} className="w-24 h-24 mx-auto" />
+                        : <div className="w-24 h-24 mx-auto flex items-center justify-center text-xs text-slate-400">No QR</div>}
+                      <p className="text-xs font-medium mt-1">{t.display}</p>
+                      <p className="text-[10px] text-slate-400 font-mono">{t.testCode}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Print-only sheet of sample labels */}
+          {order.testQrs && order.testQrs.length > 0 && (
+            <div id="sample-labels" className="hidden">
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, padding: 16 }}>
+                {order.testQrs.map((t, i) => (
+                  <div key={`p-${t.testCode}-${i}`} style={{ border: "1px solid #000", padding: 8, width: 200, fontFamily: "sans-serif" }}>
+                    {t.qrBase64 && <img src={t.qrBase64} alt="" style={{ width: 96, height: 96 }} />}
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>{t.display} ({t.testCode})</div>
+                    <div style={{ fontSize: 11 }}>{patient?.name.full}</div>
+                    <div style={{ fontSize: 10, color: "#333" }}>{patient?.phn ? `PHN ${patient.phn}` : patient?.mrn}</div>
+                    <div style={{ fontSize: 9, color: "#666" }}>Order {order.id.slice(0, 8)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Results */}
           {results.length > 0 && (

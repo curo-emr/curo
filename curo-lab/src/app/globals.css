@@ -356,3 +356,24 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+
+/* Print: show only the sample QR labels sheet */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #sample-labels,
+  #sample-labels * {
+    visibility: visible;
+  }
+  #sample-labels {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

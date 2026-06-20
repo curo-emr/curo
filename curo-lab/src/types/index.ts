@@ -206,6 +206,8 @@ export interface LabOrder {
   sentToLabAt: string | null;
   notesToLab: string;
   tests: LabOrderTest[];
+  // Per-test QR labels (populated on order detail) for printing & sticking on samples.
+  testQrs?: { testCode: string; display: string; qrBase64: string | null }[];
   review: LabOrderReview;
   showResultsToPatient: boolean;
 }

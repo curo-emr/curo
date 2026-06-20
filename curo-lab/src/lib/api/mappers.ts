@@ -139,6 +139,7 @@ export interface FhirServiceRequest {
   code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
   note?: Array<{ text?: string }>;
   extension?: Array<{ url: string; valueString?: string }>;
+  tests?: Array<{ testCode: string; display: string; qrBase64: string | null }>;
 }
 
 export interface FhirTask {
@@ -394,6 +395,7 @@ export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
       status: 'ordered' as const,
       result: null,
     })),
+    testQrs: fhir.tests ?? [],
     review: { isReviewed: false, reviewedAt: null, reviewedBy: null },
     showResultsToPatient: false,
   };
