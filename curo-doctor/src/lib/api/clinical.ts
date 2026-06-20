@@ -29,6 +29,30 @@ export async function getVitalsTrend(patientId: string) {
   return res.data;
 }
 
+export interface TrendPoint {
+  code: string;
+  display: string;
+  value: number;
+  unit: string;
+  effectiveDateTime: string;
+}
+
+// Multi-code, category-agnostic trend (BP + glucose + cholesterol, etc.)
+export async function getObservationTrends(patientId: string, codes: string[]): Promise<TrendPoint[]> {
+  const res = await apiClient.get<any[]>(`/vitals/patient/${patientId}/trends`, {
+    params: { codes: codes.join(",") },
+  });
+  return (res.data ?? [])
+    .map((o) => ({
+      code: o?.code?.coding?.[0]?.code ?? "",
+      display: o?.code?.coding?.[0]?.display ?? "",
+      value: o?.valueQuantity?.value ?? null,
+      unit: o?.valueQuantity?.unit ?? "",
+      effectiveDateTime: o?.effectiveDateTime ?? "",
+    }))
+    .filter((p) => p.value != null && p.effectiveDateTime);
+}
+
 export async function createVitals(data: Record<string, unknown>) {
   const res = await apiClient.post('/vitals', data);
   return res.data;
