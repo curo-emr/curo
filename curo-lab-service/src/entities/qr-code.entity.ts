@@ -11,6 +11,13 @@ export class QrCode {
   @Column()
   serviceRequestId: string;
 
+  // Kept in sync with clinical-service so synchronize does not drop these columns.
+  @Column({ nullable: true })
+  testCode: string;
+
+  @Column({ nullable: true })
+  testIndex: number;
+
   @Column()
   encodedUrl: string; // the URL encoded in the QR
 
