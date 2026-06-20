@@ -11,6 +11,7 @@ export const ROUTES = {
   NEW_APPOINTMENT: "/appointments/new",
   QUEUE: "/queue",
   SCHEDULE: "/schedule",
+  INCOME: "/income",
   REPORTS: "/reports",
   SETTINGS: "/settings",
 } as const;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { Appointment, Patient, Doctor } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ import {
 } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { updateAppointmentStatus } from "@/lib/actions/appointment-actions";
+import { RecordPaymentCell } from "@/components/features/payments/RecordPaymentCell";
+import { getMyPayments, type Payment } from "@/lib/api/payments";
 import { toast } from "sonner";
 
 type AppointmentStatus = 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
@@ -93,6 +95,17 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
   const [doctorFilter, setDoctorFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [paymentsByAppt, setPaymentsByAppt] = useState<Record<string, Payment>>({});
+
+  useEffect(() => {
+    getMyPayments()
+      .then((payments) => {
+        const map: Record<string, Payment> = {};
+        for (const p of payments) if (p.appointmentId) map[p.appointmentId] = p;
+        setPaymentsByAppt(map);
+      })
+      .catch(console.error);
+  }, []);
 
   const filtered = useMemo(() => {
     return appointments
@@ -221,6 +234,7 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
                 <TableHead>Type</TableHead>
                 <TableHead>Reason</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Payment</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -277,6 +291,17 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
                           ))}
                         </SelectContent>
                       </Select>
+                    </TableCell>
+                    <TableCell>
+                      <RecordPaymentCell
+                        appointmentId={apt.id}
+                        patientId={apt.patientId}
+                        patientName={getPatientName(apt.patientId, patients)}
+                        existingPayment={paymentsByAppt[apt.id]}
+                        onRecorded={(payment) =>
+                          setPaymentsByAppt((prev) => ({ ...prev, [apt.id]: payment }))
+                        }
+                      />
                     </TableCell>
                   </TableRow>
                 );
