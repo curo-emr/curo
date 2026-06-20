@@ -12,7 +12,7 @@ export async function registerPatient(data: PatientRegistrationInput) {
   const payload = {
     firstName: v.firstName,
     lastName: v.lastName,
-    nic: v.nic,
+    nic: v.nic || undefined,
     birthDate: v.dob,
     gender: v.sex,
     phone: v.phone,
@@ -35,7 +35,7 @@ export async function registerPatient(data: PatientRegistrationInput) {
   try {
     const res = await apiClient.post<FhirPatient>("/patients", payload);
     const patient = mapFhirPatient(res.data);
-    return { success: true, patientId: patient.id, patientCode: patient.mrn };
+    return { success: true, patientId: patient.id, patientCode: patient.mrn, phn: patient.phn };
   } catch (err: any) {
     const msg = err?.response?.data?.message ?? "Failed to register patient";
     return { success: false, error: { _form: [msg] } };
@@ -55,7 +55,7 @@ export async function updatePatientDemographics(
   const payload = {
     firstName: v.firstName,
     lastName: v.lastName,
-    nic: v.nic,
+    nic: v.nic || undefined,
     birthDate: v.dob,
     gender: v.sex,
     phone: v.phone,

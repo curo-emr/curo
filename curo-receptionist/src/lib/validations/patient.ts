@@ -10,7 +10,8 @@ const allergyEntrySchema = z.object({
 export type AllergyEntryInput = z.infer<typeof allergyEntrySchema>;
 
 export const patientRegistrationSchema = z.object({
-  nic: z.string().min(1, "NIC/Passport number is required"),
+  // NIC is optional: minors have no NIC. The Personal Health Number is the unique ID.
+  nic: z.string().optional().default(""),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   dob: z.string().min(1, "Date of birth is required"),

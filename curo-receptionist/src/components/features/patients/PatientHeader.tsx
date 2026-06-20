@@ -53,12 +53,25 @@ export function PatientHeader({ patient, allergies }: PatientHeaderProps) {
               >
                 {patient.mrn}
               </Badge>
+              {patient.phn && (
+                <Badge
+                  variant="outline"
+                  className="text-muted-foreground font-mono tracking-wide"
+                  title="Personal Health Number"
+                >
+                  PHN {patient.phn}
+                </Badge>
+              )}
             </div>
 
             {/* Metadata row */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mt-2">
-              <span>{patient.nic}</span>
-              <span className="text-border">|</span>
+              {patient.nic && (
+                <>
+                  <span>{patient.nic}</span>
+                  <span className="text-border">|</span>
+                </>
+              )}
               <span>
                 {patient.sex.charAt(0).toUpperCase() + patient.sex.slice(1)}
               </span>
