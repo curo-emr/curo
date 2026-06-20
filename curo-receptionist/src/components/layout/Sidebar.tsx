@@ -11,6 +11,7 @@ import {
   CalendarPlus,
   Calendar,
   BarChart3,
+  Wallet,
   Settings,
   Activity,
 } from "lucide-react";
@@ -20,6 +21,7 @@ const navItems = [
   { icon: Users, label: "Patients", href: ROUTES.PATIENTS },
   { icon: CalendarPlus, label: "Appointments", href: ROUTES.APPOINTMENTS },
   { icon: Calendar, label: "Schedule", href: ROUTES.SCHEDULE },
+  { icon: Wallet, label: "Income", href: ROUTES.INCOME },
   { icon: BarChart3, label: "Reports", href: ROUTES.REPORTS },
   { icon: Settings, label: "Settings", href: ROUTES.SETTINGS },
 ];
