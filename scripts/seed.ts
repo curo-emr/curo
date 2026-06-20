@@ -45,6 +45,27 @@ function genCode() {
   return code;
 }
 
+function luhnCheckDigit(payload: string): number {
+  let sum = 0;
+  let double = true;
+  for (let i = payload.length - 1; i >= 0; i--) {
+    let d = payload.charCodeAt(i) - 48;
+    if (double) { d *= 2; if (d > 9) d -= 9; }
+    sum += d;
+    double = !double;
+  }
+  return (10 - (sum % 10)) % 10;
+}
+
+// Personal Health Number: YYYY + 7-digit sequence + Luhn check digit (12 digits).
+function genPhn() {
+  const year = new Date().getFullYear().toString();
+  let seq = '';
+  for (let i = 0; i < 7; i++) seq += Math.floor(Math.random() * 10).toString();
+  const payload = year + seq;
+  return payload + luhnCheckDigit(payload).toString();
+}
+
 function rnd<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 
 function daysAgo(n: number) { const d = new Date(); d.setDate(d.getDate() - n); return d; }
@@ -180,17 +201,20 @@ async function seed() {
     { fn: 'Lasantha', ln: 'Gunatilake', dob: '1955-12-08', gender: 'male', nic: '554998789V', phone: '+94778901234', email: 'lasantha@email.com', blood: 'A+', city: 'Colombo' },
     { fn: 'Nadeeka', ln: 'Wickramasinghe', dob: '1978-04-20', gender: 'female', nic: '783114567V', phone: '+94779012345', email: 'nadeeka@email.com', blood: 'AB-', city: 'Kurunegala' },
     { fn: 'Chanuka', ln: 'Madusanka', dob: '1988-08-15', gender: 'male', nic: '883276789V', phone: '+94770123456', email: 'chanuka@email.com', blood: 'O+', city: 'Colombo' },
+    // Minor patient — no NIC (identified solely by the Personal Health Number)
+    { fn: 'Sehan', ln: 'Perera', dob: '2018-05-04', gender: 'male', nic: null as any, phone: '+94771112233', email: 'sehan.guardian@email.com', blood: 'A+', city: 'Colombo' },
   ];
 
   const patientIds: string[] = [];
   const patientUserIds: string[] = [];
   for (const p of patientData) {
     const code = genCode();
+    const phn = genPhn();
     const [patient] = await db.query(`
-      INSERT INTO patients (id, "patientCode", "firstName", "lastName", "birthDate", gender, nic, phone, email, "bloodType", city, country, active)
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Sri Lanka', true)
+      INSERT INTO patients (id, "patientCode", "personalHealthNumber", "firstName", "lastName", "birthDate", gender, nic, phone, email, "bloodType", city, country, active)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'Sri Lanka', true)
       RETURNING id
-    `, [code, p.fn, p.ln, p.dob, p.gender, p.nic, p.phone, p.email, p.blood, p.city]);
+    `, [code, phn, p.fn, p.ln, p.dob, p.gender, p.nic, p.phone, p.email, p.blood, p.city]);
     const [user] = await db.query(`
       INSERT INTO users (id, email, "passwordHash", role, "patientId", "isActive")
       VALUES (gen_random_uuid(), $1, $2, 'PATIENT', $3, true)
@@ -200,7 +224,7 @@ async function seed() {
     patientIds.push(patient.id);
     patientUserIds.push(user.id);
   }
-  console.log('✅ 10 patients created');
+  console.log(`✅ ${patientData.length} patients created`);
 
   // ---- ALLERGIES ----
   const allergyData = [

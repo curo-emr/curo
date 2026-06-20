@@ -13,6 +13,13 @@ export class Patient {
   @Column()
   patientCode: string;
 
+  // Personal Health Number: YYYY + 7-digit sequence + Luhn check digit (12 digits).
+  // Primary unique patient identifier. Nullable so it can be backfilled on a live DB
+  // (Postgres allows multiple NULLs under a unique index).
+  @Index({ unique: true })
+  @Column({ nullable: true })
+  personalHealthNumber: string;
+
   @Column()
   firstName: string;
 

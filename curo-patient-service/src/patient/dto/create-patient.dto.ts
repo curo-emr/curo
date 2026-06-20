@@ -24,9 +24,15 @@ export class CreatePatientDto {
   @IsEnum(Gender)
   gender: Gender;
 
+  // NIC is intentionally optional: minors have no NIC. The Personal Health Number
+  // (server-generated when omitted) is the unique identifier instead.
   @IsOptional()
   @IsString()
   nic?: string;
+
+  @IsOptional()
+  @IsString()
+  personalHealthNumber?: string;
 
   @IsOptional()
   @IsString()
