@@ -48,11 +48,12 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 - [x] Seed PHNs (+ a minor patient with no NIC)
 - All touched projects typecheck clean (`tsc --noEmit`)
 
-### Slice 2 — Per-role patient-data minimization (item 2)
-- [ ] `toFhirPatient(patient, role)` projection (reduce PHARMACIST + LAB_STAFF)
-- [ ] Controller passes `req.user.role`
-- [ ] curo-pharmacy UI cleanup
-- [ ] curo-lab UI cleanup
+### Slice 2 — Per-role patient-data minimization (item 2) ✅
+- [x] `toFhirPatient(patient, role)` projection — PHARMACIST/LAB_STAFF get only PHN, MRN, name, gender, birthDate
+- [x] Controller passes `req.user.role` (findAll/findOne/findByCode); pharmacy+lab granted detail access with reduced shape
+- [x] Pharmacy keeps allergies (dispensing safety); curo-pharmacy UI: removed NIC/bloodType/phone/email
+- [x] curo-lab UI: removed bloodType/phone/email; shows PHN for specimen labeling
+- Receptionist/doctor/patient(own)/super-admin unchanged (full). All typecheck clean.
 
 ### Slice 3 — Receptionist income (item 3)
 - [ ] Payment entity → appointment-service; payments module
