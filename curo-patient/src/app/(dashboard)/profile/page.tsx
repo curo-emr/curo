@@ -37,7 +37,9 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-bold text-foreground">{patient.name.full}</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">MRN: {patient.mrn}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                MRN: {patient.mrn}{patient.phn ? ` · PHN: ${patient.phn}` : ""}
+              </p>
               <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground flex-wrap">
                 <span className="flex items-center gap-1.5">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
