@@ -104,7 +104,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                 <div><p className="text-slate-400 text-xs">Name</p><p className="font-medium">{patient.name.full}</p></div>
                 <div><p className="text-slate-400 text-xs">MRN</p><p className="font-medium">{patient.mrn}</p></div>
                 <div><p className="text-slate-400 text-xs">Age / Sex</p><p className="font-medium">{age}y / {patient.sex.charAt(0).toUpperCase()}{patient.sex.slice(1)}</p></div>
-                <div><p className="text-slate-400 text-xs">Blood Type</p><p className="font-medium">{patient.bloodType || '—'}</p></div>
+                <div><p className="text-slate-400 text-xs">PHN</p><p className="font-medium font-mono text-xs">{patient.phn || '—'}</p></div>
               </div>
             </CardContent>
           </Card>

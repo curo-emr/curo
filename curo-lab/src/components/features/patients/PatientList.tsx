@@ -35,7 +35,7 @@ export function PatientList({ patients, orders }: PatientListProps) {
       return (
         p.name.full.toLowerCase().includes(q) ||
         p.mrn.toLowerCase().includes(q) ||
-        p.phone.includes(q)
+        (p.phn ?? "").toLowerCase().includes(q)
       );
     });
   }, [query, patients]);
@@ -54,7 +54,7 @@ export function PatientList({ patients, orders }: PatientListProps) {
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search by name, MRN, or phone..."
+              placeholder="Search by name, MRN, or PHN..."
               className="pl-9 bg-muted border"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -75,7 +75,7 @@ export function PatientList({ patients, orders }: PatientListProps) {
             <TableRow>
               <TableHead>Patient</TableHead>
               <TableHead>Age / Sex</TableHead>
-              <TableHead>Blood Type</TableHead>
+              <TableHead>PHN</TableHead>
               <TableHead>Last Lab Order</TableHead>
               <TableHead>Total Orders</TableHead>
               <TableHead className="w-[50px]"></TableHead>
@@ -101,7 +101,7 @@ export function PatientList({ patients, orders }: PatientListProps) {
                     <TableCell className="text-muted-foreground">
                       {calculateAge(patient.dob)}y / {patient.sex.charAt(0).toUpperCase()}{patient.sex.slice(1)}
                     </TableCell>
-                    <TableCell className="text-muted-foreground font-medium">{patient.bloodType}</TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">{patient.phn || "—"}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {lastOrder ? formatDate(lastOrder.createdAt) : '-'}
                     </TableCell>

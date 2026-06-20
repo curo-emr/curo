@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { User, Phone, Mail, MapPin, FlaskConical, FileText } from "lucide-react";
+import { User, MapPin, FlaskConical, FileText } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
@@ -52,12 +52,12 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
               <div className="flex flex-wrap items-center gap-3 mb-1">
                 <h1 className="text-xl font-bold text-slate-900">{patient.name.full}</h1>
                 <Badge variant="outline" className="text-slate-600">{patient.mrn}</Badge>
+                {patient.phn && <Badge variant="outline" className="text-slate-600" title="Personal Health Number">PHN {patient.phn}</Badge>}
               </div>
+              {/* Lab sees only identity needed for specimen labeling — no blood type,
+                  contact, or address (data minimization). */}
               <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
                 <span>{age}y / {patient.sex.charAt(0).toUpperCase()}{patient.sex.slice(1)}</span>
-                <span>Blood Type: <strong className="text-slate-700">{patient.bloodType}</strong></span>
-                <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {patient.phone}</span>
-                <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {patient.email}</span>
               </div>
             </div>
           </div>
