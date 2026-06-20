@@ -38,14 +38,15 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 - [x] Commit all 6 repos (rollback checkpoint) — root `51cadbc`, curo-patient `744aabf`
 - [x] Create this progress tracker
 
-### Slice 1 — PHN + minor-friendly NIC (item 4)
-- [ ] `personalHealthNumber` column (nullable + unique) on Patient entity (shared + patient-service)
-- [ ] `generatePhn()` (YYYY + seq + Luhn) + generate-retry in `create()`
-- [ ] DTO: NIC optional, PHN optional (server-generated)
-- [ ] FHIR mapper: PHN primary identifier; search includes PHN
-- [ ] Backfill existing patients
-- [ ] Frontend: registration forms (NIC optional), PHN display
-- [ ] Seed PHNs
+### Slice 1 — PHN + minor-friendly NIC (item 4) ✅
+- [x] `personalHealthNumber` column (nullable + unique) on Patient entity (shared + patient-service)
+- [x] `generatePhn()` (YYYY + seq + Luhn) + generate-retry in `create()`
+- [x] DTO: NIC optional, PHN optional (server-generated)
+- [x] FHIR mapper: PHN primary identifier; search includes PHN + NIC
+- [x] Backfill existing patients (`OnModuleInit` in PatientService)
+- [x] Frontend: registration form NIC optional + PHN in success toast; PHN shown in receptionist/doctor headers, demographics, patient profile, lists
+- [x] Seed PHNs (+ a minor patient with no NIC)
+- All touched projects typecheck clean (`tsc --noEmit`)
 
 ### Slice 2 — Per-role patient-data minimization (item 2)
 - [ ] `toFhirPatient(patient, role)` projection (reduce PHARMACIST + LAB_STAFF)

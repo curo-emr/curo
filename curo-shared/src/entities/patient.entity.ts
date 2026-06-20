@@ -13,6 +13,12 @@ export class Patient {
   @Column()
   patientCode: string; // CUR-XXXXXXXX
 
+  // Personal Health Number: YYYY + 7-digit sequence + Luhn check digit (12 digits).
+  // Primary unique patient identifier; nullable + unique so it can be backfilled live.
+  @Index({ unique: true })
+  @Column({ nullable: true })
+  personalHealthNumber: string;
+
   @Column()
   firstName: string;
 

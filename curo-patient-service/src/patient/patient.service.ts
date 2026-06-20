@@ -1,5 +1,6 @@
 import {
   Injectable, NotFoundException, ForbiddenException, ConflictException,
+  OnModuleInit, Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
@@ -16,7 +17,9 @@ import { toFhirPatient, toFhirAllergy, toFhirCondition, toFhirObservation } from
 import { UserRole } from '../enums';
 
 @Injectable()
-export class PatientService {
+export class PatientService implements OnModuleInit {
+  private readonly logger = new Logger(PatientService.name);
+
   constructor(
     @InjectRepository(Patient)
     private patientsRepo: Repository<Patient>,
@@ -37,6 +40,60 @@ export class PatientService {
     return code;
   }
 
+  /** Luhn (mod-10) check digit for a numeric string payload. */
+  private luhnCheckDigit(payload: string): number {
+    let sum = 0;
+    let double = true; // rightmost payload digit is doubled (check digit will be appended)
+    for (let i = payload.length - 1; i >= 0; i--) {
+      let d = payload.charCodeAt(i) - 48;
+      if (double) {
+        d *= 2;
+        if (d > 9) d -= 9;
+      }
+      sum += d;
+      double = !double;
+    }
+    return (10 - (sum % 10)) % 10;
+  }
+
+  /** Personal Health Number: YYYY(4) + random sequence(7) + Luhn check digit(1) = 12 digits. */
+  private generatePhn(): string {
+    const year = new Date().getFullYear().toString();
+    let seq = '';
+    for (let i = 0; i < 7; i++) seq += Math.floor(Math.random() * 10).toString();
+    const payload = year + seq; // 11 digits
+    return payload + this.luhnCheckDigit(payload).toString();
+  }
+
+  private async generateUniquePhn(): Promise<string> {
+    let phn: string;
+    let exists = true;
+    do {
+      phn = this.generatePhn();
+      exists = !!(await this.patientsRepo.findOne({ where: { personalHealthNumber: phn } }));
+    } while (exists);
+    return phn;
+  }
+
+  /** Backfill PHNs for any patient missing one (safe on a live volume). */
+  async onModuleInit(): Promise<void> {
+    try {
+      const missing = await this.patientsRepo
+        .createQueryBuilder('p')
+        .where('p.personalHealthNumber IS NULL')
+        .getMany();
+      if (missing.length === 0) return;
+      for (const p of missing) {
+        p.personalHealthNumber = await this.generateUniquePhn();
+        await this.patientsRepo.save(p);
+      }
+      this.logger.log(`Backfilled PHN for ${missing.length} existing patient(s)`);
+    } catch (err) {
+      // Table may not exist yet on a brand-new DB; synchronize creates it on boot.
+      this.logger.warn(`PHN backfill skipped: ${(err as Error).message}`);
+    }
+  }
+
   async create(dto: CreatePatientDto): Promise<any> {
     // Generate unique patient code
     let patientCode: string;
@@ -46,7 +103,10 @@ export class PatientService {
       exists = !!(await this.patientsRepo.findOne({ where: { patientCode } }));
     } while (exists);
 
-    const patient = this.patientsRepo.create({ ...dto, patientCode });
+    // Generate the Personal Health Number unless one was explicitly supplied.
+    const personalHealthNumber = dto.personalHealthNumber || (await this.generateUniquePhn());
+
+    const patient = this.patientsRepo.create({ ...dto, patientCode, personalHealthNumber });
     const saved = await this.patientsRepo.save(patient);
     return toFhirPatient(saved);
   }
@@ -58,7 +118,7 @@ export class PatientService {
     const query = this.patientsRepo.createQueryBuilder('p').where('p.active = true');
     if (search) {
       query.andWhere(
-        '(p.firstName ILIKE :s OR p.lastName ILIKE :s OR p.patientCode ILIKE :s OR p.phone ILIKE :s)',
+        '(p.firstName ILIKE :s OR p.lastName ILIKE :s OR p.patientCode ILIKE :s OR p.personalHealthNumber ILIKE :s OR p.nic ILIKE :s OR p.phone ILIKE :s)',
         { s: `%${search}%` },
       );
     }

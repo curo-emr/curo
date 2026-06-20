@@ -9,6 +9,7 @@ export function toFhirPatient(p: Patient) {
     id: p.id,
     meta: { lastUpdated: p.updatedAt },
     identifier: [
+      p.personalHealthNumber && { use: 'official', system: 'urn:curo:phn', value: p.personalHealthNumber },
       { system: 'urn:curo:patient-code', value: p.patientCode },
       p.nic && { system: 'urn:curo:nic', value: p.nic },
       p.passportNumber && { system: 'urn:curo:passport', value: p.passportNumber },
