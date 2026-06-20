@@ -123,7 +123,7 @@ export class PatientService implements OnModuleInit {
       );
     }
     const patients = await query.orderBy('p.createdAt', 'DESC').getMany();
-    return patients.map(toFhirPatient);
+    return patients.map((p) => toFhirPatient(p, requestingUser.role));
   }
 
   async findOne(id: string, requestingUser: { role: string; userId: string; patientId?: string }): Promise<any> {
@@ -136,7 +136,7 @@ export class PatientService implements OnModuleInit {
         throw new ForbiddenException('Patients can only view their own record');
       }
     }
-    return toFhirPatient(patient);
+    return toFhirPatient(patient, requestingUser.role);
   }
 
   async update(id: string, dto: UpdatePatientDto, requestingUser: { role: string }): Promise<any> {
@@ -150,10 +150,10 @@ export class PatientService implements OnModuleInit {
     return toFhirPatient(saved);
   }
 
-  async findByCode(code: string): Promise<any> {
+  async findByCode(code: string, role?: string): Promise<any> {
     const patient = await this.patientsRepo.findOne({ where: { patientCode: code } });
     if (!patient) throw new NotFoundException(`Patient with code ${code} not found`);
-    return toFhirPatient(patient);
+    return toFhirPatient(patient, role);
   }
 
   async findMyRecord(userId: string): Promise<any> {

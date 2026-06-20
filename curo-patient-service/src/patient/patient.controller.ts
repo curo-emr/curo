@@ -38,14 +38,16 @@ export class PatientController {
   }
 
   @Get('code/:code')
-  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'LAB_STAFF')
+  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'LAB_STAFF', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  findByCode(@Param('code') code: string) {
-    return this.patientService.findByCode(code);
+  findByCode(@Param('code') code: string, @CurrentUser() user: any) {
+    return this.patientService.findByCode(code, user.role);
   }
 
+  // Pharmacy & lab can fetch a patient by id, but receive a minimized projection
+  // (see toFhirPatient). Patients are restricted to their own record in the service.
   @Get(':id')
-  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'PATIENT')
+  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'PATIENT', 'LAB_STAFF', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
   findOne(@Param('id') id: string, @CurrentUser() user: any) {
     return this.patientService.findOne(id, user);
@@ -65,9 +67,9 @@ export class PatientController {
     return this.patientService.update(id, dto, user);
   }
 
-  // Allergies
+  // Allergies — pharmacy needs these for safe dispensing; lab does not.
   @Get(':id/allergies')
-  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'PATIENT')
+  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'PATIENT', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
   getAllergies(@Param('id') id: string) {
     return this.patientService.getAllergies(id);

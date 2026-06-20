@@ -3,7 +3,31 @@ import { AllergyIntolerance } from '../entities/allergy-intolerance.entity';
 import { Condition } from '../entities/condition.entity';
 import { Observation } from '../entities/observation.entity';
 
-export function toFhirPatient(p: Patient) {
+// Roles that receive a minimized patient projection (data minimization).
+// Pharmacy & lab only need identity for dispensing / specimen labeling — not
+// NIC, blood type, contact, address, insurance, or emergency contact.
+const MINIMIZED_ROLES = new Set(['PHARMACIST', 'LAB_STAFF']);
+
+export function toFhirPatient(p: Patient, role?: string) {
+  if (role && MINIMIZED_ROLES.has(role)) {
+    return {
+      resourceType: 'Patient',
+      id: p.id,
+      meta: { lastUpdated: p.updatedAt },
+      identifier: [
+        p.personalHealthNumber && { use: 'official', system: 'urn:curo:phn', value: p.personalHealthNumber },
+        { system: 'urn:curo:patient-code', value: p.patientCode },
+      ].filter(Boolean),
+      active: p.active,
+      name: [{
+        use: 'official',
+        family: p.lastName,
+        given: [p.firstName, p.middleName].filter(Boolean),
+      }],
+      gender: p.gender,
+      birthDate: p.birthDate,
+    };
+  }
   return {
     resourceType: 'Patient',
     id: p.id,
