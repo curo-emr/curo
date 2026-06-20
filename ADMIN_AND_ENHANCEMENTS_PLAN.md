@@ -102,6 +102,17 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 
 ---
 
+## Post-implementation notes
+- Receptionist payment CREATE is now audit-logged (not just admin edits).
+- Admin "Add User" form creates **staff roles only**; patient accounts are created via
+  receptionist registration (which generates the PHN) to avoid orphan patient logins.
+- **Reproducibility:** `docker compose build curo-admin curo-seed` passes (validates
+  curo-admin `npm ci`/lockfile + seed.ts in-container compile). The destructive
+  `docker compose down -v && up -d --build` (full seed run on a fresh volume) was **not**
+  executed to preserve the running stack's data — recommended before a clean redeploy.
+- All new demo data on the running volume was inserted additively (psql) so nothing breaks;
+  `scripts/seed.ts` carries the same data for fresh deployments.
+
 ## Verification (run after each slice / at the end)
 
 `docker compose up -d --build` (no volume wipe) → `docker compose ps` healthy, `curo-seed` exits 0.
