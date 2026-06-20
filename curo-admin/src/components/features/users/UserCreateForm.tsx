@@ -17,6 +17,10 @@ import { createUserSchema, type CreateUserInput } from "@/lib/validations/user";
 import { createUser } from "@/lib/api/users";
 import { ROUTES, USER_ROLES, ROLE_LABELS, GENDERS } from "@/lib/constants";
 
+// Patients are created via receptionist registration (which generates the PHN),
+// so the admin form only creates staff accounts — avoids orphan patient logins.
+const CREATABLE_ROLES = USER_ROLES.filter((r) => r !== "PATIENT");
+
 export function UserCreateForm() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -66,7 +70,7 @@ export function UserCreateForm() {
               <Select value={role} onValueChange={(v) => setValue("role", v as CreateUserInput["role"])}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {USER_ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
+                  {CREATABLE_ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
