@@ -176,6 +176,7 @@ export function mapFhirPatient(fhir: FhirPatient): Patient {
   const lastName = familyName;
 
   const patientCode = fhir.identifier?.find(i => i.system === 'urn:curo:patient-code')?.value ?? '';
+  const phn = fhir.identifier?.find(i => i.system === 'urn:curo:phn')?.value ?? '';
   const nic = fhir.identifier?.find(i => i.system === 'urn:curo:nic')?.value ?? '';
 
   const phone = fhir.telecom?.find(t => t.system === 'phone')?.value ?? '';
@@ -194,6 +195,7 @@ export function mapFhirPatient(fhir: FhirPatient): Patient {
   return {
     id: fhir.id,
     mrn: patientCode,
+    phn,
     nic,
     name: {
       first: firstName,
