@@ -53,7 +53,21 @@ export class PaymentService {
       notes: dto.notes,
       paidAt: new Date(),
     });
-    return this.paymentsRepo.save(payment);
+    const saved = await this.paymentsRepo.save(payment);
+
+    await this.auditRepo.save(this.auditRepo.create({
+      userId: user.userId,
+      userRole: user.role,
+      action: 'CREATE',
+      resourceType: 'Payment',
+      resourceId: saved.id,
+      patientId: saved.patientId,
+      changes: { after: { amount: saved.amount, currency: saved.currency, receiptNumber: saved.receiptNumber } },
+      outcome: 'success',
+      outcomeDescription: 'Receptionist recorded a visit payment',
+    }));
+
+    return saved;
   }
 
   private dateRange(from?: string, to?: string) {
