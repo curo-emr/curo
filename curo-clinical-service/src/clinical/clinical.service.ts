@@ -218,6 +218,12 @@ export class ClinicalService {
     return meds.map(toFhirMedRequest);
   }
 
+  async getPrescriptions(patientId?: string): Promise<any[]> {
+    const where = patientId ? { patientId } : {};
+    const meds = await this.medsRepo.find({ where, order: { authoredOn: 'DESC' } });
+    return meds.map(toFhirMedRequest);
+  }
+
   async getPendingPrescriptions(): Promise<any[]> {
     const meds = await this.medsRepo.find({
       where: { status: MedicationRequestStatus.ACTIVE },

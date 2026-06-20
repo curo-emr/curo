@@ -60,6 +60,12 @@ export class ClinicalController {
     return this.clinicalService.createNote(dto, user.practitionerId ?? user.userId);
   }
 
+  @Get('notes')
+  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
+  getNotes(@Query('encounterId') encounterId: string) {
+    return this.clinicalService.getEncounterNotes(encounterId);
+  }
+
   @Get('notes/encounter/:encounterId')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   getEncounterNotes(@Param('encounterId') encounterId: string) {
@@ -78,6 +84,13 @@ export class ClinicalController {
   @Header('Content-Type', 'application/fhir+json')
   addVitals(@Body() dto: CreateVitalsDto, @CurrentUser() user: any) {
     return this.clinicalService.addVitals(dto, user.practitionerId ?? user.userId);
+  }
+
+  @Get('vitals')
+  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
+  @Header('Content-Type', 'application/fhir+json')
+  getVitalsByQuery(@Query('patientId') patientId: string) {
+    return this.clinicalService.getVitals(patientId);
   }
 
   @Get('vitals/patient/:patientId')
@@ -100,6 +113,13 @@ export class ClinicalController {
   @Header('Content-Type', 'application/fhir+json')
   createPrescription(@Body() dto: CreatePrescriptionDto, @CurrentUser() user: any) {
     return this.clinicalService.createPrescription(dto, user.practitionerId ?? user.userId);
+  }
+
+  @Get('prescriptions')
+  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT', 'PHARMACIST')
+  @Header('Content-Type', 'application/fhir+json')
+  getPrescriptions(@Query('patientId') patientId?: string) {
+    return this.clinicalService.getPrescriptions(patientId);
   }
 
   @Get('prescriptions/patient/:patientId')
