@@ -11,6 +11,14 @@ export class QrCode {
   @Column()
   serviceRequestId: string;
 
+  // Per-test identification: one QrCode row per test in the order's panel so each
+  // sample tube can carry its own printable label. Null testCode = order-level QR.
+  @Column({ nullable: true })
+  testCode: string;
+
+  @Column({ nullable: true })
+  testIndex: number;
+
   @Column()
   encodedUrl: string; // the URL encoded in the QR
 

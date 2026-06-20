@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Not } from 'typeorm';
 import * as QRCode from 'qrcode';
@@ -92,7 +92,9 @@ function toFhirObservation(o: Observation) {
 }
 
 @Injectable()
-export class ClinicalService {
+export class ClinicalService implements OnModuleInit {
+  private readonly logger = new Logger(ClinicalService.name);
+
   constructor(
     @InjectRepository(Encounter)
     private encountersRepo: Repository<Encounter>,
@@ -109,6 +111,27 @@ export class ClinicalService {
     @InjectRepository(Task)
     private tasksRepo: Repository<Task>,
   ) {}
+
+  /** Backfill per-test QR codes for any existing lab orders that lack them. */
+  async onModuleInit(): Promise<void> {
+    try {
+      const orders = await this.labOrdersRepo.find();
+      let count = 0;
+      for (const o of orders) {
+        const panel = (o.testPanel ?? []) as any[];
+        if (panel.length === 0) continue;
+        const existing = await this.qrCodesRepo.count({ where: { serviceRequestId: o.id } });
+        // order-level QR is 1; if we don't yet have one-per-test, generate them
+        if (existing < panel.length + 1) {
+          await this.getTestQrs(o.id, panel);
+          count++;
+        }
+      }
+      if (count) this.logger.log(`Backfilled per-test QR codes for ${count} lab order(s)`);
+    } catch (err) {
+      this.logger.warn(`Per-test QR backfill skipped: ${(err as Error).message}`);
+    }
+  }
 
   // Encounters
   async createEncounter(dto: CreateEncounterDto, practitionerId: string): Promise<any> {
@@ -269,8 +292,50 @@ export class ClinicalService {
     const savedQr = await this.qrCodesRepo.save(qrCode);
     await this.labOrdersRepo.update(savedOrder.id, { qrCodeId: savedQr.id });
 
+    // One QR per test in the panel — labs print these and stick them on each sample.
+    const tests = savedOrder.testPanel ?? [];
+    for (let i = 0; i < tests.length; i++) {
+      const t = tests[i] as Record<string, string>;
+      const testUrl = `${process.env.GATEWAY_URL || 'http://localhost:3000'}/lab/orders/${savedOrder.id}?test=${encodeURIComponent(t.code)}&i=${i}`;
+      const testImg = await QRCode.toDataURL(testUrl);
+      await this.qrCodesRepo.save(this.qrCodesRepo.create({
+        serviceRequestId: savedOrder.id,
+        testCode: t.code,
+        testIndex: i,
+        encodedUrl: testUrl,
+        imageBase64: testImg,
+      }));
+    }
+
     const finalOrder = await this.labOrdersRepo.findOne({ where: { id: savedOrder.id } });
-    return { ...toFhirServiceRequest(finalOrder!), qrCode: { id: savedQr.id, imageBase64 } };
+    return { ...toFhirServiceRequest(finalOrder!), qrCode: { id: savedQr.id, imageBase64 }, tests: await this.getTestQrs(savedOrder.id, tests) };
+  }
+
+  /**
+   * Build per-test QR list for an order, joining testPanel display names.
+   * Lazily generates+persists any missing per-test QR (so older/seeded orders
+   * that only had an order-level QR get per-test labels on first view).
+   */
+  private async getTestQrs(orderId: string, testPanel: any[]): Promise<any[]> {
+    const qrs = await this.qrCodesRepo.find({ where: { serviceRequestId: orderId } });
+    const byCode = new Map(qrs.filter((q) => q.testCode).map((q) => [`${q.testCode}:${q.testIndex}`, q]));
+    const out: any[] = [];
+    for (let i = 0; i < (testPanel ?? []).length; i++) {
+      const t = testPanel[i] as Record<string, string>;
+      let qr = byCode.get(`${t.code}:${i}`);
+      if (!qr) {
+        const testUrl = `${process.env.GATEWAY_URL || 'http://localhost:3000'}/lab/orders/${orderId}?test=${encodeURIComponent(t.code)}&i=${i}`;
+        qr = await this.qrCodesRepo.save(this.qrCodesRepo.create({
+          serviceRequestId: orderId,
+          testCode: t.code,
+          testIndex: i,
+          encodedUrl: testUrl,
+          imageBase64: await QRCode.toDataURL(testUrl),
+        }));
+      }
+      out.push({ testCode: t.code, display: t.display, qrBase64: qr.imageBase64, qrId: qr.id });
+    }
+    return out;
   }
 
   async getLabOrders(patientId?: string): Promise<any[]> {
@@ -283,7 +348,11 @@ export class ClinicalService {
     const order = await this.labOrdersRepo.findOne({ where: { id } });
     if (!order) throw new NotFoundException(`Lab order ${id} not found`);
     const qr = order.qrCodeId ? await this.qrCodesRepo.findOne({ where: { id: order.qrCodeId } }) : null;
-    return { ...toFhirServiceRequest(order), qrCode: qr ? { id: qr.id, imageBase64: qr.imageBase64 } : null };
+    return {
+      ...toFhirServiceRequest(order),
+      qrCode: qr ? { id: qr.id, imageBase64: qr.imageBase64 } : null,
+      tests: await this.getTestQrs(order.id, order.testPanel ?? []),
+    };
   }
 
   // Tasks

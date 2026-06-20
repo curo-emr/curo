@@ -84,11 +84,13 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 - [x] Seed multi-batch drugs (future-dated `-B` batches) + live data
 - **Verified live:** dispense drew 10 from earliest-expiring batch B (400→390), batch A untouched; record shows batch
 
-### Slice 7 — Lab per-test QR (item 9)
-- [ ] QrCode per-test (testCode/testIndex)
-- [ ] createLabOrder loops tests; GET returns per-test QR
-- [ ] Fix `POST /orders/scan` (test → order)
-- [ ] Lab UI printable per-test labels
+### Slice 7 — Lab per-test QR (item 9) ✅
+- [x] QrCode `testCode`/`testIndex` columns (clinical + lab + shared, synced to avoid synchronize drops)
+- [x] createLabOrder generates a QR per test; `getTestQrs` lazily backfills; clinical OnModuleInit backfills existing orders
+- [x] `GET /lab-orders/:id` and lab `GET /orders/:id` return `tests:[{testCode,display,qrBase64}]`
+- [x] `POST /orders/scan` parses per-test URL (`?test=&i=`) → resolves order + specific test (returns scannedTest)
+- [x] Lab UI: printable per-test sample labels (QR + patient + order) with `@media print`
+- **Verified live:** 15 per-test QR rows; scan of a test URL resolved order + Hemoglobin; lab getOrder returns qr per test
 
 ### Slice 8 — Doctor pharmacy/lab inventory lookup (item 6) — last, time-boxed
 - [ ] Organization dimension (seed pharmacies/labs)

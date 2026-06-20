@@ -11,6 +11,13 @@ export class QrCode {
   @Column()
   serviceRequestId: string;
 
+  // Per-test QR: one row per test in the panel (null testCode = order-level QR).
+  @Column({ nullable: true })
+  testCode: string;
+
+  @Column({ nullable: true })
+  testIndex: number;
+
   @Column()
   encodedUrl: string; // the URL encoded in the QR
 
