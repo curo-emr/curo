@@ -197,6 +197,21 @@ export class ClinicalService {
     return obs.map(toFhirObservation);
   }
 
+  /**
+   * Category-agnostic trend for one or more LOINC codes. Unlike getVitalsTrend
+   * this does NOT filter by category, so it also returns lab-sourced values
+   * (e.g. glucose, cholesterol) for charting alongside vitals like blood pressure.
+   */
+  async getObservationsTrend(patientId: string, codes: string[]): Promise<any[]> {
+    const where: any = { patientId };
+    if (codes.length) where.code = In(codes);
+    const obs = await this.observationsRepo.find({
+      where,
+      order: { effectiveDateTime: 'ASC' },
+    });
+    return obs.map(toFhirObservation);
+  }
+
   // Prescriptions
   async createPrescription(dto: CreatePrescriptionDto, practitionerId: string): Promise<any> {
     const med = this.medsRepo.create({

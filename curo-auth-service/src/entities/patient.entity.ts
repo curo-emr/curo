@@ -14,6 +14,12 @@ export class Patient {
   @Column()
   patientCode: string;
 
+  // Kept in sync with curo-patient-service's Patient entity so this service's
+  // TypeORM synchronize does not drop the column from the shared patients table.
+  @Index({ unique: true })
+  @Column({ nullable: true })
+  personalHealthNumber: string;
+
   @Column()
   firstName: string;
 

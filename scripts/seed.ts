@@ -347,6 +347,30 @@ async function seed() {
   }
   console.log('✅ 10 encounters + notes + vitals created');
 
+  // ---- TREND OBSERVATIONS (for doctor charts: glucose + cholesterol over time) ----
+  // category-agnostic so the multi-code trend endpoint returns them alongside BP.
+  let trendCount = 0;
+  for (const patIdx of [0, 1]) {
+    let week = 12;
+    for (let i = 0; i < 6; i++, week -= 2) {
+      const when = daysAgo(week * 7);
+      // Fasting glucose (mg/dL) — ref 70–110, a couple of highs to trigger flags
+      const glucose = [98, 105, 132, 118, 145, 110][i];
+      await db.query(`
+        INSERT INTO observations (id, "patientId", "practitionerId", status, category, code, display, "valueQuantity", "valueUnit", "referenceRangeLow", "referenceRangeHigh", "effectiveDateTime")
+        VALUES (gen_random_uuid(), $1, $2, 'final', 'laboratory', '2345-7', 'Glucose', $3, 'mg/dL', '70', '110', $4)
+      `, [patientIds[patIdx], doctorIds[0], glucose, when]);
+      // Total cholesterol (mg/dL) — ref <200
+      const chol = [185, 195, 215, 205, 240, 210][i];
+      await db.query(`
+        INSERT INTO observations (id, "patientId", "practitionerId", status, category, code, display, "valueQuantity", "valueUnit", "referenceRangeLow", "referenceRangeHigh", "effectiveDateTime")
+        VALUES (gen_random_uuid(), $1, $2, 'final', 'laboratory', '2093-3', 'Total Cholesterol', $3, 'mg/dL', '0', '200', $4)
+      `, [patientIds[patIdx], doctorIds[0], chol, when]);
+      trendCount += 2;
+    }
+  }
+  console.log(`✅ ${trendCount} trend observations created`);
+
   // ---- PRESCRIPTIONS ----
   const medications = [
     { code: 'metformin-500mg', display: 'Metformin 500mg', dosage: '1 tablet twice daily', route: 'oral', freq: 'BID', qty: 60, unit: 'tablets' },

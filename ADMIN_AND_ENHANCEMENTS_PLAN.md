@@ -70,11 +70,12 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 - [x] Docker service (3015) + gateway `FRONTEND_ORIGINS`/default origins
 - **Verified live:** admin create doctor (logs in), suspend (login 401), reset, receptionist 403; curo-admin builds + serves /login (200)
 
-### Slice 5 — Doctor e-prescription print + vitals charts (items 5, 8)
-- [ ] Prescription print (full/partial) via print stylesheet
-- [ ] Multi-code category-agnostic trend endpoint
-- [ ] Seed reference ranges (BP/glucose/cholesterol)
-- [ ] Recharts charts with high/low flagging
+### Slice 5 — Doctor e-prescription print + vitals charts (items 5, 8) ✅
+- [x] Prescription print: per-item checkboxes (full/partial) → `window.print()` with print-only e-prescription layout + `@media print` stylesheet
+- [x] Multi-code category-agnostic trend endpoint `GET /vitals/patient/:id/trends?codes=` (clinical-service)
+- [x] Seed glucose/cholesterol trend observations w/ reference ranges (+ live-inserted for 2 patients); BP from existing vitals
+- [x] Recharts Trends tab: BP/sugar/cholesterol line charts, normal-range band, out-of-range points flagged red + latest-value badges
+- **Verified live:** trends endpoint returns multi-code series; doctor build passes. (Also fixed a multi-service `synchronize` hazard — added PHN column to auth-service Patient entity so it stops dropping the column.)
 
 ### Slice 6 — Pharmacy multi-batch stock + dispense (item 7)
 - [ ] `GET /stock/grouped` (FEFO batches)
