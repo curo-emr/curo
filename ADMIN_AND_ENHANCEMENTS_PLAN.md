@@ -100,6 +100,18 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 - [x] Doctor "Pharmacies & Labs" page: pharmacy selector → inventory availability search; lab selector → available tests
 - **Verified live:** orgs list, stock filtered by pharmacy (22), catalog filtered by lab (8); doctor build passes
 
+### Slice 9 — Document upload & viewing (doctor → patient, lab reports) ✅
+- [x] New `curo-document-service` (port 3009) — single owner of `document_references`
+- [x] MinIO object storage behind a swappable `StorageProvider` interface; multipart upload
+- [x] Endpoints: `POST /documents`, `GET /documents`, `GET /documents/me`, `GET /documents/:id/content`
+- [x] JWT-resolved patient access + content-type allowlist + 20 MB cap + audit (CREATE/READ)
+- [x] Gateway route `/documents`; docker-compose `minio` + `curo-document-service` + volume
+- [x] Doctor portal: "Documents" tab with upload dialog + list (`PatientChartTabs`)
+- [x] Lab portal: report upload in results flow (`LabReportUpload`)
+- [x] Patient portal: visit-detail documents view (`/documents/me`)
+- **Verified:** all three frontends typecheck clean; document-service `npm run build` passes.
+  Full-stack `docker compose up -d --build` smoke test — see `DOCUMENT_FEATURE_PROGRESS.md`.
+
 ---
 
 ## Post-implementation notes
