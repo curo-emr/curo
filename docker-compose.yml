@@ -56,6 +56,25 @@ services:
       timeout: 5s
       retries: 5
 
+  minio:
+    image: minio/minio:latest
+    container_name: curo_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: curo
+      MINIO_ROOT_PASSWORD: curo_secret_minio
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ── Backend services ─────────────────────────────────────────────────────────
   curo-auth-service:
     build:
@@ -166,6 +185,32 @@ services:
       test: ["CMD-SHELL", "nc -z localhost 3006 || exit 1"]
       <<: *backend-healthcheck
 
+  curo-document-service:
+    build:
+      context: ./curo-document-service
+      dockerfile: Dockerfile
+    container_name: curo_document
+    restart: unless-stopped
+    environment:
+      PORT: "3009"
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: curo
+      MINIO_SECRET_KEY: curo_secret_minio
+      MINIO_BUCKET: curo-documents
+      <<: [*db-env, *jwt-env]
+    ports:
+      - "3009:3009"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 3009 || exit 1"]
+      <<: *backend-healthcheck
+
   curo-notification-service:
     build:
       context: ./curo-notification-service
@@ -217,6 +262,7 @@ services:
       CLINICAL_SERVICE_URL: http://curo-clinical-service:3004
       PHARMACY_SERVICE_URL: http://curo-pharmacy-service:3005
       LAB_SERVICE_URL: http://curo-lab-service:3006
+      DOCUMENT_SERVICE_URL: http://curo-document-service:3009
       NOTIFICATION_SERVICE_URL: http://curo-notification-service:3007
       AUDIT_SERVICE_URL: http://curo-audit-service:3008
       # browser-facing origins stay as localhost (host machine ports)
@@ -235,6 +281,8 @@ services:
       curo-pharmacy-service:
         condition: service_healthy
       curo-lab-service:
+        condition: service_healthy
+      curo-document-service:
         condition: service_healthy
       curo-notification-service:
         condition: service_healthy
@@ -266,6 +314,8 @@ services:
       curo-pharmacy-service:
         condition: service_healthy
       curo-lab-service:
+        condition: service_healthy
+      curo-document-service:
         condition: service_healthy
       curo-notification-service:
         condition: service_healthy
@@ -378,3 +428,4 @@ services:
 
 volumes:
   postgres_data:
+  minio_data:

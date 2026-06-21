@@ -22,6 +22,7 @@ const SERVICE_MAP: Record<string, string> = {
   '/results': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/reports': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/instruments': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
+  '/documents': process.env.DOCUMENT_SERVICE_URL || 'http://localhost:3009',
   '/notifications': process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3007',
   '/audit': process.env.AUDIT_SERVICE_URL || 'http://localhost:3008',
 };
