@@ -9,6 +9,7 @@ import { ProblemsTab } from "./tabs/ProblemsTab";
 import { AllergiesTab } from "./tabs/AllergiesTab";
 import { MedicationsTab } from "./tabs/MedicationsTab";
 import { LabsTab } from "./tabs/LabsTab";
+import { DocumentsTab } from "../documents/DocumentsTab";
 import { VitalsTrendCharts } from "./VitalsTrendCharts";
 
 interface Props {
@@ -43,6 +44,7 @@ export function PatientChartTabs({
         <TabsTrigger value="allergies" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Allergies ({allergies.length})</TabsTrigger>
         <TabsTrigger value="medications" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Medications</TabsTrigger>
         <TabsTrigger value="labs" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Labs & Reports ({labOrders.length})</TabsTrigger>
+        <TabsTrigger value="documents" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Documents</TabsTrigger>
         <TabsTrigger value="trends" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Trends</TabsTrigger>
       </TabsList>
 
@@ -74,6 +76,10 @@ export function PatientChartTabs({
 
         <TabsContent value="labs" className="outline-none">
           <LabsTab labOrders={labOrders} labTestCatalog={labTestCatalog} />
+        </TabsContent>
+
+        <TabsContent value="documents" className="outline-none">
+          <DocumentsTab patientId={patient.id} />
         </TabsContent>
 
         <TabsContent value="trends" className="outline-none">
