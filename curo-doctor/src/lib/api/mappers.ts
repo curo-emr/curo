@@ -323,6 +323,11 @@ export function mapFhirEncounter(fhir: FhirEncounter): Encounter {
     startedAt: fhir.period?.start ?? '',
     endedAt: fhir.period?.end ?? null,
     chiefComplaint: ext.find(e => e.url === 'urn:curo:chiefComplaint')?.valueString ?? fhir.reasonCode?.[0]?.text ?? '',
+    // NOTE: GET /encounters/:id returns a bare FHIR Encounter — it carries no SOAP
+    // extensions or vitals. SOAP/vitals live in /notes and /vitals and are backfilled
+    // by the encounter detail page (see getEncounterSoap/getEncounterVitals). These
+    // extension reads are kept as a forward-compat fallback but are normally empty;
+    // don't wire up a second source here.
     soap: {
       subjective: ext.find(e => e.url === 'urn:curo:soap:subjective')?.valueString ?? '',
       objective: ext.find(e => e.url === 'urn:curo:soap:objective')?.valueString ?? '',

@@ -6,18 +6,37 @@ import { UserPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import { getPatients } from "@/lib/api/patients";
-import type { Patient } from "@/types";
+import { getPatients, getAllergies } from "@/lib/api/patients";
+import type { Patient, Allergy } from "@/types";
 
 export default function PatientsDirectoryPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [allergyMap, setAllergyMap] = useState<Record<string, Allergy>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getPatients()
-      .then(setPatients)
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+    (async () => {
+      try {
+        const fetched = await getPatients();
+        // Allergies live on a separate endpoint, so fetch them per patient and
+        // build the id -> Allergy lookup the table tooltip expects.
+        const perPatient = await Promise.all(
+          fetched.map(p => getAllergies(p.id).catch(() => [] as Allergy[])),
+        );
+        const map: Record<string, Allergy> = {};
+        const enriched = fetched.map((p, i) => {
+          const allergies = perPatient[i];
+          for (const a of allergies) map[a.id] = a;
+          return { ...p, allergies: allergies.map(a => a.id) };
+        });
+        setPatients(enriched);
+        setAllergyMap(map);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
   return (
@@ -41,7 +60,7 @@ export default function PatientsDirectoryPage() {
         </div>
       ) : (
         <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading patients...</div>}>
-          <PatientList initialPatients={patients} allergyMap={{}} />
+          <PatientList initialPatients={patients} allergyMap={allergyMap} />
         </Suspense>
       )}
     </div>
