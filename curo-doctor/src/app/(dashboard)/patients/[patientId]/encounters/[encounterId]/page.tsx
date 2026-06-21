@@ -9,7 +9,7 @@ import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { getEncounterById } from "@/lib/api/encounters";
 import { getPatientById } from "@/lib/api/patients";
-import { getPrescriptionsByPatient, getLabOrdersByPatient } from "@/lib/api/clinical";
+import { getPrescriptionsByPatient, getLabOrdersByPatient, getEncounterSoap, getEncounterVitals } from "@/lib/api/clinical";
 import { getLabTestCatalog } from "@/lib/data/api";
 import type { Encounter, Patient, Prescription, LabOrder, LabTestCatalogItem } from "@/types";
 
@@ -30,9 +30,12 @@ export default function EncounterDetailsPage({ params }: { params: Promise<{ pat
       getPrescriptionsByPatient(patientId),
       getLabOrdersByPatient(patientId),
       getLabTestCatalog(),
+      // SOAP and vitals are stored separately from the encounter, so backfill them here.
+      getEncounterSoap(encounterId),
+      getEncounterVitals(patientId, encounterId),
     ])
-      .then(([enc, pt, rxs, labs, catalog]) => {
-        setEncounter(enc);
+      .then(([enc, pt, rxs, labs, catalog, soap, vitals]) => {
+        setEncounter(enc ? { ...enc, soap: soap ?? enc.soap, vitals } : enc);
         setPatient(pt);
         setPrescriptions(rxs.filter(rx => rx.encounterId === encounterId));
         setLabOrders(labs.filter(l => l.encounterId === encounterId));

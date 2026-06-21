@@ -1,15 +1,44 @@
 import { apiClient } from './client';
-import type { Prescription, LabOrder } from '@/types';
+import type { Prescription, LabOrder, Vitals, SOAP } from '@/types';
 import {
   mapFhirMedicationRequest, mapFhirServiceRequest,
   type FhirMedicationRequest, type FhirServiceRequest,
 } from './mappers';
+
+// Shared LOINC ⇄ Vitals-field map, used both to write vitals (one observation per
+// field) and to read them back. Keyed by LOINC code; display/unit are for the write path.
+export const VITALS_MAP = [
+  { key: 'bpSystolic' as keyof Vitals, code: '8480-6', display: 'Blood Pressure Systolic', unit: 'mmHg' },
+  { key: 'bpDiastolic' as keyof Vitals, code: '8462-4', display: 'Blood Pressure Diastolic', unit: 'mmHg' },
+  { key: 'pulseBpm' as keyof Vitals, code: '8867-4', display: 'Heart rate', unit: 'bpm' },
+  { key: 'temperatureC' as keyof Vitals, code: '8310-5', display: 'Body temperature', unit: 'Cel' },
+  { key: 'spo2Percent' as keyof Vitals, code: '2708-6', display: 'Oxygen saturation', unit: '%' },
+  { key: 'respirationRpm' as keyof Vitals, code: '9279-1', display: 'Respiratory rate', unit: '/min' },
+  { key: 'heightCm' as keyof Vitals, code: '8302-2', display: 'Body height', unit: 'cm' },
+  { key: 'weightKg' as keyof Vitals, code: '29463-7', display: 'Body weight', unit: 'kg' },
+];
 
 // ─── Notes ───────────────────────────────────────────────────────────────────
 
 export async function getNotesByEncounter(encounterId: string) {
   const res = await apiClient.get('/notes', { params: { encounterId } });
   return res.data;
+}
+
+// Latest SOAP note for an encounter, mapped to the SOAP shape (or null if none).
+// `/notes` returns raw clinical_notes rows with no ordering, so we sort by createdAt.
+export async function getEncounterSoap(encounterId: string): Promise<SOAP | null> {
+  const notes = await getNotesByEncounter(encounterId);
+  if (!Array.isArray(notes) || notes.length === 0) return null;
+  const latest = [...notes].sort(
+    (a, b) => new Date(b?.createdAt ?? 0).getTime() - new Date(a?.createdAt ?? 0).getTime(),
+  )[0];
+  return {
+    subjective: latest?.subjective ?? '',
+    objective: latest?.objective ?? '',
+    assessment: latest?.assessment ?? '',
+    plan: latest?.plan ?? '',
+  };
 }
 
 export async function createNote(data: Record<string, unknown>) {
@@ -22,6 +51,28 @@ export async function createNote(data: Record<string, unknown>) {
 export async function getVitalsByPatient(patientId: string) {
   const res = await apiClient.get('/vitals', { params: { patientId } });
   return res.data;
+}
+
+// Vitals recorded against a specific encounter, collapsed into a single Vitals object.
+// `/vitals` only filters by patient, so we filter on the observation's encounter reference
+// and key strictly by LOINC code (DB displays/units vary, e.g. bpm vs /min).
+interface FhirObservation {
+  encounter?: { reference?: string };
+  code?: { coding?: Array<{ code?: string }> };
+  valueQuantity?: { value?: number };
+}
+
+export async function getEncounterVitals(patientId: string, encounterId: string): Promise<Partial<Vitals>> {
+  const observations = (await getVitalsByPatient(patientId)) as FhirObservation[];
+  const codeToKey = new Map(VITALS_MAP.map(v => [v.code, v.key]));
+  const vitals: Partial<Vitals> = {};
+  for (const o of observations ?? []) {
+    if (o?.encounter?.reference !== `Encounter/${encounterId}`) continue;
+    const key = codeToKey.get(o?.code?.coding?.[0]?.code ?? '');
+    const value = o?.valueQuantity?.value;
+    if (key && typeof value === 'number') vitals[key] = value;
+  }
+  return vitals;
 }
 
 export async function getVitalsTrend(patientId: string) {

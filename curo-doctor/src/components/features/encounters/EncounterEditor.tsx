@@ -18,7 +18,7 @@ import { PrescriptionForm } from "./sections/PrescriptionForm";
 import { LabOrderForm } from "./sections/LabOrderForm";
 import { VitalsPanel } from "./sections/VitalsPanel";
 import { createEncounter, updateEncounterStatus } from "@/lib/api/encounters";
-import { createNote, createVitals, createPrescription, createLabOrder } from "@/lib/api/clinical";
+import { createNote, createVitals, createPrescription, createLabOrder, VITALS_MAP } from "@/lib/api/clinical";
 
 interface Props {
   patient: Patient;
@@ -27,17 +27,6 @@ interface Props {
   medicationsCatalog: Medication[];
   labTestsCatalog: LabTestCatalogItem[];
 }
-
-const VITALS_MAP = [
-  { key: 'bpSystolic' as keyof Vitals, code: '8480-6', display: 'Blood Pressure Systolic', unit: 'mmHg' },
-  { key: 'bpDiastolic' as keyof Vitals, code: '8462-4', display: 'Blood Pressure Diastolic', unit: 'mmHg' },
-  { key: 'pulseBpm' as keyof Vitals, code: '8867-4', display: 'Heart rate', unit: 'bpm' },
-  { key: 'temperatureC' as keyof Vitals, code: '8310-5', display: 'Body temperature', unit: 'Cel' },
-  { key: 'spo2Percent' as keyof Vitals, code: '2708-6', display: 'Oxygen saturation', unit: '%' },
-  { key: 'respirationRpm' as keyof Vitals, code: '9279-1', display: 'Respiratory rate', unit: '/min' },
-  { key: 'heightCm' as keyof Vitals, code: '8302-2', display: 'Body height', unit: 'cm' },
-  { key: 'weightKg' as keyof Vitals, code: '29463-7', display: 'Body weight', unit: 'kg' },
-];
 
 export function EncounterEditor({ patient, appointmentId, icd10Catalog }: Props) {
   const router = useRouter();
