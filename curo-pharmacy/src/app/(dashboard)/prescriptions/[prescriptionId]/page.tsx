@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { AxiosError } from "axios";
 import { Loader2, User, Phone, Pill, ClipboardList, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,8 +50,11 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ p
       const record = await dispense(prescriptionId);
       setDispensingRecords(prev => [record, ...prev]);
       setDispenseSuccess(true);
-    } catch (err: any) {
-      setDispenseError(err?.response?.data?.message ?? "Failed to dispense prescription.");
+    } catch (err: unknown) {
+      const message = err instanceof AxiosError
+        ? err.response?.data?.message
+        : undefined;
+      setDispenseError(message ?? "Failed to dispense prescription.");
     } finally {
       setIsDispensing(false);
     }
