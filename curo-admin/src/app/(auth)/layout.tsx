@@ -1,9 +1,9 @@
-import { ClipboardList, Shield, Clock, Users } from "lucide-react";
+import { BarChart3, FileSearch, Shield, ShieldCheck, Users } from "lucide-react";
 
 const features = [
-  { icon: Users, text: "Streamlined patient registration" },
-  { icon: Clock, text: "Quick check-in & queue management" },
-  { icon: Shield, text: "HIPAA compliant & secure" },
+  { icon: Users, text: "User and role administration" },
+  { icon: FileSearch, text: "Audit oversight across activity" },
+  { icon: BarChart3, text: "Income oversight dashboards" },
 ];
 
 export default function AuthLayout({
@@ -54,14 +54,14 @@ export default function AuthLayout({
               border: "1px solid rgba(255,255,255,0.12)",
             }}
           >
-            <ClipboardList className="w-5 h-5 text-white" />
+            <ShieldCheck className="w-5 h-5 text-white" />
           </div>
           <div>
             <span className="text-xl font-bold text-white tracking-tight">
               Curo
             </span>
             <p className="text-[11px] text-white/40 leading-none mt-0.5">
-              Receptionist Dashboard
+              Super Admin Portal
             </p>
           </div>
         </div>
@@ -70,15 +70,15 @@ export default function AuthLayout({
         <div className="relative z-10 space-y-8">
           <div className="space-y-4">
             <h2 className="text-[38px] font-bold text-white leading-tight">
-              Patient management
+              Administrative control
               <br />
               <span style={{ color: "rgba(147,197,253,0.85)" }}>
-                at your fingertips
+                for clinic operations
               </span>
             </h2>
             <p className="text-white/45 text-[15px] leading-relaxed max-w-[272px]">
-              Register patients, manage appointments, and keep the front desk
-              running smoothly.
+              Manage system users, review operational activity, and oversee
+              revenue across the organization.
             </p>
           </div>
 
@@ -122,7 +122,7 @@ export default function AuthLayout({
                   "linear-gradient(135deg, #060d1a 0%, #12244a 100%)",
               }}
             >
-              <ClipboardList className="w-4 h-4 text-white" />
+              <Shield className="w-4 h-4 text-white" />
             </div>
             <span className="text-lg font-bold tracking-tight text-gray-900">
               Curo

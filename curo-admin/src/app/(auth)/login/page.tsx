@@ -42,7 +42,7 @@ export default function LoginPage() {
           Welcome back
         </h1>
         <p className="text-gray-500 text-sm">
-          Sign in to the reception desk
+          Sign in to the admin console
         </p>
       </div>
 
@@ -57,7 +57,7 @@ export default function LoginPage() {
             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             <Input
               id="email"
-              placeholder="receptionist@curo.com"
+              placeholder="admin@curo.health"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
