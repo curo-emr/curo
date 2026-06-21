@@ -8,6 +8,7 @@ import { Observation } from './entities/observation.entity';
 import { QrCode } from './entities/qr-code.entity';
 import { LabInstrument } from './entities/lab-instrument.entity';
 import { LabTestCatalog } from './entities/lab-test-catalog.entity';
+import { QCLog } from './entities/qc-log.entity';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { LabTestCatalog } from './entities/lab-test-catalog.entity';
       username: process.env.DB_USER || 'curo',
       password: process.env.DB_PASS || 'curo_secret',
       database: process.env.DB_NAME || 'curo_db',
-      entities: [ServiceRequest, DiagnosticReport, Observation, QrCode, LabInstrument, LabTestCatalog],
+      entities: [ServiceRequest, DiagnosticReport, Observation, QrCode, LabInstrument, LabTestCatalog, QCLog],
       synchronize: true,
     }),
     LabModule,

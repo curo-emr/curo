@@ -22,6 +22,7 @@ enum DiagStatus { FINAL='final' }
 enum ObsStatus { FINAL='final' }
 enum DispStatus { COMPLETED='completed' }
 enum InstrumentStatus { OPERATIONAL='operational', MAINTENANCE='maintenance', OFFLINE='offline' }
+enum QCStatus { PASS='pass', FAIL='fail', WARNING='warning' }
 enum AllergyType { ALLERGY='allergy', INTOLERANCE='intolerance' }
 enum AllergyCrit { LOW='low', HIGH='high', UNABLE_TO_ASSESS='unable-to-assess' }
 enum CondStatus { ACTIVE='active', RESOLVED='resolved' }
@@ -594,13 +595,44 @@ async function seed() {
     { name: 'Sysmex XN-550', model: 'XN-550', manufacturer: 'Sysmex', serial: 'SYS-XN-2023-001', category: 'hematology', status: 'operational', location: 'Lab Room 1' },
     { name: 'Beckman AU480', model: 'AU480', manufacturer: 'Beckman Coulter', serial: 'BCK-AU-2022-002', category: 'chemistry', status: 'operational', location: 'Lab Room 2' },
   ];
+  const instrumentIds: string[] = [];
   for (const inst of instruments) {
-    await db.query(`
+    const [createdInstrument] = await db.query(`
       INSERT INTO lab_instruments (id, name, model, manufacturer, "serialNumber", status, location, category, "lastMaintenanceDate")
       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
     `, [inst.name, inst.model, inst.manufacturer, inst.serial, inst.status, inst.location, inst.category, '2026-01-15']);
+    instrumentIds.push(createdInstrument.id);
   }
   console.log('✅ 2 lab instruments created');
+
+  // ---- LAB QUALITY CONTROL LOGS ----
+  const qcLogs = [
+    { instrumentIdx: 0, testCode: '718-7', controlLevel: 'Normal', expectedValue: 13.5, observedValue: 13.4, unit: 'g/dL', status: QCStatus.PASS, staffIdx: 0, minutesAgo: 90, notes: '' },
+    { instrumentIdx: 0, testCode: '26515-7', controlLevel: 'High', expectedValue: 420, observedValue: 438, unit: '10^3/uL', status: QCStatus.WARNING, staffIdx: 1, minutesAgo: 80, notes: 'Outside preferred range; repeat control before patient samples.' },
+    { instrumentIdx: 1, testCode: '2345-7', controlLevel: 'Normal', expectedValue: 95, observedValue: 94, unit: 'mg/dL', status: QCStatus.PASS, staffIdx: 0, minutesAgo: 70, notes: '' },
+    { instrumentIdx: 1, testCode: '17856-6', controlLevel: 'Normal', expectedValue: 5.4, observedValue: 6.1, unit: '%', status: QCStatus.FAIL, staffIdx: 1, minutesAgo: 60, notes: 'Out of range. Hold HbA1c runs until calibration is verified.' },
+    { instrumentIdx: 1, testCode: '2093-3', controlLevel: 'High', expectedValue: 240, observedValue: 238, unit: 'mg/dL', status: QCStatus.PASS, staffIdx: 0, minutesAgo: 50, notes: '' },
+  ];
+  for (const log of qcLogs) {
+    const performedAt = new Date(Date.now() - log.minutesAgo * 60_000);
+    await db.query(`
+      INSERT INTO lab_qc_logs (id, "instrumentId", "testCode", "controlLevel", "expectedValue", "observedValue", unit, status, "performedBy", "performedAt", notes)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `, [
+      instrumentIds[log.instrumentIdx],
+      log.testCode,
+      log.controlLevel,
+      log.expectedValue,
+      log.observedValue,
+      log.unit,
+      log.status,
+      labStaffIds[log.staffIdx],
+      performedAt,
+      log.notes,
+    ]);
+  }
+  console.log(`✅ ${qcLogs.length} lab QC logs created`);
 
   // ---- NOTIFICATIONS ----
   const notifications = [
