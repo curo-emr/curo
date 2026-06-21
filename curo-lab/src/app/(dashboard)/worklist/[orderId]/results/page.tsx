@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { Loader2 } from "lucide-react";
 import { ResultsEntryForm } from "@/components/features/worklist/ResultsEntryForm";
+import { LabReportUpload } from "@/components/features/worklist/LabReportUpload";
 import { getLabOrderById } from "@/lib/api/lab";
 import { getPatientById } from "@/lib/api/patients";
 import { getLabTestCatalog } from "@/lib/data/api";
@@ -36,6 +37,8 @@ export default function ResultsEntryPage({ params }: { params: Promise<{ orderId
       </div>
 
       <ResultsEntryForm order={order} patient={patient} testCatalog={testCatalog} />
+
+      <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId} />
     </div>
   );
 }
