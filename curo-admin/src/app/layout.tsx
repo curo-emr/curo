@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CuroMD - Receptionist Portal",
-  description: "Electronic Medical Record system - Front Desk",
+  title: "CuroMD - Super Admin Portal",
+  description: "Electronic Medical Record system - Admin Console",
 };
 
 export default function RootLayout({
