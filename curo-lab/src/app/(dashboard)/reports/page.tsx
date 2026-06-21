@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, Clock, FlaskConical, XCircle, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getLabOrders } from "@/lib/api/lab";
-import { getLabTestCatalog } from "@/lib/data/api";
+import { getLabOrders, getLabTestCatalog } from "@/lib/api/lab";
 import type { LabOrder, LabTestCatalogItem } from "@/types";
 
 export default function ReportsPage() {

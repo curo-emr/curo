@@ -5,18 +5,16 @@ import { Loader2 } from "lucide-react";
 import { WorklistTable } from "@/components/features/worklist/WorklistTable";
 import { getLabOrders } from "@/lib/api/lab";
 import { getPatients } from "@/lib/api/patients";
-import { getLabTestCatalog } from "@/lib/data/api";
-import type { LabOrder, Patient, LabTestCatalogItem } from "@/types";
+import type { LabOrder, Patient } from "@/types";
 
 export default function WorklistPage() {
   const [orders, setOrders] = useState<LabOrder[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getLabOrders(), getPatients(), getLabTestCatalog()])
-      .then(([ords, pts, catalog]) => { setOrders(ords); setPatients(pts); setTestCatalog(catalog); })
+    Promise.all([getLabOrders(), getPatients()])
+      .then(([ords, pts]) => { setOrders(ords); setPatients(pts); })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
@@ -31,7 +29,7 @@ export default function WorklistPage() {
       {isLoading ? (
         <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <WorklistTable orders={orders} patients={patients} testCatalog={testCatalog} staff={[]} />
+        <WorklistTable orders={orders} patients={patients} />
       )}
     </div>
   );

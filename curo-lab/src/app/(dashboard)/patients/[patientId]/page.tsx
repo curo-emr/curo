@@ -3,8 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { Loader2 } from "lucide-react";
 import { getPatientById } from "@/lib/api/patients";
-import { getLabOrdersByPatient, getLabResultsByPatient, type LabResult } from "@/lib/api/lab";
-import { getLabTestCatalog } from "@/lib/data/api";
+import { getLabOrdersByPatient, getLabResultsByPatient, getLabTestCatalog, type LabResult } from "@/lib/api/lab";
 import { calculateAge, formatDate, getTestName, formatStatus } from "@/lib/utils";
 import type { Patient, LabOrder, LabTestCatalogItem } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

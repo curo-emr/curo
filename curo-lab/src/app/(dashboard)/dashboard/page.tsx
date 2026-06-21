@@ -7,9 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { LabDashboardStats } from "@/components/features/dashboard/LabDashboardStats";
 import { UrgentOrdersList } from "@/components/features/dashboard/UrgentOrdersList";
 import { RecentActivityFeed } from "@/components/features/dashboard/RecentActivityFeed";
-import { getLabOrders, getLabInstruments, type LabInstrument } from "@/lib/api/lab";
+import { getLabOrders, getLabInstruments, getLabTestCatalog, getQCLogs, type LabInstrument } from "@/lib/api/lab";
 import { getPatients } from "@/lib/api/patients";
-import { getLabTestCatalog } from "@/lib/data/api";
 import type { LabOrder, Patient, LabTestCatalogItem, QCLog } from "@/types";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
@@ -18,15 +17,17 @@ export default function DashboardPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
   const [instruments, setInstruments] = useState<LabInstrument[]>([]);
+  const [qcLogs, setQcLogs] = useState<QCLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getLabOrders(), getPatients(), getLabTestCatalog(), getLabInstruments()])
-      .then(([ords, pts, catalog, insts]) => {
+    Promise.all([getLabOrders(), getPatients(), getLabTestCatalog(), getLabInstruments(), getQCLogs()])
+      .then(([ords, pts, catalog, insts, logs]) => {
         setOrders(ords);
         setPatients(pts);
         setTestCatalog(catalog);
         setInstruments(insts);
+        setQcLogs(logs);
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -35,12 +36,7 @@ export default function DashboardPage() {
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
   const urgentOrders = orders.filter(o => o.priority === 'urgent' || o.priority === 'stat');
-  const qcAlerts: QCLog[] = [];
-
-  const today = new Date();
-  const dateHeading = today.toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-  });
+  const qcAlerts = qcLogs.filter(log => log.status === 'fail' || log.status === 'warning');
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">

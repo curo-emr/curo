@@ -9,9 +9,8 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { calculateAge, formatDate, getTestName, formatStatus } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
-import { getLabOrderById, getLabResultsByOrder, receiveOrder, type LabResult } from "@/lib/api/lab";
+import { getLabOrderById, getLabResultsByOrder, getLabTestCatalog, receiveOrder, type LabResult } from "@/lib/api/lab";
 import { getPatientById } from "@/lib/api/patients";
-import { getLabTestCatalog } from "@/lib/data/api";
 import type { LabOrder, Patient, LabTestCatalogItem } from "@/types";
 
 export default function OrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
@@ -30,7 +29,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
     const [pt, catalog, res] = await Promise.all([
       getPatientById(ord.patientId),
       getLabTestCatalog(),
-      getLabResultsByOrder(orderId),
+      getLabResultsByOrder(orderId, ord.patientId),
     ]);
     setPatient(pt);
     setTestCatalog(catalog);
@@ -120,7 +119,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
               <div className="divide-y divide-slate-100">
                 {order.tests.map(test => {
                   const catalogItem = testCatalog.find(t => t.id === test.testId || t.code === test.testId);
-                  const orderResult = results.find(r => r.results.some(rr => rr.testCode === test.testId));
+                  const orderResult = results.find(r => r.results?.some(rr => rr.testCode === test.testId));
                   return (
                     <div key={test.testId} className="p-4 flex items-center justify-between">
                       <div>
@@ -208,7 +207,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                           </tr>
                         </thead>
                         <tbody>
-                          {result.results.map((rr, i) => (
+                          {result.results?.map((rr, i) => (
                             <tr key={i} className="border-b border-slate-100 last:border-0">
                               <td className="px-3 py-2 text-slate-700">{rr.testName}</td>
                               <td className="px-3 py-2 font-medium">{rr.value} {rr.unit}</td>
