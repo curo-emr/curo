@@ -1,6 +1,11 @@
 import { apiClient } from './client';
-import { mapFhirPatient, mapFhirMedicationRequest, type FhirPatient, type FhirMedicationRequest } from './mappers';
-import type { Patient, Prescription } from '@/types';
+import {
+  mapFhirMedicationDispense,
+  mapFhirMedicationRequest,
+  type FhirMedicationDispense,
+  type FhirMedicationRequest,
+} from './mappers';
+import type { Prescription } from '@/types';
 
 // ─── Prescriptions ───────────────────────────────────────────────────────────
 
@@ -33,23 +38,25 @@ export interface DispenseRecord {
 }
 
 export async function dispense(prescriptionId: string): Promise<DispenseRecord> {
-  const res = await apiClient.post<DispenseRecord>('/dispense', { prescriptionId });
-  return res.data;
+  const res = await apiClient.post<FhirMedicationDispense>('/dispense', { prescriptionId });
+  return mapFhirMedicationDispense(res.data);
 }
 
 export async function getDispensingRecords(): Promise<DispenseRecord[]> {
-  const res = await apiClient.get<DispenseRecord[]>('/dispense');
-  return res.data;
+  const res = await apiClient.get<Array<FhirMedicationDispense | DispenseRecord>>('/dispense');
+  return res.data.map(mapFhirMedicationDispense);
 }
 
 export async function getDispensingRecordsByPatient(patientId: string): Promise<DispenseRecord[]> {
-  const res = await apiClient.get<DispenseRecord[]>('/dispense', { params: { patientId } });
-  return res.data;
+  const res = await apiClient.get<Array<FhirMedicationDispense | DispenseRecord>>('/dispense', { params: { patientId } });
+  return res.data.map(mapFhirMedicationDispense);
 }
 
 export async function getDispensingRecordsByPrescription(prescriptionId: string): Promise<DispenseRecord[]> {
-  const res = await apiClient.get<DispenseRecord[]>('/dispense', { params: { prescriptionId } });
-  return res.data;
+  const res = await apiClient.get<Array<FhirMedicationDispense | DispenseRecord>>('/dispense', { params: { prescriptionId } });
+  return res.data
+    .map(mapFhirMedicationDispense)
+    .filter(record => record.prescriptionId === prescriptionId);
 }
 
 // ─── Stock ───────────────────────────────────────────────────────────────────
