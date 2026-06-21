@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { TestCatalogList } from "@/components/features/test-catalog/TestCatalogList";
-import { getLabTestCatalog } from "@/lib/data/api";
+import { getLabTestCatalog } from "@/lib/api/lab";
 import type { LabTestCatalogItem } from "@/types";
 
 export default function TestCatalogPage() {

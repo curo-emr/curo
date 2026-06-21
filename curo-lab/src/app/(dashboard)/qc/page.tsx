@@ -5,14 +5,24 @@ import { Loader2, Cpu } from "lucide-react";
 import { QCLogTable } from "@/components/features/qc/QCLogTable";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getLabInstruments, type LabInstrument } from "@/lib/api/lab";
+import { getLabInstruments, getLabStaff, getQCLogs, type LabInstrument } from "@/lib/api/lab";
+import type { LabStaff, QCLog } from "@/types";
 
 export default function QCPage() {
   const [instruments, setInstruments] = useState<LabInstrument[]>([]);
+  const [logs, setLogs] = useState<QCLog[]>([]);
+  const [staff, setStaff] = useState<LabStaff[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getLabInstruments().then(setInstruments).catch(console.error).finally(() => setIsLoading(false));
+    Promise.all([getLabInstruments(), getQCLogs(), getLabStaff()])
+      .then(([insts, qcLogs, labStaff]) => {
+        setInstruments(insts);
+        setLogs(qcLogs);
+        setStaff(labStaff);
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
   }, []);
 
   return (
@@ -46,7 +56,7 @@ export default function QCPage() {
         </div>
       )}
 
-      <QCLogTable logs={[]} instruments={instruments} staff={[]} />
+      <QCLogTable logs={logs} instruments={instruments} staff={staff} />
     </div>
   );
 }

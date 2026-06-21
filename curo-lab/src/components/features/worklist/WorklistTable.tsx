@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, Eye } from "lucide-react";
-import { LabOrder, Patient, LabTestCatalogItem, LabStaff } from "@/types";
+import { LabOrder, Patient } from "@/types";
 import { getPatientName, formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorklistFilters } from "./WorklistFilters";
@@ -32,8 +32,6 @@ const STATUS_TABS = [
 interface WorklistTableProps {
   orders: LabOrder[];
   patients: Patient[];
-  testCatalog: LabTestCatalogItem[];
-  staff: LabStaff[];
 }
 
 export function WorklistTable({ orders, patients }: WorklistTableProps) {

@@ -4,9 +4,8 @@ import { useState, useEffect, use } from "react";
 import { Loader2 } from "lucide-react";
 import { ResultsEntryForm } from "@/components/features/worklist/ResultsEntryForm";
 import { LabReportUpload } from "@/components/features/worklist/LabReportUpload";
-import { getLabOrderById } from "@/lib/api/lab";
+import { getLabOrderById, getLabTestCatalog } from "@/lib/api/lab";
 import { getPatientById } from "@/lib/api/patients";
-import { getLabTestCatalog } from "@/lib/data/api";
 import type { LabOrder, Patient, LabTestCatalogItem } from "@/types";
 
 export default function ResultsEntryPage({ params }: { params: Promise<{ orderId: string }> }) {
