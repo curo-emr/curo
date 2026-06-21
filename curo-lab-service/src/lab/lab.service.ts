@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { ServiceRequest } from '../entities/service-request.entity';
 import { DiagnosticReport } from '../entities/diagnostic-report.entity';
 import { Observation } from '../entities/observation.entity';
 import { QrCode } from '../entities/qr-code.entity';
 import { LabInstrument } from '../entities/lab-instrument.entity';
 import { LabTestCatalog } from '../entities/lab-test-catalog.entity';
+import { QCLog, QCStatus } from '../entities/qc-log.entity';
 import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
 import { ServiceRequestStatus, DiagnosticReportStatus, ObservationStatus, InstrumentStatus } from '../enums';
@@ -60,6 +61,9 @@ export class LabService {
     private instrumentsRepo: Repository<LabInstrument>,
     @InjectRepository(LabTestCatalog)
     private catalogRepo: Repository<LabTestCatalog>,
+    @InjectRepository(QCLog)
+    private qcLogRepo: Repository<QCLog>,
+    private dataSource: DataSource,
   ) {}
 
   // Tests a given lab offers (doctors browse before ordering).
@@ -234,6 +238,40 @@ export class LabService {
   // Instruments
   async getInstruments(): Promise<LabInstrument[]> {
     return this.instrumentsRepo.find();
+  }
+
+  async getQcLogs(filters?: { instrumentId?: string; status?: QCStatus }): Promise<QCLog[]> {
+    const where: any = {};
+    if (filters?.instrumentId) where.instrumentId = filters.instrumentId;
+    if (filters?.status) where.status = filters.status;
+    return this.qcLogRepo.find({ where, order: { performedAt: 'DESC' } });
+  }
+
+  async getLabStaff(): Promise<any[]> {
+    const rows = await this.dataSource.query(`
+      SELECT id, "firstName", "lastName", email, specialization, qualification, active
+      FROM practitioners
+      WHERE role = 'LAB_STAFF'
+      ORDER BY "firstName", "lastName"
+    `);
+
+    return rows.map((row: any) => ({
+      id: row.id,
+      name: {
+        first: row.firstName,
+        last: row.lastName,
+        full: `${row.firstName} ${row.lastName}`,
+      },
+      role: 'technician',
+      department: row.specialization ?? 'Laboratory',
+      employeeId: row.id,
+      email: row.email,
+      phone: '',
+      qualifications: row.qualification ? [row.qualification] : [],
+      activeShift: 'morning',
+      joinedAt: '',
+      active: row.active,
+    }));
   }
 
   async updateInstrumentStatus(id: string, status: InstrumentStatus, notes?: string): Promise<LabInstrument> {

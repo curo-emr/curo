@@ -6,7 +6,8 @@
   "scripts": {
     "seed": "cd scripts && ts-node --project tsconfig.seed.json seed.ts",
     "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down"
+    "docker:down": "docker-compose down",
+    "docker:build:backends": "bash scripts/build-backends-with-local-npm-registry.sh"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",

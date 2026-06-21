@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
+import axios from 'axios';
 import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
 
 const SERVICE_MAP: Record<string, string> = {
@@ -22,6 +23,8 @@ const SERVICE_MAP: Record<string, string> = {
   '/results': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/reports': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/instruments': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
+  '/qc-logs': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
+  '/lab-staff': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/documents': process.env.DOCUMENT_SERVICE_URL || 'http://localhost:3009',
   '/notifications': process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3007',
   '/audit': process.env.AUDIT_SERVICE_URL || 'http://localhost:3008',
@@ -54,10 +57,91 @@ function getTarget(path: string): string | null {
   return null;
 }
 
+// ─── Aggregated OpenAPI docs ────────────────────────────────────────────────
+// Each downstream service exposes its own spec at `${base}/api-docs-json`. We
+// fetch them all once (cached), merge paths + schemas into a single OpenAPI 3
+// document with one server (the gateway) and a global bearer-auth scheme, and
+// serve it at GET /openapi.json. GET /docs renders it with Scalar. Both routes
+// are handled here in the middleware so they are never proxied and need no auth.
+const SPEC_BASES = Array.from(new Set(Object.values(SERVICE_MAP)));
+const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL || 'http://localhost:3000';
+
+let mergedSpecCache: any = null;
+async function buildMergedSpec(): Promise<any> {
+  if (mergedSpecCache) return mergedSpecCache;
+  const merged: any = {
+    openapi: '3.0.0',
+    info: {
+      title: 'Curo EMR API',
+      description:
+        'Unified API reference for the Curo EMR platform. All requests go through the ' +
+        `gateway at ${GATEWAY_PUBLIC_URL}. Obtain a token via POST /auth/login, click ` +
+        '**Authorize**, paste the accessToken, then call any endpoint.',
+      version: '1.0.0',
+    },
+    servers: [{ url: GATEWAY_PUBLIC_URL, description: 'API gateway' }],
+    tags: [] as any[],
+    paths: {} as Record<string, any>,
+    components: {
+      schemas: {} as Record<string, any>,
+      securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
+    },
+    security: [{ bearerAuth: [] }],
+  };
+  const seenTags = new Set<string>();
+  await Promise.all(
+    SPEC_BASES.map(async (base) => {
+      try {
+        const { data } = await axios.get(`${base}/api-docs-json`, { timeout: 5000 });
+        for (const [p, item] of Object.entries(data.paths || {})) {
+          // First service to declare a path wins (clinical precedes pharmacy in
+          // SERVICE_MAP, so the reachable /prescriptions handler is kept).
+          if (!merged.paths[p]) merged.paths[p] = item;
+        }
+        Object.assign(merged.components.schemas, data.components?.schemas || {});
+        for (const t of data.tags || []) {
+          if (!seenTags.has(t.name)) { seenTags.add(t.name); merged.tags.push(t); }
+        }
+      } catch {
+        // service unreachable / no spec — leave the merged doc partial
+      }
+    }),
+  );
+  mergedSpecCache = merged;
+  return merged;
+}
+
+const SCALAR_HTML = `<!doctype html>
+<html>
+  <head>
+    <title>Curo EMR API Reference</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <script id="api-reference" data-url="/openapi.json"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  </body>
+</html>`;
+
 @Injectable()
 export class ProxyMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const path = req.path;
+
+    // Aggregated API documentation — served directly, never proxied, no auth.
+    if (path === '/openapi.json') {
+      if (req.query.refresh) mergedSpecCache = null;
+      buildMergedSpec()
+        .then((spec) => res.json(spec))
+        .catch(() => res.status(502).json({ message: 'Failed to build aggregated spec' }));
+      return;
+    }
+    if (path === '/docs' || path === '/docs/') {
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(SCALAR_HTML);
+    }
+
     const isPublic = PUBLIC_PATHS.some(p => path.startsWith(p));
 
     if (!isPublic) {

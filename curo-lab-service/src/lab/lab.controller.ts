@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles, CurrentUser } from '../common/decorators';
 import { InstrumentStatus } from '../enums';
+import { QCStatus } from '../entities/qc-log.entity';
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -80,6 +81,18 @@ export class LabController {
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
   getInstruments() {
     return this.labService.getInstruments();
+  }
+
+  @Get('qc-logs')
+  @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
+  getQcLogs(@Query('instrumentId') instrumentId?: string, @Query('status') status?: QCStatus) {
+    return this.labService.getQcLogs({ instrumentId, status });
+  }
+
+  @Get('lab-staff')
+  @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
+  getLabStaff() {
+    return this.labService.getLabStaff();
   }
 
   @Post('instruments')
