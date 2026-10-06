@@ -11,8 +11,9 @@ import { TodayAppointments } from "@/components/features/dashboard/TodayAppointm
 import { QuickActions } from "@/components/features/dashboard/QuickActions";
 import { QueueSummary } from "@/components/features/dashboard/QueueSummary";
 import { getAppointments } from "@/lib/api/appointments";
-import { isAwaitingDoctor } from "@/lib/queue";
-import { getPatients } from "@/lib/api/patients";
+import { isAwaitingDoctor, QUEUE_POLL_MS } from "@/lib/queue";
+import { getPatientsByIds } from "@/lib/api/patients";
+import { usePolling } from "@/lib/hooks/usePolling";
 import { getDoctors, type Practitioner } from "@/lib/api/practitioners";
 import type { Appointment, Patient, Doctor } from "@/types";
 
@@ -39,21 +40,24 @@ export default function DashboardPage() {
   const todayStr = getTodayString();
 
   useEffect(() => {
-    Promise.all([
-      getAppointments({ date: todayStr }),
-      getPatients(),
-      getDoctors(),
-    ])
-      .then(([appts, pts, practs]) => {
-        setAppointments(appts);
-        setPatients(pts);
-        setDoctors(practs.map(mapPractitionerToDoctor));
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [todayStr]);
+    getDoctors().then(practs => setDoctors(practs.map(mapPractitionerToDoctor))).catch(console.error);
+  }, []);
 
-  const todaysSchedule = appointments.sort((a, b) => a.time.localeCompare(b.time));
+  // Today's appointments + their patients, kept fresh while the dashboard is open.
+  const loadToday = async () => {
+    try {
+      const appts = await getAppointments({ date: todayStr });
+      setAppointments(appts);
+      setPatients(await getPatientsByIds([...new Set(appts.map(a => a.patientId))]));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  usePolling(loadToday, QUEUE_POLL_MS);
+
+  const todaysSchedule = [...appointments].sort((a, b) => a.time.localeCompare(b.time));
 
   const today = new Date();
   const dateHeading = today.toLocaleDateString("en-US", {
@@ -107,7 +111,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <TodayAppointments appointments={todaysSchedule} patients={patients} doctors={doctors} />
+          <TodayAppointments appointments={todaysSchedule} patients={patients} doctors={doctors} onChange={loadToday} />
         </div>
 
         <div className="space-y-6">
