@@ -1,6 +1,7 @@
 import { apiClient } from './client';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, mapFhirMedicationRequest, mapFhirServiceRequest, mapFhirAppointment, mapFhirEncounter, type FhirPatient, type FhirAllergy, type FhirCondition, type FhirMedicationRequest, type FhirServiceRequest, type FhirAppointment, type FhirEncounter } from './mappers';
 import type { Patient, Allergy, Problem, Appointment, Encounter, Prescription, LabOrder } from '@/types';
+import { unwrapBundle, type FhirBundle } from './fhir';
 
 export async function getMyProfile(): Promise<Patient | null> {
   try {
@@ -12,33 +13,33 @@ export async function getMyProfile(): Promise<Patient | null> {
 }
 
 export async function getMyAppointments(): Promise<Appointment[]> {
-  const res = await apiClient.get<FhirAppointment[]>('/appointments');
-  return res.data.map(mapFhirAppointment);
+  const res = await apiClient.get<FhirAppointment[] | FhirBundle<FhirAppointment>>('/appointments');
+  return unwrapBundle(res.data).resources.map(mapFhirAppointment);
 }
 
 export async function getMyAllergies(patientId: string): Promise<Allergy[]> {
-  const res = await apiClient.get<FhirAllergy[]>(`/patients/${patientId}/allergies`);
-  return res.data.map(a => mapFhirAllergy({ ...a, patient: { reference: `Patient/${patientId}` } }));
+  const res = await apiClient.get<FhirAllergy[] | FhirBundle<FhirAllergy>>(`/patients/${patientId}/allergies`);
+  return unwrapBundle(res.data).resources.map(a => mapFhirAllergy({ ...a, patient: { reference: `Patient/${patientId}` } }));
 }
 
 export async function getMyConditions(patientId: string): Promise<Problem[]> {
-  const res = await apiClient.get<FhirCondition[]>(`/patients/${patientId}/conditions`);
-  return res.data.map(c => mapFhirCondition({ ...c, subject: { reference: `Patient/${patientId}` } }));
+  const res = await apiClient.get<FhirCondition[] | FhirBundle<FhirCondition>>(`/patients/${patientId}/conditions`);
+  return unwrapBundle(res.data).resources.map(c => mapFhirCondition({ ...c, subject: { reference: `Patient/${patientId}` } }));
 }
 
 export async function getMyPrescriptions(patientId: string): Promise<Prescription[]> {
-  const res = await apiClient.get<FhirMedicationRequest[]>('/prescriptions', { params: { patientId } });
-  return res.data.map(mapFhirMedicationRequest);
+  const res = await apiClient.get<FhirMedicationRequest[] | FhirBundle<FhirMedicationRequest>>('/prescriptions', { params: { patientId } });
+  return unwrapBundle(res.data).resources.map(mapFhirMedicationRequest);
 }
 
 export async function getMyLabOrders(patientId: string): Promise<LabOrder[]> {
-  const res = await apiClient.get<FhirServiceRequest[]>('/lab-orders', { params: { patientId } });
-  return res.data.map(mapFhirServiceRequest);
+  const res = await apiClient.get<FhirServiceRequest[] | FhirBundle<FhirServiceRequest>>('/lab-orders', { params: { patientId } });
+  return unwrapBundle(res.data).resources.map(mapFhirServiceRequest);
 }
 
 export async function getMyEncounters(patientId: string): Promise<Encounter[]> {
-  const res = await apiClient.get<FhirEncounter[]>(`/encounters/patient/${patientId}`);
-  return res.data.map(mapFhirEncounter);
+  const res = await apiClient.get<FhirEncounter[] | FhirBundle<FhirEncounter>>(`/encounters/patient/${patientId}`);
+  return unwrapBundle(res.data).resources.map(mapFhirEncounter);
 }
 
 export async function getPractitioners(): Promise<{ id: string; name: { full: string } }[]> {

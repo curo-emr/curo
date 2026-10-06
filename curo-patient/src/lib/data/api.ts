@@ -14,14 +14,6 @@ export async function getPatientEncounters() { return []; }
 export async function getPrescriptionById() { return null; }
 export async function getEncounterById() { return null; }
 
-import labTestsData from '../../../data/lab-tests.json';
-import medicationsData from '../../../data/medications.json';
-import type { LabTestCatalogItem, Medication } from '@/types';
-
-export async function getLabTestCatalog(): Promise<LabTestCatalogItem[]> {
-  return labTestsData as LabTestCatalogItem[];
-}
-
-export async function getMedicationCatalog(): Promise<Medication[]> {
-  return medicationsData as Medication[];
-}
+// Catalog readers — DB-backed endpoints via the gateway.
+export { getLabTestCatalog } from '@/lib/api/catalog';
+export { getMedicationCatalog } from '@/lib/api/medications';
