@@ -1,18 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { ServiceRequest } from '../entities/service-request.entity';
+import { ServiceRequest, Observation, QrCode } from '@curo/shared/database';
+import { ServiceRequestStatus, ObservationStatus } from '@curo/shared/enums';
+import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
 import { DiagnosticReport } from '../entities/diagnostic-report.entity';
-import { Observation } from '../entities/observation.entity';
-import { QrCode } from '../entities/qr-code.entity';
 import { LabInstrument } from '../entities/lab-instrument.entity';
 import { LabTestCatalog } from '../entities/lab-test-catalog.entity';
 import { QCLog, QCStatus } from '../entities/qc-log.entity';
 import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
-import { ServiceRequestStatus, DiagnosticReportStatus, ObservationStatus, InstrumentStatus } from '../enums';
+import { DiagnosticReportStatus, InstrumentStatus } from '../enums';
 import { generateLabReportPdf } from './pdf.generator';
-import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 function toFhirServiceRequest(s: ServiceRequest) {
   return {

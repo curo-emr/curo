@@ -4,9 +4,7 @@ import {
 import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { RolesGuard } from '../common/roles.guard';
-import { Roles, CurrentUser } from '../common/decorators';
+import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
 
 @Controller('payments')
 @UseGuards(JwtAuthGuard, RolesGuard)

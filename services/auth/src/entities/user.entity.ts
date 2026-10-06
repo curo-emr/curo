@@ -2,7 +2,7 @@ import {
   Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
   UpdateDateColumn, Index,
 } from 'typeorm';
-import { UserRole } from '../enums';
+import { UserRole } from '@curo/shared/enums';
 
 @Entity('users')
 export class User {

@@ -5,9 +5,7 @@ import { AppointmentService } from './appointment.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { UpdateQueueStageDto } from './dto/update-queue-stage.dto';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { RolesGuard } from '../common/roles.guard';
-import { Roles, CurrentUser } from '../common/decorators';
+import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
 
 @Controller('appointments')
 @UseGuards(JwtAuthGuard, RolesGuard)

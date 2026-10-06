@@ -1,13 +1,3 @@
-export enum UserRole {
-  PATIENT = 'PATIENT',
-  DOCTOR = 'DOCTOR',
-  RECEPTIONIST = 'RECEPTIONIST',
-  PHARMACIST = 'PHARMACIST',
-  LAB_STAFF = 'LAB_STAFF',
-  NURSE = 'NURSE',
-  SUPER_ADMIN = 'SUPER_ADMIN',
-}
-
 export enum NotificationEventType {
   APPOINTMENT_CONFIRMED = 'appointment_confirmed',
   APPOINTMENT_CANCELLED = 'appointment_cancelled',

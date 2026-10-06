@@ -7,7 +7,7 @@ import { Repository } from 'typeorm';
 import { Readable } from 'stream';
 import { randomUUID } from 'crypto';
 import { DocumentReference } from '../entities/document-reference.entity';
-import { AuditLog } from '../entities/audit-log.entity';
+import { AuditLog } from '@curo/shared/database';
 import { STORAGE_PROVIDER } from '../storage/storage.provider';
 import type { StorageProvider } from '../storage/storage.provider';
 import { CreateDocumentDto } from './dto/create-document.dto';

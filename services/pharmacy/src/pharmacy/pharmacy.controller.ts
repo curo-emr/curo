@@ -4,9 +4,7 @@ import {
 import { PharmacyService } from './pharmacy.service';
 import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { RolesGuard } from '../common/roles.guard';
-import { Roles, CurrentUser } from '../common/decorators';
+import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)

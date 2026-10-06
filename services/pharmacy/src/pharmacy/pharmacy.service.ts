@@ -2,14 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import { MedicationRequest } from '../entities/medication-request.entity';
+import { MedicationRequest } from '@curo/shared/database';
+import { MedicationRequestStatus } from '@curo/shared/enums';
+import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
 import { MedicationDispense } from '../entities/medication-dispense.entity';
 import { Stock } from '../entities/stock.entity';
 import { MedicationCatalog } from '../entities/medication-catalog.entity';
 import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
-import { MedicationRequestStatus, MedicationDispenseStatus } from '../enums';
-import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
+import { MedicationDispenseStatus } from '../enums';
 
 function toFhirDispense(d: MedicationDispense) {
   return {

@@ -1,8 +1,8 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuditLog } from '../entities/audit-log.entity';
-import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
+import { AuditLog } from '@curo/shared/database';
+import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
 
 @Injectable()
 export class AuditService {

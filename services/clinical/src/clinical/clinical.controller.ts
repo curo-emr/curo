@@ -7,9 +7,7 @@ import { CreateNoteDto } from './dto/create-note.dto';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { CreateLabOrderDto } from './dto/create-lab-order.dto';
 import { CreateVitalsDto } from './dto/create-vitals.dto';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { RolesGuard } from '../common/roles.guard';
-import { Roles, CurrentUser } from '../common/decorators';
+import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
 import { EncounterStatus } from '../enums';
 
 @Controller()

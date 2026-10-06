@@ -1,26 +1,8 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { bootstrapService } from '@curo/shared/bootstrap';
 import { AppModule } from './app.module';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors();
-
-  // OpenAPI / Swagger — served at /api-docs (UI) and /api-docs-json (raw spec).
-  // The API gateway fetches the raw spec from each service and merges them into
-  // one aggregated reference at http://localhost:3000/docs.
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Curo Lab Service')
-    .setDescription(`Lab orders, per-test QR scanning, results, diagnostic reports & instruments.`)
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const swaggerDoc = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api-docs', app, swaggerDoc);
-  const port = process.env.PORT ?? 3006;
-  await app.listen(port);
-  console.log(`Lab service running on port ${port}`);
-}
-bootstrap();
+void bootstrapService(AppModule, {
+  title: 'Curo Lab Service',
+  description: `Lab orders, per-test QR scanning, results, diagnostic reports & instruments.`,
+  defaultPort: 3006,
+});

@@ -4,19 +4,17 @@ import { Repository, In, Not, IsNull } from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Encounter } from '../entities/encounter.entity';
 import { ClinicalNote } from '../entities/clinical-note.entity';
-import { MedicationRequest } from '../entities/medication-request.entity';
-import { ServiceRequest } from '../entities/service-request.entity';
-import { Observation } from '../entities/observation.entity';
-import { QrCode } from '../entities/qr-code.entity';
+import { MedicationRequest, ServiceRequest, Observation, QrCode } from '@curo/shared/database';
+import { MedicationRequestStatus, ServiceRequestStatus, ObservationStatus } from '@curo/shared/enums';
+import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
 import { Task } from '../entities/task.entity';
 import { CreateEncounterDto } from './dto/create-encounter.dto';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { CreateLabOrderDto } from './dto/create-lab-order.dto';
 import { CreateVitalsDto } from './dto/create-vitals.dto';
-import { EncounterStatus, MedicationRequestStatus, ServiceRequestStatus, ObservationStatus } from '../enums';
+import { EncounterStatus } from '../enums';
 import { Icd10Code } from '../entities/icd10-code.entity';
-import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 function toFhirEncounter(e: Encounter) {
   return {

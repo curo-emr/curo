@@ -1,5 +1,5 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { Gender, UserRole } from '../../enums';
+import { Gender, UserRole } from '@curo/shared/enums';
 
 export class CreateStaffDto {
   @IsEmail()
