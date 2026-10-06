@@ -133,8 +133,8 @@ one corrects an outdated note in the build history.
 2. **Pharmacy `/prescriptions/pending` is shadowed by the gateway.** The gateway routes all
    `/prescriptions*` to the **clinical** service, so the pharmacy portal's pending queue is served
    by clinical-service's handler (which permits `PHARMACIST`). Pharmacy-service's own copy of that
-   route is only reachable on its direct port `:3005`. Behavior is equivalent; flagged only so a
-   future code change to one copy doesn't surprise anyone.
+   route was only reachable on its direct port `:3005`. **Resolved 2026-10-06:** the pharmacy copy
+   was removed (`refactor/remove-dead-pending-route`); clinical's is the only one.
 3. **`GET /health` returns 404.** `/health` is listed in the gateway's public-paths allowlist but
    no handler serves it, so it 404s (it still bypasses auth). Minor — consider adding a real
    gateway health route. Per-service health is available at `GET /` and `GET /auth/health`.

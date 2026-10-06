@@ -10,19 +10,10 @@ import type { Prescription } from '@/types';
 
 // ─── Prescriptions ───────────────────────────────────────────────────────────
 
+// Every active prescription (served by the clinical service, unpaginated).
 export async function getPendingPrescriptions(): Promise<Prescription[]> {
-  const res = await apiClient.get<FhirMedicationRequest[] | FhirBundle<FhirMedicationRequest>>('/prescriptions/pending', {
-    params: { pageSize: 100 },
-  });
-  return unwrapBundle(res.data).resources.map(mapFhirMedicationRequest);
-}
-
-export async function getPendingPrescriptionsPaginated(params: PaginationParams = {}): Promise<PaginatedResult<Prescription>> {
-  const res = await apiClient.get<FhirMedicationRequest[] | FhirBundle<FhirMedicationRequest>>('/prescriptions/pending', {
-    params: paginationParams(params),
-  });
-  const { resources, total } = unwrapBundle(res.data);
-  return { items: resources.map(mapFhirMedicationRequest), total, page: params.page ?? 1, pageSize: params.pageSize ?? 25 };
+  const res = await apiClient.get<FhirMedicationRequest[]>('/prescriptions/pending');
+  return res.data.map(mapFhirMedicationRequest);
 }
 
 export async function getPrescription(id: string): Promise<Prescription> {

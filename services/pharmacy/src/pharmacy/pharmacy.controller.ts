@@ -26,13 +26,6 @@ import type { PaginationQuery, SearchQuery } from '@curo/shared/fhir';
 export class PharmacyController {
   constructor(private pharmacyService: PharmacyService) {}
 
-  @Get('prescriptions/pending')
-  @Roles('PHARMACIST', 'SUPER_ADMIN')
-  @Header('Content-Type', 'application/fhir+json')
-  getPendingPrescriptions(@Query() query: PaginationQuery) {
-    return this.pharmacyService.getPendingPrescriptions(query);
-  }
-
   // Prescribing reference catalog (DB-backed) — searchable + paginated.
   @Get('medication-catalog')
   @Roles('DOCTOR', 'PHARMACIST', 'SUPER_ADMIN', 'PATIENT')
