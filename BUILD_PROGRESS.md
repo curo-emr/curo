@@ -777,3 +777,35 @@ Branch `fix/portal-lint-warnings`. All 7 portals lint clean; each `lint` script 
   encounters stay clinical-only.
 - Verified: lint + `next build` for all 7 portals; rebuilt lab portal — worklist shows only
   the priority filter, order page loads each endpoint once (no refetch loop), QR renders.
+
+---
+
+## Pharmacy prescription detail ✅ DONE — 2026-10-06
+
+Branch `feat/pharmacy-prescription-detail`. The prescription page now shows what is being
+dispensed, and the Dispense button works.
+
+- **Bug:** the portal posted `{ prescriptionId }` to `POST /dispense`, which requires
+  `medicationRequestId`/`dispenserName`, so every click was a 400. Fixed; `dispenserName` is
+  the user's name, falling back to the email (login returns no name for staff).
+- **Clinical:** `GET /prescriptions/:id` (DOCTOR, PHARMACIST, SUPER_ADMIN; 404 if missing),
+  declared after the literal `prescriptions/*` routes.
+- **Pharmacy service:** dispensing a prescription that isn't `active` → 409 (it used to
+  decrement stock and issue a second receipt). The dispense's `patientId` comes from the
+  prescription, not the body (dropped from the DTO). `GET /dispense?prescriptionId=` filters
+  on the server; the portal used to filter the latest 100 records client-side.
+- **Portal:** the page shows the patient (with allergies), the medication (directions,
+  frequency, route, quantity, duration, note), status and prescribed date; Dispense only for
+  active prescriptions. Shared `PatientSummaryCard` and `DispenseRecordCard` (also used by the
+  patient page).
+- **Mapper fixes:** `completed` mapped to `sent_to_pharmacy` (dispensed prescriptions looked
+  pending) and `cancelled`/`stopped` to `draft`; `durationDays` read an extension the server
+  never sends (always 7); `dose` showed the total quantity; `createdAt` read `meta.lastUpdated`
+  (never set) instead of `authoredOn`. The pharmacy patient page's allergy banner never showed
+  (`mapFhirPatient` returns `allergies: []`); it now loads `/patients/:id/allergies`.
+- Not done: the portal sends no `unitPrice`, so every dispense totals 0.
+- Verified: root lint, `tsc --noEmit` (clinical, pharmacy), pharmacy portal lint + `next
+  build`; smoke PASS=114 on rebuilt images (new: Rx by id 200 / receptionist 403, dispense
+  patient from prescription, second dispense 409, history by prescription = 1). In the
+  browser: pending Rx shows patient + allergies + medication → Dispense → Completed with the
+  receipt; patient with an allergy shows the banner.

@@ -214,12 +214,20 @@ RX_ID=$(jq -r '.id' <<<"$RX")
 echo "   medicationRequestId=$RX_ID" >&2
 
 req "pharma" 200 GET  "/prescriptions/pending" "" "$PHARM" >/dev/null
+RXR=$(req "pharma" 200 GET "/prescriptions/$RX_ID" "" "$PHARM")
+expect_eq "prescription by id" "$(jq -r '.id' <<<"$RXR")" "$RX_ID"
+req "recep"  403 GET  "/prescriptions/$RX_ID" "" "$RECEP" >/dev/null
 req "pharma" 200 GET  "/stock/grouped" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock?lowOnly=true" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock/alerts" "" "$PHARM" >/dev/null
-DISP_BODY="{\"medicationRequestId\":\"$RX_ID\",\"patientId\":\"$PATIENT_ID\",\"dispenserName\":\"Kasun Bandara\",\"quantityValue\":60,\"quantityUnit\":\"tablet\"}"
+# Same body shape as the pharmacy portal: the patient comes from the prescription.
+DISP_BODY="{\"medicationRequestId\":\"$RX_ID\",\"dispenserName\":\"Kasun Bandara\",\"quantityValue\":60,\"quantityUnit\":\"tablet\"}"
 D=$(req "pharma" 201 POST "/dispense" "$DISP_BODY" "$PHARM")
 DISP_ID=$(jq -r '.id' <<<"$D")
+expect_eq "dispense patient from prescription" "$(jq -r '.subject.reference' <<<"$D")" "Patient/$PATIENT_ID"
+req "pharma" 409 POST "/dispense" "$DISP_BODY" "$PHARM" >/dev/null
+DH=$(req "pharma" 200 GET "/dispense?prescriptionId=$RX_ID" "" "$PHARM")
+expect_eq "dispense history by prescription" "$(jq -r '.total' <<<"$DH")" "1"
 req "pharma" 200 GET  "/dispense?patientId=$PATIENT_ID" "" "$PHARM" >/dev/null
 [[ -n "$DISP_ID" && "$DISP_ID" != "null" ]] && req "pharma" 200 GET "/dispense/$DISP_ID" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock" "" "$PHARM" >/dev/null

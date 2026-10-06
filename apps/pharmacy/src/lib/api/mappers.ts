@@ -102,6 +102,7 @@ export interface FhirMedicationRequest {
   id: string;
   meta?: { lastUpdated?: string };
   status: string;
+  authoredOn?: string;
   subject?: { reference?: string };
   requester?: { reference?: string };
   encounter?: { reference?: string };
@@ -121,7 +122,8 @@ export interface FhirMedicationRequest {
     }>;
   }>;
   dispenseRequest?: {
-    quantity?: { value?: number };
+    quantity?: { value?: number; unit?: string };
+    expectedSupplyDuration?: { value?: number };
     validityPeriod?: { end?: string };
   };
   note?: Array<{ text?: string }>;
@@ -360,15 +362,14 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
   const patientId = fhir.subject?.reference?.replace('Patient/', '') ?? '';
   const encounterId = fhir.encounter?.reference?.replace('Encounter/', '') ?? '';
   const doctorId = fhir.requester?.reference?.replace('Practitioner/', '') ?? '';
-  const ext = fhir.extension ?? [];
   const statusMap: Record<string, Prescription['status']> = {
-    draft: 'draft', active: 'sent_to_pharmacy', completed: 'sent_to_pharmacy',
-    cancelled: 'draft', stopped: 'draft',
+    draft: 'draft', active: 'sent_to_pharmacy', completed: 'completed',
+    cancelled: 'cancelled', stopped: 'cancelled',
   };
 
   const dosage = fhir.dosageInstruction?.[0];
-  const dose = dosage?.doseAndRate?.[0]?.doseQuantity;
-  const qty = fhir.dispenseRequest?.quantity?.value ?? 1;
+  const supply = fhir.dispenseRequest;
+  const createdAt = fhir.authoredOn ?? fhir.meta?.lastUpdated ?? '';
 
   return {
     id: fhir.id,
@@ -376,19 +377,18 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
     encounterId,
     doctorId,
     status: statusMap[fhir.status] ?? 'draft',
-    createdAt: fhir.meta?.lastUpdated ?? '',
-    sentAt: fhir.status === 'active' ? (fhir.meta?.lastUpdated ?? null) : null,
+    createdAt,
+    sentAt: fhir.status === 'active' ? createdAt : null,
     items: [{
       id: fhir.id,
       medicationId: fhir.medicationCodeableConcept?.coding?.[0]?.code ?? '',
       displayName: fhir.medicationCodeableConcept?.text ?? fhir.medicationCodeableConcept?.coding?.[0]?.display ?? '',
-      dose: dose ? `${dose.value} ${dose.unit}` : (dosage?.text ?? ''),
-      route: dosage?.route?.text ?? 'oral',
+      route: dosage?.route?.text ?? '',
       frequency: dosage?.timing?.code?.text ?? '',
-      durationDays: parseInt(ext.find(e => e.url === 'urn:curo:durationDays')?.valueString ?? '7'),
-      quantity: qty,
+      durationDays: supply?.expectedSupplyDuration?.value ?? null,
+      quantity: supply?.quantity?.value ?? 1,
+      quantityUnit: supply?.quantity?.unit ?? '',
       instructions: dosage?.text ?? '',
-      substitutes: [],
     }],
     notesToPharmacy: fhir.note?.[0]?.text ?? '',
   };
