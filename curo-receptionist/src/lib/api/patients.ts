@@ -12,6 +12,15 @@ export async function getPatients(search?: string): Promise<Patient[]> {
   return unwrapBundle(res.data).resources.map(mapFhirPatient);
 }
 
+// Resolve a specific set of patients (FHIR `_id` search) — e.g. the ones on today's queue.
+export async function getPatientsByIds(ids: string[]): Promise<Patient[]> {
+  if (ids.length === 0) return [];
+  const res = await apiClient.get<FhirPatient[] | FhirBundle<FhirPatient>>('/patients', {
+    params: { _id: ids.join(','), pageSize: 100 },
+  });
+  return unwrapBundle(res.data).resources.map(mapFhirPatient);
+}
+
 // Server-driven pagination for the patient table.
 export async function getPatientsPaginated(params: PaginationParams = {}): Promise<PaginatedResult<Patient>> {
   const res = await apiClient.get<FhirPatient[] | FhirBundle<FhirPatient>>('/patients', {

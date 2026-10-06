@@ -1,8 +1,8 @@
 import { Clock, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getPatientName, getDoctorName, calculateWaitTime } from "@/lib/utils";
-import { APPOINTMENT_STATUS } from "@/lib/constants";
+import { getPatientName, getDoctorName } from "@/lib/utils";
+import { isAwaitingDoctor, minutesInStage, waitBadgeClass } from "@/lib/queue";
 import type { Appointment, Patient, Doctor } from "@/types";
 
 interface QueueSummaryProps {
@@ -12,11 +12,7 @@ interface QueueSummaryProps {
 }
 
 export function QueueSummary({ appointments, patients, doctors }: QueueSummaryProps) {
-  const waitingAppointments = appointments.filter(
-    (a) =>
-      a.status === APPOINTMENT_STATUS.ARRIVED ||
-      a.status === APPOINTMENT_STATUS.WAITING
-  );
+  const waitingAppointments = appointments.filter(isAwaitingDoctor);
 
   return (
     <Card className="shadow-sm border">
@@ -41,9 +37,7 @@ export function QueueSummary({ appointments, patients, doctors }: QueueSummaryPr
             </div>
           ) : (
             waitingAppointments.map((apt) => {
-              const waitMinutes = apt.checkInTime
-                ? calculateWaitTime(apt.checkInTime)
-                : 0;
+              const waitMinutes = minutesInStage(apt);
 
               return (
                 <div
@@ -54,16 +48,7 @@ export function QueueSummary({ appointments, patients, doctors }: QueueSummaryPr
                     <span className="font-medium text-sm text-foreground">
                       {getPatientName(apt.patientId, patients)}
                     </span>
-                    <Badge
-                      variant="outline"
-                      className={
-                        waitMinutes >= 30
-                          ? "bg-status-error-bg text-status-error-text border-status-error-border"
-                          : waitMinutes >= 15
-                            ? "bg-status-warning-bg text-status-warning-text border-status-warning-border"
-                            : "bg-muted text-muted-foreground border"
-                      }
-                    >
+                    <Badge variant="outline" className={waitBadgeClass(waitMinutes)}>
                       <Clock className="h-3 w-3 mr-1" />
                       {waitMinutes} min
                     </Badge>

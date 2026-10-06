@@ -4,27 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { ROUTES } from "@/lib/constants";
-import {
-  LayoutDashboard,
-  Users,
-  CalendarPlus,
-  Calendar,
-  BarChart3,
-  Wallet,
-  Settings,
-  Activity,
-} from "lucide-react";
-
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", href: ROUTES.DASHBOARD },
-  { icon: Users, label: "Patients", href: ROUTES.PATIENTS },
-  { icon: CalendarPlus, label: "Appointments", href: ROUTES.APPOINTMENTS },
-  { icon: Calendar, label: "Schedule", href: ROUTES.SCHEDULE },
-  { icon: Wallet, label: "Income", href: ROUTES.INCOME },
-  { icon: BarChart3, label: "Reports", href: ROUTES.REPORTS },
-  { icon: Settings, label: "Settings", href: ROUTES.SETTINGS },
-];
+import { Activity } from "lucide-react";
+import { navItems } from "./nav-items";
 
 export function Sidebar() {
   const pathname = usePathname();

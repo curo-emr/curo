@@ -1,6 +1,6 @@
 import type {
   Patient, Allergy, Problem, Appointment, Encounter, Prescription,
-  LabOrder, Task,
+  LabOrder, Task, QueueStage,
 } from '@/types';
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
@@ -297,9 +297,8 @@ export function mapFhirAppointment(fhir: FhirAppointment): Appointment {
     status: FHIR_APPT_STATUS_MAP[fhir.status] ?? 'scheduled',
     room: '',
     notes: fhir.comment ?? '',
-    checkInTime: null,
-    checkedInBy: null,
-    visitId: null,
+    queueStage: (fhir.extension?.find(e => e.url === 'urn:curo:queueStage')?.valueString as QueueStage | undefined) ?? null,
+    stageSince: fhir.meta?.lastUpdated ?? null,
   };
 }
 

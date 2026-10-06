@@ -5,26 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { ROUTES } from "@/lib/constants";
-import {
-  LayoutDashboard,
-  Users,
-  CalendarPlus,
-  Calendar,
-  BarChart3,
-  Settings,
-  Activity,
-  X,
-} from "lucide-react";
-
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", href: ROUTES.DASHBOARD },
-  { icon: Users, label: "Patients", href: ROUTES.PATIENTS },
-  { icon: CalendarPlus, label: "Appointments", href: ROUTES.APPOINTMENTS },
-  { icon: Calendar, label: "Schedule", href: ROUTES.SCHEDULE },
-  { icon: BarChart3, label: "Reports", href: ROUTES.REPORTS },
-  { icon: Settings, label: "Settings", href: ROUTES.SETTINGS },
-];
+import { Activity, X } from "lucide-react";
+import { navItems } from "./nav-items";
 
 export function MobileSidebar() {
   const pathname = usePathname();
