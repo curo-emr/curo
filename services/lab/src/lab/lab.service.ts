@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import { ServiceRequest, Observation, QrCode } from '@curo/shared/database';
 import { ServiceRequestStatus, ObservationStatus } from '@curo/shared/enums';
 import {
@@ -14,8 +14,19 @@ import { LabTestCatalog } from '../entities/lab-test-catalog.entity';
 import { QCLog, QCStatus } from '../entities/qc-log.entity';
 import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
+import { CreateInstrumentDto } from './dto/create-instrument.dto';
 import { DiagnosticReportStatus, InstrumentStatus } from '../enums';
 import { generateLabReportPdf } from './pdf.generator';
+
+interface LabStaffRow {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  specialization: string | null;
+  qualification: string | null;
+  active: boolean;
+}
 
 function toFhirServiceRequest(s: ServiceRequest) {
   return {
@@ -45,7 +56,7 @@ function toFhirReport(r: DiagnosticReport) {
     effectiveDateTime: r.effectiveDateTime,
     issued: r.issued,
     conclusion: r.conclusion,
-    result: (r.results || []).map((res: any) => ({ display: res.display })),
+    result: (r.results ?? []).map((res) => ({ display: res.display })),
     presentedForm: r.pdfBase64
       ? [{ contentType: 'application/pdf', data: r.pdfBase64 }]
       : [],
@@ -74,8 +85,10 @@ export class LabService {
 
   // Tests a given lab offers (doctors browse before ordering).
   async getCatalog(organizationId?: string): Promise<LabTestCatalog[]> {
-    const where: any = { active: true };
-    if (organizationId) where.organizationId = organizationId;
+    const where: FindOptionsWhere<LabTestCatalog> = {
+      active: true,
+      ...(organizationId && { organizationId }),
+    };
     return this.catalogRepo.find({ where, order: { name: 'ASC' } });
   }
 
@@ -114,7 +127,7 @@ export class LabService {
         .filter((q) => q.testCode)
         .map((q) => [`${q.testCode}:${q.testIndex}`, q]),
     );
-    const tests = (order.testPanel ?? []).map((t: any, i: number) => ({
+    const tests = (order.testPanel ?? []).map((t, i) => ({
       testCode: t.code,
       display: t.display,
       qrBase64: byKey.get(`${t.code}:${i}`)?.imageBase64 ?? null,
@@ -165,7 +178,7 @@ export class LabService {
             testCode,
             testIndex,
             display:
-              (order.testPanel ?? []).find((t: any) => t.code === testCode)
+              (order.testPanel ?? []).find((t) => t.code === testCode)
                 ?.display ?? testCode,
           }
         : null;
@@ -257,7 +270,7 @@ export class LabService {
       status: DiagnosticReportStatus.FINAL,
       code: order.code,
       display: order.display,
-      results: dto.results as unknown as Record<string, unknown>[],
+      results: dto.results,
       conclusion: dto.conclusion,
       pdfBase64,
       effectiveDateTime: new Date(),
@@ -313,9 +326,10 @@ export class LabService {
     pagination: PaginationQuery = {},
   ): Promise<any> {
     const { page, pageSize, skip, take } = parsePagination(pagination);
-    const where: any = {};
-    if (filters?.instrumentId) where.instrumentId = filters.instrumentId;
-    if (filters?.status) where.status = filters.status;
+    const where: FindOptionsWhere<QCLog> = {
+      ...(filters?.instrumentId && { instrumentId: filters.instrumentId }),
+      ...(filters?.status && { status: filters.status }),
+    };
     const [logs, total] = await this.qcLogRepo.findAndCount({
       where,
       order: { performedAt: 'DESC' },
@@ -330,15 +344,16 @@ export class LabService {
     });
   }
 
-  async getLabStaff(): Promise<any[]> {
-    const rows = await this.dataSource.query(`
+  async getLabStaff() {
+    // practitioners is owned by the auth service, so it is read with raw SQL.
+    const rows = await this.dataSource.query<LabStaffRow[]>(`
       SELECT id, "firstName", "lastName", email, specialization, qualification, active
       FROM practitioners
       WHERE role = 'LAB_STAFF'
       ORDER BY "firstName", "lastName"
     `);
 
-    return rows.map((row: any) => ({
+    return rows.map((row) => ({
       id: row.id,
       name: {
         first: row.firstName,
@@ -371,7 +386,7 @@ export class LabService {
     return this.instrumentsRepo.save(instrument);
   }
 
-  async createInstrument(dto: Partial<LabInstrument>): Promise<LabInstrument> {
+  async createInstrument(dto: CreateInstrumentDto): Promise<LabInstrument> {
     const instrument = this.instrumentsRepo.create(dto);
     return this.instrumentsRepo.save(instrument);
   }
