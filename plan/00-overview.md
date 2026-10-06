@@ -61,9 +61,11 @@ queue-stage endpoint accepts DOCTOR as a manual fallback).
   from `practitionerId`/`patientId` claims) — never from client-supplied params.
 - Runtime deps go in `dependencies`, **never** devDependencies (Docker images use
   `npm ci --omit=dev`; the `qrcode` incident). This applies to `kafkajs`.
-- Update `scripts/seed.ts` at the end of each slice; the seed must remain
+- Update `database/seed.ts` at the end of each slice; the seed must remain
   idempotent-ish (it short-circuits when data exists) and compile in the
   `curo-seed` container.
+- Schema changes ship as a migration (`npm run db:generate -- migrations/<Name>`)
+  committed with the entity change; services never alter the schema.
 - Frontends: reuse the existing shadcn ui components and design tokens
   (`--status-*`, `--chart-*`, `bg-muted`, `text-muted-foreground`, …). No new
   component libraries. New pages must look native next to existing ones.
