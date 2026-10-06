@@ -128,6 +128,10 @@ req "doctor"  201 POST "/patients/$PATIENT_ID/conditions" '{"clinicalStatus":"ac
 req "doctor"  201 POST "/patients/$PATIENT_ID/allergies"  '{"code":"7980","display":"Penicillin","type":"allergy","criticality":"high"}' "$DOC" >/dev/null
 req "staff"   200 GET  "/patients/$PATIENT_ID/conditions" "" "$DOC" >/dev/null
 req "staff"   200 GET  "/patients/$PATIENT_ID/allergies"  "" "$DOC" >/dev/null
+AL=$(req "pharma" 200 GET "/patients/allergies?patientIds=$PATIENT_ID" "" "$PHARM")
+expect_eq "batch allergies for the patient" "$(jq -r '.[0].patient.reference' <<<"$AL")" "Patient/$PATIENT_ID"
+req "pharma"  400 GET  "/patients/allergies?patientIds=not-a-uuid" "" "$PHARM" >/dev/null
+req "patient" 403 GET  "/patients/allergies?patientIds=$PATIENT_ID" "" "$PAT" >/dev/null
 
 # ---------------------------------------------------------------------------
 # 2. APPOINTMENT + PAYMENT (receptionist)

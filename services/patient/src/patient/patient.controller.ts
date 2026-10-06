@@ -15,6 +15,7 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { CreateAllergyDto } from './dto/create-allergy.dto';
 import { CreateConditionDto } from './dto/create-condition.dto';
+import { AllergiesQueryDto } from './dto/allergies-query.dto';
 import {
   JwtAuthGuard,
   RolesGuard,
@@ -66,6 +67,14 @@ export class PatientController {
   @Header('Content-Type', 'application/fhir+json')
   findByCode(@Param('code') code: string, @CurrentUser() user: AuthUser) {
     return this.patientService.findByCode(code, user.role);
+  }
+
+  // Allergies for several patients at once (a page of a patient list).
+  @Get('allergies')
+  @Roles('DOCTOR', 'NURSE', 'RECEPTIONIST', 'SUPER_ADMIN', 'PHARMACIST')
+  @Header('Content-Type', 'application/fhir+json')
+  getAllergiesForPatients(@Query() query: AllergiesQueryDto) {
+    return this.patientService.getAllergiesForPatients(query.patientIds);
   }
 
   // Pharmacy & lab can fetch a patient by id, but receive a minimized projection
