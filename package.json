@@ -12,6 +12,7 @@
     "build:shared": "npm run build -w @curo/shared",
     "test": "npm test --workspaces --if-present",
     "seed": "cd scripts && ts-node --project tsconfig.seed.json seed.ts",
+    "typecheck:db": "tsc -p scripts/tsconfig.seed.json --noEmit",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:build:backends": "bash scripts/build-backends-with-local-npm-registry.sh",
