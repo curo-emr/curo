@@ -2,78 +2,68 @@
 
 import { useState, useEffect, use } from "react";
 import { notFound } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { calculateAge } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { PatientHeader } from "@/components/features/patients/PatientHeader";
 import { PatientChartTabs } from "@/components/features/patients/PatientChartTabs";
 import { getPatientById, getAllergies, getConditions } from "@/lib/api/patients";
 import { getEncountersByPatient } from "@/lib/api/encounters";
-import { getLabOrdersByPatient, getPrescriptionsByPatient } from "@/lib/api/clinical";
-import { getLabTestCatalog } from "@/lib/data/api";
-import type { Patient, Allergy, Problem, Encounter, LabOrder, Prescription, LabTestCatalogItem } from "@/types";
+import { getLabOrdersByPatient, getLatestVitals, getPrescriptionsByPatient } from "@/lib/api/clinical";
+import { findTodaysAppointment, hasDraft, visitDraftKey } from "@/lib/visit";
+import type { Allergy, Appointment, Encounter, LabOrder, Patient, Prescription, Problem, Vitals } from "@/types";
+
+interface Chart {
+  patient: Patient | null;
+  allergies: Allergy[];
+  problems: Problem[];
+  encounters: Encounter[];
+  labOrders: LabOrder[];
+  prescriptions: Prescription[];
+  latestVitals: { vitals: Partial<Vitals>; recordedAt: string | null };
+  todaysAppointment: Appointment | null;
+}
 
 export default function PatientChartPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = use(params);
-
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [allergies, setAllergies] = useState<Allergy[]>([]);
-  const [problems, setProblems] = useState<Problem[]>([]);
-  const [encounters, setEncounters] = useState<Encounter[]>([]);
-  const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [labTestCatalog, setLabTestCatalog] = useState<LabTestCatalogItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [notFoundError, setNotFoundError] = useState(false);
+  const { user } = useAuth();
+  const [chart, setChart] = useState<Chart | null>(null);
 
   useEffect(() => {
+    const none = <T,>(fallback: T) => () => fallback;
     Promise.all([
       getPatientById(patientId),
-      getAllergies(patientId),
-      getConditions(patientId),
-      getEncountersByPatient(patientId),
-      getLabOrdersByPatient(patientId),
-      getPrescriptionsByPatient(patientId),
-      getLabTestCatalog(),
-    ])
-      .then(([pt, alg, probs, encs, labs, rxs, catalog]) => {
-        if (!pt) { setNotFoundError(true); return; }
-        setPatient(pt);
-        setAllergies(alg);
-        setProblems(probs);
-        setEncounters(encs);
-        setLabOrders(labs);
-        setPrescriptions(rxs);
-        setLabTestCatalog(catalog);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+      getAllergies(patientId).catch(none<Allergy[]>([])),
+      getConditions(patientId).catch(none<Problem[]>([])),
+      getEncountersByPatient(patientId).catch(none<Encounter[]>([])),
+      getLabOrdersByPatient(patientId).catch(none<LabOrder[]>([])),
+      getPrescriptionsByPatient(patientId).catch(none<Prescription[]>([])),
+      getLatestVitals(patientId).catch(none({ vitals: {}, recordedAt: null })),
+      findTodaysAppointment(patientId),
+    ]).then(([patient, allergies, problems, encounters, labOrders, prescriptions, latestVitals, todaysAppointment]) =>
+      setChart({
+        patient, allergies, problems, latestVitals, todaysAppointment,
+        encounters: [...encounters].sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
+        labOrders: [...labOrders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+        prescriptions,
+      }));
   }, [patientId]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+  if (!chart) return <PageSkeleton side={false} />;
+  if (!chart.patient) notFound();
 
-  if (notFoundError || !patient) {
-    notFound();
-  }
-
-  const age = calculateAge(patient!.dob);
+  const draft = !!user && hasDraft(visitDraftKey(user.id, patientId, chart.todaysAppointment?.id));
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <PatientHeader patient={patient!} allergies={allergies} age={age} />
+    <div className="space-y-6">
+      <PatientHeader patient={chart.patient} allergies={chart.allergies} todaysAppointment={chart.todaysAppointment} hasDraft={draft} />
       <PatientChartTabs
-        patient={patient!}
-        encounters={encounters}
-        allergies={allergies}
-        problems={problems}
-        labOrders={labOrders}
-        prescriptions={prescriptions}
-        labTestCatalog={labTestCatalog}
+        patient={chart.patient}
+        encounters={chart.encounters}
+        allergies={chart.allergies}
+        problems={chart.problems}
+        labOrders={chart.labOrders}
+        prescriptions={chart.prescriptions}
+        latestVitals={chart.latestVitals}
       />
     </div>
   );

@@ -1,55 +1,67 @@
 "use client";
 
-import { SOAP } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { forwardRef } from "react";
+import { NotebookPen } from "lucide-react";
+import type { SOAP } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { FileSignature } from "lucide-react";
+import { SectionCard } from "@/components/ui/SectionCard";
 
 const SOAP_SECTIONS = [
-  { key: 'subjective' as const, label: 'S — Subjective', placeholder: 'History of Present Illness (HPI), chief complaint, review of systems, symptoms reported by patient...' },
-  { key: 'objective' as const, label: 'O — Objective', placeholder: 'Physical exam findings, vital sign observations, relevant test results observed...' },
-  { key: 'assessment' as const, label: 'A — Assessment', placeholder: 'Clinical impressions, working diagnosis, differential diagnoses...' },
-  { key: 'plan' as const, label: 'P — Plan', placeholder: 'Treatment plan, medications ordered, lab orders, referrals, patient instructions, follow-up...' },
+  { key: "subjective" as const, label: "Subjective", hint: "History, symptoms as the patient describes them" },
+  { key: "objective" as const, label: "Objective", hint: "Examination findings, observations" },
+  { key: "assessment" as const, label: "Assessment", hint: "Clinical impression, differentials" },
+  { key: "plan" as const, label: "Plan", hint: "Treatment, advice, follow-up" },
 ];
 
 interface ClinicalNotesProps {
   chiefComplaint: string;
-  setChiefComplaint: (value: string) => void;
+  onChiefComplaintChange: (value: string) => void;
   soap: SOAP;
-  setSoap: React.Dispatch<React.SetStateAction<SOAP>>;
+  onSoapChange: (soap: SOAP) => void;
+  invalid?: boolean;
 }
 
-export function ClinicalNotes({ chiefComplaint, setChiefComplaint, soap, setSoap }: ClinicalNotesProps) {
+export const ClinicalNotes = forwardRef<HTMLInputElement, ClinicalNotesProps>(function ClinicalNotes(
+  { chiefComplaint, onChiefComplaintChange, soap, onSoapChange, invalid },
+  ref,
+) {
   return (
-    <Card className="shadow-sm border">
-      <CardHeader className="bg-muted border-b">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <FileSignature className="h-5 w-5 text-primary" /> Clinical Notes
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-6 space-y-5">
-        <div>
-          <Label htmlFor="cc" className="font-semibold text-foreground">Chief Complaint</Label>
-          <Input id="cc" value={chiefComplaint} onChange={e => setChiefComplaint(e.target.value)} placeholder="e.g. Chest pain for 2 days" className="mt-1" />
+    <SectionCard id="notes" icon={NotebookPen} iconClassName="text-clinical-notes" title="Consultation notes">
+      <div className="space-y-5">
+        <div className="space-y-1.5">
+          <Label htmlFor="cc">
+            Chief complaint <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            ref={ref}
+            id="cc"
+            value={chiefComplaint}
+            onChange={e => onChiefComplaintChange(e.target.value)}
+            placeholder="Why is the patient here today? e.g. Chest pain for 2 days"
+            aria-invalid={invalid || undefined}
+            className="h-10 scroll-mt-56 text-base md:text-sm"
+          />
         </div>
-
-        {/* SOAP — stacked sections, all visible at once */}
-        <div className="space-y-5 mt-2 pt-2 border-t">
-          {SOAP_SECTIONS.map(({ key, label, placeholder }) => (
-            <div key={key}>
-              <Label className="font-semibold text-foreground text-sm tracking-wide">{label}</Label>
+        <div className="grid gap-4 xl:grid-cols-2">
+          {SOAP_SECTIONS.map(({ key, label, hint }) => (
+            <div key={key} className="space-y-1.5">
+              <Label htmlFor={`soap-${key}`} className="flex items-baseline gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded bg-muted text-[11px] font-bold text-muted-foreground">{label[0]}</span>
+                {label}
+              </Label>
               <Textarea
-                placeholder={placeholder}
-                className="mt-1.5 min-h-[120px] resize-y text-sm"
+                id={`soap-${key}`}
+                placeholder={hint}
+                className="min-h-24 resize-none"
                 value={soap[key]}
-                onChange={e => setSoap(prev => ({ ...prev, [key]: e.target.value }))}
+                onChange={e => onSoapChange({ ...soap, [key]: e.target.value })}
               />
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </SectionCard>
   );
-}
+});

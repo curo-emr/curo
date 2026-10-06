@@ -1,161 +1,93 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Loader2 } from "lucide-react";
-import Link from "next/link";
-import { getPatientName, getPatientMeta, getTodayString } from "@/lib/utils";
-import { ROUTES, APPOINTMENT_STATUS } from "@/lib/constants";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
-import { DashboardSidebar } from "@/components/features/dashboard/DashboardSidebar";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { UpNextCard } from "@/components/features/dashboard/UpNextCard";
+import { QueueList } from "@/components/features/dashboard/QueueList";
+import { NeedsAttention } from "@/components/features/dashboard/NeedsAttention";
 import { getAppointments } from "@/lib/api/appointments";
 import { getOpenTasks } from "@/lib/api/tasks";
-import { getPatients } from "@/lib/api/patients";
-import type { Appointment, Task, Patient } from "@/types";
+import { getRecentLabResults } from "@/lib/api/clinical";
+import { getPatientsByIds } from "@/lib/api/patients";
+import { getTodayString } from "@/lib/utils";
+import { QUEUE_GROUPS, getQueueGroup, hasDraft, visitDraftKey, type QueueGroup } from "@/lib/visit";
+import type { Appointment, LabOrder, Patient, Task } from "@/types";
 
-export default function DashboardPage() {
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+
+export default function TodayPage() {
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [patients, setPatients] = useState<Record<string, Patient>>({});
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const todayStr = getTodayString();
+  const practitionerId = user?.practitionerId;
 
   useEffect(() => {
+    const today = getTodayString();
     Promise.all([
-      getAppointments({ date: todayStr }),
-      getOpenTasks(),
-      getPatients(),
+      getAppointments({ date: today }),
+      getOpenTasks().catch(() => [] as Task[]),
+      practitionerId ? getRecentLabResults(practitionerId).catch(() => [] as LabOrder[]) : Promise.resolve([]),
     ])
-      .then(([appts, openTasks, pts]) => {
-        setAppointments(appts);
+      .then(async ([appts, openTasks, labs]) => {
+        const todays = appts.filter(a => a.date === today).sort((a, b) => a.time.localeCompare(b.time));
+        setAppointments(todays);
         setTasks(openTasks);
-        setPatients(pts);
+        setLabOrders(labs);
+        setPatients(await getPatientsByIds([...todays.map(a => a.patientId), ...labs.map(l => l.patientId)]));
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, [todayStr]);
+  }, [practitionerId]);
 
-  const todaysSchedule = appointments
-    .filter(a => a.date === todayStr)
-    .sort((a, b) => a.time.localeCompare(b.time));
+  // Appointments with an autosaved, unsigned visit in this browser.
+  const draftIds = useMemo(
+    () => new Set(user ? appointments.filter(a => hasDraft(visitDraftKey(user.id, a.patientId, a.id))).map(a => a.id) : []),
+    [appointments, user],
+  );
 
-  const today = new Date();
-  const dateHeading = today.toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
+  if (isLoading) return <PageSkeleton />;
 
-  const waitingCount = todaysSchedule.filter(a => a.status === APPOINTMENT_STATUS.WAITING).length;
-  const inProgressCount = todaysSchedule.filter(a => a.status === APPOINTMENT_STATUS.IN_PROGRESS).length;
-  const completedCount = todaysSchedule.filter(a => a.status === APPOINTMENT_STATUS.COMPLETED).length;
-
-  const statCards = [
-    { label: "Today's Visits", value: todaysSchedule.length, color: "text-blue-700 bg-blue-50 border-blue-200" },
-    { label: "Waiting", value: waitingCount, color: "text-orange-700 bg-orange-50 border-orange-200" },
-    { label: "In Progress", value: inProgressCount, color: "text-sky-700 bg-sky-50 border-sky-200" },
-    { label: "Completed", value: completedCount, color: "text-green-700 bg-green-50 border-green-200" },
-  ];
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+  const count = (g: QueueGroup) => appointments.filter(a => getQueueGroup(a) === g).length;
+  const upNext = appointments.find(a => getQueueGroup(a) === "consultation") ?? appointments.find(a => getQueueGroup(a) === "ready") ?? null;
+  const nextUpcoming = appointments.find(a => getQueueGroup(a) === "upcoming") ?? null;
+  const dateLabel = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">{dateHeading}</p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={`${greeting()}${user?.firstName ? `, Dr. ${user.firstName}` : ""}`}
+        description={`${dateLabel} · ${appointments.length} appointment${appointments.length === 1 ? "" : "s"} today`}
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {statCards.map(stat => (
-          <div key={stat.label} className={`rounded-lg border p-4 ${stat.color}`}>
-            <p className="text-xs font-medium opacity-80">{stat.label}</p>
-            <p className="text-2xl font-bold mt-1">{stat.value}</p>
+      <div className="flex flex-wrap gap-2">
+        {QUEUE_GROUPS.map(({ id, label }) => (
+          <div key={id} className="flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5 text-sm shadow-xs">
+            <span className="font-semibold tabular-nums text-foreground">{count(id)}</span>
+            <span className="text-muted-foreground">{label}</span>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-              <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Calendar className="h-5 w-5 text-blue-600" />
-                  Today&apos;s Schedule
-                </CardTitle>
-                <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-50">
-                  {todaysSchedule.length} Appointment{todaysSchedule.length !== 1 ? 's' : ''}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-slate-100">
-                {todaysSchedule.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">No appointments scheduled for today.</div>
-                ) : (
-                  todaysSchedule.map(apt => {
-                    const patientMeta = getPatientMeta(apt.patientId, patients);
-                    const inConsultation = apt.status === APPOINTMENT_STATUS.IN_PROGRESS || apt.queueStage === "with_doctor";
-                    return (
-                      <div key={apt.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between gap-4">
-                        <div className="flex items-start gap-4 min-w-0">
-                          <div className="w-16 shrink-0 flex flex-col items-center justify-center p-2 rounded-lg bg-slate-100 text-slate-700">
-                            <span className="text-sm font-semibold">{apt.time}</span>
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <Link href={ROUTES.PATIENT(apt.patientId)} className="font-semibold text-base text-slate-900 hover:text-blue-600 transition-colors">
-                                {getPatientName(apt.patientId, patients)}
-                              </Link>
-                              <StatusBadge status={apt.status} />
-                              <QueueStageBadge stage={apt.queueStage} />
-                            </div>
-                            <div className="text-sm text-slate-500 mb-1">
-                              {patientMeta?.age}y • {patientMeta?.sex.charAt(0).toUpperCase()}{patientMeta?.sex.slice(1)} • {apt.visitType} — {apt.reason}
-                            </div>
-                            {apt.room && (
-                              <div className="flex items-center gap-1 text-xs text-slate-400">
-                                <Clock className="h-3 w-3" /> {apt.room}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Link href={ROUTES.PATIENT(apt.patientId)}>
-                            <Button variant="outline" size="sm" className="h-8 text-xs">Open Chart</Button>
-                          </Link>
-                          {!inConsultation && apt.status !== APPOINTMENT_STATUS.COMPLETED && (
-                            <Link href={`${ROUTES.NEW_ENCOUNTER(apt.patientId)}?appointmentId=${apt.id}`}>
-                              <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700">Start Visit</Button>
-                            </Link>
-                          )}
-                          {inConsultation && (
-                            <Link href={`${ROUTES.NEW_ENCOUNTER(apt.patientId)}?appointmentId=${apt.id}`}>
-                              <Button size="sm" className="h-8 text-xs bg-amber-500 hover:bg-amber-600">Resume</Button>
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <UpNextCard
+            appointment={upNext}
+            patient={upNext ? patients[upNext.patientId] : undefined}
+            hasDraft={!!upNext && draftIds.has(upNext.id)}
+            nextUpcoming={nextUpcoming}
+          />
+          <QueueList appointments={appointments} patients={patients} draftIds={draftIds} />
         </div>
-
-        <DashboardSidebar tasks={tasks} pendingLabs={[]} patients={patients} />
+        <NeedsAttention tasks={tasks} labOrders={labOrders} patients={patients} />
       </div>
     </div>
   );

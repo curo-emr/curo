@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Search, Pill, FlaskConical, CheckCircle2, XCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { FlaskConical, Pill, Search } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   getOrganizations, getPharmacyStock, getLabCatalog,
   type Organization, type PharmacyStockItem, type LabCatalogTest,
@@ -16,157 +17,140 @@ import {
 
 export default function DirectoryPage() {
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Pharmacies &amp; Labs</h1>
-        <p className="text-sm text-muted-foreground">Check a pharmacy&apos;s drug availability or a lab&apos;s available tests.</p>
-      </div>
-      <Tabs defaultValue="pharmacy">
+    <div className="space-y-6">
+      <PageHeader title="Pharmacies & Labs" description="Check what a pharmacy has in stock or which tests a lab offers." />
+      <Tabs defaultValue="pharmacy" className="gap-4">
         <TabsList>
-          <TabsTrigger value="pharmacy"><Pill className="h-4 w-4 mr-2" />Pharmacies</TabsTrigger>
-          <TabsTrigger value="lab"><FlaskConical className="h-4 w-4 mr-2" />Labs</TabsTrigger>
+          <TabsTrigger value="pharmacy" className="px-4"><Pill /> Pharmacies</TabsTrigger>
+          <TabsTrigger value="lab" className="px-4"><FlaskConical /> Labs</TabsTrigger>
         </TabsList>
-        <TabsContent value="pharmacy" className="mt-4"><PharmacyPanel /></TabsContent>
-        <TabsContent value="lab" className="mt-4"><LabPanel /></TabsContent>
+        <TabsContent value="pharmacy">
+          <CatalogPanel<PharmacyStockItem>
+            orgType="pharmacy"
+            orgLabel="pharmacy"
+            searchPlaceholder="Search drugs…"
+            load={getPharmacyStock}
+            matches={(s, q) => `${s.medicationName} ${s.genericName ?? ""}`.toLowerCase().includes(q)}
+            emptyIcon={Pill}
+            columns={[
+              { header: "Drug", cell: s => <span className="font-medium text-foreground">{s.medicationName}</span> },
+              { header: "Strength", cell: s => s.strength },
+              {
+                header: "Availability", cell: s => s.quantity > 0
+                  ? <span className="rounded-full bg-status-success-bg px-2 py-0.5 text-xs font-medium text-status-success-text">{s.quantity} {s.unit} in stock</span>
+                  : <span className="rounded-full bg-status-error-bg px-2 py-0.5 text-xs font-medium text-status-error-text">Out of stock</span>,
+              },
+              { header: "Expiry", cell: s => s.expiryDate ? new Date(s.expiryDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "—" },
+            ]}
+          />
+        </TabsContent>
+        <TabsContent value="lab">
+          <CatalogPanel<LabCatalogTest>
+            orgType="laboratory"
+            orgLabel="lab"
+            searchPlaceholder="Search tests…"
+            load={getLabCatalog}
+            matches={(t, q) => `${t.name} ${t.code}`.toLowerCase().includes(q)}
+            emptyIcon={FlaskConical}
+            columns={[
+              { header: "Test", cell: t => <><span className="font-medium text-foreground">{t.name}</span> <span className="font-mono text-xs text-muted-foreground">{t.code}</span></> },
+              { header: "Category", cell: t => t.category },
+              { header: "Specimen", cell: t => t.specimen },
+              { header: "Price", cell: t => (t.price != null ? `Rs. ${Number(t.price).toFixed(2)}` : "—"), align: "right" },
+            ]}
+          />
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-function PharmacyPanel() {
-  const [orgs, setOrgs] = useState<Organization[]>([]);
-  const [selected, setSelected] = useState<string>("");
-  const [stock, setStock] = useState<PharmacyStockItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    getOrganizations("pharmacy").then((o) => { setOrgs(o); if (o[0]) setSelected(o[0].id); }).catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    if (!selected) return;
-    setLoading(true);
-    getPharmacyStock(selected).then(setStock).catch(console.error).finally(() => setLoading(false));
-  }, [selected]);
-
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    if (!q) return stock;
-    return stock.filter((s) => s.medicationName.toLowerCase().includes(q) || (s.genericName ?? "").toLowerCase().includes(q));
-  }, [stock, query]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Select value={selected} onValueChange={setSelected}>
-          <SelectTrigger className="sm:w-72"><SelectValue placeholder="Select a pharmacy" /></SelectTrigger>
-          <SelectContent>{orgs.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
-        </Select>
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search drug..." value={query} onChange={(e) => setQuery(e.target.value)} className="pl-9 bg-muted border" />
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-      ) : (
-        <Card className="shadow-sm border">
-          <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-muted text-muted-foreground"><tr className="text-left">
-                <th className="px-4 py-2 font-medium">Drug</th><th className="px-4 py-2 font-medium">Strength</th>
-                <th className="px-4 py-2 font-medium">Availability</th><th className="px-4 py-2 font-medium">Expiry</th>
-              </tr></thead>
-              <tbody className="divide-y">
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={4} className="text-center text-muted-foreground py-8">No drugs found.</td></tr>
-                ) : filtered.map((s) => (
-                  <tr key={s.id} className="hover:bg-muted/50">
-                    <td className="px-4 py-2 font-medium">{s.medicationName}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{s.strength}</td>
-                    <td className="px-4 py-2">
-                      {s.quantity > 0 ? (
-                        <Badge variant="outline" className="bg-status-success-bg text-status-success-text border-status-success-border"><CheckCircle2 className="h-3 w-3 mr-1" />{s.quantity} {s.unit}</Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-status-error-bg text-status-error-text border-status-error-border"><XCircle className="h-3 w-3 mr-1" />Out of stock</Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground">{s.expiryDate ? new Date(s.expiryDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+interface Column<T> {
+  header: string;
+  cell: (item: T) => React.ReactNode;
+  align?: "right";
 }
 
-function LabPanel() {
+interface CatalogPanelProps<T> {
+  orgType: "pharmacy" | "laboratory";
+  orgLabel: string;
+  searchPlaceholder: string;
+  load: (orgId: string) => Promise<T[]>;
+  matches: (item: T, query: string) => boolean;
+  columns: Column<T>[];
+  emptyIcon: typeof Pill;
+}
+
+// Pick an organisation, then browse/search its catalog.
+function CatalogPanel<T extends { id: string }>({ orgType, orgLabel, searchPlaceholder, load, matches, columns, emptyIcon }: CatalogPanelProps<T>) {
   const [orgs, setOrgs] = useState<Organization[]>([]);
-  const [selected, setSelected] = useState<string>("");
-  const [tests, setTests] = useState<LabCatalogTest[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState("");
+  const [items, setItems] = useState<T[] | null>(null);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    getOrganizations("laboratory").then((o) => { setOrgs(o); if (o[0]) setSelected(o[0].id); }).catch(console.error);
-  }, []);
+    getOrganizations(orgType)
+      .then(o => { setOrgs(o); if (o[0]) setSelected(o[0].id); else setItems([]); })
+      .catch(() => setItems([]));
+  }, [orgType]);
 
   useEffect(() => {
     if (!selected) return;
-    setLoading(true);
-    getLabCatalog(selected).then(setTests).catch(console.error).finally(() => setLoading(false));
-  }, [selected]);
+    let active = true;
+    load(selected).then(r => { if (active) setItems(r); }).catch(() => { if (active) setItems([]); });
+    return () => { active = false; };
+  }, [selected, load]);
+
+  const choose = (id: string) => { setItems(null); setSelected(id); };
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    if (!q) return tests;
-    return tests.filter((t) => t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q));
-  }, [tests, query]);
+    return !items ? null : q ? items.filter(i => matches(i, q)) : items;
+  }, [items, query, matches]);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Select value={selected} onValueChange={setSelected}>
-          <SelectTrigger className="sm:w-72"><SelectValue placeholder="Select a lab" /></SelectTrigger>
-          <SelectContent>{orgs.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Select value={selected} onValueChange={choose}>
+          <SelectTrigger className="h-10 bg-card sm:w-72"><SelectValue placeholder={`Select a ${orgLabel}`} /></SelectTrigger>
+          <SelectContent>{orgs.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
         </Select>
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search test..." value={query} onChange={(e) => setQuery(e.target.value)} className="pl-9 bg-muted border" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input placeholder={searchPlaceholder} value={query} onChange={e => setQuery(e.target.value)} className="h-10 bg-card pl-9" />
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-      ) : (
-        <Card className="shadow-sm border">
-          <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-muted text-muted-foreground"><tr className="text-left">
-                <th className="px-4 py-2 font-medium">Test</th><th className="px-4 py-2 font-medium">Category</th>
-                <th className="px-4 py-2 font-medium">Specimen</th><th className="px-4 py-2 font-medium text-right">Price</th>
-              </tr></thead>
-              <tbody className="divide-y">
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={4} className="text-center text-muted-foreground py-8">No tests available.</td></tr>
-                ) : filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-muted/50">
-                    <td className="px-4 py-2 font-medium">{t.name} <span className="text-xs text-muted-foreground font-mono">{t.code}</span></td>
-                    <td className="px-4 py-2 text-muted-foreground">{t.category}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{t.specimen}</td>
-                    <td className="px-4 py-2 text-right text-muted-foreground">{t.price != null ? `Rs. ${Number(t.price).toFixed(2)}` : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      )}
+      <Card className="gap-0 py-0">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40 hover:bg-muted/40">
+              {columns.map(c => <TableHead key={c.header} className={c.align === "right" ? "pr-5 text-right" : "first:pl-5"}>{c.header}</TableHead>)}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered === null ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}><TableCell colSpan={columns.length} className="px-5"><Skeleton className="h-6 w-full" /></TableCell></TableRow>
+              ))
+            ) : filtered.length === 0 ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={columns.length}><EmptyState icon={emptyIcon} title="Nothing found" /></TableCell>
+              </TableRow>
+            ) : (
+              filtered.map(item => (
+                <TableRow key={item.id}>
+                  {columns.map(c => (
+                    <TableCell key={c.header} className={c.align === "right" ? "pr-5 text-right text-muted-foreground" : "text-muted-foreground first:pl-5"}>
+                      {c.cell(item)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 }

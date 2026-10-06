@@ -1,62 +1,66 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { Loader2 } from "lucide-react";
-import { getPatientById } from "@/lib/api/patients";
-import { getICD10Subset, getMedicationCatalog, getLabTestCatalog } from "@/lib/data/api";
-import { EncounterEditor } from "@/components/features/encounters/EncounterEditor";
-import type { Patient, ICD10, Medication, LabTestCatalogItem } from "@/types";
 import { useSearchParams } from "next/navigation";
+import { UserX } from "lucide-react";
+import { EncounterEditor } from "@/components/features/encounters/EncounterEditor";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { getPatientById, getAllergies, getConditions } from "@/lib/api/patients";
+import { getPrescriptionsByPatient } from "@/lib/api/clinical";
+import { getMedicationCatalog } from "@/lib/api/medications";
+import { getLabTestCatalog } from "@/lib/api/catalog";
+import { recentMedicationNames } from "@/lib/clinical";
+import { findTodaysAppointment } from "@/lib/visit";
+import type { Allergy, LabTestCatalogItem, Medication, Patient, Problem } from "@/types";
 
-export default function NewEncounterPage({ params }: { params: Promise<{ patientId: string }> }) {
+interface VisitContext {
+  patient: Patient | null;
+  allergies: Allergy[];
+  problems: Problem[];
+  recentMedications: string[];
+  appointmentId?: string;
+  medications: Medication[];
+  labTests: LabTestCatalogItem[];
+}
+
+export default function NewVisitPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = use(params);
-  const searchParams = useSearchParams();
-  const appointmentId = searchParams.get("appointmentId") ?? undefined;
-
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [icd10Catalog, setIcd10Catalog] = useState<ICD10[]>([]);
-  const [medicationsCatalog, setMedicationsCatalog] = useState<Medication[]>([]);
-  const [labTestsCatalog, setLabTestsCatalog] = useState<LabTestCatalogItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const appointmentParam = useSearchParams().get("appointmentId") ?? undefined;
+  const [ctx, setCtx] = useState<VisitContext | null>(null);
 
   useEffect(() => {
     Promise.all([
       getPatientById(patientId),
-      getICD10Subset(),
-      getMedicationCatalog(),
-      getLabTestCatalog(),
+      getAllergies(patientId).catch(() => []),
+      getConditions(patientId).catch(() => []),
+      getPrescriptionsByPatient(patientId).catch(() => []),
+      getMedicationCatalog().catch(() => []),
+      getLabTestCatalog().catch(() => []),
+      // Started from the chart? Attach the visit to the patient's open appointment today.
+      appointmentParam ? Promise.resolve(null) : findTodaysAppointment(patientId),
     ])
-      .then(([pt, icd, meds, labs]) => {
-        setPatient(pt);
-        setIcd10Catalog(icd);
-        setMedicationsCatalog(meds);
-        setLabTestsCatalog(labs);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [patientId]);
+      .then(([patient, allergies, problems, rxs, medications, labTests, todays]) =>
+        setCtx({
+          patient, allergies, problems, medications, labTests,
+          recentMedications: recentMedicationNames(rxs),
+          appointmentId: appointmentParam ?? todays?.id,
+        }))
+      .catch(() => setCtx({ patient: null, allergies: [], problems: [], recentMedications: [], medications: [], labTests: [] }));
+  }, [patientId, appointmentParam]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
-  if (!patient) {
-    return <div className="p-8 text-center text-slate-500">Patient not found.</div>;
-  }
+  if (!ctx) return <PageSkeleton />;
+  if (!ctx.patient) return <EmptyState icon={UserX} title="Patient not found" className="min-h-[50vh]" />;
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <EncounterEditor
-        patient={patient}
-        appointmentId={appointmentId}
-        icd10Catalog={icd10Catalog}
-        medicationsCatalog={medicationsCatalog}
-        labTestsCatalog={labTestsCatalog}
-      />
-    </div>
+    <EncounterEditor
+      patient={ctx.patient}
+      allergies={ctx.allergies}
+      problems={ctx.problems}
+      recentMedications={ctx.recentMedications}
+      appointmentId={ctx.appointmentId}
+      medicationsCatalog={ctx.medications}
+      labTestsCatalog={ctx.labTests}
+    />
   );
 }

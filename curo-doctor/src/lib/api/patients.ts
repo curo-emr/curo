@@ -67,6 +67,23 @@ export async function updatePatient(id: string, data: Record<string, unknown>): 
   await apiClient.patch(`/patients/${id}`, data);
 }
 
+export async function createCondition(patientId: string, data: Record<string, unknown>): Promise<void> {
+  await apiClient.post(`/patients/${patientId}/conditions`, data);
+}
+
 export async function createAllergy(patientId: string, data: Record<string, unknown>): Promise<void> {
   await apiClient.post(`/patients/${patientId}/allergies`, data);
+}
+
+// Resolve a set of patients by id (e.g. everyone on today's list), keyed by id.
+// Larger sets start from one page of patients and only look up the rest individually.
+export async function getPatientsByIds(ids: string[]): Promise<Record<string, Patient>> {
+  const unique = [...new Set(ids)].filter(Boolean);
+  const byId: Record<string, Patient> = {};
+  if (unique.length > 10) {
+    for (const p of await getPatients().catch(() => [] as Patient[])) byId[p.id] = p;
+  }
+  const missing = unique.filter(id => !byId[id]);
+  for (const p of await Promise.all(missing.map(id => getPatientById(id)))) if (p) byId[p.id] = p;
+  return byId;
 }

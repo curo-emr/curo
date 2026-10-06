@@ -1,126 +1,133 @@
 "use client";
 
-import { useState } from "react";
-import { PrescriptionItem } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useCallback } from "react";
+import { AlertTriangle, Pill, X } from "lucide-react";
+import type { Allergy, Medication, PrescriptionItem } from "@/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Pill } from "lucide-react";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { SearchCombobox } from "@/components/ui/SearchCombobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FREQUENCIES, routeForForm, suggestQuantity } from "../visit";
 
 interface PrescriptionFormProps {
   prescriptions: PrescriptionItem[];
-  setPrescriptions: React.Dispatch<React.SetStateAction<PrescriptionItem[]>>;
+  onChange: (items: PrescriptionItem[]) => void;
+  catalog: Medication[];
+  allergies: Allergy[];
 }
 
-export function PrescriptionForm({ prescriptions, setPrescriptions }: PrescriptionFormProps) {
-  const [newMed, setNewMed] = useState({ name: "", dose: "", frequency: "", durationDays: 1, quantity: 1, instructions: "" });
+const newItem = (displayName: string, med?: Medication): PrescriptionItem => ({
+  id: `rx-${Date.now()}`,
+  medicationId: med?.id ?? `custom-${displayName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+  displayName,
+  dose: med?.strength ?? "",
+  route: routeForForm(med?.form),
+  frequency: "BD",
+  durationDays: 5,
+  quantity: suggestQuantity("BD", 5) ?? 1,
+  instructions: "",
+  substitutes: [],
+});
 
-  const addMedication = () => {
-    if (!newMed.name.trim()) return;
-    setPrescriptions(prev => [
-      ...prev,
-      {
-        id: `rx-${Date.now()}`,
-        medicationId: `custom-${Date.now()}`,
-        displayName: newMed.name,
-        dose: newMed.dose,
-        route: "oral",
-        frequency: newMed.frequency,
-        durationDays: newMed.durationDays,
-        quantity: newMed.quantity,
-        instructions: newMed.instructions,
-        substitutes: [],
+// Allergy whose substance appears in the drug name, e.g. "Penicillin" in "Penicillin V 250mg".
+const allergyConflict = (name: string, allergies: Allergy[]) =>
+  allergies.find(a => a.substance && name.toLowerCase().includes(a.substance.toLowerCase()));
+
+export function PrescriptionForm({ prescriptions, onChange, catalog, allergies }: PrescriptionFormProps) {
+  const search = useCallback(
+    (q: string) => {
+      const needle = q.toLowerCase();
+      return catalog.filter(m => `${m.name} ${m.genericName}`.toLowerCase().includes(needle)).slice(0, 8);
+    },
+    [catalog],
+  );
+
+  const update = (id: string, patch: Partial<PrescriptionItem>) =>
+    onChange(prescriptions.map(p => {
+      if (p.id !== id) return p;
+      const next = { ...p, ...patch };
+      // Keep quantity in step with frequency × days unless the doctor typed one.
+      if ("frequency" in patch || "durationDays" in patch) {
+        next.quantity = suggestQuantity(next.frequency, next.durationDays) ?? next.quantity;
       }
-    ]);
-    setNewMed({ name: "", dose: "", frequency: "", durationDays: 1, quantity: 1, instructions: "" });
-  };
-
-  const updatePrescriptionField = <K extends keyof PrescriptionItem>(
-    id: string,
-    field: K,
-    value: PrescriptionItem[K]
-  ) => {
-    setPrescriptions(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
-  };
+      return next;
+    }));
 
   return (
-    <Card className="shadow-sm border">
-      <CardHeader className="bg-muted border-b">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Pill className="h-5 w-5 text-status-success-text" /> e-Prescription
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-6 space-y-6">
-        <div className="bg-muted border rounded-md p-4">
-          <div className="flex flex-col md:flex-row items-end gap-3 flex-wrap">
-            <div className="space-y-1 flex-1 w-full min-w-[200px]">
-              <Label className="text-xs text-muted-foreground">Medicine Name</Label>
-              <Input value={newMed.name} onChange={e => setNewMed(m => ({ ...m, name: e.target.value }))} placeholder="e.g. Amoxicillin 500mg" className="h-9 bg-white" />
+    <SectionCard id="prescriptions" icon={Pill} iconClassName="text-clinical-rx" title="Prescriptions" count={prescriptions.length}
+      description="Sent to the pharmacy when you sign the visit">
+      <div className="space-y-3">
+        <SearchCombobox<Medication>
+          placeholder="Add a medication…"
+          search={search}
+          suggestions={catalog.slice(0, 6)}
+          getKey={m => m.id}
+          onSelect={m => onChange([...prescriptions, newItem(m.name, m)])}
+          onCustom={name => onChange([...prescriptions, newItem(name)])}
+          renderItem={m => (
+            <div className="flex w-full items-center justify-between gap-3">
+              <span>{m.name}</span>
+              <span className="shrink-0 text-xs capitalize text-muted-foreground">{m.form}</span>
             </div>
-            <div className="space-y-1 w-full md:w-24">
-              <Label className="text-xs text-muted-foreground">Dose</Label>
-              <Input value={newMed.dose} onChange={e => setNewMed(m => ({ ...m, dose: e.target.value }))} placeholder="500mg" className="h-9 bg-white" />
-            </div>
-            <div className="space-y-1 w-full md:w-28">
-              <Label className="text-xs text-muted-foreground">Frequency</Label>
-              <Input value={newMed.frequency} onChange={e => setNewMed(m => ({ ...m, frequency: e.target.value }))} placeholder="TID" className="h-9 bg-white" />
-            </div>
-            <div className="space-y-1 w-full md:w-20">
-              <Label className="text-xs text-muted-foreground">Days</Label>
-              <Input type="number" value={newMed.durationDays} onChange={e => setNewMed(m => ({ ...m, durationDays: parseInt(e.target.value) || 1 }))} className="h-9 bg-white" />
-            </div>
-            <div className="space-y-1 flex-1 w-full min-w-[150px]">
-              <Label className="text-xs text-muted-foreground">Instructions</Label>
-              <Input value={newMed.instructions} onChange={e => setNewMed(m => ({ ...m, instructions: e.target.value }))} placeholder="e.g. After meals" className="h-9 bg-white" />
-            </div>
-            <Button type="button" onClick={addMedication} className="h-9 bg-status-success-text hover:bg-status-success-text/90 shrink-0 gap-1.5">
-              <Plus className="h-4 w-4" /> Add Medication
-            </Button>
-          </div>
-        </div>
-
-        {prescriptions.length > 0 && (
-          <div className="space-y-4">
-            {prescriptions.map(rx => (
-              <div key={rx.id} className="p-4 border rounded-md bg-muted/50">
-                <div className="flex items-center justify-between mb-3 border-b pb-2">
-                  <span className="font-semibold text-foreground">{rx.displayName}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                    onClick={() => setPrescriptions(prev => prev.filter(p => p.id !== rx.id))}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+          )}
+        />
+        {prescriptions.map(rx => {
+          const conflict = allergyConflict(rx.displayName, allergies);
+          return (
+            <div key={rx.id} className="rounded-lg border p-3 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground">{rx.displayName}</p>
+                  <p className="text-xs capitalize text-muted-foreground">{rx.route}</p>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                  {(['dose', 'frequency'] as const).map(field => (
-                    <div key={field} className="space-y-1">
-                      <Label className="text-xs capitalize">{field}</Label>
-                      <Input className="h-8" value={rx[field] as string} onChange={e => updatePrescriptionField(rx.id, field, e.target.value)} placeholder={field === 'dose' ? 'e.g. 500mg' : 'e.g. BID'} />
-                    </div>
-                  ))}
-                  <div className="space-y-1">
-                    <Label className="text-xs">Duration (Days)</Label>
-                    <Input type="number" className="h-8" value={rx.durationDays} onChange={e => updatePrescriptionField(rx.id, 'durationDays', Number(e.target.value))} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Quantity</Label>
-                    <Input type="number" className="h-8" value={rx.quantity} onChange={e => updatePrescriptionField(rx.id, 'quantity', Number(e.target.value))} />
-                  </div>
-                </div>
-                <div className="mt-3 space-y-1">
-                  <Label className="text-xs">Instructions (Sig)</Label>
-                  <Input className="h-8" value={rx.instructions} onChange={e => updatePrescriptionField(rx.id, 'instructions', e.target.value)} placeholder="e.g. Take 1 tablet by mouth twice daily after meals" />
-                </div>
+                <Button type="button" variant="ghost" size="icon-sm" onClick={() => onChange(prescriptions.filter(p => p.id !== rx.id))}
+                  aria-label={`Remove ${rx.displayName}`} className="text-muted-foreground hover:text-destructive">
+                  <X />
+                </Button>
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              {conflict && (
+                <p className="flex items-center gap-2 rounded-md border border-status-error-border bg-status-error-bg px-2.5 py-1.5 text-xs font-medium text-status-error-text">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> Patient is allergic to {conflict.substance}
+                  {conflict.reaction ? ` (${conflict.reaction})` : ""}.
+                </p>
+              )}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1.6fr_0.7fr_0.7fr]">
+                <Field label="Dose">
+                  <Input value={rx.dose} onChange={e => update(rx.id, { dose: e.target.value })} placeholder="e.g. 500mg" className="h-9" />
+                </Field>
+                <Field label="Frequency">
+                  <Select value={rx.frequency} onValueChange={frequency => update(rx.id, { frequency })}>
+                    <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {FREQUENCIES.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Days">
+                  <Input type="number" min={1} value={rx.durationDays || ""} onChange={e => update(rx.id, { durationDays: Number(e.target.value) })} className="h-9" />
+                </Field>
+                <Field label="Quantity">
+                  <Input type="number" min={1} value={rx.quantity || ""} onChange={e => update(rx.id, { quantity: Number(e.target.value) })} className="h-9" />
+                </Field>
+              </div>
+              <Field label="Instructions">
+                <Input value={rx.instructions} onChange={e => update(rx.id, { instructions: e.target.value })} placeholder="e.g. After meals" className="h-9" />
+              </Field>
+            </div>
+          );
+        })}
+      </div>
+    </SectionCard>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+    </div>
   );
 }

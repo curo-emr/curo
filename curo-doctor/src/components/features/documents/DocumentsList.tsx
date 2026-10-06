@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { FileText, Eye, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate, formatStatus } from "@/lib/utils";
 import { formatFileSize } from "@/components/ui/FileInput";
 import { openDocument, type DocumentRef } from "@/lib/api/documents";
@@ -29,19 +30,19 @@ export function DocumentsList({ documents }: Props) {
   }
 
   if (documents.length === 0) {
-    return <div className="p-8 text-center text-muted-foreground">No documents on record.</div>;
+    return <EmptyState icon={FileText} title="No documents yet" description="Upload referral letters, scans or reports." />;
   }
 
   return (
     <div className="divide-y">
       {documents.map((doc) => (
-        <div key={doc.id} className="flex items-start justify-between gap-4 p-6 hover:bg-muted transition-colors">
+        <div key={doc.id} className="flex items-start justify-between gap-4 px-5 py-4 hover:bg-muted/40 transition-colors">
           <div className="flex items-start gap-3 min-w-0">
             <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="truncate font-medium text-foreground">{doc.fileName || "Document"}</span>
-                <Badge variant="secondary" className="bg-white border text-foreground">
+                <Badge variant="secondary" className="bg-muted text-muted-foreground">
                   {formatStatus(doc.type)}
                 </Badge>
               </div>

@@ -28,6 +28,15 @@ const statusStyles: Record<string, { label?: string; classes: string; strikethro
   arrived:      { classes: "bg-status-teal-bg text-status-teal-text border-status-teal-border" },
   cancelled:    { classes: "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border", strikethrough: true },
   no_show:      { label: "No Show", classes: "bg-status-error-bg text-status-error-text border-status-error-border" },
+  // Lab orders & prescriptions
+  draft:            { classes: "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border" },
+  sent_to_lab:      { label: "Sent to lab", classes: "bg-status-info-bg text-status-info-text border-status-info-border" },
+  results_pending:  { label: "Awaiting results", classes: "bg-status-warning-bg text-status-warning-text border-status-warning-border" },
+  sent_to_pharmacy: { label: "Sent to pharmacy", classes: "bg-status-info-bg text-status-info-text border-status-info-border" },
+  // Problems
+  active:   { classes: "bg-status-info-bg text-status-info-text border-status-info-border" },
+  resolved: { classes: "bg-status-success-bg text-status-success-text border-status-success-border" },
+  inactive: { classes: "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border" },
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {

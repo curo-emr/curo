@@ -1,30 +1,21 @@
-"use client";
-
 import { Suspense } from "react";
-import { PatientList } from "@/components/features/patients/PatientList";
+import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PatientList } from "@/components/features/patients/PatientList";
 import { ROUTES } from "@/lib/constants";
 
-export default function PatientsDirectoryPage() {
+export default function PatientsPage() {
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Patient Directory</h1>
-          <p className="text-sm text-muted-foreground">Search and manage patient records</p>
-        </div>
-        <Link href={ROUTES.NEW_PATIENT}>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Patient
-          </Button>
-        </Link>
-      </div>
-
-      {/* PatientList fetches its own paginated data (useSearchParams needs Suspense). */}
-      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading patients...</div>}>
+    <div className="space-y-6">
+      <PageHeader title="Patients" description="Search the patient register or add a new patient.">
+        <Button asChild>
+          <Link href={ROUTES.NEW_PATIENT}><UserPlus /> Add patient</Link>
+        </Button>
+      </PageHeader>
+      {/* PatientList reads ?q= (useSearchParams needs a Suspense boundary). */}
+      <Suspense>
         <PatientList />
       </Suspense>
     </div>

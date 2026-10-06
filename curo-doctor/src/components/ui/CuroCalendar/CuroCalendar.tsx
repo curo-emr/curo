@@ -52,9 +52,9 @@ const EVENT_COLORS: Record<
     dot: "bg-teal-400",
   },
   gray: {
-    pill: "bg-slate-100 text-slate-500 border border-slate-200",
-    selectedPill: "bg-slate-200/80 text-slate-600 border border-slate-300",
-    dot: "bg-slate-400",
+    pill: "bg-muted text-muted-foreground border border-border",
+    selectedPill: "bg-muted text-muted-foreground border border-border",
+    dot: "bg-muted-foreground/60",
   },
 };
 
@@ -154,37 +154,37 @@ export function CuroCalendar({
   return (
     <div
       className={cn(
-        "flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden",
+        "flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden",
         className
       )}
     >
       {/* ── Header: month/year title + navigation ── */}
-      <div className="flex items-center justify-between px-5 sm:px-7 py-4 border-b border-slate-100 shrink-0">
+      <div className="flex items-center justify-between px-5 sm:px-7 py-4 border-b border-border shrink-0">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl font-bold text-foreground tracking-tight">
             {MONTH_NAMES[month]}{" "}
-            <span className="text-slate-400 font-normal text-lg">{year}</span>
+            <span className="text-muted-foreground/80 font-normal text-lg">{year}</span>
           </h2>
         </div>
 
         <div className="flex items-center gap-1">
           <button
             onClick={goToToday}
-            className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
           >
             Today
           </button>
-          <div className="h-5 w-px bg-slate-200 mx-1" aria-hidden="true" />
+          <div className="h-5 w-px bg-border mx-1" aria-hidden="true" />
           <button
             onClick={goToPrev}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Previous month"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={goToNext}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Next month"
           >
             <ChevronRight className="w-4 h-4" />
@@ -193,13 +193,13 @@ export function CuroCalendar({
       </div>
 
       {/* ── Weekday header row ── */}
-      <div className="grid grid-cols-7 bg-slate-50/70 border-b border-slate-100 shrink-0">
+      <div className="grid grid-cols-7 bg-muted/40 border-b border-border shrink-0">
         {WEEKDAY_LABELS.map((label, i) => (
           <div
             key={label}
             className={cn(
               "py-3 text-center text-[11px] font-semibold uppercase tracking-widest select-none",
-              i === 0 || i === 6 ? "text-slate-400" : "text-slate-500"
+              i === 0 || i === 6 ? "text-muted-foreground/80" : "text-muted-foreground"
             )}
           >
             {label}
@@ -236,20 +236,20 @@ export function CuroCalendar({
                 // Focus ring
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset",
                 // Grid borders (internal only)
-                !isLastCol && "border-r border-slate-100",
-                !isLastRow && "border-b border-slate-100",
+                !isLastCol && "border-r border-border",
+                !isLastRow && "border-b border-border",
                 // Base background
                 !isCurrentMonth
-                  ? "bg-slate-50/60"
+                  ? "bg-muted/40"
                   : isWeekend
-                  ? "bg-white/60"
-                  : "bg-white",
+                  ? "bg-card/60"
+                  : "bg-card",
                 // Selected highlight
                 isSelected && isCurrentMonth && "bg-blue-50/80",
                 // Hover
                 isCurrentMonth
                   ? "hover:bg-blue-50/50"
-                  : "hover:bg-slate-100/50"
+                  : "hover:bg-muted/50"
               )}
               aria-label={`${date.toLocaleDateString("en-US", {
                 weekday: "long",
@@ -265,19 +265,19 @@ export function CuroCalendar({
                 className={cn(
                   "self-start mb-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold shrink-0 transition-colors select-none",
                   // Out-of-month: very dim
-                  !isCurrentMonth && "text-slate-300",
+                  !isCurrentMonth && "text-muted-foreground/50",
                   // Normal current-month day
                   isCurrentMonth &&
                     !today &&
                     !isSelected &&
-                    (isWeekend ? "text-slate-500" : "text-slate-800"),
+                    (isWeekend ? "text-muted-foreground" : "text-foreground"),
                   // Today: filled blue circle
                   today &&
-                    "bg-blue-600 text-white shadow-sm shadow-blue-200",
+                    "bg-primary text-white shadow-sm shadow-blue-200",
                   // Selected but not today
                   isSelected &&
                     !today &&
-                    "bg-blue-600 text-white shadow-sm shadow-blue-200",
+                    "bg-primary text-white shadow-sm shadow-blue-200",
                 )}
               >
                 {date.getDate()}
@@ -289,7 +289,7 @@ export function CuroCalendar({
                   <EventPill key={evt.id} event={evt} isSelected={isSelected} />
                 ))}
                 {overflowCount > 0 && (
-                  <span className="text-[10px] font-medium text-slate-400 pl-1.5 leading-tight">
+                  <span className="text-[10px] font-medium text-muted-foreground/80 pl-1.5 leading-tight">
                     +{overflowCount} more
                   </span>
                 )}

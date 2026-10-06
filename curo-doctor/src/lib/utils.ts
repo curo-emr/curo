@@ -81,31 +81,40 @@ export function getPatientMeta(id: string, patients: { id: string; dob: string; 
   return { age: calculateAge(p.dob), sex: p.sex };
 }
 
-/**
- * Look up a lab test display name from catalog by test ID.
- */
-export function getTestName(testId: string, catalog: { id: string; name: string; code: string }[]): string {
-  const test = catalog.find(t => t.id === testId);
-  return test ? `${test.name} (${test.code})` : testId;
+
+
+
+
+/** "Amali Dissanayake" → "AD" */
+export function getInitials(name?: string | null): string {
+  if (!name) return '';
+  return name.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
-export function generateId(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+/** "female" → "Female" */
+export function formatSex(sex?: string | null): string {
+  return sex ? sex.charAt(0).toUpperCase() + sex.slice(1) : '';
 }
 
-export function generateMRN(): string {
-  const num = Math.floor(Math.random() * 9000000) + 1000000;
-  return `CURO-${num}`;
+/** "35y · Female" from a DOB + sex. */
+export function formatAgeSex(dob: string, sex?: string | null): string {
+  return [dob ? `${calculateAge(dob)}y` : '', formatSex(sex)].filter(Boolean).join(' · ');
 }
 
-/**
- * Returns the left-border color class for a given appointment status.
- */
-export function getStatusBorderClass(status: string): string {
-  switch (status) {
-    case 'waiting': return 'border-l-4 border-l-status-warning-text';
-    case 'in_progress': return 'border-l-4 border-l-primary';
-    case 'completed': return 'border-l-4 border-l-status-success-text';
-    default: return 'border-l-4 border-l-border';
-  }
+/** "19:00" → "7:00 PM" */
+export function formatTime(time: string): string {
+  const [h, m] = time.split(':').map(Number);
+  if (Number.isNaN(h)) return time;
+  return `${h % 12 || 12}:${String(m ?? 0).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+
+/** Relative "just now / 5 min ago / 2 h ago", falling back to a date. */
+export function formatRelative(iso: string | number | Date): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.round(diff / 60_000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min} min ago`;
+  const hours = Math.round(min / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return formatDate(new Date(iso).toISOString());
 }
