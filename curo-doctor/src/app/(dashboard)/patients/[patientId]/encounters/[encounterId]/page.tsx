@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { Loader2, ArrowLeft, Stethoscope, Pill, Beaker, FileSignature, Activity } from "lucide-react";
+import { Loader2, ArrowLeft, Stethoscope, Pill, Beaker, FileSignature, Activity, UserCheck } from "lucide-react";
 import { calculateBMI, formatDate, formatStatus, getBMICategory } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ export default function EncounterDetailsPage({ params }: { params: Promise<{ pat
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
   const [labTestCatalog, setLabTestCatalog] = useState<LabTestCatalogItem[]>([]);
+  const [triagedByNurse, setTriagedByNurse] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -34,8 +35,9 @@ export default function EncounterDetailsPage({ params }: { params: Promise<{ pat
       getEncounterSoap(encounterId),
       getEncounterVitals(patientId, encounterId),
     ])
-      .then(([enc, pt, rxs, labs, catalog, soap, vitals]) => {
+      .then(([enc, pt, rxs, labs, catalog, soap, { vitals, triagedByNurse }]) => {
         setEncounter(enc ? { ...enc, soap: soap ?? enc.soap, vitals } : enc);
+        setTriagedByNurse(triagedByNurse);
         setPatient(pt);
         setPrescriptions(rxs.filter(rx => rx.encounterId === encounterId));
         setLabOrders(labs.filter(l => l.encounterId === encounterId));
@@ -141,6 +143,11 @@ export default function EncounterDetailsPage({ params }: { params: Promise<{ pat
             <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Activity className="h-5 w-5 text-rose-500" /> Vitals
+                {triagedByNurse && (
+                  <Badge variant="outline" className="ml-auto font-medium bg-status-teal-bg text-status-teal-text border-status-teal-border">
+                    <UserCheck /> Nurse triage
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5">
@@ -150,6 +157,7 @@ export default function EncounterDetailsPage({ params }: { params: Promise<{ pat
                   { label: 'Pulse', value: `${encounter.vitals?.pulseBpm ?? '—'} bpm` },
                   { label: 'Temperature', value: `${encounter.vitals?.temperatureC ?? '—'} °C` },
                   { label: 'SpO2', value: `${encounter.vitals?.spo2Percent ?? '—'}%` },
+                  { label: 'Respiration', value: `${encounter.vitals?.respirationRpm ?? '—'} rpm` },
                   { label: 'Weight', value: `${encounter.vitals?.weightKg ?? '—'} kg` },
                   { label: 'Height', value: `${encounter.vitals?.heightCm ?? '—'} cm` },
                 ].map(({ label, value }) => (

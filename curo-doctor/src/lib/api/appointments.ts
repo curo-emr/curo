@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Appointment } from '@/types';
+import type { Appointment, QueueStage } from '@/types';
 import { mapFhirAppointment, type FhirAppointment } from './mappers';
 import { unwrapBundle, type FhirBundle } from './fhir';
 
@@ -27,6 +27,12 @@ export async function getSchedule(practitionerId: string, date?: string): Promis
 
 export async function updateAppointment(id: string, data: Record<string, unknown>): Promise<Appointment> {
   const res = await apiClient.put<FhirAppointment>(`/appointments/${id}`, data);
+  return mapFhirAppointment(res.data);
+}
+
+// Move the patient through the day's flow; the backend validates the transition.
+export async function updateQueueStage(id: string, stage: QueueStage): Promise<Appointment> {
+  const res = await apiClient.put<FhirAppointment>(`/appointments/${id}/queue-stage`, { stage });
   return mapFhirAppointment(res.data);
 }
 

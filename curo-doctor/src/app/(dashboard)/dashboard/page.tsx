@@ -9,6 +9,7 @@ import Link from "next/link";
 import { getPatientName, getPatientMeta, getTodayString } from "@/lib/utils";
 import { ROUTES, APPOINTMENT_STATUS } from "@/lib/constants";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
 import { DashboardSidebar } from "@/components/features/dashboard/DashboardSidebar";
 import { getAppointments } from "@/lib/api/appointments";
 import { getOpenTasks } from "@/lib/api/tasks";
@@ -105,6 +106,7 @@ export default function DashboardPage() {
                 ) : (
                   todaysSchedule.map(apt => {
                     const patientMeta = getPatientMeta(apt.patientId, patients);
+                    const inConsultation = apt.status === APPOINTMENT_STATUS.IN_PROGRESS || apt.queueStage === "with_doctor";
                     return (
                       <div key={apt.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between gap-4">
                         <div className="flex items-start gap-4 min-w-0">
@@ -117,6 +119,7 @@ export default function DashboardPage() {
                                 {getPatientName(apt.patientId, patients)}
                               </Link>
                               <StatusBadge status={apt.status} />
+                              <QueueStageBadge stage={apt.queueStage} />
                             </div>
                             <div className="text-sm text-slate-500 mb-1">
                               {patientMeta?.age}y • {patientMeta?.sex.charAt(0).toUpperCase()}{patientMeta?.sex.slice(1)} • {apt.visitType} — {apt.reason}
@@ -132,12 +135,12 @@ export default function DashboardPage() {
                           <Link href={ROUTES.PATIENT(apt.patientId)}>
                             <Button variant="outline" size="sm" className="h-8 text-xs">Open Chart</Button>
                           </Link>
-                          {apt.status !== APPOINTMENT_STATUS.IN_PROGRESS && apt.status !== APPOINTMENT_STATUS.COMPLETED && (
+                          {!inConsultation && apt.status !== APPOINTMENT_STATUS.COMPLETED && (
                             <Link href={`${ROUTES.NEW_ENCOUNTER(apt.patientId)}?appointmentId=${apt.id}`}>
                               <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700">Start Visit</Button>
                             </Link>
                           )}
-                          {apt.status === APPOINTMENT_STATUS.IN_PROGRESS && (
+                          {inConsultation && (
                             <Link href={`${ROUTES.NEW_ENCOUNTER(apt.patientId)}?appointmentId=${apt.id}`}>
                               <Button size="sm" className="h-8 text-xs bg-amber-500 hover:bg-amber-600">Resume</Button>
                             </Link>

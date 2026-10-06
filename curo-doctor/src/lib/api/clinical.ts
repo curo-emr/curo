@@ -54,26 +54,63 @@ export async function getVitalsByPatient(patientId: string) {
   return res.data;
 }
 
-// Vitals recorded against a specific encounter, collapsed into a single Vitals object.
-// `/vitals` only filters by patient, so we filter on the observation's encounter reference
-// and key strictly by LOINC code (DB displays/units vary, e.g. bpm vs /min).
 interface FhirObservation {
   encounter?: { reference?: string };
   code?: { coding?: Array<{ code?: string }> };
   valueQuantity?: { value?: number };
+  effectiveDateTime?: string;
+  performer?: Array<{ reference?: string }>;
+  extension?: Array<{ url: string; valueString?: string }>;
 }
 
-export async function getEncounterVitals(patientId: string, encounterId: string): Promise<Partial<Vitals>> {
-  const observations = (await getVitalsByPatient(patientId)) as FhirObservation[];
-  const codeToKey = new Map(VITALS_MAP.map(v => [v.code, v.key]));
+const VITAL_KEY_BY_CODE = new Map(VITALS_MAP.map(v => [v.code, v.key]));
+const observedAt = (o: FhirObservation) => new Date(o.effectiveDateTime ?? 0).getTime();
+const isNurseRecorded = (o: FhirObservation) =>
+  o.extension?.some(e => e.url === 'urn:curo:performerRole' && e.valueString === 'NURSE') ?? false;
+
+// Collapse observations into one Vitals object, keyed strictly by LOINC code (DB
+// displays/units vary, e.g. bpm vs /min). When a field was measured more than once
+// (nurse at triage, then the doctor), the most recent value wins.
+function collapseVitals(observations: FhirObservation[]): Partial<Vitals> {
   const vitals: Partial<Vitals> = {};
-  for (const o of observations ?? []) {
-    if (o?.encounter?.reference !== `Encounter/${encounterId}`) continue;
-    const key = codeToKey.get(o?.code?.coding?.[0]?.code ?? '');
+  for (const o of [...observations].sort((a, b) => observedAt(a) - observedAt(b))) {
+    const key = VITAL_KEY_BY_CODE.get(o?.code?.coding?.[0]?.code ?? '');
     const value = o?.valueQuantity?.value;
     if (key && typeof value === 'number') vitals[key] = value;
   }
   return vitals;
+}
+
+export interface EncounterVitals {
+  vitals: Partial<Vitals>;
+  triagedByNurse: boolean;
+}
+
+// Vitals recorded against a specific encounter (including nurse triage vitals,
+// which the backend links to the encounter when it is created).
+export async function getEncounterVitals(patientId: string, encounterId: string): Promise<EncounterVitals> {
+  const observations = ((await getVitalsByPatient(patientId)) as FhirObservation[] ?? [])
+    .filter(o => o?.encounter?.reference === `Encounter/${encounterId}`);
+  return { vitals: collapseVitals(observations), triagedByNurse: observations.some(isNurseRecorded) };
+}
+
+export interface TriageVitals {
+  vitals: Partial<Vitals>;
+  recordedById: string | null;
+  recordedAt: string | null;
+}
+
+// Vitals the nurse recorded for an appointment at triage (null when none).
+export async function getVitalsByAppointment(appointmentId: string): Promise<TriageVitals | null> {
+  const res = await apiClient.get<FhirObservation[]>('/vitals', { params: { appointmentId } });
+  const observations = res.data ?? [];
+  if (observations.length === 0) return null;
+  const latest = observations.reduce((a, b) => (observedAt(b) > observedAt(a) ? b : a));
+  return {
+    vitals: collapseVitals(observations),
+    recordedById: latest.performer?.[0]?.reference?.replace('Practitioner/', '') ?? null,
+    recordedAt: latest.effectiveDateTime ?? null,
+  };
 }
 
 export async function getVitalsTrend(patientId: string) {

@@ -73,6 +73,9 @@ export interface Problem {
   notes: string;
 }
 
+// Where a checked-in patient is in the day's flow (nurse triage → doctor).
+export type QueueStage = 'waiting_nurse' | 'with_nurse' | 'ready_for_doctor' | 'with_doctor' | 'done';
+
 export interface Appointment {
   id: string;
   date: string;
@@ -84,6 +87,7 @@ export interface Appointment {
   status: 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   room: string;
   notes: string;
+  queueStage?: QueueStage | null;
 }
 
 export interface SOAP {
