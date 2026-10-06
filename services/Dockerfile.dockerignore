@@ -1,0 +1,13 @@
+# The context is the repo root: send only what a backend image needs.
+**
+!package.json
+!package-lock.json
+!tsconfig.base.json
+!packages/**
+!services/**
+**/node_modules
+**/dist
+**/coverage
+**/.env*
+**/*.log
+**/*.md

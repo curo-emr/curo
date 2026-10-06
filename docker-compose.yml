@@ -14,6 +14,15 @@ x-jwt-env: &jwt-env
   JWT_EXPIRES_IN: 15m
   JWT_REFRESH_EXPIRES_IN: 7d
 
+x-backend-build: &backend-build
+  context: .
+  dockerfile: services/Dockerfile
+
+x-portal-build: &portal-build
+  dockerfile: ../Dockerfile
+  args:
+    NEXT_PUBLIC_API_URL: http://localhost:3000
+
 x-backend-healthcheck: &backend-healthcheck
   interval: 15s
   timeout: 5s
@@ -78,8 +87,9 @@ services:
   # ── Backend services ─────────────────────────────────────────────────────────
   curo-auth-service:
     build:
-      context: services/auth
-      dockerfile: Dockerfile
+      <<: *backend-build
+      args:
+        SERVICE: auth
     container_name: curo_auth
     restart: unless-stopped
     environment:
@@ -96,8 +106,9 @@ services:
 
   curo-patient-service:
     build:
-      context: services/patient
-      dockerfile: Dockerfile
+      <<: *backend-build
+      args:
+        SERVICE: patient
     container_name: curo_patient
     restart: unless-stopped
     environment:
@@ -114,8 +125,9 @@ services:
 
   curo-appointment-service:
     build:
-      context: services/appointment
-      dockerfile: Dockerfile
+      <<: *backend-build
+      args:
+        SERVICE: appointment
     container_name: curo_appointment
     restart: unless-stopped
     environment:
@@ -133,8 +145,9 @@ services:
 
   curo-clinical-service:
     build:
-      context: services/clinical
-      dockerfile: Dockerfile
+      <<: *backend-build
+      args:
+        SERVICE: clinical
     container_name: curo_clinical
     restart: unless-stopped
     environment:
@@ -151,8 +164,9 @@ services:
 
   curo-pharmacy-service:
     build:
-      context: services/pharmacy
-      dockerfile: Dockerfile
+      <<: *backend-build
+      args:
+        SERVICE: pharmacy
     container_name: curo_pharmacy_svc
     restart: unless-stopped
     environment:
@@ -169,8 +183,9 @@ services:
 
   curo-lab-service:
     build:
-      context: services/lab
-      dockerfile: Dockerfile
+      <<: *backend-build
+      args:
+        SERVICE: lab
     container_name: curo_lab_svc
     restart: unless-stopped
     environment:
@@ -187,8 +202,9 @@ services:
 
   curo-document-service:
     build:
-      context: services/document
-      dockerfile: Dockerfile
+      <<: *backend-build
+      args:
+        SERVICE: document
     container_name: curo_document
     restart: unless-stopped
     environment:
@@ -213,8 +229,9 @@ services:
 
   curo-notification-service:
     build:
-      context: services/notification
-      dockerfile: Dockerfile
+      <<: *backend-build
+      args:
+        SERVICE: notification
     container_name: curo_notification
     restart: unless-stopped
     environment:
@@ -231,8 +248,9 @@ services:
 
   curo-audit-service:
     build:
-      context: services/audit
-      dockerfile: Dockerfile
+      <<: *backend-build
+      args:
+        SERVICE: audit
     container_name: curo_audit
     restart: unless-stopped
     environment:
@@ -249,8 +267,9 @@ services:
 
   curo-api-gateway:
     build:
-      context: services/api-gateway
-      dockerfile: Dockerfile
+      <<: *backend-build
+      args:
+        SERVICE: api-gateway
     container_name: curo_gateway
     restart: unless-stopped
     environment:
@@ -323,13 +342,12 @@ services:
         condition: service_healthy
 
   # ── Frontends ─────────────────────────────────────────────────────────────────
-  # NEXT_PUBLIC_API_URL is baked in at build time (browser uses host-exposed port 3000)
+  # NEXT_PUBLIC_API_URL is baked in at build time (browser uses host-exposed port 3000);
+  # see x-portal-build above.
   curo-doctor:
     build:
-      context: apps/doctor
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
+      <<: *portal-build
+      context: ./apps/doctor
     container_name: curo_doctor_ui
     restart: unless-stopped
     environment:
@@ -343,10 +361,8 @@ services:
 
   curo-patient-portal:
     build:
-      context: apps/patient
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
+      <<: *portal-build
+      context: ./apps/patient
     container_name: curo_patient_ui
     restart: unless-stopped
     environment:
@@ -360,10 +376,8 @@ services:
 
   curo-receptionist:
     build:
-      context: apps/receptionist
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
+      <<: *portal-build
+      context: ./apps/receptionist
     container_name: curo_receptionist_ui
     restart: unless-stopped
     environment:
@@ -377,10 +391,8 @@ services:
 
   curo-lab-portal:
     build:
-      context: apps/lab
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
+      <<: *portal-build
+      context: ./apps/lab
     container_name: curo_lab_ui
     restart: unless-stopped
     environment:
@@ -394,10 +406,8 @@ services:
 
   curo-pharmacy-portal:
     build:
-      context: apps/pharmacy
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
+      <<: *portal-build
+      context: ./apps/pharmacy
     container_name: curo_pharmacy_ui
     restart: unless-stopped
     environment:
@@ -411,10 +421,8 @@ services:
 
   curo-admin:
     build:
-      context: apps/admin
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
+      <<: *portal-build
+      context: ./apps/admin
     container_name: curo_admin_ui
     restart: unless-stopped
     environment:
@@ -428,10 +436,8 @@ services:
 
   curo-nurse:
     build:
-      context: apps/nurse
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
+      <<: *portal-build
+      context: ./apps/nurse
     container_name: curo_nurse_ui
     restart: unless-stopped
     environment:
