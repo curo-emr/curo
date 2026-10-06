@@ -24,6 +24,7 @@ import {
   actorId,
   type AuthUser,
 } from '@curo/shared/auth';
+import { PatientIdsQueryDto } from '@curo/shared/dto';
 import type { SearchQuery } from '@curo/shared/fhir';
 import { EncounterStatus } from '../enums';
 
@@ -190,6 +191,13 @@ export class ClinicalController {
   @Header('Content-Type', 'application/fhir+json')
   getPendingPrescriptions() {
     return this.clinicalService.getPendingPrescriptions();
+  }
+
+  // Pending count and latest prescription for each patient on a list page.
+  @Get('prescriptions/summary')
+  @Roles('DOCTOR', 'SUPER_ADMIN', 'PHARMACIST')
+  getPrescriptionSummaries(@Query() query: PatientIdsQueryDto) {
+    return this.clinicalService.getPrescriptionSummaries(query.patientIds);
   }
 
   // Declared after the literal prescriptions/* routes so ":id" doesn't capture them.

@@ -15,7 +15,6 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { CreateAllergyDto } from './dto/create-allergy.dto';
 import { CreateConditionDto } from './dto/create-condition.dto';
-import { AllergiesQueryDto } from './dto/allergies-query.dto';
 import {
   JwtAuthGuard,
   RolesGuard,
@@ -23,6 +22,7 @@ import {
   CurrentUser,
   type AuthUser,
 } from '@curo/shared/auth';
+import { PatientIdsQueryDto } from '@curo/shared/dto';
 import type { PaginationQuery } from '@curo/shared/fhir';
 
 @Controller('patients')
@@ -73,7 +73,7 @@ export class PatientController {
   @Get('allergies')
   @Roles('DOCTOR', 'NURSE', 'RECEPTIONIST', 'SUPER_ADMIN', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  getAllergiesForPatients(@Query() query: AllergiesQueryDto) {
+  getAllergiesForPatients(@Query() query: PatientIdsQueryDto) {
     return this.patientService.getAllergiesForPatients(query.patientIds);
   }
 

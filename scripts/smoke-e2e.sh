@@ -225,8 +225,14 @@ req "recep"  403 GET  "/prescriptions/$RX_ID" "" "$RECEP" >/dev/null
 req "pharma" 200 GET  "/stock/grouped" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock?lowOnly=true" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock/alerts" "" "$PHARM" >/dev/null
+RXS=$(req "pharma" 200 GET "/prescriptions/summary?patientIds=$PATIENT_ID" "" "$PHARM")
+expect_eq "prescription summary: pending count" "$(jq -r '.[0].pendingCount' <<<"$RXS")" "1"
+req "pharma"  400 GET  "/prescriptions/summary?patientIds=not-a-uuid" "" "$PHARM" >/dev/null
+req "patient" 403 GET  "/prescriptions/summary?patientIds=$PATIENT_ID" "" "$PAT" >/dev/null
 # Same body shape as the pharmacy portal: patient, price and dispenser come from the server.
 DISP_BODY="{\"medicationRequestId\":\"$RX_ID\",\"quantityValue\":60,\"quantityUnit\":\"tablet\"}"
+# Stock the 60 tablets this run dispenses, so repeated runs leave the total unchanged.
+req "pharma" 201 POST "/stock" '{"medicationCode":"860975","medicationName":"Metformin 500mg","quantity":60,"unit":"tablet","unitPrice":1}' "$PHARM" >/dev/null
 D=$(req "pharma" 201 POST "/dispense" "$DISP_BODY" "$PHARM")
 DISP_ID=$(jq -r '.id' <<<"$D")
 expect_eq "dispense patient from prescription" "$(jq -r '.subject.reference' <<<"$D")" "Patient/$PATIENT_ID"
@@ -243,8 +249,11 @@ STOCK_ID=$(jq -r '.id' <<<"$ST")
 # Pricing, dispenser name and concurrency, on a fresh batch with a known price.
 PRICED_CODE="SMK-RX-$RANDOM$RANDOM"
 req "pharma" 201 POST "/stock" "{\"medicationCode\":\"$PRICED_CODE\",\"medicationName\":\"Smoke Priced\",\"quantity\":100,\"unit\":\"tablet\",\"unitPrice\":2.5}" "$PHARM" >/dev/null
-prescribe_priced() {
-  req "doctor" 201 POST /prescriptions "{\"patientId\":\"$PATIENT_ID\",\"medicationCode\":\"$PRICED_CODE\",\"medicationDisplay\":\"Smoke Priced\",\"dosageText\":\"1 tab OD\",\"quantityValue\":10,\"quantityUnit\":\"tablet\"}" "$DOC" | jq -r '.id'
+prescribe_priced() {  # prescribe_priced [quantity=10] -> echoes the prescription id
+  req "doctor" 201 POST /prescriptions "{\"patientId\":\"$PATIENT_ID\",\"medicationCode\":\"$PRICED_CODE\",\"medicationDisplay\":\"Smoke Priced\",\"dosageText\":\"1 tab OD\",\"quantityValue\":${1:-10},\"quantityUnit\":\"tablet\"}" "$DOC" | jq -r '.id'
+}
+priced_stock_left() {
+  req "pharma" 200 GET "/stock/grouped" "" "$PHARM" | jq -r --arg c "$PRICED_CODE" '.[] | select(.medicationCode == $c) | .totalQuantity'
 }
 ext() { jq -r --arg u "urn:curo:$1" '.extension[] | select(.url == $u) | (.valueDecimal // .valueString)'; }
 D2=$(req "pharma" 201 POST "/dispense" "{\"medicationRequestId\":\"$(prescribe_priced)\"}" "$PHARM")
@@ -257,8 +266,13 @@ CODES=$(for _ in 1 2; do
     -H "Authorization: Bearer $PHARM" -d "{\"medicationRequestId\":\"$RX3\"}" &
 done; wait)
 expect_eq "concurrent dispenses: one 201, one 409" "$(sort <<<"$CODES" | tr '\n' ' ')" "201 409 "
-LEFT=$(req "pharma" 200 GET "/stock/grouped" "" "$PHARM" | jq -r --arg c "$PRICED_CODE" '.[] | select(.medicationCode == $c) | .totalQuantity')
-expect_eq "stock drawn once per dispense" "$LEFT" "80"
+expect_eq "stock drawn once per dispense" "$(priced_stock_left)" "80"
+# More than stock holds: refused, and neither the stock nor the prescription changes.
+RX4=$(prescribe_priced 81)
+SHORT=$(req "pharma" 409 POST "/dispense" "{\"medicationRequestId\":\"$RX4\"}" "$PHARM")
+expect_eq "short-stock dispense says why" "$(jq -r '.message' <<<"$SHORT")" "Not enough Smoke Priced in stock: 80 available, 81 needed. Receive stock before dispensing."
+expect_eq "short-stock dispense leaves stock" "$(priced_stock_left)" "80"
+expect_eq "short-stock dispense leaves prescription active" "$(req "pharma" 200 GET "/prescriptions/$RX4" "" "$PHARM" | jq -r '.status')" "active"
 
 # ---------------------------------------------------------------------------
 # 6. READ-BACK to doctor + patient
