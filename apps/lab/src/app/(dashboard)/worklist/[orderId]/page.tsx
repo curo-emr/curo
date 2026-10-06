@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import { Loader2, User, FlaskConical, Clock, ArrowLeft, CheckCircle2, QrCode, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
-import { calculateAge, formatDate, getTestName, formatStatus } from "@/lib/utils";
+import { calculateAge, formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { getLabOrderById, getLabResultsByOrder, getLabTestCatalog, receiveOrder, type LabResult } from "@/lib/api/lab";
 import { getPatientById } from "@/lib/api/patients";
@@ -22,7 +22,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
   const [isLoading, setIsLoading] = useState(true);
   const [isReceiving, setIsReceiving] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const ord = await getLabOrderById(orderId);
     if (!ord) return;
     setOrder(ord);
@@ -34,11 +34,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
     setPatient(pt);
     setTestCatalog(catalog);
     setResults(res);
-  };
+  }, [orderId]);
 
   useEffect(() => {
     loadData().catch(console.error).finally(() => setIsLoading(false));
-  }, [orderId]);
+  }, [loadData]);
 
   const handleReceive = async () => {
     setIsReceiving(true);
@@ -156,6 +156,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                   {order.testQrs.map((t, i) => (
                     <div key={`${t.testCode}-${i}`} className="border rounded-md p-3 text-center">
                       {t.qrBase64
+                        // eslint-disable-next-line @next/next/no-img-element -- data: URL QR code; next/image adds nothing
                         ? <img src={t.qrBase64} alt={`QR ${t.display}`} className="w-24 h-24 mx-auto" />
                         : <div className="w-24 h-24 mx-auto flex items-center justify-center text-xs text-slate-400">No QR</div>}
                       <p className="text-xs font-medium mt-1">{t.display}</p>
@@ -173,6 +174,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12, padding: 16 }}>
                 {order.testQrs.map((t, i) => (
                   <div key={`p-${t.testCode}-${i}`} style={{ border: "1px solid #000", padding: 8, width: 200, fontFamily: "sans-serif" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- data: URL QR code; next/image adds nothing */}
                     {t.qrBase64 && <img src={t.qrBase64} alt="" style={{ width: 96, height: 96 }} />}
                     <div style={{ fontSize: 12, fontWeight: 700 }}>{t.display} ({t.testCode})</div>
                     <div style={{ fontSize: 11 }}>{patient?.name.full}</div>
