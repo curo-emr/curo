@@ -26,6 +26,10 @@ function refreshSecret(): string {
   );
 }
 
+function fullName(p: { firstName: string; lastName: string }): string {
+  return `${p.firstName} ${p.lastName}`;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -113,7 +117,7 @@ export class AuthService {
       practitionerId: savedPractitioner.id,
       email: savedUser.email,
       role: savedUser.role,
-      name: `${dto.firstName} ${dto.lastName}`,
+      name: fullName(dto),
     };
   }
 
@@ -124,7 +128,7 @@ export class AuthService {
       });
       const user = await this.usersRepo.findOne({ where: { id: payload.sub } });
       if (!user || !user.isActive) throw new UnauthorizedException();
-      return this.issueTokens(user);
+      return await this.issueTokens(user);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -150,7 +154,7 @@ export class AuthService {
       name: {
         first: p.firstName,
         last: p.lastName,
-        full: `${p.firstName} ${p.lastName}`,
+        full: fullName(p),
       },
       role: p.role,
       specialty: p.specialization ?? '',
@@ -161,13 +165,19 @@ export class AuthService {
     }));
   }
 
-  private issueTokens(user: User) {
+  private async issueTokens(user: User) {
+    const practitioner = user.practitionerId
+      ? await this.practitionersRepo.findOne({
+          where: { id: user.practitionerId },
+        })
+      : null;
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       role: user.role,
       practitionerId: user.practitionerId ?? null,
       patientId: user.patientId ?? null,
+      name: practitioner ? fullName(practitioner) : null,
     };
     const accessToken = this.jwtService.sign(payload, {
       secret: jwtSecret(),
@@ -186,6 +196,7 @@ export class AuthService {
         role: user.role,
         patientId: user.patientId,
         practitionerId: user.practitionerId,
+        name: payload.name,
       },
     };
   }

@@ -10,7 +10,6 @@ import { DispenseRecordCard } from "@/components/features/dispensing/DispenseRec
 import Link from "next/link";
 import { formatDate, formatStatus } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
-import { useAuth } from "@/contexts/AuthContext";
 import { getPatientById, getAllergies } from "@/lib/api/patients";
 import {
   getPrescription,
@@ -37,7 +36,6 @@ function medicationDetails(item: PrescriptionItem): [string, string][] {
 
 export default function PrescriptionDetailPage({ params }: { params: Promise<{ prescriptionId: string }> }) {
   const { prescriptionId } = use(params);
-  const { user } = useAuth();
   const [prescription, setPrescription] = useState<Prescription | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [allergies, setAllergies] = useState<Allergy[]>([]);
@@ -69,11 +67,10 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ p
   }, [prescriptionId]);
 
   const handleDispense = async () => {
-    if (!user) return;
     setIsDispensing(true);
     setDispenseError(null);
     try {
-      const record = await dispense(prescriptionId, user.name || user.email);
+      const record = await dispense(prescriptionId);
       setDispensingRecords(prev => [record, ...prev]);
       setPrescription(prev => prev && { ...prev, status: "completed" });
     } catch (err: unknown) {
@@ -134,7 +131,7 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ p
         </CardContent>
         <div className="border-t p-4 space-y-3">
           {prescription.status === DISPENSABLE_STATUS ? (
-            <Button onClick={handleDispense} disabled={isDispensing || !user} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={handleDispense} disabled={isDispensing} className="bg-green-600 hover:bg-green-700">
               {isDispensing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Dispensing...</> : "Dispense Prescription"}
             </Button>
           ) : (
