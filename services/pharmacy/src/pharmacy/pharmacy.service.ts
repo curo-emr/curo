@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MedicationRequest } from '@curo/shared/database';
@@ -15,6 +19,12 @@ import { MedicationCatalog } from '../entities/medication-catalog.entity';
 import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
 import { MedicationDispenseStatus } from '../enums';
+
+/** Optional filters for GET /dispense. */
+export interface DispenseHistoryFilter {
+  patientId?: string;
+  prescriptionId?: string;
+}
 
 export type StockBatch = Pick<
   Stock,
@@ -183,6 +193,10 @@ export class PharmacyService {
       throw new NotFoundException(
         `Prescription ${dto.medicationRequestId} not found`,
       );
+    if (prescription.status !== MedicationRequestStatus.ACTIVE)
+      throw new ConflictException(
+        `Prescription ${dto.medicationRequestId} is ${prescription.status}, not active`,
+      );
 
     const receiptNumber = `RX-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
     const unitPrice = dto.unitPrice || 0;
@@ -197,7 +211,7 @@ export class PharmacyService {
 
     const dispense = this.dispenseRepo.create({
       medicationRequestId: dto.medicationRequestId,
-      patientId: dto.patientId,
+      patientId: prescription.patientId,
       pharmacistId,
       status: MedicationDispenseStatus.COMPLETED,
       medicationCode: prescription.medicationCode,
@@ -224,11 +238,15 @@ export class PharmacyService {
   }
 
   async getDispenseHistory(
-    patientId?: string,
+    filter: DispenseHistoryFilter,
     pagination: PaginationQuery = {},
   ): Promise<any> {
     const { page, pageSize, skip, take } = parsePagination(pagination);
-    const where = patientId ? { patientId } : {};
+    const { patientId, prescriptionId } = filter;
+    const where = {
+      ...(patientId ? { patientId } : {}),
+      ...(prescriptionId ? { medicationRequestId: prescriptionId } : {}),
+    };
     const [dispenses, total] = await this.dispenseRepo.findAndCount({
       where,
       order: { createdAt: 'DESC' },
@@ -239,7 +257,7 @@ export class PharmacyService {
       page,
       pageSize,
       baseUrl: '/dispense',
-      query: { patientId },
+      query: { patientId, prescriptionId },
     });
   }
 
