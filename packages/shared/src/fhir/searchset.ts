@@ -22,10 +22,13 @@ export interface Pagination {
 export const DEFAULT_PAGE_SIZE = 25;
 export const MAX_PAGE_SIZE = 100;
 
-export function parsePagination(query: PaginationQuery = {}): Pagination {
+export function parsePagination(
+  query: PaginationQuery = {},
+  defaultPageSize = DEFAULT_PAGE_SIZE,
+): Pagination {
   const rawSize = query.pageSize ?? query._count;
   let pageSize = Number(rawSize);
-  if (!Number.isFinite(pageSize) || pageSize <= 0) pageSize = DEFAULT_PAGE_SIZE;
+  if (!Number.isFinite(pageSize) || pageSize <= 0) pageSize = defaultPageSize;
   pageSize = Math.min(Math.max(Math.floor(pageSize), 1), MAX_PAGE_SIZE);
 
   let page = Number(query.page);

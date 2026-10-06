@@ -9,7 +9,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { JwtAuthGuard, CurrentUser } from '@curo/shared/auth';
+import { JwtAuthGuard, CurrentUser, type AuthUser } from '@curo/shared/auth';
+import type { PaginationQuery } from '@curo/shared/fhir';
 import { NotificationEventType } from '../enums';
 
 @Controller('notifications')
@@ -35,9 +36,9 @@ export class NotificationController {
 
   @Get()
   getForUser(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Query('unreadOnly') unreadOnly?: string,
-    @Query() query?: any,
+    @Query() query?: PaginationQuery,
   ) {
     return this.notificationService.getForUser(
       user.userId,
@@ -47,17 +48,17 @@ export class NotificationController {
   }
 
   @Get('count')
-  getUnreadCount(@CurrentUser() user: any) {
+  getUnreadCount(@CurrentUser() user: AuthUser) {
     return this.notificationService.getUnreadCount(user.userId);
   }
 
   @Put(':id/read')
-  markRead(@Param('id') id: string, @CurrentUser() user: any) {
+  markRead(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.notificationService.markRead(id, user.userId);
   }
 
   @Put('read-all')
-  markAllRead(@CurrentUser() user: any) {
+  markAllRead(@CurrentUser() user: AuthUser) {
     return this.notificationService.markAllRead(user.userId);
   }
 }
