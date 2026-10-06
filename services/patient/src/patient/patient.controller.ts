@@ -8,7 +8,6 @@ import {
   Param,
   Query,
   UseGuards,
-  Request,
   Header,
 } from '@nestjs/common';
 import { PatientService } from './patient.service';

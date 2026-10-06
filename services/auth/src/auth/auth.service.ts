@@ -14,7 +14,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UserRole, Gender } from '@curo/shared/enums';
-import { jwtSecret } from '@curo/shared/auth';
+import { jwtSecret, type AuthUser } from '@curo/shared/auth';
 
 @Injectable()
 export class AuthService {
@@ -55,7 +55,10 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
-  async createStaff(dto: CreateStaffDto, requestingUser: { role: string }) {
+  async createStaff(
+    dto: CreateStaffDto,
+    requestingUser: Pick<AuthUser, 'role'>,
+  ) {
     if (requestingUser.role !== UserRole.SUPER_ADMIN) {
       throw new ForbiddenException(
         'Only super admin can create staff accounts',
@@ -73,8 +76,8 @@ export class AuthService {
       lastName: dto.lastName,
       email: dto.email,
       phone: dto.phone,
-      gender: (dto.gender as Gender) || Gender.UNKNOWN,
-      role: dto.role as UserRole,
+      gender: dto.gender || Gender.UNKNOWN,
+      role: dto.role,
       specialization: dto.specialization,
       qualification: dto.qualification,
       licenseNumber: dto.licenseNumber,
@@ -85,7 +88,7 @@ export class AuthService {
     const user = this.usersRepo.create({
       email: dto.email,
       passwordHash,
-      role: dto.role as UserRole,
+      role: dto.role,
       practitionerId: savedPractitioner.id,
     });
     const savedUser = await this.usersRepo.save(user);
@@ -158,7 +161,6 @@ export class AuthService {
       practitionerId: user.practitionerId ?? null,
       patientId: user.patientId ?? null,
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const accessToken = this.jwtService.sign(
       payload as any,
       {
@@ -166,7 +168,6 @@ export class AuthService {
         expiresIn: '900s',
       } as any,
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const refreshToken = this.jwtService.sign(
       payload as any,
       {

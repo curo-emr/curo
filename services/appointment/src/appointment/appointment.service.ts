@@ -16,6 +16,7 @@ import {
 } from '@curo/shared/fhir';
 import { AppointmentStatus, QueueStage } from '../enums';
 import { assertQueueTransition, queueStageForStatus } from './queue-stage';
+import type { AuthUser } from '@curo/shared/auth';
 
 function toFhirAppointment(a: Appointment) {
   return {
@@ -68,12 +69,7 @@ export class AppointmentService {
   }
 
   async findAll(
-    requestingUser: {
-      role: string;
-      userId: string;
-      practitionerId?: string;
-      patientId?: string;
-    },
+    requestingUser: AuthUser,
     filters?: {
       date?: string;
       practitionerId?: string;
@@ -152,7 +148,7 @@ export class AppointmentService {
   async updateQueueStage(
     id: string,
     stage: QueueStage,
-    user: { role: string; practitionerId?: string },
+    user: Pick<AuthUser, 'role' | 'practitionerId'>,
   ): Promise<any> {
     const a = await this.appointmentsRepo.findOne({ where: { id } });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);

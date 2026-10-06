@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsPositive,
   IsString,
-  Min,
 } from 'class-validator';
 
 export class CreatePaymentDto {

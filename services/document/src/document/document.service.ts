@@ -15,17 +15,16 @@ import { AuditLog } from '@curo/shared/database';
 import { STORAGE_PROVIDER } from '../storage/storage.provider';
 import type { StorageProvider } from '../storage/storage.provider';
 import { CreateDocumentDto } from './dto/create-document.dto';
+import type { AuthUser } from '@curo/shared/auth';
+import { UserRole } from '@curo/shared/enums';
 
 const ALLOWED_CONTENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
-const STAFF_ROLES = ['DOCTOR', 'LAB_STAFF', 'SUPER_ADMIN'];
-
-interface AuthUser {
-  userId: string;
-  role: string;
-  practitionerId: string | null;
-  patientId: string | null;
-}
+const STAFF_ROLES: UserRole[] = [
+  UserRole.DOCTOR,
+  UserRole.LAB_STAFF,
+  UserRole.SUPER_ADMIN,
+];
 
 @Injectable()
 export class DocumentService {
@@ -107,7 +106,8 @@ export class DocumentService {
     if (!doc) throw new NotFoundException('Document not found');
 
     const isStaff = STAFF_ROLES.includes(user.role);
-    const isOwner = user.role === 'PATIENT' && doc.patientId === user.patientId;
+    const isOwner =
+      user.role === UserRole.PATIENT && doc.patientId === user.patientId;
     if (!isStaff && !isOwner) {
       throw new ForbiddenException('Not allowed to access this document');
     }

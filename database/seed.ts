@@ -16,76 +16,10 @@ enum UserRole {
   NURSE = 'NURSE',
   SUPER_ADMIN = 'SUPER_ADMIN',
 }
-enum Gender {
-  MALE = 'male',
-  FEMALE = 'female',
-  OTHER = 'other',
-  UNKNOWN = 'unknown',
-}
-enum MaritalStatus {
-  SINGLE = 'S',
-  MARRIED = 'M',
-  DIVORCED = 'D',
-  WIDOWED = 'W',
-  SEPARATED = 'L',
-  UNKNOWN = 'UNK',
-}
-enum AppointmentStatus {
-  BOOKED = 'booked',
-  ARRIVED = 'arrived',
-  FULFILLED = 'fulfilled',
-  CANCELLED = 'cancelled',
-}
-enum EncounterStatus {
-  IN_PROGRESS = 'in-progress',
-  COMPLETED = 'completed',
-  PLANNED = 'planned',
-}
-enum MedReqStatus {
-  ACTIVE = 'active',
-  COMPLETED = 'completed',
-}
-enum SvcReqStatus {
-  ACTIVE = 'active',
-  COMPLETED = 'completed',
-}
-enum DiagStatus {
-  FINAL = 'final',
-}
-enum ObsStatus {
-  FINAL = 'final',
-}
-enum DispStatus {
-  COMPLETED = 'completed',
-}
-enum InstrumentStatus {
-  OPERATIONAL = 'operational',
-  MAINTENANCE = 'maintenance',
-  OFFLINE = 'offline',
-}
 enum QCStatus {
   PASS = 'pass',
   FAIL = 'fail',
   WARNING = 'warning',
-}
-enum AllergyType {
-  ALLERGY = 'allergy',
-  INTOLERANCE = 'intolerance',
-}
-enum AllergyCrit {
-  LOW = 'low',
-  HIGH = 'high',
-  UNABLE_TO_ASSESS = 'unable-to-assess',
-}
-enum CondStatus {
-  ACTIVE = 'active',
-  RESOLVED = 'resolved',
-}
-enum NotifType {
-  APPOINTMENT_CONFIRMED = 'appointment_confirmed',
-  LAB_RESULTS_READY = 'lab_results_ready',
-  PRESCRIPTION_READY = 'prescription_ready',
-  GENERAL = 'general',
 }
 
 const AppDataSource = new DataSource(connectionOptions);
@@ -129,11 +63,6 @@ function rnd<T>(arr: T[]): T {
 function daysAgo(n: number) {
   const d = new Date();
   d.setDate(d.getDate() - n);
-  return d;
-}
-function hoursFromNow(h: number) {
-  const d = new Date();
-  d.setHours(d.getHours() + h);
   return d;
 }
 
@@ -380,11 +309,10 @@ async function seed() {
   console.log('✅ organizations created (1 clinic, 2 pharmacies, 2 labs)');
 
   // ---- SUPER ADMIN USER ----
-  const [adminUser] = await db.query(
+  await db.query(
     `
     INSERT INTO users (id, email, "passwordHash", role, "isActive")
     VALUES (gen_random_uuid(), 'admin@curo.health', $1, 'SUPER_ADMIN', true)
-    RETURNING id
   `,
     [HASH('Admin@12345')],
   );
