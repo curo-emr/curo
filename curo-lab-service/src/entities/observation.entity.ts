@@ -19,6 +19,13 @@ export class Observation {
   @Column({ nullable: true })
   encounterId: string;
 
+  @Index()
+  @Column({ nullable: true })
+  appointmentId: string; // links pre-encounter (nurse triage) vitals to the visit
+
+  @Column({ nullable: true })
+  performerRole: string; // role of whoever recorded it, e.g. NURSE | DOCTOR
+
   @Column({ nullable: true })
   serviceRequestId: string;
 

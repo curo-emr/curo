@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsNumber, IsUUID } from 'class-validator';
 
 export class CreateVitalsDto {
   @IsNotEmpty()
@@ -8,6 +8,12 @@ export class CreateVitalsDto {
   @IsOptional()
   @IsString()
   encounterId?: string;
+
+  // Triage vitals are recorded before an encounter exists; they are tied to the
+  // visit's appointment and linked to the encounter when the doctor creates it.
+  @IsOptional()
+  @IsUUID()
+  appointmentId?: string;
 
   @IsNotEmpty()
   @IsString()

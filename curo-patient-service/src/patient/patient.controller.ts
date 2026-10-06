@@ -24,7 +24,7 @@ export class PatientController {
   }
 
   @Get()
-  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'LAB_STAFF', 'PHARMACIST')
+  @Roles('DOCTOR', 'NURSE', 'RECEPTIONIST', 'SUPER_ADMIN', 'LAB_STAFF', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
   findAll(@CurrentUser() user: any, @Query('search') search?: string, @Query() query?: any) {
     return this.patientService.findAll(user, search, query);
@@ -47,7 +47,7 @@ export class PatientController {
   // Pharmacy & lab can fetch a patient by id, but receive a minimized projection
   // (see toFhirPatient). Patients are restricted to their own record in the service.
   @Get(':id')
-  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'PATIENT', 'LAB_STAFF', 'PHARMACIST')
+  @Roles('DOCTOR', 'NURSE', 'RECEPTIONIST', 'SUPER_ADMIN', 'PATIENT', 'LAB_STAFF', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
   findOne(@Param('id') id: string, @CurrentUser() user: any) {
     return this.patientService.findOne(id, user);
@@ -67,9 +67,9 @@ export class PatientController {
     return this.patientService.update(id, dto, user);
   }
 
-  // Allergies — pharmacy needs these for safe dispensing; lab does not.
+  // Allergies — pharmacy needs these for safe dispensing, nurses for safe triage; lab does not.
   @Get(':id/allergies')
-  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'PATIENT', 'PHARMACIST')
+  @Roles('DOCTOR', 'NURSE', 'RECEPTIONIST', 'SUPER_ADMIN', 'PATIENT', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
   getAllergies(@Param('id') id: string) {
     return this.patientService.getAllergies(id);
@@ -84,7 +84,7 @@ export class PatientController {
 
   // Conditions
   @Get(':id/conditions')
-  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
+  @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getConditions(@Param('id') id: string) {
     return this.patientService.getConditions(id);
@@ -99,7 +99,7 @@ export class PatientController {
 
   // Vitals
   @Get(':id/vitals')
-  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
+  @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getVitals(@Param('id') id: string) {
     return this.patientService.getVitals(id);
