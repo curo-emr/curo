@@ -94,6 +94,13 @@ export async function getEncounterVitals(patientId: string, encounterId: string)
   return { vitals: collapseVitals(observations), triagedByNurse: observations.some(isNurseRecorded) };
 }
 
+// The most recent value of every vital the patient has on record, and when the last one was taken.
+export async function getLatestVitals(patientId: string): Promise<{ vitals: Partial<Vitals>; recordedAt: string | null }> {
+  const observations = ((await getVitalsByPatient(patientId)) as FhirObservation[]) ?? [];
+  const latest = observations.reduce<FhirObservation | null>((a, b) => (!a || observedAt(b) > observedAt(a) ? b : a), null);
+  return { vitals: collapseVitals(observations), recordedAt: latest?.effectiveDateTime ?? null };
+}
+
 export interface TriageVitals {
   vitals: Partial<Vitals>;
   recordedById: string | null;
@@ -171,9 +178,15 @@ export async function getLabOrdersByPatient(patientId: string): Promise<LabOrder
   return unwrapBundle(res.data).resources.map(mapFhirServiceRequest);
 }
 
-export async function getPendingLabOrders(): Promise<LabOrder[]> {
-  const res = await apiClient.get<FhirServiceRequest[] | FhirBundle<FhirServiceRequest>>('/lab-orders', { params: { status: 'results_pending' } });
-  return unwrapBundle(res.data).resources.map(mapFhirServiceRequest);
+// Lab orders this doctor placed whose results came back in the last `days` days, newest first.
+// (`/lab-orders` has no status/requester filter, so both are applied here.)
+export async function getRecentLabResults(practitionerId: string, days = 7): Promise<LabOrder[]> {
+  const res = await apiClient.get<FhirServiceRequest[] | FhirBundle<FhirServiceRequest>>('/lab-orders');
+  const since = Date.now() - days * 86_400_000;
+  return unwrapBundle(res.data).resources
+    .map(mapFhirServiceRequest)
+    .filter(o => o.doctorId === practitionerId && o.status === 'completed' && new Date(o.createdAt).getTime() >= since)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function createLabOrder(data: Record<string, unknown>): Promise<LabOrder> {

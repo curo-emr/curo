@@ -1,7 +1,6 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileSidebar } from "@/components/layout/MobileSidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { SidebarProvider } from "@/contexts/SidebarContext";
@@ -17,11 +16,10 @@ export default function DashboardLayout({
         <TooltipProvider>
           <Sidebar />
           <MobileSidebar />
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
             <Topbar />
-            <main className="flex-1 overflow-y-auto p-6 relative">
-              <Breadcrumbs />
-              {children}
+            <main id="main" className="flex-1 overflow-y-auto">
+              <div className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-8 lg:py-8">{children}</div>
             </main>
           </div>
         </TooltipProvider>

@@ -1,133 +1,80 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ICD10, Diagnosis } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useCallback } from "react";
+import { Star, Stethoscope, X } from "lucide-react";
+import type { Diagnosis, ICD10 } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Search, Trash2, Stethoscope } from "lucide-react";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { SearchCombobox } from "@/components/ui/SearchCombobox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { searchICD10 } from "@/lib/api/icd";
+import { cn } from "@/lib/utils";
 
 interface DiagnosisSearchProps {
-  // Retained for backward-compat; ICD-10 matches now come from the DB via search.
-  icd10Catalog?: ICD10[];
   diagnoses: Diagnosis[];
-  setDiagnoses: React.Dispatch<React.SetStateAction<Diagnosis[]>>;
+  onChange: (diagnoses: Diagnosis[]) => void;
 }
 
-export function DiagnosisSearch({ diagnoses, setDiagnoses }: DiagnosisSearchProps) {
-  const [icdQuery, setIcdQuery] = useState("");
-  const [filteredIcd, setFilteredIcd] = useState<ICD10[]>([]);
+export function DiagnosisSearch({ diagnoses, onChange }: DiagnosisSearchProps) {
+  const search = useCallback((q: string) => searchICD10(q, 8), []);
 
-  // Debounced server-side ICD-10 search (top matches) for the autocomplete dropdown.
-  useEffect(() => {
-    const q = icdQuery.trim();
-    if (!q) { setFilteredIcd([]); return; }
-    let active = true;
-    const t = setTimeout(() => {
-      searchICD10(q, 6)
-        .then(r => { if (active) setFilteredIcd(r); })
-        .catch(() => { if (active) setFilteredIcd([]); });
-    }, 250);
-    return () => { active = false; clearTimeout(t); };
-  }, [icdQuery]);
-
-  const addDiagnosis = (icd: ICD10) => {
-    if (!diagnoses.some(d => d.icdCode === icd.code)) {
-      setDiagnoses(prev => [...prev, { icdCode: icd.code, name: icd.name, isPrimary: prev.length === 0 }]);
-    }
-    setIcdQuery("");
+  const add = (icd: ICD10) => {
+    if (diagnoses.some(d => d.icdCode === icd.code)) return;
+    onChange([...diagnoses, { icdCode: icd.code, name: icd.name, isPrimary: diagnoses.length === 0 }]);
   };
 
-  const togglePrimary = (code: string) => {
-    setDiagnoses(prev => prev.map(d => ({ ...d, isPrimary: d.icdCode === code })));
+  const makePrimary = (code: string) => onChange(diagnoses.map(d => ({ ...d, isPrimary: d.icdCode === code })));
+
+  const remove = (code: string) => {
+    const rest = diagnoses.filter(d => d.icdCode !== code);
+    // Keep exactly one primary while any diagnosis remains.
+    if (rest.length > 0 && !rest.some(d => d.isPrimary)) rest[0] = { ...rest[0], isPrimary: true };
+    onChange(rest);
   };
 
   return (
-    <Card className="shadow-sm border">
-      <CardHeader className="bg-muted border-b">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Stethoscope className="h-5 w-5 text-primary" /> Diagnoses
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-6 space-y-6">
-        <div className="relative">
-          <Label htmlFor="icd-search" className="sr-only">Search ICD-10</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="icd-search"
-              value={icdQuery}
-              onChange={e => setIcdQuery(e.target.value)}
-              placeholder="Search diagnoses by keyword or ICD-10 code..."
-              className="pl-9"
-              autoComplete="off"
-            />
-          </div>
-          {/* Dropdown */}
-          {icdQuery && (
-            <div className="absolute top-11 left-0 right-0 bg-white border rounded-md shadow-lg z-20 max-h-60 overflow-y-auto">
-              {filteredIcd.length > 0 ? filteredIcd.map(icd => (
-                <button
-                  key={icd.code}
-                  type="button"
-                  onClick={() => addDiagnosis(icd)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm border-b last:border-0 flex justify-between items-center gap-4"
-                >
-                  <span className="font-medium">{icd.name}</span>
-                  <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded shrink-0">{icd.code}</span>
-                </button>
-              )) : (
-                <div className="px-4 py-3 text-sm text-muted-foreground">No matching diagnoses found.</div>
-              )}
+    <SectionCard id="diagnoses" icon={Stethoscope} iconClassName="text-clinical-diagnosis" title="Diagnoses" count={diagnoses.length}>
+      <div className="space-y-3">
+        <SearchCombobox<ICD10>
+          placeholder="Search ICD-10 by condition or code…"
+          search={search}
+          getKey={icd => icd.code}
+          onSelect={add}
+          renderItem={icd => (
+            <div className="flex w-full items-center justify-between gap-3">
+              <span>{icd.name}</span>
+              <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{icd.code}</span>
             </div>
           )}
-        </div>
-
+        />
         {diagnoses.length > 0 && (
-          <div className="border rounded-md overflow-hidden">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-muted border-b text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-2 font-medium">ICD-10</th>
-                  <th className="px-4 py-2 font-medium">Description</th>
-                  <th className="px-4 py-2 font-medium">Primary</th>
-                  <th className="px-4 py-2 font-medium text-right">Remove</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {diagnoses.map(d => (
-                  <tr key={d.icdCode} className="hover:bg-muted/50">
-                    <td className="px-4 py-3 font-mono text-foreground">{d.icdCode}</td>
-                    <td className="px-4 py-3 font-medium text-foreground">{d.name}</td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="radio"
-                        name="primary-diagnosis"
-                        checked={d.isPrimary}
-                        onChange={() => togglePrimary(d.icdCode)}
-                        className="h-4 w-4 text-primary cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-status-error-bg"
-                        onClick={() => setDiagnoses(prev => prev.filter(x => x.icdCode !== d.icdCode))}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="divide-y rounded-lg border">
+            {diagnoses.map(d => (
+              <li key={d.icdCode} className="flex items-center gap-3 px-3 py-2.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => makePrimary(d.icdCode)}
+                      aria-label={d.isPrimary ? "Primary diagnosis" : "Make primary"}
+                      className={cn("rounded p-1 transition-colors", d.isPrimary ? "text-status-warning-text" : "text-muted-foreground/40 hover:text-status-warning-text")}
+                    >
+                      <Star className={cn("h-4 w-4", d.isPrimary && "fill-current")} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{d.isPrimary ? "Primary diagnosis" : "Make primary"}</TooltipContent>
+                </Tooltip>
+                <span className="w-20 shrink-0 font-mono text-xs text-muted-foreground">{d.icdCode}</span>
+                <span className="min-w-0 flex-1 text-sm font-medium text-foreground">{d.name}</span>
+                {d.isPrimary && <span className="hidden sm:inline text-xs font-medium text-status-warning-text">Primary</span>}
+                <Button type="button" variant="ghost" size="icon-sm" onClick={() => remove(d.icdCode)} aria-label={`Remove ${d.name}`} className="text-muted-foreground hover:text-destructive">
+                  <X />
+                </Button>
+              </li>
+            ))}
+          </ul>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </SectionCard>
   );
 }

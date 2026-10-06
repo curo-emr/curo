@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Patient, Encounter, Allergy, Problem, LabOrder, Prescription, LabTestCatalogItem } from "@/types";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { Allergy, Encounter, LabOrder, Patient, Prescription, Problem, Vitals } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { OverviewTab } from "./tabs/OverviewTab";
-import { EncountersTab } from "./tabs/EncountersTab";
-import { ProblemsTab } from "./tabs/ProblemsTab";
-import { AllergiesTab } from "./tabs/AllergiesTab";
+import { SummaryTab } from "./tabs/SummaryTab";
+import { VisitsTab } from "./tabs/VisitsTab";
 import { MedicationsTab } from "./tabs/MedicationsTab";
 import { LabsTab } from "./tabs/LabsTab";
 import { DocumentsTab } from "../documents/DocumentsTab";
@@ -19,73 +17,56 @@ interface Props {
   problems: Problem[];
   labOrders: LabOrder[];
   prescriptions: Prescription[];
-  labTestCatalog: LabTestCatalogItem[];
-  initialTab?: string;
+  latestVitals: { vitals: Partial<Vitals>; recordedAt: string | null };
 }
 
-export function PatientChartTabs({
-  patient,
-  encounters,
-  allergies,
-  problems,
-  labOrders,
-  prescriptions,
-  labTestCatalog,
-  initialTab = "overview",
-}: Props) {
-  const [activeTab, setActiveTab] = useState(initialTab);
+const TABS = ["summary", "visits", "medications", "labs", "documents", "trends"] as const;
+type Tab = (typeof TABS)[number];
+
+export function PatientChartTabs({ patient, encounters, allergies, problems, labOrders, prescriptions, latestVitals }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requested = searchParams.get("tab") as Tab | null;
+  const tab: Tab = requested && TABS.includes(requested) ? requested : "summary";
+
+  // The tab lives in the URL so links like ?tab=labs open the right view and back/forward work.
+  const setTab = (next: string) => router.replace(next === "summary" ? pathname : `${pathname}?tab=${next}`, { scroll: false });
+
+  const count = (n: number) => n > 0 && <span className="ml-1 text-xs tabular-nums text-muted-foreground">{n}</span>;
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="bg-white border-b px-2 py-0 h-auto w-full justify-start rounded-none space-x-6 overflow-x-auto scrollbar-none">
-        <TabsTrigger value="overview" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Overview</TabsTrigger>
-        <TabsTrigger value="encounters" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Encounters ({encounters.length})</TabsTrigger>
-        <TabsTrigger value="problems" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Problems ({problems.length})</TabsTrigger>
-        <TabsTrigger value="allergies" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Allergies ({allergies.length})</TabsTrigger>
-        <TabsTrigger value="medications" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Medications</TabsTrigger>
-        <TabsTrigger value="labs" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Labs & Reports ({labOrders.length})</TabsTrigger>
-        <TabsTrigger value="documents" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Documents</TabsTrigger>
-        <TabsTrigger value="trends" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary">Trends</TabsTrigger>
-      </TabsList>
-
-      <div className="mt-6">
-        <TabsContent value="overview" className="space-y-6 outline-none">
-          <OverviewTab
-            patient={patient}
-            encounters={encounters}
-            problems={problems}
-            setActiveTab={setActiveTab}
-          />
-        </TabsContent>
-
-        <TabsContent value="encounters" className="space-y-4 outline-none">
-          <EncountersTab patient={patient} encounters={encounters} />
-        </TabsContent>
-
-        <TabsContent value="problems" className="outline-none">
-          <ProblemsTab problems={problems} />
-        </TabsContent>
-
-        <TabsContent value="allergies" className="outline-none">
-          <AllergiesTab allergies={allergies} />
-        </TabsContent>
-
-        <TabsContent value="medications" className="outline-none">
-          <MedicationsTab prescriptions={prescriptions} patient={patient} />
-        </TabsContent>
-
-        <TabsContent value="labs" className="outline-none">
-          <LabsTab labOrders={labOrders} labTestCatalog={labTestCatalog} />
-        </TabsContent>
-
-        <TabsContent value="documents" className="outline-none">
-          <DocumentsTab patientId={patient.id} />
-        </TabsContent>
-
-        <TabsContent value="trends" className="outline-none">
-          <VitalsTrendCharts patientId={patient.id} />
-        </TabsContent>
+    <Tabs value={tab} onValueChange={setTab} className="gap-6">
+      <div className="overflow-x-auto border-b">
+        <TabsList variant="line" className="h-11 gap-4 px-1">
+          <TabsTrigger value="summary" className="flex-none px-1">Summary</TabsTrigger>
+          <TabsTrigger value="visits" className="flex-none px-1">Visits{count(encounters.length)}</TabsTrigger>
+          <TabsTrigger value="medications" className="flex-none px-1">Medications</TabsTrigger>
+          <TabsTrigger value="labs" className="flex-none px-1">Labs{count(labOrders.length)}</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-none px-1">Documents</TabsTrigger>
+          <TabsTrigger value="trends" className="flex-none px-1">Trends</TabsTrigger>
+        </TabsList>
       </div>
+
+      <TabsContent value="summary">
+        <SummaryTab patient={patient} allergies={allergies} problems={problems} encounters={encounters}
+          prescriptions={prescriptions} latestVitals={latestVitals} onShowTab={setTab} />
+      </TabsContent>
+      <TabsContent value="visits">
+        <VisitsTab patientId={patient.id} encounters={encounters} problems={problems} />
+      </TabsContent>
+      <TabsContent value="medications">
+        <MedicationsTab prescriptions={prescriptions} patient={patient} />
+      </TabsContent>
+      <TabsContent value="labs">
+        <LabsTab labOrders={labOrders} />
+      </TabsContent>
+      <TabsContent value="documents">
+        <DocumentsTab patientId={patient.id} />
+      </TabsContent>
+      <TabsContent value="trends">
+        <VitalsTrendCharts patientId={patient.id} />
+      </TabsContent>
     </Tabs>
   );
 }

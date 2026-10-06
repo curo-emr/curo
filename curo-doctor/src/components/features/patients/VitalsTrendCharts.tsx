@@ -130,9 +130,9 @@ function MetricChart({ metric, points }: { metric: Metric; points: TrendPoint[] 
     .filter(Boolean) as { label: string; value: number; unit: string; flag: string }[];
 
   return (
-    <Card className="shadow-sm border">
-      <CardHeader className="bg-muted/50 border-b pb-3 flex-row items-center justify-between">
-        <CardTitle className="text-base">{metric.title}</CardTitle>
+    <Card className="gap-0">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 px-5 pt-4 pb-2">
+        <CardTitle className="text-sm font-semibold">{metric.title}</CardTitle>
         <div className="flex gap-2 flex-wrap">
           {latestFlags.map((f) => (
             <Badge
@@ -149,7 +149,7 @@ function MetricChart({ metric, points }: { metric: Metric; points: TrendPoint[] 
           ))}
         </div>
       </CardHeader>
-      <CardContent className="p-5">
+      <CardContent className="px-5 pb-5">
         {data.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">No data recorded.</p>
         ) : (

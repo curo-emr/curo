@@ -111,11 +111,11 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Personal Information */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border pb-3">
-          <CardTitle className="text-base">Personal Information</CardTitle>
+      <Card className="gap-0">
+        <CardHeader className="px-5 pt-4 pb-1">
+          <CardTitle className="text-sm font-semibold">Personal Information</CardTitle>
         </CardHeader>
-        <CardContent className="p-5">
+        <CardContent className="px-5 pb-5 pt-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="nic">NIC / Passport *</Label>
@@ -235,11 +235,11 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
       </Card>
 
       {/* Contact Information */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border pb-3">
-          <CardTitle className="text-base">Contact Information</CardTitle>
+      <Card className="gap-0">
+        <CardHeader className="px-5 pt-4 pb-1">
+          <CardTitle className="text-sm font-semibold">Contact Information</CardTitle>
         </CardHeader>
-        <CardContent className="p-5">
+        <CardContent className="px-5 pb-5 pt-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="phone">Phone *</Label>
@@ -299,11 +299,11 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
       </Card>
 
       {/* Emergency Contact */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border pb-3">
-          <CardTitle className="text-base">Emergency Contact</CardTitle>
+      <Card className="gap-0">
+        <CardHeader className="px-5 pt-4 pb-1">
+          <CardTitle className="text-sm font-semibold">Emergency Contact</CardTitle>
         </CardHeader>
-        <CardContent className="p-5">
+        <CardContent className="px-5 pb-5 pt-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="emergencyContactName">Name *</Label>
@@ -350,13 +350,13 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
       </Card>
 
       {/* Insurance (Collapsible) */}
-      <Card className="shadow-sm border">
+      <Card className="gap-0">
         <CardHeader
           className="bg-muted/50 border-b border pb-3 cursor-pointer"
           onClick={() => setInsuranceOpen(!insuranceOpen)}
         >
           <div className="flex items-center justify-between w-full">
-            <CardTitle className="text-base">Insurance (Optional)</CardTitle>
+            <CardTitle className="text-sm font-semibold">Insurance (Optional)</CardTitle>
             <ChevronDown
               className={`h-4 w-4 text-muted-foreground transition-transform ${
                 insuranceOpen ? "rotate-180" : ""
@@ -365,7 +365,7 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
           </div>
         </CardHeader>
         {insuranceOpen && (
-          <CardContent className="p-5">
+          <CardContent className="px-5 pb-5 pt-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="insuranceProvider">Provider</Label>
@@ -436,10 +436,10 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
       </Card>
 
       {/* Allergies */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border pb-3">
+      <Card className="gap-0">
+        <CardHeader className="px-5 pt-4 pb-1">
           <div className="flex items-center justify-between w-full">
-            <CardTitle className="text-base">Allergies</CardTitle>
+            <CardTitle className="text-sm font-semibold">Allergies</CardTitle>
             <Button
               type="button"
               variant="outline"
@@ -451,7 +451,7 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-5">
+        <CardContent className="px-5 pb-5 pt-3">
           {allergyFields.length === 0 ? (
             <p className="text-sm text-muted-foreground">No allergies recorded. Click &apos;Add Allergy&apos; to add one.</p>
           ) : (
@@ -509,11 +509,11 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
       </Card>
 
       {/* Tags */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border pb-3">
-          <CardTitle className="text-base">Tags</CardTitle>
+      <Card className="gap-0">
+        <CardHeader className="px-5 pt-4 pb-1">
+          <CardTitle className="text-sm font-semibold">Tags</CardTitle>
         </CardHeader>
-        <CardContent className="p-5">
+        <CardContent className="px-5 pb-5 pt-3">
           <div className="space-y-1.5">
             <Label htmlFor="tags">Tags (comma-separated)</Label>
             <Input

@@ -1,22 +1,19 @@
 "use client";
 
-import { Vitals } from "@/types";
+import { HeartPulse, UserCheck } from "lucide-react";
+import type { Vitals } from "@/types";
 import { calculateBMI, cn, getBMICategory } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Activity, UserCheck } from "lucide-react";
+import { SectionCard } from "@/components/ui/SectionCard";
 
-const VITAL_FIELDS = [
-  { key: 'bpSystolic' as const, label: 'BP Systolic', unit: 'mmHg' },
-  { key: 'bpDiastolic' as const, label: 'BP Diastolic', unit: 'mmHg' },
-  { key: 'pulseBpm' as const, label: 'Pulse', unit: 'bpm' },
-  { key: 'temperatureC' as const, label: 'Temp (°C)', unit: '°C' },
-  { key: 'spo2Percent' as const, label: 'SpO2 (%)', unit: '%' },
-  { key: 'respirationRpm' as const, label: 'Resp (rpm)', unit: 'rpm' },
-  { key: 'heightCm' as const, label: 'Height (cm)', unit: 'cm' },
-  { key: 'weightKg' as const, label: 'Weight (kg)', unit: 'kg' },
+type VitalKey = keyof Vitals;
+
+const FIELDS: { key: VitalKey; label: string; unit: string; step?: string }[] = [
+  { key: "pulseBpm", label: "Pulse", unit: "bpm" },
+  { key: "temperatureC", label: "Temp", unit: "°C", step: "0.1" },
+  { key: "spo2Percent", label: "SpO₂", unit: "%" },
+  { key: "respirationRpm", label: "Resp. rate", unit: "/min" },
+  { key: "heightCm", label: "Height", unit: "cm" },
+  { key: "weightKg", label: "Weight", unit: "kg", step: "0.1" },
 ];
 
 // Vitals already recorded for this visit (nurse triage), shown prefilled.
@@ -28,87 +25,94 @@ export interface RecordedVitals {
 
 interface VitalsPanelProps {
   vitals: Partial<Vitals>;
-  setVitals: React.Dispatch<React.SetStateAction<Partial<Vitals>>>;
+  onChange: (vitals: Partial<Vitals>) => void;
   recorded?: RecordedVitals | null;
 }
 
-export function VitalsPanel({ vitals, setVitals, recorded }: VitalsPanelProps) {
+const BMI_STYLES = {
+  normal: "bg-status-success-bg text-status-success-text",
+  overweight: "bg-status-warning-bg text-status-warning-text",
+  obese: "bg-status-error-bg text-status-error-text",
+};
+
+export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
   const bmi = vitals.heightCm && vitals.weightKg ? calculateBMI(vitals.heightCm, vitals.weightKg) : null;
   const bmiCategory = bmi ? getBMICategory(bmi) : null;
-
-  const bmiVariant = () => {
-    if (!bmiCategory) return 'secondary' as const;
-    if (bmiCategory === 'obese') return 'destructive' as const;
-    return 'outline' as const;
-  };
-
-  const bmiClass = () => {
-    if (!bmiCategory) return '';
-    if (bmiCategory === 'obese') return '';
-    if (bmiCategory === 'overweight') return 'text-status-warning-text border-status-warning-border bg-status-warning-bg';
-    return 'text-status-success-text border-status-success-border bg-status-success-bg';
-  };
-
   const recordedTime = recorded?.recordedAt
-    ? new Date(recorded.recordedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(recorded.recordedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
     : null;
 
+  const set = (key: VitalKey, raw: string) => {
+    const next = { ...vitals };
+    if (raw === "") delete next[key];
+    else next[key] = Number(raw);
+    onChange(next);
+  };
+
+  // "edited" = the doctor changed a value the nurse recorded.
+  const edited = (key: VitalKey) => recorded?.vitals[key] !== undefined && vitals[key] !== recorded.vitals[key];
+
+  const input = (key: VitalKey, unit: string, step?: string, label?: string) => (
+    <div className="relative">
+      <input
+        type="number"
+        inputMode="decimal"
+        step={step}
+        aria-label={label ?? key}
+        value={vitals[key] ?? ""}
+        onChange={e => set(key, e.target.value)}
+        className={cn(
+          "h-9 w-full rounded-md border border-input bg-background pl-2.5 pr-11 text-sm tabular-nums shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+          edited(key) && "border-status-info-border bg-status-info-bg/40",
+        )}
+      />
+      <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-muted-foreground">{unit}</span>
+    </div>
+  );
+
   return (
-    <Card className="shadow-sm border">
-      <CardHeader className="bg-muted border-b">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Activity className="h-5 w-5 text-rose-500" /> Vitals
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-5 space-y-4">
+    <SectionCard icon={HeartPulse} iconClassName="text-clinical-vitals" title="Vitals">
+      <div className="space-y-4">
         {recorded && (
-          <div className="flex items-start gap-2.5 rounded-lg border border-status-teal-border bg-status-teal-bg/60 px-3 py-2.5">
-            <UserCheck className="h-4 w-4 mt-0.5 shrink-0 text-status-teal-text" />
-            <div className="min-w-0 text-xs leading-relaxed">
-              <p className="font-medium text-status-teal-text">
-                Triage vitals recorded by {recorded.recordedBy}
-                {recordedTime && <span className="font-normal opacity-80"> · {recordedTime}</span>}
-              </p>
-              <p className="text-muted-foreground">Edit any value to record your own measurement.</p>
-            </div>
+          <div className="flex items-start gap-2 rounded-lg bg-status-teal-bg px-3 py-2 text-xs">
+            <UserCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-teal-text" />
+            <p className="text-status-teal-text">
+              <span className="font-medium">Triage by {recorded.recordedBy}</span>
+              {recordedTime && <span className="opacity-80"> · {recordedTime}</span>}
+              <span className="block text-muted-foreground">Change a value to record your own reading.</span>
+            </p>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-3">
-          {VITAL_FIELDS.map(({ key, label, unit }) => {
-            const nurseValue = recorded?.vitals[key];
-            const edited = nurseValue !== undefined && vitals[key] !== nurseValue;
-            return (
-              <div key={key} className="space-y-1">
-                <Label className="text-xs text-muted-foreground flex items-center justify-between gap-1">
-                  {label}
-                  {edited && (
-                    <span className="text-[10px] font-medium text-status-info-text" title={`Nurse recorded ${nurseValue}`}>
-                      edited
-                    </span>
-                  )}
-                </Label>
-                <Input
-                  type="number"
-                  placeholder={unit}
-                  className={cn("h-8 text-sm", edited && "border-status-info-border")}
-                  value={vitals[key] || ''}
-                  onChange={e => setVitals(v => ({ ...v, [key]: Number(e.target.value) }))}
-                />
-              </div>
-            );
-          })}
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">Blood pressure</p>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+            {input("bpSystolic", "sys", undefined, "Systolic")}
+            <span className="text-muted-foreground">/</span>
+            {input("bpDiastolic", "dia", undefined, "Diastolic")}
+          </div>
         </div>
-        <div className="pt-3 mt-3 border-t flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">Calculated BMI</span>
-          {bmi ? (
-            <Badge variant={bmiVariant()} className={`text-sm py-1 ${bmiClass()}`}>
-              {bmi} <span className="ml-1 text-xs capitalize opacity-80">({bmiCategory})</span>
-            </Badge>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+          {FIELDS.map(({ key, label, unit, step }) => (
+            <div key={key} className="space-y-1">
+              <p className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                {label}
+                {edited(key) && <span className="text-[10px] text-status-info-text" title={`Nurse recorded ${recorded?.vitals[key]}`}>edited</span>}
+              </p>
+              {input(key, unit, step, label)}
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between border-t pt-3 text-sm">
+          <span className="text-muted-foreground">BMI</span>
+          {bmi && bmiCategory ? (
+            <span className={cn("rounded-full px-2.5 py-0.5 text-sm font-medium tabular-nums", BMI_STYLES[bmiCategory])}>
+              {bmi} <span className="text-xs font-normal capitalize opacity-80">· {bmiCategory}</span>
+            </span>
           ) : (
-            <Badge variant="secondary" className="text-sm py-1 text-muted-foreground">--</Badge>
+            <span className="text-muted-foreground">—</span>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </SectionCard>
   );
 }

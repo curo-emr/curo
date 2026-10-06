@@ -33,6 +33,7 @@
 
   /* --- Core shadcn tokens --- */
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -145,6 +146,7 @@
 
   /* --- Core palette (from shadcn preset aKX4z5c) --- */
   --background: oklch(1 0 0);
+  --surface: oklch(0.982 0.004 247); /* app canvas behind cards */
   --foreground: oklch(0.148 0.004 228.8);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.148 0.004 228.8);
@@ -249,6 +251,7 @@
 .dark {
   /* --- Core palette --- */
   --background: oklch(0.148 0.004 228.8);
+  --surface: oklch(0.148 0.004 228.8);
   --foreground: oklch(0.987 0.002 197.1);
   --card: oklch(0.218 0.008 223.9);
   --card-foreground: oklch(0.987 0.002 197.1);

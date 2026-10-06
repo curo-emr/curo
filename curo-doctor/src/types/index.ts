@@ -71,6 +71,9 @@ export interface Problem {
   status: 'active' | 'resolved' | 'inactive';
   onsetDate: string;
   notes: string;
+  encounterId: string;
+  category: string;
+  isPrimary: boolean;
 }
 
 // Where a checked-in patient is in the day's flow (nurse triage → doctor).
@@ -187,6 +190,7 @@ export interface LabTestCatalogItem {
 
 export interface LabOrderTest {
   testId: string;
+  display: string;
   status: 'ordered' | 'collected' | 'completed' | 'results_available';
   result: string | null;
 }

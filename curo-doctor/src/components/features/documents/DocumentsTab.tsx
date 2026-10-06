@@ -1,49 +1,34 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Loader2, FileText } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileText } from "lucide-react";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DocumentUpload } from "./DocumentUpload";
 import { DocumentsList } from "./DocumentsList";
 import { getDocumentsByPatient, type DocumentRef } from "@/lib/api/documents";
 
-interface Props {
-  patientId: string;
-}
+export function DocumentsTab({ patientId }: { patientId: string }) {
+  const [documents, setDocuments] = useState<DocumentRef[] | null>(null);
 
-export function DocumentsTab({ patientId }: Props) {
-  const [documents, setDocuments] = useState<DocumentRef[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const load = useCallback(
+    () => getDocumentsByPatient(patientId).then(setDocuments).catch(() => setDocuments([])),
+    [patientId],
+  );
 
-  const load = useCallback(() => {
-    setIsLoading(true);
-    getDocumentsByPatient(patientId)
-      .then(setDocuments)
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [patientId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   return (
-    <Card className="shadow-sm border">
-      <CardHeader className="bg-muted border-b flex flex-row items-center justify-between gap-4 space-y-0">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" /> Documents
-        </CardTitle>
-        <DocumentUpload patientId={patientId} onUploaded={load} />
-      </CardHeader>
-      <CardContent className="p-0">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <DocumentsList documents={documents} />
-        )}
-      </CardContent>
-    </Card>
+    <SectionCard icon={FileText} title="Documents" count={documents?.length} noPadding
+      headerRight={<DocumentUpload patientId={patientId} onUploaded={load} />}>
+      {documents === null ? (
+        <div className="space-y-3 p-5">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      ) : (
+        <DocumentsList documents={documents} />
+      )}
+    </SectionCard>
   );
 }

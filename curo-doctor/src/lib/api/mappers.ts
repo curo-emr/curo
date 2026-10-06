@@ -53,9 +53,17 @@ export interface FhirCondition {
   subject?: { reference?: string };
   code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
   clinicalStatus?: { coding?: Array<{ code?: string }> };
+  encounter?: { reference?: string };
+  category?: Array<{ coding?: Array<{ code?: string }> }>;
   onsetDateTime?: string;
+  recordedDate?: string;
   note?: Array<{ text?: string }>;
 }
+
+// Diagnoses recorded during a visit are stored as Conditions with this category;
+// the primary one carries PRIMARY_DIAGNOSIS_NOTE.
+export const ENCOUNTER_DIAGNOSIS = 'encounter-diagnosis';
+export const PRIMARY_DIAGNOSIS_NOTE = 'Primary diagnosis';
 
 export interface FhirAppointment {
   resourceType: 'Appointment';
@@ -100,6 +108,7 @@ export interface FhirMedicationRequest {
   resourceType: 'MedicationRequest';
   id: string;
   meta?: { lastUpdated?: string };
+  authoredOn?: string;
   status: string;
   subject?: { reference?: string };
   requester?: { reference?: string };
@@ -121,6 +130,7 @@ export interface FhirMedicationRequest {
   }>;
   dispenseRequest?: {
     quantity?: { value?: number };
+    expectedSupplyDuration?: { value?: number };
     validityPeriod?: { end?: string };
   };
   note?: Array<{ text?: string }>;
@@ -136,6 +146,7 @@ export interface FhirServiceRequest {
   subject?: { reference?: string };
   requester?: { reference?: string };
   encounter?: { reference?: string };
+  authoredOn?: string;
   code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
   note?: Array<{ text?: string }>;
   extension?: Array<{ url: string; valueString?: string }>;
@@ -256,8 +267,11 @@ export function mapFhirCondition(fhir: FhirCondition): Problem {
     icdCode,
     name,
     status: statusMap[statusCode] ?? 'active',
-    onsetDate: fhir.onsetDateTime?.slice(0, 10) ?? '',
+    onsetDate: fhir.onsetDateTime?.slice(0, 10) ?? fhir.recordedDate?.slice(0, 10) ?? '',
     notes: fhir.note?.[0]?.text ?? '',
+    encounterId: fhir.encounter?.reference?.replace('Encounter/', '') ?? '',
+    category: fhir.category?.[0]?.coding?.[0]?.code ?? '',
+    isPrimary: fhir.note?.[0]?.text === PRIMARY_DIAGNOSIS_NOTE,
   };
 }
 
@@ -275,7 +289,8 @@ const FHIR_APPT_STATUS_MAP: Record<string, Appointment['status']> = {
 
 export function mapFhirAppointment(fhir: FhirAppointment): Appointment {
   const start = fhir.start ? new Date(fhir.start) : new Date();
-  const date = start.toISOString().slice(0, 10);
+  // Local calendar date (not UTC) so it lines up with getTodayString() and the calendar.
+  const date = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
   const time = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
 
   const patientRef = fhir.participant?.find(p => p.actor?.reference?.startsWith('Patient/'));
@@ -364,18 +379,19 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
     encounterId,
     doctorId,
     status: statusMap[fhir.status] ?? 'draft',
-    createdAt: fhir.meta?.lastUpdated ?? '',
+    createdAt: fhir.authoredOn ?? fhir.meta?.lastUpdated ?? '',
     sentAt: fhir.status === 'active' ? (fhir.meta?.lastUpdated ?? null) : null,
     items: [{
       id: fhir.id,
       medicationId: fhir.medicationCodeableConcept?.coding?.[0]?.code ?? '',
       displayName: fhir.medicationCodeableConcept?.text ?? fhir.medicationCodeableConcept?.coding?.[0]?.display ?? '',
-      dose: dose ? `${dose.value} ${dose.unit}` : (dosage?.text ?? ''),
+      // dosageInstruction.text holds the dose as written ("500mg"); doseQuantity is the dispense count.
+      dose: dosage?.text || (dose?.unit ? `${dose.value} ${dose.unit}` : ''),
       route: dosage?.route?.text ?? 'oral',
       frequency: dosage?.timing?.code?.text ?? '',
-      durationDays: parseInt(ext.find(e => e.url === 'urn:curo:durationDays')?.valueString ?? '7'),
+      durationDays: Number(ext.find(e => e.url === 'urn:curo:durationDays')?.valueString ?? fhir.dispenseRequest?.expectedSupplyDuration?.value ?? 0),
       quantity: qty,
-      instructions: dosage?.text ?? '',
+      instructions: fhir.note?.[0]?.text ?? '',
       substitutes: [],
     }],
     notesToPharmacy: fhir.note?.[0]?.text ?? '',
@@ -401,11 +417,12 @@ export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
     doctorId,
     priority: priorityMap[fhir.priority ?? 'routine'] ?? 'routine',
     status: statusMap[fhir.status] ?? 'draft',
-    createdAt: fhir.meta?.lastUpdated ?? '',
-    sentToLabAt: fhir.status !== 'draft' ? (fhir.meta?.lastUpdated ?? null) : null,
+    createdAt: fhir.authoredOn ?? fhir.meta?.lastUpdated ?? '',
+    sentToLabAt: fhir.status !== 'draft' ? (fhir.authoredOn ?? fhir.meta?.lastUpdated ?? null) : null,
     notesToLab: fhir.note?.[0]?.text ?? '',
     tests: (fhir.code?.coding ?? []).map(c => ({
       testId: c.code ?? '',
+      display: c.display ?? fhir.code?.text ?? c.code ?? '',
       status: 'ordered' as const,
       result: null,
     })),
