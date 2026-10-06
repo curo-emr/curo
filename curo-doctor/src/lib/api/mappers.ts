@@ -306,6 +306,7 @@ const ENCOUNTER_STATUS_MAP: Record<string, Encounter['status']> = {
   'in-progress': 'in_progress',
   onleave: 'in_progress',
   finished: 'completed',
+  completed: 'completed', // what clinical-service actually stores (EncounterStatus.COMPLETED)
   cancelled: 'cancelled',
 };
 
