@@ -127,35 +127,6 @@ export class PharmacyService {
     });
   }
 
-  // Pending prescriptions - PHARMACIST only sees name+DOB+meds, not full clinical data
-  async getPendingPrescriptions(pagination: PaginationQuery = {}) {
-    const { page, pageSize, skip, take } = parsePagination(pagination);
-    const [pending, total] = await this.medsRepo.findAndCount({
-      where: { status: MedicationRequestStatus.ACTIVE },
-      order: { authoredOn: 'DESC' },
-      skip,
-      take,
-    });
-    const resources = pending.map((p) => ({
-      id: p.id,
-      patientId: p.patientId,
-      medicationCode: p.medicationCode,
-      medicationDisplay: p.medicationDisplay,
-      dosageText: p.dosageText,
-      route: p.route,
-      frequency: p.frequency,
-      quantityValue: p.quantityValue,
-      quantityUnit: p.quantityUnit,
-      authoredOn: p.authoredOn,
-      note: p.note,
-    }));
-    return toSearchset(resources, total, {
-      page,
-      pageSize,
-      baseUrl: '/prescriptions/pending',
-    });
-  }
-
   /**
    * Draw `qty` units of a drug from stock, FEFO (First-Expiry-First-Out): the
    * earliest-expiring non-expired batches first, across several if needed. The

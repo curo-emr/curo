@@ -119,8 +119,7 @@ async function buildMergedSpec(): Promise<object> {
   // Fetched in parallel, merged in SERVICE_MAP order.
   for (const spec of await Promise.all(SPEC_BASES.map(fetchSpec))) {
     for (const [p, item] of Object.entries(spec.paths ?? {})) {
-      // First service to declare a path wins (clinical precedes pharmacy in
-      // SERVICE_MAP, so the reachable /prescriptions handler is kept).
+      // First service to declare a path wins.
       paths[p] ??= item;
     }
     Object.assign(schemas, spec.components?.schemas);
