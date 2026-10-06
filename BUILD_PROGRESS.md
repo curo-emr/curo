@@ -885,10 +885,28 @@ Branch `fix/pharmacy-rx-summary-short-stock`. Follow-ups from dispense integrity
   `@curo/shared/dto`; the allergies and prescription-summary endpoints both use it.
   `class-validator`/`class-transformer` are optional peer deps of the shared package.
 - Note: `/prescriptions/*` routes to clinical at the gateway, so pharmacy's own
-  `GET /prescriptions/pending` is unreachable (left as is).
+  `GET /prescriptions/pending` was unreachable — removed in `refactor/remove-dead-pending-route`
+  (below).
 - Verified: root build, lint, tests, `tsc --noEmit` (clinical, patient, pharmacy), pharmacy portal lint and
   typecheck; smoke PASS=130 on rebuilt images (new: summary pending count, 400/403;
   Metformin stocked before its dispense; short-stock 409 with its message, stock and
   prescription unchanged). In the browser: patient list shows Pending Rx / Last Prescribed;
   dispensing an 81-tablet prescription against 80 in stock shows the message and the
   prescription stays "Sent to Pharmacy".
+
+---
+
+## Dead pharmacy pending-prescriptions route removed ✅ DONE — 2026-10-06
+
+Branch `refactor/remove-dead-pending-route`. The gateway sends every `/prescriptions*` request
+to clinical, so pharmacy-service's own paginated `GET /prescriptions/pending` (and its
+"pharmacist sees less" projection) never served a request.
+
+- Removed the pharmacy route and service method. Clinical's handler is the only one, and the
+  pharmacy portal's queue, dashboard and reports keep using it unchanged.
+- Portal: removed the unused `getPendingPrescriptionsPaginated`; `getPendingPrescriptions` no
+  longer sends a `pageSize` clinical ignored and reads the plain array clinical returns.
+- Gateway OpenAPI-merge comment and `docs/API_VERIFICATION.md` (finding 2) updated.
+- Verified: root lint, build, tests; pharmacy portal lint and typecheck; smoke PASS=130 on
+  rebuilt images; pharmacy-service `:3005/prescriptions/pending` → 404 (was 401). In the
+  browser: the prescriptions queue lists pending prescriptions as before.
