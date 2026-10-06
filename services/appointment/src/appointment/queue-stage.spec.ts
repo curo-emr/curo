@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { assertQueueTransition, queueStageForStatus } from './queue-stage';
+import { UserRole } from '@curo/shared/enums';
 import { AppointmentStatus, QueueStage } from '../enums';
 
 describe('assertQueueTransition', () => {
@@ -8,14 +9,14 @@ describe('assertQueueTransition', () => {
       assertQueueTransition(
         QueueStage.WAITING_NURSE,
         QueueStage.WITH_NURSE,
-        'NURSE',
+        UserRole.NURSE,
       ),
     ).toBe(true);
     expect(
       assertQueueTransition(
         QueueStage.WITH_NURSE,
         QueueStage.READY_FOR_DOCTOR,
-        'NURSE',
+        UserRole.NURSE,
       ),
     ).toBe(true);
   });
@@ -25,11 +26,15 @@ describe('assertQueueTransition', () => {
       assertQueueTransition(
         QueueStage.WAITING_NURSE,
         QueueStage.READY_FOR_DOCTOR,
-        'RECEPTIONIST',
+        UserRole.RECEPTIONIST,
       ),
     ).toBe(true);
     expect(
-      assertQueueTransition(null, QueueStage.READY_FOR_DOCTOR, 'RECEPTIONIST'),
+      assertQueueTransition(
+        null,
+        QueueStage.READY_FOR_DOCTOR,
+        UserRole.RECEPTIONIST,
+      ),
     ).toBe(true);
   });
 
@@ -41,7 +46,7 @@ describe('assertQueueTransition', () => {
       QueueStage.READY_FOR_DOCTOR,
     ]) {
       expect(
-        assertQueueTransition(from, QueueStage.WITH_DOCTOR, 'DOCTOR'),
+        assertQueueTransition(from, QueueStage.WITH_DOCTOR, UserRole.DOCTOR),
       ).toBe(true);
     }
   });
@@ -51,7 +56,7 @@ describe('assertQueueTransition', () => {
       assertQueueTransition(
         QueueStage.WITH_DOCTOR,
         QueueStage.WITH_DOCTOR,
-        'DOCTOR',
+        UserRole.DOCTOR,
       ),
     ).toBe(false);
   });
@@ -61,17 +66,21 @@ describe('assertQueueTransition', () => {
       assertQueueTransition(
         QueueStage.READY_FOR_DOCTOR,
         QueueStage.DONE,
-        'DOCTOR',
+        UserRole.DOCTOR,
       ),
     ).toThrow(BadRequestException);
     expect(() =>
-      assertQueueTransition(QueueStage.DONE, QueueStage.WITH_NURSE, 'NURSE'),
+      assertQueueTransition(
+        QueueStage.DONE,
+        QueueStage.WITH_NURSE,
+        UserRole.NURSE,
+      ),
     ).toThrow(BadRequestException);
     expect(() =>
       assertQueueTransition(
         QueueStage.WITH_DOCTOR,
         QueueStage.WITH_NURSE,
-        'SUPER_ADMIN',
+        UserRole.SUPER_ADMIN,
       ),
     ).toThrow(BadRequestException);
   });
@@ -81,21 +90,21 @@ describe('assertQueueTransition', () => {
       assertQueueTransition(
         QueueStage.WAITING_NURSE,
         QueueStage.WITH_DOCTOR,
-        'NURSE',
+        UserRole.NURSE,
       ),
     ).toThrow(ForbiddenException);
     expect(() =>
       assertQueueTransition(
         QueueStage.WAITING_NURSE,
         QueueStage.WITH_NURSE,
-        'RECEPTIONIST',
+        UserRole.RECEPTIONIST,
       ),
     ).toThrow(ForbiddenException);
     expect(() =>
       assertQueueTransition(
         QueueStage.WAITING_NURSE,
         QueueStage.WITH_NURSE,
-        'PATIENT',
+        UserRole.PATIENT,
       ),
     ).toThrow(ForbiddenException);
   });
@@ -105,7 +114,7 @@ describe('assertQueueTransition', () => {
       assertQueueTransition(
         QueueStage.WITH_DOCTOR,
         QueueStage.DONE,
-        'SUPER_ADMIN',
+        UserRole.SUPER_ADMIN,
       ),
     ).toBe(true);
   });

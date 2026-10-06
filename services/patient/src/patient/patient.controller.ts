@@ -20,7 +20,9 @@ import {
   RolesGuard,
   Roles,
   CurrentUser,
+  type AuthUser,
 } from '@curo/shared/auth';
+import type { PaginationQuery } from '@curo/shared/fhir';
 
 @Controller('patients')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -45,9 +47,9 @@ export class PatientController {
   )
   @Header('Content-Type', 'application/fhir+json')
   findAll(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Query('search') search?: string,
-    @Query() query?: any,
+    @Query() query?: PaginationQuery,
   ) {
     return this.patientService.findAll(user, search, query);
   }
@@ -55,14 +57,14 @@ export class PatientController {
   @Get('me')
   @Roles('PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getMyRecord(@CurrentUser() user: any) {
+  getMyRecord(@CurrentUser() user: AuthUser) {
     return this.patientService.findMyRecord(user.userId);
   }
 
   @Get('code/:code')
   @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'LAB_STAFF', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  findByCode(@Param('code') code: string, @CurrentUser() user: any) {
+  findByCode(@Param('code') code: string, @CurrentUser() user: AuthUser) {
     return this.patientService.findByCode(code, user.role);
   }
 
@@ -79,7 +81,7 @@ export class PatientController {
     'PHARMACIST',
   )
   @Header('Content-Type', 'application/fhir+json')
-  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.patientService.findOne(id, user);
   }
 
@@ -89,7 +91,7 @@ export class PatientController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdatePatientDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.patientService.update(id, dto, user);
   }
@@ -100,7 +102,7 @@ export class PatientController {
   patch(
     @Param('id') id: string,
     @Body() dto: UpdatePatientDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.patientService.update(id, dto, user);
   }
@@ -126,7 +128,7 @@ export class PatientController {
   addAllergy(
     @Param('id') id: string,
     @Body() dto: CreateAllergyDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.patientService.addAllergy(id, dto, user.userId);
   }
@@ -145,7 +147,7 @@ export class PatientController {
   addCondition(
     @Param('id') id: string,
     @Body() dto: CreateConditionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.patientService.addCondition(id, dto, user.userId);
   }
