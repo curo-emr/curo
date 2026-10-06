@@ -1,5 +1,10 @@
 import {
-  IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Min,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  Min,
 } from 'class-validator';
 
 export class CreatePaymentDto {

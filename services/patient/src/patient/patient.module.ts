@@ -8,7 +8,12 @@ import { Condition } from '../entities/condition.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Patient, AllergyIntolerance, Condition, Observation]),
+    TypeOrmModule.forFeature([
+      Patient,
+      AllergyIntolerance,
+      Condition,
+      Observation,
+    ]),
   ],
   controllers: [PatientController],
   providers: [PatientService],

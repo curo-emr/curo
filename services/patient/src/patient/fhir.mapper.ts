@@ -14,15 +14,21 @@ export function toFhirPatient(p: Patient, role?: string) {
       id: p.id,
       meta: { lastUpdated: p.updatedAt },
       identifier: [
-        p.personalHealthNumber && { use: 'official', system: 'urn:curo:phn', value: p.personalHealthNumber },
+        p.personalHealthNumber && {
+          use: 'official',
+          system: 'urn:curo:phn',
+          value: p.personalHealthNumber,
+        },
         { system: 'urn:curo:patient-code', value: p.patientCode },
       ].filter(Boolean),
       active: p.active,
-      name: [{
-        use: 'official',
-        family: p.lastName,
-        given: [p.firstName, p.middleName].filter(Boolean),
-      }],
+      name: [
+        {
+          use: 'official',
+          family: p.lastName,
+          given: [p.firstName, p.middleName].filter(Boolean),
+        },
+      ],
       gender: p.gender,
       birthDate: p.birthDate,
     };
@@ -32,36 +38,63 @@ export function toFhirPatient(p: Patient, role?: string) {
     id: p.id,
     meta: { lastUpdated: p.updatedAt },
     identifier: [
-      p.personalHealthNumber && { use: 'official', system: 'urn:curo:phn', value: p.personalHealthNumber },
+      p.personalHealthNumber && {
+        use: 'official',
+        system: 'urn:curo:phn',
+        value: p.personalHealthNumber,
+      },
       { system: 'urn:curo:patient-code', value: p.patientCode },
       p.nic && { system: 'urn:curo:nic', value: p.nic },
-      p.passportNumber && { system: 'urn:curo:passport', value: p.passportNumber },
+      p.passportNumber && {
+        system: 'urn:curo:passport',
+        value: p.passportNumber,
+      },
     ].filter(Boolean),
     active: p.active,
-    name: [{
-      use: 'official',
-      family: p.lastName,
-      given: [p.firstName, p.middleName].filter(Boolean),
-    }],
+    name: [
+      {
+        use: 'official',
+        family: p.lastName,
+        given: [p.firstName, p.middleName].filter(Boolean),
+      },
+    ],
     gender: p.gender,
     birthDate: p.birthDate,
     telecom: [
       p.phone && { system: 'phone', value: p.phone, use: 'mobile' },
       p.email && { system: 'email', value: p.email },
     ].filter(Boolean),
-    address: (p.addressLine1 || p.city) ? [{
-      line: [p.addressLine1, p.addressLine2].filter(Boolean),
-      city: p.city,
-      state: p.state,
-      postalCode: p.postalCode,
-      country: p.country,
-    }] : [],
-    maritalStatus: p.maritalStatus ? { coding: [{ system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus', code: p.maritalStatus }] } : undefined,
-    contact: p.emergencyContactName ? [{
-      name: { text: p.emergencyContactName },
-      telecom: [{ system: 'phone', value: p.emergencyContactPhone }],
-      relationship: [{ text: p.emergencyContactRelationship }],
-    }] : [],
+    address:
+      p.addressLine1 || p.city
+        ? [
+            {
+              line: [p.addressLine1, p.addressLine2].filter(Boolean),
+              city: p.city,
+              state: p.state,
+              postalCode: p.postalCode,
+              country: p.country,
+            },
+          ]
+        : [],
+    maritalStatus: p.maritalStatus
+      ? {
+          coding: [
+            {
+              system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+              code: p.maritalStatus,
+            },
+          ],
+        }
+      : undefined,
+    contact: p.emergencyContactName
+      ? [
+          {
+            name: { text: p.emergencyContactName },
+            telecom: [{ system: 'phone', value: p.emergencyContactPhone }],
+            relationship: [{ text: p.emergencyContactRelationship }],
+          },
+        ]
+      : [],
     extension: [
       { url: 'urn:curo:bloodType', valueString: p.bloodType },
       p.insuranceProvider && {
@@ -87,7 +120,9 @@ export function toFhirAllergy(a: AllergyIntolerance) {
     code: { coding: [{ code: a.code, display: a.display }] },
     category: a.category ? [a.category] : undefined,
     clinicalStatus: { coding: [{ code: a.clinicalStatus || 'active' }] },
-    verificationStatus: { coding: [{ code: a.verificationStatus || 'confirmed' }] },
+    verificationStatus: {
+      coding: [{ code: a.verificationStatus || 'confirmed' }],
+    },
     onsetDateTime: a.onsetDate,
     reaction: a.reactions || [],
     note: a.note ? [{ text: a.note }] : undefined,
@@ -101,12 +136,31 @@ export function toFhirCondition(c: Condition) {
     id: c.id,
     subject: { reference: `Patient/${c.patientId}` },
     asserter: { reference: `Practitioner/${c.practitionerId}` },
-    encounter: c.encounterId ? { reference: `Encounter/${c.encounterId}` } : undefined,
-    clinicalStatus: { coding: [{ system: 'http://terminology.hl7.org/CodeSystem/condition-clinical', code: c.clinicalStatus }] },
-    verificationStatus: { coding: [{ code: c.verificationStatus || 'confirmed' }] },
+    encounter: c.encounterId
+      ? { reference: `Encounter/${c.encounterId}` }
+      : undefined,
+    clinicalStatus: {
+      coding: [
+        {
+          system: 'http://terminology.hl7.org/CodeSystem/condition-clinical',
+          code: c.clinicalStatus,
+        },
+      ],
+    },
+    verificationStatus: {
+      coding: [{ code: c.verificationStatus || 'confirmed' }],
+    },
     category: c.category ? [{ coding: [{ code: c.category }] }] : undefined,
     severity: c.severity ? { coding: [{ code: c.severity }] } : undefined,
-    code: { coding: [{ system: 'http://hl7.org/fhir/sid/icd-10', code: c.code, display: c.display }] },
+    code: {
+      coding: [
+        {
+          system: 'http://hl7.org/fhir/sid/icd-10',
+          code: c.code,
+          display: c.display,
+        },
+      ],
+    },
     onsetDateTime: c.onsetDate,
     abatementDateTime: c.abatementDate,
     note: c.note ? [{ text: c.note }] : undefined,
@@ -123,19 +177,35 @@ export function toFhirObservation(o: Observation) {
     code: { coding: [{ code: o.code, display: o.display }] },
     subject: { reference: `Patient/${o.patientId}` },
     performer: [{ reference: `Practitioner/${o.practitionerId}` }],
-    encounter: o.encounterId ? { reference: `Encounter/${o.encounterId}` } : undefined,
+    encounter: o.encounterId
+      ? { reference: `Encounter/${o.encounterId}` }
+      : undefined,
     effectiveDateTime: o.effectiveDateTime,
-    valueQuantity: o.valueQuantity != null ? {
-      value: Number(o.valueQuantity),
-      unit: o.valueUnit,
-    } : undefined,
+    valueQuantity:
+      o.valueQuantity != null
+        ? {
+            value: Number(o.valueQuantity),
+            unit: o.valueUnit,
+          }
+        : undefined,
     valueString: o.valueString,
-    interpretation: o.interpretation ? [{ coding: [{ code: o.interpretation }] }] : undefined,
-    referenceRange: (o.referenceRangeLow || o.referenceRangeHigh) ? [{
-      low: o.referenceRangeLow ? { value: parseFloat(o.referenceRangeLow) } : undefined,
-      high: o.referenceRangeHigh ? { value: parseFloat(o.referenceRangeHigh) } : undefined,
-      text: o.referenceRangeText,
-    }] : undefined,
+    interpretation: o.interpretation
+      ? [{ coding: [{ code: o.interpretation }] }]
+      : undefined,
+    referenceRange:
+      o.referenceRangeLow || o.referenceRangeHigh
+        ? [
+            {
+              low: o.referenceRangeLow
+                ? { value: parseFloat(o.referenceRangeLow) }
+                : undefined,
+              high: o.referenceRangeHigh
+                ? { value: parseFloat(o.referenceRangeHigh) }
+                : undefined,
+              text: o.referenceRangeText,
+            },
+          ]
+        : undefined,
     component: o.components,
   };
 }

@@ -4,7 +4,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClinicalModule } from './clinical/clinical.module';
 import { Encounter } from './entities/encounter.entity';
 import { ClinicalNote } from './entities/clinical-note.entity';
-import { MedicationRequest, ServiceRequest, Observation, QrCode, databaseOptions } from '@curo/shared/database';
+import {
+  MedicationRequest,
+  ServiceRequest,
+  Observation,
+  QrCode,
+  databaseOptions,
+} from '@curo/shared/database';
 import { Task } from './entities/task.entity';
 import { Icd10Code } from './entities/icd10-code.entity';
 import { JwtAuthModule } from '@curo/shared/auth';
@@ -13,7 +19,18 @@ import { JwtAuthModule } from '@curo/shared/auth';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     JwtAuthModule,
-    TypeOrmModule.forRoot(databaseOptions([Encounter, ClinicalNote, MedicationRequest, ServiceRequest, Observation, QrCode, Task, Icd10Code])),
+    TypeOrmModule.forRoot(
+      databaseOptions([
+        Encounter,
+        ClinicalNote,
+        MedicationRequest,
+        ServiceRequest,
+        Observation,
+        QrCode,
+        Task,
+        Icd10Code,
+      ]),
+    ),
     ClinicalModule,
   ],
 })

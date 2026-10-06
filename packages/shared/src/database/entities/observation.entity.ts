@@ -1,6 +1,10 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { ObservationStatus } from '../../enums';
 
@@ -29,7 +33,11 @@ export class Observation {
   @Column({ nullable: true })
   serviceRequestId: string;
 
-  @Column({ type: 'enum', enum: ObservationStatus, default: ObservationStatus.FINAL })
+  @Column({
+    type: 'enum',
+    enum: ObservationStatus,
+    default: ObservationStatus.FINAL,
+  })
   status: ObservationStatus;
 
   @Column({ nullable: true })

@@ -12,7 +12,9 @@ import { Organization } from './entities/organization.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot(databaseOptions([User, Practitioner, Patient, AuditLog, Organization])),
+    TypeOrmModule.forRoot(
+      databaseOptions([User, Practitioner, Patient, AuditLog, Organization]),
+    ),
     AuthModule,
     AdminModule,
     OrganizationModule,

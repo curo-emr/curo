@@ -10,7 +10,15 @@ import { QCLog } from '../entities/qc-log.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ServiceRequest, DiagnosticReport, Observation, QrCode, LabInstrument, LabTestCatalog, QCLog]),
+    TypeOrmModule.forFeature([
+      ServiceRequest,
+      DiagnosticReport,
+      Observation,
+      QrCode,
+      LabInstrument,
+      LabTestCatalog,
+      QCLog,
+    ]),
   ],
   controllers: [LabController],
   providers: [LabService],

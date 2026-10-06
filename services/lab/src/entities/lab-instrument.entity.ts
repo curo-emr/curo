@@ -1,5 +1,8 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { InstrumentStatus } from '../enums';
@@ -21,7 +24,11 @@ export class LabInstrument {
   @Column({ nullable: true })
   serialNumber: string;
 
-  @Column({ type: 'enum', enum: InstrumentStatus, default: InstrumentStatus.OPERATIONAL })
+  @Column({
+    type: 'enum',
+    enum: InstrumentStatus,
+    default: InstrumentStatus.OPERATIONAL,
+  })
   status: InstrumentStatus;
 
   @Column({ nullable: true })

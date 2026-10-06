@@ -5,9 +5,7 @@ import { AuditService } from './audit.service';
 import { AuditLog } from '@curo/shared/database';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([AuditLog]),
-  ],
+  imports: [TypeOrmModule.forFeature([AuditLog])],
   controllers: [AuditController],
   providers: [AuditService],
 })

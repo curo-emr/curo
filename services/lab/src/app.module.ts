@@ -2,7 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LabModule } from './lab/lab.module';
-import { ServiceRequest, Observation, QrCode, databaseOptions } from '@curo/shared/database';
+import {
+  ServiceRequest,
+  Observation,
+  QrCode,
+  databaseOptions,
+} from '@curo/shared/database';
 import { DiagnosticReport } from './entities/diagnostic-report.entity';
 import { LabInstrument } from './entities/lab-instrument.entity';
 import { LabTestCatalog } from './entities/lab-test-catalog.entity';
@@ -13,7 +18,17 @@ import { JwtAuthModule } from '@curo/shared/auth';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     JwtAuthModule,
-    TypeOrmModule.forRoot(databaseOptions([ServiceRequest, DiagnosticReport, Observation, QrCode, LabInstrument, LabTestCatalog, QCLog])),
+    TypeOrmModule.forRoot(
+      databaseOptions([
+        ServiceRequest,
+        DiagnosticReport,
+        Observation,
+        QrCode,
+        LabInstrument,
+        LabTestCatalog,
+        QCLog,
+      ]),
+    ),
     LabModule,
   ],
 })

@@ -87,7 +87,8 @@ export function toSearchset<T>(
       return `${baseUrl}?${params.toString()}`;
     };
     link.push({ relation: 'self', url: build(page) });
-    if (page * pageSize < total) link.push({ relation: 'next', url: build(page + 1) });
+    if (page * pageSize < total)
+      link.push({ relation: 'next', url: build(page + 1) });
     if (page > 1) link.push({ relation: 'previous', url: build(page - 1) });
   }
 

@@ -1,6 +1,10 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { AppointmentStatus } from '../enums';
 
@@ -17,7 +21,11 @@ export class Appointment {
   @Column()
   practitionerId: string;
 
-  @Column({ type: 'enum', enum: AppointmentStatus, default: AppointmentStatus.BOOKED })
+  @Column({
+    type: 'enum',
+    enum: AppointmentStatus,
+    default: AppointmentStatus.BOOKED,
+  })
   status: AppointmentStatus;
 
   @Column()
