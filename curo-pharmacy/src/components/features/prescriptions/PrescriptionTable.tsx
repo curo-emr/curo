@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -58,6 +59,16 @@ export function PrescriptionTable({ prescriptions, patients }: PrescriptionTable
     });
   }, [query, statusFilter, sorted, patients]);
 
+  // Client-side pagination over the filtered set (search joins patient names from
+  // a separate service, so it can't be pushed server-side).
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  useEffect(() => { setPage(1); }, [query, statusFilter, pageSize]);
+  const paged = useMemo(
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize],
+  );
+
   return (
     <div className="space-y-4">
       <Card className="shadow-sm border">
@@ -110,7 +121,7 @@ export function PrescriptionTable({ prescriptions, patients }: PrescriptionTable
           </TableHeader>
           <TableBody>
             {filtered.length > 0 ? (
-              filtered.map(rx => (
+              paged.map(rx => (
                 <TableRow key={rx.id} className="hover:bg-muted/50 transition-colors group">
                   <TableCell className="font-mono text-sm font-medium">{rx.id.slice(0, 8).toUpperCase()}</TableCell>
                   <TableCell>
@@ -140,6 +151,14 @@ export function PrescriptionTable({ prescriptions, patients }: PrescriptionTable
           </TableBody>
         </Table>
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

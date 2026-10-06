@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -54,6 +55,16 @@ export function MedicationList({ medications }: MedicationListProps) {
     });
   }, [query, stockFilter, medications]);
 
+  // Client-side pagination over the filtered set (stock + expiry filters are
+  // computed client-side, so the page is sliced here rather than server-side).
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  useEffect(() => { setPage(1); }, [query, stockFilter, pageSize]);
+  const paged = useMemo(
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize],
+  );
+
   return (
     <div className="space-y-4">
       <Card className="shadow-sm border">
@@ -103,7 +114,7 @@ export function MedicationList({ medications }: MedicationListProps) {
           </TableHeader>
           <TableBody>
             {filtered.length > 0 ? (
-              filtered.map(med => {
+              paged.map(med => {
                 const stockStatus = getStockStatus(med);
                 const expDays = daysUntilExpiry(med.expiryDate);
                 return (
@@ -150,6 +161,14 @@ export function MedicationList({ medications }: MedicationListProps) {
           </TableBody>
         </Table>
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

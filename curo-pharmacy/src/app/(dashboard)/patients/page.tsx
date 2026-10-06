@@ -1,20 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { PatientList } from "@/components/features/patients/PatientList";
-import { getPatients } from "@/lib/api/patients";
 import { getPendingPrescriptions } from "@/lib/api/pharmacy";
-import type { Patient, Prescription } from "@/types";
+import type { Prescription } from "@/types";
 
 export default function PatientsDirectoryPage() {
-  const [patients, setPatients] = useState<Patient[]>([]);
+  // Prescriptions feed the per-patient Rx columns; PatientList paginates patients itself.
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getPatients(), getPendingPrescriptions()])
-      .then(([pts, rxs]) => { setPatients(pts); setPrescriptions(rxs); })
+    getPendingPrescriptions()
+      .then(setPrescriptions)
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
@@ -29,7 +28,9 @@ export default function PatientsDirectoryPage() {
       {isLoading ? (
         <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <PatientList patients={patients} prescriptions={prescriptions} />
+        <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading patients...</div>}>
+          <PatientList prescriptions={prescriptions} />
+        </Suspense>
       )}
     </div>
   );
