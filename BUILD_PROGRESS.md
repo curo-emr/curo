@@ -290,6 +290,12 @@ npm run seed
 
 ### 3. Start All Backend Services
 ```bash
+# Once, at the repo root: installs every backend (npm workspaces) and builds
+# @curo/shared, which the services import. Rebuild it after changing it
+# (or keep `npm run build:watch -w @curo/shared` running).
+npm install
+npm run build:shared
+
 # In separate terminals (or use pm2/tmux):
 cd services/auth && npm run start:dev
 cd services/patient && npm run start:dev
@@ -646,3 +652,23 @@ Frontend-only (`curo-doctor`); no backend changes.
 - Out of scope / known: pharmacy stock is keyed by slugs (`amoxicillin-250mg`) that match neither the
   medication catalog ids nor custom codes, so dispensing won't auto-decrement for doctor-prescribed items
   (pre-existing). `/lab-orders` ignores `status`, so "Recent lab results" filters client-side.
+
+---
+
+## Monorepo layout + `@curo/shared` ✅ DONE — 2026-10-06
+
+Plan + results: `plan/04-monorepo-layout-and-shared-package.md` (Doc 03 A2/A3/A4/A12).
+
+- Layout: `apps/<role>` (portals), `services/<name>` (backends, npm workspaces
+  `@curo/<name>-service`), `packages/shared` (`@curo/shared`). Compose service names unchanged.
+- `@curo/shared` exports `/auth` (global `JwtAuthModule`, guards, decorators, `jwtSecret()`),
+  `/database` (`databaseOptions()` + the 6 cross-service entities), `/enums`, `/fhir`,
+  `/bootstrap` (`bootstrapService()`). Single-owner entities/enums stay in their service.
+- One `services/Dockerfile` (context = repo root, `SERVICE` build arg) and one
+  `apps/Dockerfile` (context = portal dir), each with a `<Dockerfile>.dockerignore`.
+- Behaviour changes: `jwtSecret()` throws if `JWT_SECRET` is unset in production;
+  fresh root lockfile moved deps to newer minors (typeorm 1.1.1, @nestjs 11.2).
+- Fixed: `patients.gender` NOT NULL/nullable flip-flop between patient and auth services.
+- Verified: schema dry run 0 pending for all services; schema dump identical;
+  smoke PASS=109; 19 unit tests pass.
+- Local dev now: `npm install` + `npm run build:shared` at the root before `start:dev`.

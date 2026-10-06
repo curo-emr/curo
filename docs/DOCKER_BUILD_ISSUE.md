@@ -1,5 +1,10 @@
 # Docker build failure — `npm ci` crash in backend images
 
+> **Update 2026-10-06 (Doc 04):** the ten per-service backend Dockerfiles are now one
+> `services/Dockerfile` (build context = repo root, `--build-arg SERVICE=<name>`), installing from
+> the root workspace lockfile. The fixes below (NODE_IMAGE / NPM_REGISTRY args, cache mounts,
+> retry flags, install validation) carried over unchanged.
+
 ## Resolution implemented
 
 This build blocker has been resolved in the repo:
