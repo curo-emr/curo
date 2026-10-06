@@ -38,7 +38,7 @@ jobs:
       - run: npm ci
       # Workspaces run in declaration order, so @curo/shared builds before the services.
       - run: npm run build
-      # Errors fail the build; warnings (the no-unsafe-* backlog) are reported only.
+      # Any lint error or warning fails the build.
       - run: npm run lint
       - run: npm test
       - run: npm run typecheck:db

@@ -12,12 +12,15 @@ import {
 import { LabService } from './lab.service';
 import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
+import { CreateInstrumentDto } from './dto/create-instrument.dto';
 import {
   JwtAuthGuard,
   RolesGuard,
   Roles,
   CurrentUser,
+  type AuthUser,
 } from '@curo/shared/auth';
+import type { PaginationQuery } from '@curo/shared/fhir';
 import { InstrumentStatus } from '../enums';
 import { QCStatus } from '../entities/qc-log.entity';
 
@@ -29,7 +32,10 @@ export class LabController {
   @Get('orders')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  getOrders(@Query('status') status?: string, @Query() query?: any) {
+  getOrders(
+    @Query('status') status?: string,
+    @Query() query?: PaginationQuery,
+  ) {
     return this.labService.getOrders(status, query);
   }
 
@@ -56,28 +62,31 @@ export class LabController {
   @Post('orders/scan')
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  scanQr(@Body() dto: ScanQrDto, @CurrentUser() user: any) {
+  scanQr(@Body() dto: ScanQrDto, @CurrentUser() user: AuthUser) {
     return this.labService.scanQr(dto, user.userId);
   }
 
   @Put('orders/:id/receive')
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  receiveOrder(@Param('id') id: string, @CurrentUser() user: any) {
+  receiveOrder(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.labService.receiveOrder(id, user.userId);
   }
 
   @Post('results')
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  enterResults(@Body() dto: EnterResultsDto, @CurrentUser() user: any) {
+  enterResults(@Body() dto: EnterResultsDto, @CurrentUser() user: AuthUser) {
     return this.labService.enterResults(dto, user.userId);
   }
 
   @Get('reports')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getReports(@Query('patientId') patientId?: string, @Query() query?: any) {
+  getReports(
+    @Query('patientId') patientId?: string,
+    @Query() query?: PaginationQuery,
+  ) {
     return this.labService.getReports(patientId, query);
   }
 
@@ -100,7 +109,7 @@ export class LabController {
   getQcLogs(
     @Query('instrumentId') instrumentId?: string,
     @Query('status') status?: QCStatus,
-    @Query() query?: any,
+    @Query() query?: PaginationQuery,
   ) {
     return this.labService.getQcLogs({ instrumentId, status }, query);
   }
@@ -113,7 +122,7 @@ export class LabController {
 
   @Post('instruments')
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
-  createInstrument(@Body() dto: any) {
+  createInstrument(@Body() dto: CreateInstrumentDto) {
     return this.labService.createInstrument(dto);
   }
 

@@ -711,8 +711,7 @@ Branch `chore/lint-baseline`. Lint now runs in CI: errors fail the build, warnin
 - Backend fixes: `AuthUser.role` typed `UserRole` and services use the shared `AuthUser`
   (3 local copies removed); unused imports and dead seed enums removed; type guards instead
   of `as string[]`; `void` on the gateway's intentional fire-and-forget promises.
-- `no-unsafe-*` rules are **warnings** (~320 remaining); make them errors service by
-  service as `any` is typed out.
+- `no-unsafe-*` rules were **warnings** (~320); cleared in "Backend `any` cleanup" below.
 - **Portals (36 errors → 0):** `AuthContext` uses `useSyncExternalStore` over localStorage
   in all 7 portals (removes the set-state-in-effect error; cross-tab sign-out);
   `useClientPagination` hook (pharmacy, receptionist); `apiErrorMessage()` in every portal's
@@ -722,3 +721,37 @@ Branch `chore/lint-baseline`. Lint now runs in CI: errors fail the build, warnin
   images. In the browser: doctor login → dashboard → reload (session restored, profile
   name enriched) → sign out; pharmacy and receptionist login from a fresh load;
   receptionist appointments pagination resets to page 1 on filter or page-size change.
+
+---
+
+## Backend `any` cleanup ✅ DONE — 2026-10-06
+
+Branch `fix/backend-no-unsafe-any`. The 322 `no-unsafe-*` warnings are gone and those rules
+are errors again (as is `no-floating-promises`); root `npm run lint` uses `--max-warnings 0`.
+
+- **Shared:** `JwtPayload` + `toAuthUser()` (guard, auth service, gateway), typed `AuthRequest`
+  in the guards, `CurrentUser` throws 401 when no guard ran, `actorId()` for
+  practitioner-or-user, `SearchQuery`, `parsePagination(query, defaultPageSize)`,
+  `ServiceRequest.testPanel: LabPanelTest[]`.
+- **Controllers:** `@CurrentUser() user: AuthUser`, `@Query() query: PaginationQuery |
+  SearchQuery` everywhere (interfaces, so no runtime validation change).
+- **Bodies that were `any` now have DTOs** (whitelist strips unknown fields):
+  `POST /audit` (userId/userRole now come from the token), `POST/PUT /tasks` (PUT could
+  overwrite `ownerId`/`id`), `POST /instruments`. `GET /tasks?status=<unknown>` → 400.
+- **Auth service:** dropped its copies of `Roles`/`RolesGuard`/`CurrentUser`; the passport
+  `JwtAuthGuard` stays (it also rejects deactivated accounts) and returns a full `AuthUser`.
+- **De-duplication:** `insertStaff()` in the seed (5 copies), `LabResultItem` (entity,
+  DTO, PDF generator), notification paging via `parsePagination`, lab-order per-test QR
+  creation only in `getTestQrs()`.
+- **Bugs found on the way:** gateway merged service specs in response order, not
+  `SERVICE_MAP` order; `queue-stage.spec.ts` didn't type-check (`tsc --noEmit` only — jest
+  and `nest build` skip it). TypeORM 1.x throws on `undefined` in `where`, so optional
+  filters use conditional spreads.
+- `no-explicit-any` is still off: ~150 explicit `any`s remain, mostly `Promise<any>` on
+  FHIR mapper return types. Typing those (FHIR resource types) is the next step.
+- Verified: `npm run lint` clean, backend build/test, `tsc --noEmit` for every service
+  (specs included), `typecheck:db`; fresh scratch DB migrate → `db:check` (no drift) → seed
+  (all staff linked both ways) → re-seed takes the top-up path; smoke PASS=109 on rebuilt
+  images. Spot checks: forged audit `userId` replaced by the caller's; task PUT ignores
+  `ownerId`, bad status → 400; `/tasks?status=bogus` → 400; invalid `/instruments` → 400;
+  `/organizations` without `type` → 200; `/auth/users` admin 200 / receptionist 403.

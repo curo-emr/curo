@@ -1,9 +1,10 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { Socket } from 'net';
 import * as jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
-import { jwtSecret } from '@curo/shared/auth';
+import { jwtSecret, type JwtPayload } from '@curo/shared/auth';
 
 const SERVICE_MAP: Record<string, string> = {
   '/auth': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
@@ -44,15 +45,17 @@ const PUBLIC_PATHS = [
 ];
 
 // Pre-create one proxy per unique target URL
-const proxies = new Map<string, RequestHandler>();
+const proxies = new Map<string, RequestHandler<Request, Response>>();
 for (const target of new Set(Object.values(SERVICE_MAP))) {
   proxies.set(
     target,
-    createProxyMiddleware({
+    createProxyMiddleware<Request, Response>({
       target,
       changeOrigin: true,
       on: {
-        error: (err: Error, _req: Request, res: any) => {
+        error: (err, _req, res) => {
+          // A failed WebSocket upgrade hands over the raw socket.
+          if (res instanceof Socket) return void res.destroy();
           if (!res.headersSent) {
             res.status(502).json({
               message: 'Service temporarily unavailable',
@@ -61,7 +64,7 @@ for (const target of new Set(Object.values(SERVICE_MAP))) {
           }
         },
       },
-    }) as RequestHandler,
+    }),
   );
 }
 
@@ -88,10 +91,47 @@ const SPEC_BASES = Array.from(new Set(Object.values(SERVICE_MAP)));
 const GATEWAY_PUBLIC_URL =
   process.env.GATEWAY_PUBLIC_URL || 'http://localhost:3000';
 
-let mergedSpecCache: any = null;
-async function buildMergedSpec(): Promise<any> {
+/** The parts of a service's OpenAPI document that get merged. */
+interface ServiceSpec {
+  paths?: Record<string, unknown>;
+  components?: { schemas?: Record<string, unknown> };
+  tags?: { name: string }[];
+}
+
+async function fetchSpec(base: string): Promise<ServiceSpec> {
+  try {
+    const { data } = await axios.get<ServiceSpec>(`${base}/api-docs-json`, {
+      timeout: 5000,
+    });
+    return data;
+  } catch {
+    return {}; // service unreachable / no spec — leave the merged doc partial
+  }
+}
+
+let mergedSpecCache: object | null = null;
+async function buildMergedSpec(): Promise<object> {
   if (mergedSpecCache) return mergedSpecCache;
-  const merged: any = {
+  const paths: Record<string, unknown> = {};
+  const schemas: Record<string, unknown> = {};
+  const tags: { name: string }[] = [];
+  const seenTags = new Set<string>();
+  // Fetched in parallel, merged in SERVICE_MAP order.
+  for (const spec of await Promise.all(SPEC_BASES.map(fetchSpec))) {
+    for (const [p, item] of Object.entries(spec.paths ?? {})) {
+      // First service to declare a path wins (clinical precedes pharmacy in
+      // SERVICE_MAP, so the reachable /prescriptions handler is kept).
+      paths[p] ??= item;
+    }
+    Object.assign(schemas, spec.components?.schemas);
+    for (const t of spec.tags ?? []) {
+      if (!seenTags.has(t.name)) {
+        seenTags.add(t.name);
+        tags.push(t);
+      }
+    }
+  }
+  mergedSpecCache = {
     openapi: '3.0.0',
     info: {
       title: 'Curo EMR API',
@@ -102,45 +142,17 @@ async function buildMergedSpec(): Promise<any> {
       version: '1.0.0',
     },
     servers: [{ url: GATEWAY_PUBLIC_URL, description: 'API gateway' }],
-    tags: [] as any[],
-    paths: {} as Record<string, any>,
+    tags,
+    paths,
     components: {
-      schemas: {} as Record<string, any>,
+      schemas,
       securitySchemes: {
         bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       },
     },
     security: [{ bearerAuth: [] }],
   };
-  const seenTags = new Set<string>();
-  await Promise.all(
-    SPEC_BASES.map(async (base) => {
-      try {
-        const { data } = await axios.get(`${base}/api-docs-json`, {
-          timeout: 5000,
-        });
-        for (const [p, item] of Object.entries(data.paths || {})) {
-          // First service to declare a path wins (clinical precedes pharmacy in
-          // SERVICE_MAP, so the reachable /prescriptions handler is kept).
-          if (!merged.paths[p]) merged.paths[p] = item;
-        }
-        Object.assign(
-          merged.components.schemas,
-          data.components?.schemas || {},
-        );
-        for (const t of data.tags || []) {
-          if (!seenTags.has(t.name)) {
-            seenTags.add(t.name);
-            merged.tags.push(t);
-          }
-        }
-      } catch {
-        // service unreachable / no spec — leave the merged doc partial
-      }
-    }),
-  );
-  mergedSpecCache = merged;
-  return merged;
+  return mergedSpecCache;
 }
 
 const SCALAR_HTML = `<!doctype html>
@@ -187,10 +199,12 @@ export class ProxyMiddleware implements NestMiddleware {
       }
       try {
         const token = authHeader.split(' ')[1];
-        const payload = jwt.verify(token, jwtSecret()) as any;
-        req.headers['x-user-id'] = payload.sub;
-        req.headers['x-user-role'] = payload.role;
-        req.headers['x-user-email'] = payload.email;
+        const payload = jwt.verify(token, jwtSecret());
+        if (typeof payload === 'string') throw new Error('Unexpected token');
+        const { sub, role, email } = payload as JwtPayload;
+        req.headers['x-user-id'] = sub;
+        req.headers['x-user-role'] = role;
+        req.headers['x-user-email'] = email;
       } catch {
         return res.status(401).json({ message: 'Unauthorized: Invalid token' });
       }

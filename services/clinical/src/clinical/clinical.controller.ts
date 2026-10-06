@@ -15,12 +15,16 @@ import { CreateNoteDto } from './dto/create-note.dto';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { CreateLabOrderDto } from './dto/create-lab-order.dto';
 import { CreateVitalsDto } from './dto/create-vitals.dto';
+import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
 import {
   JwtAuthGuard,
   RolesGuard,
   Roles,
   CurrentUser,
+  actorId,
+  type AuthUser,
 } from '@curo/shared/auth';
+import type { SearchQuery } from '@curo/shared/fhir';
 import { EncounterStatus } from '../enums';
 
 @Controller()
@@ -32,7 +36,7 @@ export class ClinicalController {
   @Get('icd10')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  getIcd10(@Query() query: any) {
+  getIcd10(@Query() query: SearchQuery) {
     return this.clinicalService.getIcd10(query);
   }
 
@@ -40,11 +44,11 @@ export class ClinicalController {
   @Post('encounters')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  createEncounter(@Body() dto: CreateEncounterDto, @CurrentUser() user: any) {
-    return this.clinicalService.createEncounter(
-      dto,
-      user.practitionerId ?? user.userId,
-    );
+  createEncounter(
+    @Body() dto: CreateEncounterDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.createEncounter(dto, actorId(user));
   }
 
   @Get('encounters')
@@ -81,11 +85,8 @@ export class ClinicalController {
   // Clinical Notes
   @Post('notes')
   @Roles('DOCTOR', 'SUPER_ADMIN')
-  createNote(@Body() dto: CreateNoteDto, @CurrentUser() user: any) {
-    return this.clinicalService.createNote(
-      dto,
-      user.practitionerId ?? user.userId,
-    );
+  createNote(@Body() dto: CreateNoteDto, @CurrentUser() user: AuthUser) {
+    return this.clinicalService.createNote(dto, actorId(user));
   }
 
   @Get('notes')
@@ -110,12 +111,8 @@ export class ClinicalController {
   @Post('vitals')
   @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  addVitals(@Body() dto: CreateVitalsDto, @CurrentUser() user: any) {
-    return this.clinicalService.addVitals(
-      dto,
-      user.practitionerId ?? user.userId,
-      user.role,
-    );
+  addVitals(@Body() dto: CreateVitalsDto, @CurrentUser() user: AuthUser) {
+    return this.clinicalService.addVitals(dto, actorId(user), user.role);
   }
 
   // ?patientId= (history) or ?appointmentId= (one visit's triage vitals)
@@ -169,12 +166,9 @@ export class ClinicalController {
   @Header('Content-Type', 'application/fhir+json')
   createPrescription(
     @Body() dto: CreatePrescriptionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.createPrescription(
-      dto,
-      user.practitionerId ?? user.userId,
-    );
+    return this.clinicalService.createPrescription(dto, actorId(user));
   }
 
   @Get('prescriptions')
@@ -202,11 +196,11 @@ export class ClinicalController {
   @Post('lab-orders')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  createLabOrder(@Body() dto: CreateLabOrderDto, @CurrentUser() user: any) {
-    return this.clinicalService.createLabOrder(
-      dto,
-      user.practitionerId ?? user.userId,
-    );
+  createLabOrder(
+    @Body() dto: CreateLabOrderDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.createLabOrder(dto, actorId(user));
   }
 
   @Get('lab-orders')
@@ -226,33 +220,25 @@ export class ClinicalController {
   // Tasks
   @Post('tasks')
   @Roles('DOCTOR', 'SUPER_ADMIN')
-  createTask(@Body() dto: any, @CurrentUser() user: any) {
-    return this.clinicalService.createTask(
-      dto,
-      user.practitionerId ?? user.userId,
-    );
+  createTask(@Body() dto: CreateTaskDto, @CurrentUser() user: AuthUser) {
+    return this.clinicalService.createTask(dto, actorId(user));
   }
 
   @Get('tasks')
   @Roles('DOCTOR', 'SUPER_ADMIN')
-  getTasks(@CurrentUser() user: any, @Query('status') status?: string) {
-    return this.clinicalService.getTasks(
-      user.practitionerId ?? user.userId,
-      status,
-    );
+  getTasks(@CurrentUser() user: AuthUser, @Query('status') status?: string) {
+    return this.clinicalService.getTasks(actorId(user), status);
   }
 
   @Get('tasks/mine')
   @Roles('DOCTOR', 'SUPER_ADMIN')
-  getDoctorTasks(@CurrentUser() user: any) {
-    return this.clinicalService.getDoctorTasks(
-      user.practitionerId ?? user.userId,
-    );
+  getDoctorTasks(@CurrentUser() user: AuthUser) {
+    return this.clinicalService.getDoctorTasks(actorId(user));
   }
 
   @Put('tasks/:id')
   @Roles('DOCTOR', 'SUPER_ADMIN')
-  updateTask(@Param('id') id: string, @Body() dto: any) {
+  updateTask(@Param('id') id: string, @Body() dto: UpdateTaskDto) {
     return this.clinicalService.updateTask(id, dto);
   }
 }

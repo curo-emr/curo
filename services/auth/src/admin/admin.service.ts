@@ -164,12 +164,12 @@ export class AdminService {
           .createQueryBuilder('p')
           .select('p.id', 'id')
           .where('p.firstName ILIKE :s OR p.lastName ILIKE :s', { s })
-          .getRawMany(),
+          .getRawMany<{ id: string }>(),
         this.patientsRepo
           .createQueryBuilder('p')
           .select('p.id', 'id')
           .where('p.firstName ILIKE :s OR p.lastName ILIKE :s', { s })
-          .getRawMany(),
+          .getRawMany<{ id: string }>(),
       ]);
       const pracIds = pracs.map((r) => r.id);
       const patIds = pats.map((r) => r.id);

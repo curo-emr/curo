@@ -17,7 +17,9 @@ import {
   RolesGuard,
   Roles,
   CurrentUser,
+  type AuthUser,
 } from '@curo/shared/auth';
+import type { PaginationQuery, SearchQuery } from '@curo/shared/fhir';
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,7 +29,7 @@ export class PharmacyController {
   @Get('prescriptions/pending')
   @Roles('PHARMACIST', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  getPendingPrescriptions(@Query() query: any) {
+  getPendingPrescriptions(@Query() query: PaginationQuery) {
     return this.pharmacyService.getPendingPrescriptions(query);
   }
 
@@ -35,14 +37,14 @@ export class PharmacyController {
   @Get('medication-catalog')
   @Roles('DOCTOR', 'PHARMACIST', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getMedicationCatalog(@Query() query: any) {
+  getMedicationCatalog(@Query() query: SearchQuery) {
     return this.pharmacyService.getMedicationCatalog(query);
   }
 
   @Post('dispense')
   @Roles('PHARMACIST', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  dispense(@Body() dto: DispenseMedicationDto, @CurrentUser() user: any) {
+  dispense(@Body() dto: DispenseMedicationDto, @CurrentUser() user: AuthUser) {
     return this.pharmacyService.dispense(dto, user.userId);
   }
 
@@ -51,7 +53,7 @@ export class PharmacyController {
   @Header('Content-Type', 'application/fhir+json')
   getDispenseHistory(
     @Query('patientId') patientId?: string,
-    @Query() query?: any,
+    @Query() query?: PaginationQuery,
   ) {
     return this.pharmacyService.getDispenseHistory(patientId, query);
   }
@@ -69,7 +71,7 @@ export class PharmacyController {
   getStock(
     @Query('lowOnly') lowOnly?: string,
     @Query('organizationId') organizationId?: string,
-    @Query() query?: any,
+    @Query() query?: PaginationQuery,
   ) {
     return this.pharmacyService.getStock(
       lowOnly === 'true',

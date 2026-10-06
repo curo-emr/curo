@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Injectable, UseGuards } from '@nestjs/common';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule, InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import { Organization } from '../entities/organization.entity';
 import { AuthModule } from '../auth/auth.module';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -14,8 +14,10 @@ export class OrganizationService {
   ) {}
 
   list(type?: string): Promise<Organization[]> {
-    const where: any = { active: true };
-    if (type) where.type = type;
+    const where: FindOptionsWhere<Organization> = {
+      active: true,
+      ...(type && { type }),
+    };
     return this.orgRepo.find({ where, order: { name: 'ASC' } });
   }
 }
