@@ -2,8 +2,9 @@ import {
   SetMetadata,
   createParamDecorator,
   ExecutionContext,
+  UnauthorizedException,
 } from '@nestjs/common';
-import type { AuthUser } from './jwt-auth.guard';
+import type { AuthRequest, AuthUser } from './jwt-auth.guard';
 
 export const ROLES_KEY = 'roles';
 
@@ -12,6 +13,9 @@ export const Roles = (...roles: string[]) => SetMetadata(ROLES_KEY, roles);
 
 /** Injects the authenticated user set by `JwtAuthGuard`. */
 export const CurrentUser = createParamDecorator(
-  (_data: unknown, ctx: ExecutionContext): AuthUser =>
-    ctx.switchToHttp().getRequest().user,
+  (_data: unknown, ctx: ExecutionContext): AuthUser => {
+    const { user } = ctx.switchToHttp().getRequest<AuthRequest>();
+    if (!user) throw new UnauthorizedException();
+    return user;
+  },
 );
