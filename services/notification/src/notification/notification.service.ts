@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../entities/notification.entity';
 import { NotificationEventType } from '../enums';
+import { parsePagination, type PaginationQuery } from '@curo/shared/fhir';
 
 @Injectable()
 export class NotificationService {
@@ -27,31 +28,16 @@ export class NotificationService {
   async getForUser(
     userId: string,
     unreadOnly = false,
-    pagination?: {
-      page?: string | number;
-      pageSize?: string | number;
-      _count?: string | number;
-    },
+    pagination?: PaginationQuery,
   ): Promise<Notification[]> {
     const query = this.notificationsRepo
       .createQueryBuilder('n')
       .where('n.recipientId = :userId', { userId });
     if (unreadOnly) query.andWhere('n.isRead = false');
 
-    // Configurable page size (replaces the hard-coded 50 cap); the dropdown reads
-    // the recent slice, but admins can page deeper via page/pageSize/_count.
-    const rawSize = pagination?.pageSize ?? pagination?._count;
-    let pageSize = Number(rawSize);
-    if (!Number.isFinite(pageSize) || pageSize <= 0) pageSize = 50;
-    pageSize = Math.min(Math.max(Math.floor(pageSize), 1), 100);
-    let page = Number(pagination?.page);
-    if (!Number.isFinite(page) || page < 1) page = 1;
-
-    return query
-      .orderBy('n.createdAt', 'DESC')
-      .skip((page - 1) * pageSize)
-      .take(pageSize)
-      .getMany();
+    // The dropdown reads the recent slice; callers can page deeper.
+    const { skip, take } = parsePagination(pagination, 50);
+    return query.orderBy('n.createdAt', 'DESC').skip(skip).take(take).getMany();
   }
 
   async markRead(id: string, userId: string): Promise<void> {

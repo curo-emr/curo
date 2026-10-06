@@ -1,6 +1,7 @@
 import { IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
+import type { LabResultItem } from '../../entities/diagnostic-report.entity';
 
-export class ResultItemDto {
+export class ResultItemDto implements LabResultItem {
   @IsNotEmpty()
   @IsString()
   code: string; // LOINC

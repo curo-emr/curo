@@ -18,7 +18,9 @@ import {
   RolesGuard,
   Roles,
   CurrentUser,
+  type AuthUser,
 } from '@curo/shared/auth';
+import type { PaginationQuery } from '@curo/shared/fhir';
 
 @Controller('appointments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -36,12 +38,12 @@ export class AppointmentController {
   @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT', 'NURSE')
   @Header('Content-Type', 'application/fhir+json')
   findAll(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Query('date') date?: string,
     @Query('practitionerId') practitionerId?: string,
     @Query('patientId') patientId?: string,
     @Query('queueStage') queueStage?: string,
-    @Query() query?: any,
+    @Query() query?: PaginationQuery,
   ) {
     return this.appointmentService.findAll(
       user,
@@ -91,7 +93,7 @@ export class AppointmentController {
   updateQueueStage(
     @Param('id') id: string,
     @Body() dto: UpdateQueueStageDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.appointmentService.updateQueueStage(id, dto.stage, user);
   }

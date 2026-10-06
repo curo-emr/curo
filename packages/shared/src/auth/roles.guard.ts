@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from './decorators';
+import type { AuthRequest } from './jwt-auth.guard';
 
 /** Allows the request only if `request.user.role` is listed by `@Roles(...)`. */
 @Injectable()
@@ -18,9 +19,9 @@ export class RolesGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
     if (!requiredRoles) return true;
-    const { user } = context.switchToHttp().getRequest();
-    if (!requiredRoles.includes(user.role)) {
-      throw new ForbiddenException(`Role ${user.role} is not allowed`);
+    const { user } = context.switchToHttp().getRequest<AuthRequest>();
+    if (!user || !requiredRoles.includes(user.role)) {
+      throw new ForbiddenException(`Role ${user?.role} is not allowed`);
     }
     return true;
   }

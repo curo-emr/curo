@@ -7,6 +7,7 @@ import {
   parsePagination,
   toSearchset,
   PaginationQuery,
+  SearchQuery,
 } from '@curo/shared/fhir';
 import { MedicationDispense } from '../entities/medication-dispense.entity';
 import { Stock } from '../entities/stock.entity';
@@ -14,6 +15,32 @@ import { MedicationCatalog } from '../entities/medication-catalog.entity';
 import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
 import { MedicationDispenseStatus } from '../enums';
+
+export type StockBatch = Pick<
+  Stock,
+  | 'id'
+  | 'batchNumber'
+  | 'quantity'
+  | 'expiryDate'
+  | 'unitPrice'
+  | 'supplier'
+  | 'storageLocation'
+>;
+
+/** One drug's stock across all of its batches. */
+export interface StockGroup extends Pick<
+  Stock,
+  | 'medicationCode'
+  | 'medicationName'
+  | 'genericName'
+  | 'form'
+  | 'strength'
+  | 'unit'
+  | 'reorderThreshold'
+> {
+  totalQuantity: number;
+  batches: StockBatch[];
+}
 
 function toFhirDispense(d: MedicationDispense) {
   return {
@@ -56,9 +83,7 @@ export class PharmacyService {
   ) {}
 
   // Prescribing reference catalog — searchable, paginated FHIR searchset Bundle.
-  async getMedicationCatalog(
-    query: PaginationQuery & { search?: string } = {},
-  ) {
+  async getMedicationCatalog(query: SearchQuery = {}) {
     const { skip, take, page, pageSize } = parsePagination(query);
     const qb = this.catalogRepo
       .createQueryBuilder('m')
@@ -252,12 +277,12 @@ export class PharmacyService {
    * Stock grouped by drug, with each drug's batches listed by expiry (FEFO order).
    * Multiple batches of the same drug with different expiry dates are separate rows.
    */
-  async getGroupedStock(): Promise<any[]> {
+  async getGroupedStock(): Promise<StockGroup[]> {
     const rows = await this.stockRepo.find({
       where: { active: true },
       order: { medicationName: 'ASC' },
     });
-    const groups = new Map<string, any>();
+    const groups = new Map<string, StockGroup>();
     for (const s of rows) {
       const g = groups.get(s.medicationCode) ?? {
         medicationCode: s.medicationCode,
@@ -285,7 +310,7 @@ export class PharmacyService {
     // sort each drug's batches earliest-expiry first (FEFO)
     const result = Array.from(groups.values());
     for (const g of result) {
-      g.batches.sort((a: any, b: any) =>
+      g.batches.sort((a, b) =>
         (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999'),
       );
     }

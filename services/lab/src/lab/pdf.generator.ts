@@ -1,21 +1,13 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require('pdfkit') as typeof import('pdfkit');
+import type { LabResultItem } from '../entities/diagnostic-report.entity';
 
 interface ReportData {
   patientName: string;
   patientCode: string;
   birthDate: string;
   testName: string;
-  results: Array<{
-    display: string;
-    value?: number;
-    unit?: string;
-    valueString?: string;
-    referenceRangeLow?: string;
-    referenceRangeHigh?: string;
-    referenceRangeText?: string;
-    interpretation?: string;
-  }>;
+  results: LabResultItem[];
   conclusion?: string;
   labStaffName: string;
   clinicName: string;

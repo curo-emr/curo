@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Not, IsNull } from 'typeorm';
+import { FindOptionsWhere, Repository, In, Not, IsNull } from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Encounter } from '../entities/encounter.entity';
 import { ClinicalNote } from '../entities/clinical-note.entity';
@@ -15,25 +15,41 @@ import {
   ServiceRequest,
   Observation,
   QrCode,
+  type LabPanelTest,
 } from '@curo/shared/database';
 import {
   MedicationRequestStatus,
   ServiceRequestStatus,
   ObservationStatus,
 } from '@curo/shared/enums';
-import {
-  parsePagination,
-  toSearchset,
-  PaginationQuery,
-} from '@curo/shared/fhir';
+import { parsePagination, toSearchset, SearchQuery } from '@curo/shared/fhir';
 import { Task } from '../entities/task.entity';
 import { CreateEncounterDto } from './dto/create-encounter.dto';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { CreateLabOrderDto } from './dto/create-lab-order.dto';
 import { CreateVitalsDto } from './dto/create-vitals.dto';
-import { EncounterStatus } from '../enums';
+import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
+import { EncounterStatus, TaskStatus } from '../enums';
 import { Icd10Code } from '../entities/icd10-code.entity';
+
+const CLOSED_TASK_STATUSES = [
+  TaskStatus.COMPLETED,
+  TaskStatus.CANCELLED,
+  TaskStatus.FAILED,
+];
+
+function isTaskStatus(value: string): value is TaskStatus {
+  return (Object.values(TaskStatus) as string[]).includes(value);
+}
+
+/** A test in a lab order with the QR label printed for its sample. */
+export interface LabTestQr {
+  testCode: string;
+  display: string;
+  qrBase64: string;
+  qrId: string;
+}
 
 function toFhirEncounter(e: Encounter) {
   return {
@@ -171,7 +187,7 @@ export class ClinicalService implements OnModuleInit {
   ) {}
 
   // ICD-10 diagnosis catalog (DB-backed) — searchable + paginated FHIR searchset.
-  async getIcd10(query: PaginationQuery & { search?: string } = {}) {
+  async getIcd10(query: SearchQuery = {}) {
     const { skip, take, page, pageSize } = parsePagination(query);
     const qb = this.icd10Repo.createQueryBuilder('c');
     if (query.search) {
@@ -199,7 +215,7 @@ export class ClinicalService implements OnModuleInit {
       const orders = await this.labOrdersRepo.find();
       let count = 0;
       for (const o of orders) {
-        const panel = (o.testPanel ?? []) as any[];
+        const panel = o.testPanel ?? [];
         if (panel.length === 0) continue;
         const existing = await this.qrCodesRepo.count({
           where: { serviceRequestId: o.id },
@@ -322,9 +338,11 @@ export class ClinicalService implements OnModuleInit {
     if (!filter.patientId && !filter.appointmentId) {
       throw new BadRequestException('patientId or appointmentId is required');
     }
-    const where: any = { category: 'vital-signs' };
-    if (filter.patientId) where.patientId = filter.patientId;
-    if (filter.appointmentId) where.appointmentId = filter.appointmentId;
+    const where: FindOptionsWhere<Observation> = {
+      category: 'vital-signs',
+      ...(filter.patientId && { patientId: filter.patientId }),
+      ...(filter.appointmentId && { appointmentId: filter.appointmentId }),
+    };
     const obs = await this.observationsRepo.find({
       where,
       order: { effectiveDateTime: 'DESC' },
@@ -349,8 +367,10 @@ export class ClinicalService implements OnModuleInit {
     patientId: string,
     codes: string[],
   ): Promise<any[]> {
-    const where: any = { patientId };
-    if (codes.length) where.code = In(codes);
+    const where: FindOptionsWhere<Observation> = {
+      patientId,
+      ...(codes.length && { code: In(codes) }),
+    };
     const obs = await this.observationsRepo.find({
       where,
       order: { effectiveDateTime: 'ASC' },
@@ -424,39 +444,25 @@ export class ClinicalService implements OnModuleInit {
     const savedQr = await this.qrCodesRepo.save(qrCode);
     await this.labOrdersRepo.update(savedOrder.id, { qrCodeId: savedQr.id });
 
-    // One QR per test in the panel — labs print these and stick them on each sample.
-    const tests = savedOrder.testPanel ?? [];
-    for (let i = 0; i < tests.length; i++) {
-      const t = tests[i] as Record<string, string>;
-      const testUrl = `${process.env.GATEWAY_URL || 'http://localhost:3000'}/lab/orders/${savedOrder.id}?test=${encodeURIComponent(t.code)}&i=${i}`;
-      const testImg = await QRCode.toDataURL(testUrl);
-      await this.qrCodesRepo.save(
-        this.qrCodesRepo.create({
-          serviceRequestId: savedOrder.id,
-          testCode: t.code,
-          testIndex: i,
-          encodedUrl: testUrl,
-          imageBase64: testImg,
-        }),
-      );
-    }
-
     const finalOrder = await this.labOrdersRepo.findOne({
       where: { id: savedOrder.id },
     });
     return {
       ...toFhirServiceRequest(finalOrder!),
       qrCode: { id: savedQr.id, imageBase64 },
-      tests: await this.getTestQrs(savedOrder.id, tests),
+      tests: await this.getTestQrs(savedOrder.id, savedOrder.testPanel ?? []),
     };
   }
 
   /**
-   * Build per-test QR list for an order, joining testPanel display names.
-   * Lazily generates+persists any missing per-test QR (so older/seeded orders
-   * that only had an order-level QR get per-test labels on first view).
+   * One QR per test in the panel — labs print these and stick them on each sample.
+   * Generates and persists any that are missing (new orders, and older/seeded
+   * orders that only had an order-level QR).
    */
-  private async getTestQrs(orderId: string, testPanel: any[]): Promise<any[]> {
+  private async getTestQrs(
+    orderId: string,
+    testPanel: LabPanelTest[],
+  ): Promise<LabTestQr[]> {
     const qrs = await this.qrCodesRepo.find({
       where: { serviceRequestId: orderId },
     });
@@ -465,9 +471,9 @@ export class ClinicalService implements OnModuleInit {
         .filter((q) => q.testCode)
         .map((q) => [`${q.testCode}:${q.testIndex}`, q]),
     );
-    const out: any[] = [];
-    for (let i = 0; i < (testPanel ?? []).length; i++) {
-      const t = testPanel[i] as Record<string, string>;
+    const out: LabTestQr[] = [];
+    for (let i = 0; i < testPanel.length; i++) {
+      const t = testPanel[i];
       let qr = byCode.get(`${t.code}:${i}`);
       if (!qr) {
         const testUrl = `${process.env.GATEWAY_URL || 'http://localhost:3000'}/lab/orders/${orderId}?test=${encodeURIComponent(t.code)}&i=${i}`;
@@ -514,7 +520,7 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // Tasks
-  async createTask(dto: any, ownerId: string): Promise<any> {
+  async createTask(dto: CreateTaskDto, ownerId: string): Promise<Task> {
     const task = this.tasksRepo.create({
       ...dto,
       ownerId,
@@ -523,7 +529,7 @@ export class ClinicalService implements OnModuleInit {
     return this.tasksRepo.save(task);
   }
 
-  async getDoctorTasks(ownerId: string): Promise<any[]> {
+  async getDoctorTasks(ownerId: string): Promise<Task[]> {
     return this.tasksRepo.find({
       where: { ownerId },
       order: { createdAt: 'DESC' },
@@ -531,17 +537,20 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // List the current user's tasks (GET /tasks?status=). status=open => non-terminal statuses.
-  async getTasks(ownerId: string, status?: string): Promise<any[]> {
-    const where: any = { ownerId };
+  async getTasks(ownerId: string, status?: string): Promise<Task[]> {
+    const where: FindOptionsWhere<Task> = { ownerId };
     if (status === 'open') {
-      where.status = Not(In(['completed', 'cancelled', 'failed']));
+      where.status = Not(In(CLOSED_TASK_STATUSES));
     } else if (status) {
+      if (!isTaskStatus(status)) {
+        throw new BadRequestException(`Unknown task status: ${status}`);
+      }
       where.status = status;
     }
     return this.tasksRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 
-  async updateTask(id: string, update: any): Promise<any> {
+  async updateTask(id: string, update: UpdateTaskDto): Promise<Task> {
     const task = await this.tasksRepo.findOne({ where: { id } });
     if (!task) throw new NotFoundException(`Task ${id} not found`);
     Object.assign(task, update, { lastModified: new Date() });
