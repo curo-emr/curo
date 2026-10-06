@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import Link from "next/link";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
@@ -18,63 +18,36 @@ interface TodayAppointmentsProps {
   appointments: Appointment[];
   patients: Patient[];
   doctors: Doctor[];
+  onChange: () => void;
 }
 
-export function TodayAppointments({ appointments: initialAppointments, patients, doctors }: TodayAppointmentsProps) {
-  const [appointments, setAppointments] = useState(initialAppointments);
+export function TodayAppointments({ appointments, patients, doctors, onChange }: TodayAppointmentsProps) {
   const [isPending, startTransition] = useTransition();
 
-  function handleCheckIn(appointmentId: string) {
+  // Run a check-in action, report it, and let the page re-fetch so stats and the queue summary stay in sync.
+  function runAction(
+    action: (appointmentId: string) => Promise<{ success: boolean; error?: string }>,
+    appointmentId: string,
+    successMessage: string,
+    failureMessage: string,
+  ) {
     startTransition(async () => {
-      const result = await checkInPatient(appointmentId);
+      const result = await action(appointmentId);
       if (result.success) {
-        setAppointments((prev) =>
-          prev.map((a) =>
-            a.id === appointmentId
-              ? { ...a, status: "arrived" as const, queueStage: a.queueStage ?? "waiting_nurse", stageSince: new Date().toISOString() }
-              : a
-          )
-        );
-        toast.success("Patient checked in successfully");
+        toast.success(successMessage);
+        onChange();
       } else {
-        toast.error(result.error || "Failed to check in patient");
+        toast.error(result.error || failureMessage);
       }
     });
   }
 
-  function handleSendToDoctor(appointmentId: string) {
-    startTransition(async () => {
-      const result = await sendToDoctor(appointmentId);
-      if (result.success) {
-        setAppointments((prev) =>
-          prev.map((a) =>
-            a.id === appointmentId
-              ? { ...a, status: "arrived" as const, queueStage: "ready_for_doctor" as const, stageSince: new Date().toISOString() }
-              : a
-          )
-        );
-        toast.success("Patient sent directly to the doctor");
-      } else {
-        toast.error(result.error || "Failed to send patient to doctor");
-      }
-    });
-  }
-
-  function handleComplete(appointmentId: string) {
-    startTransition(async () => {
-      const result = await completeVisit(appointmentId);
-      if (result.success) {
-        setAppointments((prev) =>
-          prev.map((a) =>
-            a.id === appointmentId ? { ...a, status: "completed" as const, queueStage: "done" as const } : a
-          )
-        );
-        toast.success("Visit completed");
-      } else {
-        toast.error(result.error || "Failed to complete visit");
-      }
-    });
-  }
+  const handleCheckIn = (id: string) =>
+    runAction(checkInPatient, id, "Patient checked in — waiting for nurse triage", "Failed to check in patient");
+  const handleSendToDoctor = (id: string) =>
+    runAction(sendToDoctor, id, "Patient sent directly to the doctor", "Failed to send patient to doctor");
+  const handleComplete = (id: string) =>
+    runAction(completeVisit, id, "Visit completed", "Failed to complete visit");
 
   return (
     <Card className="shadow-sm border">
