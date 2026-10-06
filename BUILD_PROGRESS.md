@@ -604,3 +604,45 @@ reception check-in ─► nurse triage (vitals) ─► doctor visit (vitals pref
 ### Not built (follow-ups)
 - "Patient ready" notification to the doctor (the schedule badge covers it; needs either Kafka or a
   notification write from appointment-service).
+
+## Doctor portal UI/UX rework ✅ DONE — 2026-10-06
+
+Goal: make the doctor flow obvious — **Today queue → Start/Resume visit → Sign → back to Today**.
+Frontend-only (`curo-doctor`); no backend changes.
+
+### Flow fixes (these were real bugs, not just looks)
+- **Diagnoses were never saved.** Sign now posts each one as a Condition (`category: encounter-diagnosis`,
+  `encounterId`, primary marked via note) — they show on the visit summary, visit list and problem list
+  (problem list de-dupes by ICD code at display time).
+- **"Resume" opened a blank form / "Save draft" was a toast.** The visit now autosaves to localStorage
+  (`curo_visit_draft:<userId>:<appointmentId|patient-…>`), restores on reopen, discard has undo; drafts are
+  cleared on sign and on logout. Today/chart show "Draft" / "Resume visit".
+- **Visits started from the chart weren't linked to the appointment** (never closed it). The editor and the
+  chart now find the patient's open appointment today (`findTodaysAppointment` in `src/lib/visit.ts`).
+- **Sign is retry-safe** (`signVisit` in `components/features/encounters/visit.ts` records each completed
+  step; a retry never duplicates the encounter or orders). Confirm dialog lists what goes to pharmacy/lab.
+- Meds and lab tests are picked from the DB catalogs (free text still allowed) → labs get real LOINC codes.
+- Mapper fixes: Rx dose showed "10 null" / instructions duplicated / dates blank; lab orders had no date or
+  test name; appointment dates used UTC (wrong day near midnight).
+- Removed dead controls (task "Resolve" was local-only, "Pending labs" always empty, bell did nothing,
+  lab "Review Results", unused "show results to patient", fake editable Settings form, UUID breadcrumbs).
+
+### Structure
+- `src/lib/visit.ts` — queue grouping + next action (`getQueueGroup`, `getVisitAction`) shared by Today,
+  Schedule and the chart; draft storage helpers. `src/lib/clinical.ts` — pure record helpers.
+- Shared UI: `SectionCard`, `PageHeader` (back link), `PatientAvatar`, `EmptyState`, `PageSkeleton`,
+  `SearchCombobox` (ICD/med/lab pickers), `AppointmentRow`, `RxPrint`. shadcn added: avatar, dropdown-menu,
+  sheet, skeleton, alert-dialog, toggle(-group). (CLI wrote `import { cn } from "cn"` — fixed by hand.)
+- Chart tabs 8 → 6 (Summary absorbs Problems/Allergies), tab in `?tab=`. ⌘K patient search, real
+  notifications popover, doctor's real name/specialty (looked up in `AuthContext`), mobile nav = Sheet.
+
+### Verified
+- tsc clean, `next build` OK, lint 24 → 12 problems (all pre-existing `any`s + AuthContext baseline).
+- Browser walk: start from queue (triage vitals prefilled) → ICD/catalog med/custom med/2 catalog labs →
+  reload restores draft → sign → back on Today; DB shows encounter completed + linked appt `fulfilled/done`,
+  condition R05 primary with encounterId, 2 Rx, 2 lab orders (LOINC); lab (`/orders`) and pharmacy
+  (`/prescriptions/pending`) APIs list them. Chart Start links today's appt; ⌘K, bell, task resolve,
+  `?tab=labs`, 400px mobile drawer all checked. `scripts/smoke-e2e.sh` PASS=109.
+- Out of scope / known: pharmacy stock is keyed by slugs (`amoxicillin-250mg`) that match neither the
+  medication catalog ids nor custom codes, so dispensing won't auto-decrement for doctor-prescribed items
+  (pre-existing). `/lab-orders` ignores `status`, so "Recent lab results" filters client-side.
