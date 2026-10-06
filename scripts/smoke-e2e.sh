@@ -163,6 +163,7 @@ echo "   encounterId=$ENC_ID" >&2
 
 req "doctor" 200 PUT "/encounters/$ENC_ID/status" '{"status":"in-progress"}' "$DOC" >/dev/null
 req "doctor" 201 POST /vitals "{\"patientId\":\"$PATIENT_ID\",\"encounterId\":\"$ENC_ID\",\"code\":\"8310-5\",\"display\":\"Body temperature\",\"valueQuantity\":37,\"valueUnit\":\"Cel\"}" "$DOC" >/dev/null
+req "doctor" 400 POST /vitals "{\"patientId\":\"$PATIENT_ID\",\"code\":\"85354-9\",\"display\":\"Blood pressure\",\"components\":[\"120/80\"]}" "$DOC" >/dev/null
 req "doctor" 201 POST /notes "{\"patientId\":\"$PATIENT_ID\",\"encounterId\":\"$ENC_ID\",\"subjective\":\"Routine checkup\",\"assessment\":\"Stable\",\"plan\":\"Order labs\"}" "$DOC" >/dev/null
 req "doctor" 200 GET "/encounters?patientId=$PATIENT_ID" "" "$DOC" >/dev/null
 req "doctor" 200 GET "/encounters/$ENC_ID" "" "$DOC" >/dev/null

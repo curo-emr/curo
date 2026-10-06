@@ -93,10 +93,7 @@ export class LabService {
   }
 
   // Lab orders queue → FHIR searchset Bundle (paginated, optional status filter).
-  async getOrders(
-    status?: string,
-    pagination: PaginationQuery = {},
-  ): Promise<any> {
+  async getOrders(status?: string, pagination: PaginationQuery = {}) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const query = this.ordersRepo.createQueryBuilder('s');
     if (status) query.where('s.status = :status', { status });
@@ -113,7 +110,7 @@ export class LabService {
     });
   }
 
-  async getOrder(id: string): Promise<any> {
+  async getOrder(id: string) {
     const order = await this.ordersRepo.findOne({ where: { id } });
     if (!order) throw new NotFoundException(`Lab order ${id} not found`);
     const qr = order.qrCodeId
@@ -140,7 +137,7 @@ export class LabService {
     };
   }
 
-  async scanQr(dto: ScanQrDto, performerId: string): Promise<any> {
+  async scanQr(dto: ScanQrDto, performerId: string) {
     // QR encodes either an order-level URL (.../lab/orders/:id) or a per-test URL
     // (.../lab/orders/:id?test=<code>&i=<index>). Resolve order id + optional test.
     const { orderId, testCode, testIndex } = this.parseQrData(dto.qrData);
@@ -208,7 +205,7 @@ export class LabService {
     return { orderId, testCode, testIndex };
   }
 
-  async receiveOrder(id: string, performerId: string): Promise<any> {
+  async receiveOrder(id: string, performerId: string) {
     const order = await this.ordersRepo.findOne({ where: { id } });
     if (!order) throw new NotFoundException(`Lab order ${id} not found`);
     order.receivedAt = new Date();
@@ -218,7 +215,7 @@ export class LabService {
   }
 
   // Enter results and generate PDF report
-  async enterResults(dto: EnterResultsDto, performerId: string): Promise<any> {
+  async enterResults(dto: EnterResultsDto, performerId: string) {
     const order = await this.ordersRepo.findOne({
       where: { id: dto.serviceRequestId },
     });
@@ -290,10 +287,7 @@ export class LabService {
     return toFhirReport(savedReport);
   }
 
-  async getReports(
-    patientId?: string,
-    pagination: PaginationQuery = {},
-  ): Promise<any> {
+  async getReports(patientId?: string, pagination: PaginationQuery = {}) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const where = patientId ? { patientId } : {};
     const [reports, total] = await this.reportsRepo.findAndCount({
@@ -310,7 +304,7 @@ export class LabService {
     });
   }
 
-  async getReport(id: string): Promise<any> {
+  async getReport(id: string) {
     const r = await this.reportsRepo.findOne({ where: { id } });
     if (!r) throw new NotFoundException(`Report ${id} not found`);
     return toFhirReport(r);
@@ -324,7 +318,7 @@ export class LabService {
   async getQcLogs(
     filters?: { instrumentId?: string; status?: QCStatus },
     pagination: PaginationQuery = {},
-  ): Promise<any> {
+  ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const where: FindOptionsWhere<QCLog> = {
       ...(filters?.instrumentId && { instrumentId: filters.instrumentId }),
@@ -392,7 +386,7 @@ export class LabService {
   }
 
   // TAT calculation
-  async getTatStats(): Promise<any> {
+  async getTatStats() {
     const completed = await this.ordersRepo.find({
       where: { status: ServiceRequestStatus.COMPLETED },
     });

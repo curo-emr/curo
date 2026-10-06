@@ -128,9 +128,7 @@ export class PharmacyService {
   }
 
   // Pending prescriptions - PHARMACIST only sees name+DOB+meds, not full clinical data
-  async getPendingPrescriptions(
-    pagination: PaginationQuery = {},
-  ): Promise<any> {
+  async getPendingPrescriptions(pagination: PaginationQuery = {}) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const [pending, total] = await this.medsRepo.findAndCount({
       where: { status: MedicationRequestStatus.ACTIVE },
@@ -268,7 +266,7 @@ export class PharmacyService {
   async getDispenseHistory(
     filter: DispenseHistoryFilter,
     pagination: PaginationQuery = {},
-  ): Promise<any> {
+  ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const { patientId, prescriptionId } = filter;
     const where = {
@@ -289,7 +287,7 @@ export class PharmacyService {
     });
   }
 
-  async getDispense(id: string): Promise<any> {
+  async getDispense(id: string) {
     const d = await this.dispenseRepo.findOne({ where: { id } });
     if (!d) throw new NotFoundException(`Dispense record ${id} not found`);
     return toFhirDispense(d);
@@ -300,7 +298,7 @@ export class PharmacyService {
     lowOnly?: boolean,
     organizationId?: string,
     pagination: PaginationQuery = {},
-  ): Promise<any> {
+  ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const qb = this.stockRepo.createQueryBuilder('s').where('s.active = true');
     if (lowOnly) qb.andWhere('s.quantity <= s.reorderThreshold');
