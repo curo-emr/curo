@@ -282,6 +282,9 @@ async function seed() {
   }
   console.log('✅ 2 lab staff created');
 
+  // Nurses + DB-backed catalogs (same idempotent step that runs on existing volumes)
+  await topUps(db);
+
   // ---- PATIENTS ----
   const patientData = [
     { fn: 'Samantha', ln: 'Wijesekara', dob: '1985-03-12', gender: 'female', nic: '852728456V', phone: '+94771234567', email: 'samantha@email.com', blood: 'A+', city: 'Colombo' },
@@ -378,6 +381,45 @@ async function seed() {
     appointmentRows.push({ id: appt.id, patientId: patientIds[patIdx], practitionerId: doctorIds[docIdx], isPast });
   }
   console.log('✅ 20 appointments created');
+
+  // ---- TODAY'S PATIENT FLOW (nurse triage demo) ----
+  // A spread of queue stages so the nurse station, reception queue board and the
+  // doctor's schedule all have something to show on a fresh stack.
+  const [nurse] = await db.query(`SELECT id FROM practitioners WHERE role = 'NURSE' ORDER BY "createdAt" LIMIT 1`);
+  const todayFlow = [
+    { patIdx: 5, docIdx: 0, hour: 8, minute: 0, status: 'fulfilled', stage: 'done' },
+    { patIdx: 6, docIdx: 0, hour: 8, minute: 30, status: 'arrived', stage: 'with_doctor' },
+    { patIdx: 7, docIdx: 1, hour: 9, minute: 0, status: 'arrived', stage: 'ready_for_doctor', vitals: true },
+    { patIdx: 8, docIdx: 1, hour: 9, minute: 30, status: 'arrived', stage: 'waiting_nurse' },
+    { patIdx: 9, docIdx: 2, hour: 10, minute: 0, status: 'arrived', stage: 'waiting_nurse' },
+  ];
+  // Triage readings for the ready_for_doctor patient — one hypertensive BP to show the flags.
+  const triageVitals = [
+    { code: '8480-6', display: 'Blood Pressure Systolic', value: 152, unit: 'mmHg' },
+    { code: '8462-4', display: 'Blood Pressure Diastolic', value: 96, unit: 'mmHg' },
+    { code: '8867-4', display: 'Heart rate', value: 88, unit: 'bpm' },
+    { code: '2708-6', display: 'Oxygen saturation', value: 97, unit: '%' },
+    { code: '8310-5', display: 'Body temperature', value: 36.9, unit: 'Cel' },
+  ];
+  for (const f of todayFlow) {
+    const start = new Date();
+    start.setHours(f.hour, f.minute, 0, 0);
+    const end = new Date(start.getTime() + 30 * 60 * 1000);
+    const [appt] = await db.query(`
+      INSERT INTO appointments (id, "patientId", "practitionerId", status, "queueStage", start, "end", description, "serviceType", "reasonCode")
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 'General Consultation', 'Review visit')
+      RETURNING id
+    `, [patientIds[f.patIdx], doctorIds[f.docIdx], f.status, f.stage, start, end, `Appointment for ${patientData[f.patIdx].fn} ${patientData[f.patIdx].ln}`]);
+    if (f.vitals && nurse) {
+      for (const v of triageVitals) {
+        await db.query(`
+          INSERT INTO observations (id, "patientId", "practitionerId", "appointmentId", "performerRole", status, category, code, display, "valueQuantity", "valueUnit", "effectiveDateTime")
+          VALUES (gen_random_uuid(), $1, $2, $3, 'NURSE', 'final', 'vital-signs', $4, $5, $6, $7, NOW())
+        `, [patientIds[f.patIdx], nurse.id, appt.id, v.code, v.display, v.value, v.unit]);
+      }
+    }
+  }
+  console.log(`✅ ${todayFlow.length} appointments in today's patient flow`);
 
   // ---- PAYMENTS (receptionist-collected visit income) ----
   const consultationFees = [1500, 2000, 2500, 3000, 3500];
@@ -724,7 +766,6 @@ async function seed() {
   }
   console.log('✅ Notifications created');
 
-  await topUps(db);
   await AppDataSource.destroy();
 
   console.log('\n🎉 Seed complete! Login credentials:');

@@ -17,6 +17,7 @@ All logins go through the gateway: `POST http://localhost:3000/auth/login` with
 | Lab | http://localhost:3013 | lab staff |
 | Pharmacy | http://localhost:3014 | pharmacists |
 | Admin | http://localhost:3015 | super admin |
+| Nurse Station | http://localhost:3016 | nursing officers |
 
 ## Staff accounts
 
@@ -32,6 +33,8 @@ All logins go through the gateway: `POST http://localhost:3000/auth/login` with
 | PHARMACIST | `niluka.pharma@curo.health` | `Pharma@123` | Niluka Mendis |
 | LAB_STAFF | `tharindi.lab@curo.health` | `LabStaff@123` | Tharindi Jayawardena |
 | LAB_STAFF | `rukshan.lab@curo.health` | `LabStaff@123` | Rukshan Gunasekara |
+| NURSE | `nimasha@curo.health` | `Nurse@123` | Nimasha Herath — Nursing Officer |
+| NURSE | `ruwan@curo.health` | `Nurse@123` | Ruwan Ekanayake — Nursing Officer |
 
 ## Patient accounts
 
@@ -56,6 +59,10 @@ All patients share the password **`Patient@123`**.
 - **Organizations (5):** Curo Central Clinic (clinic); Curo Pharmacy — Colombo & Kandy;
   Curo Diagnostics — Colombo & Galle. `GET /organizations` lists them.
 - **Appointments:** 20 seeded (10 past fulfilled/noshow, 10 future booked) across patients × doctors.
+- **Today's patient flow (fresh seed only):** 5 appointments for the seed day spread across queue
+  stages — 2 waiting for the nurse, 1 ready for the doctor with nurse triage vitals (BP 152/96),
+  1 with the doctor, 1 done. Nurses are added to existing volumes automatically (seed top-ups);
+  on an existing volume, create today's queue by checking a patient in from reception.
 - **Encounters:** 10, each with a SOAP note + 5 vital observations.
 - **Prescriptions:** 8 (Metformin, Amlodipine, Atorvastatin, Omeprazole, Salbutamol, Losartan,
   Paracetamol, Amoxicillin) — first 5 completed, rest active (visible in the pharmacy pending queue).
