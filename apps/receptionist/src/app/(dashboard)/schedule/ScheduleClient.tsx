@@ -297,7 +297,6 @@ export function ScheduleClient({ appointments, patients, doctors }: Props) {
           title: getPatientName(apt.patientId, patients),
           subtitle: apt.time,
           color: statusToColor(apt.status),
-          appointment: apt,
         })),
     [appointments, patients, doctorFilter]
   );
