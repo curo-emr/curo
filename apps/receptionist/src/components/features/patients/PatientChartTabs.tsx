@@ -1,23 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Patient, Appointment, Visit, Doctor } from "@/types";
+import { Patient, Appointment, Doctor } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DemographicsTab } from "./tabs/DemographicsTab";
 import { AppointmentsTab } from "./tabs/AppointmentsTab";
-import { VisitHistoryTab } from "./tabs/VisitHistoryTab";
 
 interface Props {
   patient: Patient;
   appointments: Appointment[];
-  visits: Visit[];
   doctors: Doctor[];
 }
 
 export function PatientChartTabs({
   patient,
   appointments,
-  visits,
   doctors,
 }: Props) {
   const [activeTab, setActiveTab] = useState("demographics");
@@ -37,12 +34,6 @@ export function PatientChartTabs({
         >
           Appointments ({appointments.length})
         </TabsTrigger>
-        <TabsTrigger
-          value="visits"
-          className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-1 text-muted-foreground data-[state=active]:text-primary"
-        >
-          Visit History ({visits.length})
-        </TabsTrigger>
       </TabsList>
 
       <div className="mt-6">
@@ -52,10 +43,6 @@ export function PatientChartTabs({
 
         <TabsContent value="appointments" className="outline-none">
           <AppointmentsTab appointments={appointments} doctors={doctors} />
-        </TabsContent>
-
-        <TabsContent value="visits" className="outline-none">
-          <VisitHistoryTab visits={visits} doctors={doctors} />
         </TabsContent>
       </div>
     </Tabs>
