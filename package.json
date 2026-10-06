@@ -11,23 +11,29 @@
     "build": "npm run build --workspaces --if-present",
     "build:shared": "npm run build -w @curo/shared",
     "test": "npm test --workspaces --if-present",
-    "seed": "cd scripts && ts-node --project tsconfig.seed.json seed.ts",
-    "typecheck:db": "tsc -p scripts/tsconfig.seed.json --noEmit",
+    "db:migrate": "cd database && typeorm-ts-node-commonjs migration:run -d data-source.ts",
+    "db:revert": "cd database && typeorm-ts-node-commonjs migration:revert -d data-source.ts",
+    "db:generate": "cd database && typeorm-ts-node-commonjs migration:generate -d data-source.ts",
+    "db:check": "cd database && typeorm-ts-node-commonjs migration:generate --check -d data-source.ts migrations/check",
+    "seed": "cd database && ts-node seed.ts",
+    "typecheck:db": "tsc -p database",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:build:backends": "bash scripts/build-backends-with-local-npm-registry.sh",
     "docker:rebuild": "bash scripts/docker-rebuild.sh"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/node": "^24.0.0",
+    "@types/qrcode": "^1.5.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
-    "typeorm": "^1.0.0",
     "pg": "^8.21.0",
     "qrcode": "^1.5.4",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^1.0.0"
   }
 }

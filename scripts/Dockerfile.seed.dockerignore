@@ -1,7 +1,0 @@
-# The context is the repo root: the seed image needs only the root manifests and scripts/.
-**
-!package.json
-!package-lock.json
-!scripts/**
-**/node_modules
-**/.env*
