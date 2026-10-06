@@ -116,6 +116,9 @@ constraint makes a shared package awkward, but a `curo-frontend-shared`
 template dir + sync script (or promoting the frontends into the parent repo /
 proper submodules + workspace) would pay for itself. This is the frontend twin
 of A3/A4.
+> 2026-10-06 (lint baseline): `AuthContext` and `apiErrorMessage()` were brought in line
+> across the portals, but they are still copies. `AuthContext.tsx`, the API client and
+> `hooks/use-client-pagination.ts` are the first things to move into the shared package.
 
 ### B2. All data fetching is `useEffect` + axios with no cache
 Every page refetches everything on mount; polling is hand-rolled
