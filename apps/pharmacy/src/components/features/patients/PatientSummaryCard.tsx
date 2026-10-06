@@ -1,7 +1,7 @@
 import { User, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { calculateAge } from "@/lib/utils";
+import { calculateAge, formatAllergies } from "@/lib/utils";
 import type { Allergy, Patient } from "@/types";
 
 interface PatientSummaryCardProps {
@@ -32,7 +32,7 @@ export function PatientSummaryCard({ patient, allergies }: PatientSummaryCardPro
               <div className="flex items-center gap-2 mt-2">
                 <AlertTriangle className="h-4 w-4 text-status-error-text" />
                 <span className="text-sm font-medium text-status-error-text">
-                  Allergies: {allergies.map(a => `${a.substance} (${a.severity})`).join(', ')}
+                  Allergies: {formatAllergies(allergies)}
                 </span>
               </div>
             ) : (

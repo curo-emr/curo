@@ -119,3 +119,7 @@ export function daysUntilExpiry(expiryDate: string): number {
   const now = new Date();
   return Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
+
+export function formatAllergies(allergies: { substance: string; severity: string }[]): string {
+  return allergies.map(a => `${a.substance} (${a.severity})`).join(', ');
+}

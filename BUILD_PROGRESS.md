@@ -771,10 +771,10 @@ Branch `fix/portal-lint-warnings`. All 7 portals lint clean; each `lint` script 
 - Lab: the worklist's department filter is removed — orders carry no department, so it
   never filtered anything. The order page's `loadData` is a `useCallback` on `orderId`.
   QR `<img>`s keep `<img>` (data: URLs) with a reasoned disable.
-- Follow-ups seen, not done: the pharmacy prescription page shows dispense records only
-  (no `GET /prescriptions/:id`). The receptionist Visit History tab (always `visits={[]}`)
-  was removed in `refactor/remove-visit-history-tab`: the Appointments tab covers it, and
-  encounters stay clinical-only.
+- Follow-ups: the pharmacy prescription page got its detail view in
+  `feat/pharmacy-prescription-detail` (below). The receptionist Visit History tab (always
+  `visits={[]}`) was removed in `refactor/remove-visit-history-tab`: the Appointments tab
+  covers it, and encounters stay clinical-only.
 - Verified: lint + `next build` for all 7 portals; rebuilt lab portal — worklist shows only
   the priority filter, order page loads each endpoint once (no refetch loop), QR renders.
 
@@ -803,9 +803,43 @@ dispensed, and the Dispense button works.
   never sends (always 7); `dose` showed the total quantity; `createdAt` read `meta.lastUpdated`
   (never set) instead of `authoredOn`. The pharmacy patient page's allergy banner never showed
   (`mapFhirPatient` returns `allergies: []`); it now loads `/patients/:id/allergies`.
-- Not done: the portal sends no `unitPrice`, so every dispense totals 0.
+- Not done here: the portal sent no `unitPrice`, so every dispense totalled 0 — priced on the
+  server in `fix/pharmacy-dispense-integrity` (below).
 - Verified: root lint, `tsc --noEmit` (clinical, pharmacy), pharmacy portal lint + `next
   build`; smoke PASS=114 on rebuilt images (new: Rx by id 200 / receptionist 403, dispense
   patient from prescription, second dispense 409, history by prescription = 1). In the
   browser: pending Rx shows patient + allergies + medication → Dispense → Completed with the
   receipt; patient with an allergy shows the banner.
+
+---
+
+## Dispense integrity, staff names, patient-list allergies ✅ DONE — 2026-10-06
+
+Branch `fix/pharmacy-dispense-integrity`. Follow-ups from the prescription detail work.
+
+- **Concurrent dispenses:** two simultaneous `POST /dispense` for one prescription both got
+  201 — two receipts, and stock decremented once (lost update). Now one transaction: claim
+  the prescription with a conditional update (`active` → `completed`; 0 rows → 409, rolled
+  back), then draw FEFO batches under `pessimistic_write` row locks, then save the dispense.
+- **Price:** computed on the server from the batches drawn (Σ quantity × batch `unitPrice`;
+  `unitPrice` on the record is the average). `unitPrice` and `dispenserName` left the DTO.
+  Units no batch can supply are still dispensed, unpriced (best-effort, as before).
+- **Staff names:** access/refresh tokens and the login response carry `name` (the linked
+  practitioner's full name, `null` otherwise); `AuthUser.name` comes from the token. The
+  dispense records it (falls back to the email for older tokens), and every portal's sidebar
+  shows it after the next login. The doctor portal's profile lookup now keys on `firstName`
+  (it still adds first name and specialty).
+- **Patient list allergies:** the pharmacy list showed "None known" for everyone
+  (`mapFhirPatient` returned `allergies: []`). New `GET /patients/allergies?patientIds=`
+  (≤100 UUIDs, validated; staff roles, not PATIENT) — one request per page; a failed lookup
+  shows "Unavailable". The always-empty `allergies`/`problemList`/`currentMedications` are
+  gone from the pharmacy `Patient` type. Shared `formatAllergies()`.
+- Not done: the list's Last Prescription / Total Rx columns count pending prescriptions only
+  (the page loads `/prescriptions/pending`). Portals keep a session stored before this change
+  (no name) until the next login.
+- Verified: root build, lint, tests, `typecheck:db`, `db:check` (no drift), `tsc --noEmit` for
+  every service; pharmacy + doctor portal lint and typecheck; smoke PASS=122 on rebuilt images
+  (new: batch allergies 200/400/403, priced dispense = 25, dispenser name, concurrent
+  dispenses → one 201 + one 409, stock drawn once). Race repro before/after: 201+201 →
+  201+409. In the browser: patient list shows real allergies; receipt "Dispensed by Kasun
+  Bandara", Rs. 55.00; pharmacy sidebar shows the name; doctor greeting and specialty intact.

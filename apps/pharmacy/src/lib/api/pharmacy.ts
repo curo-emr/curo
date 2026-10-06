@@ -53,12 +53,10 @@ export interface DispenseRecord {
   }>;
 }
 
-// The server takes the patient, medication and quantity from the prescription.
-export async function dispense(prescriptionId: string, dispenserName: string): Promise<DispenseRecord> {
-  const res = await apiClient.post<FhirMedicationDispense>('/dispense', {
-    medicationRequestId: prescriptionId,
-    dispenserName,
-  });
+// The server takes the patient, medication, quantity, price and dispenser from
+// the prescription, stock and session.
+export async function dispense(prescriptionId: string): Promise<DispenseRecord> {
+  const res = await apiClient.post<FhirMedicationDispense>('/dispense', { medicationRequestId: prescriptionId });
   return mapFhirMedicationDispense(res.data);
 }
 

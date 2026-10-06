@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Patient, Observation } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import {
@@ -236,6 +236,13 @@ export class PatientService implements OnModuleInit {
   // Allergies
   async getAllergies(patientId: string): Promise<any[]> {
     const allergies = await this.allergiesRepo.find({ where: { patientId } });
+    return allergies.map(toFhirAllergy);
+  }
+
+  async getAllergiesForPatients(patientIds: string[]) {
+    const allergies = await this.allergiesRepo.find({
+      where: { patientId: In(patientIds) },
+    });
     return allergies.map(toFhirAllergy);
   }
 

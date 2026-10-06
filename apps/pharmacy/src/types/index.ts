@@ -36,9 +36,6 @@ export interface Patient {
   address: Address;
   emergencyContact: EmergencyContact;
   insurance?: { provider: string; policyNumber: string } | null;
-  allergies: string[];
-  problemList: string[];
-  currentMedications: string[];
   tags: string[];
   createdAt: string;
   updatedAt: string;
