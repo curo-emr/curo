@@ -4,6 +4,7 @@ import {
 import { AppointmentService } from './appointment.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
+import { UpdateQueueStageDto } from './dto/update-queue-stage.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles, CurrentUser } from '../common/decorators';
@@ -21,16 +22,17 @@ export class AppointmentController {
   }
 
   @Get()
-  @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT')
+  @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT', 'NURSE')
   @Header('Content-Type', 'application/fhir+json')
   findAll(
     @CurrentUser() user: any,
     @Query('date') date?: string,
     @Query('practitionerId') practitionerId?: string,
     @Query('patientId') patientId?: string,
+    @Query('queueStage') queueStage?: string,
     @Query() query?: any,
   ) {
-    return this.appointmentService.findAll(user, { date, practitionerId, patientId }, query);
+    return this.appointmentService.findAll(user, { date, practitionerId, patientId, queueStage }, query);
   }
 
   @Get('schedule/:practitionerId')
@@ -50,7 +52,7 @@ export class AppointmentController {
   }
 
   @Get(':id')
-  @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT')
+  @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT', 'NURSE')
   @Header('Content-Type', 'application/fhir+json')
   findOne(@Param('id') id: string) {
     return this.appointmentService.findOne(id);
@@ -61,5 +63,14 @@ export class AppointmentController {
   @Header('Content-Type', 'application/fhir+json')
   update(@Param('id') id: string, @Body() dto: UpdateAppointmentDto) {
     return this.appointmentService.update(id, dto);
+  }
+
+  // Moves a checked-in patient through the day's flow (nurse triage → doctor).
+  // Transition + per-stage role rules live in queue-stage.ts.
+  @Put(':id/queue-stage')
+  @Roles('NURSE', 'RECEPTIONIST', 'DOCTOR', 'SUPER_ADMIN')
+  @Header('Content-Type', 'application/fhir+json')
+  updateQueueStage(@Param('id') id: string, @Body() dto: UpdateQueueStageDto, @CurrentUser() user: any) {
+    return this.appointmentService.updateQueueStage(id, dto.stage, user);
   }
 }

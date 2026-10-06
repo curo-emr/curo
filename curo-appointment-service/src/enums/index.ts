@@ -18,3 +18,13 @@ export enum AppointmentStatus {
   NOSHOW = 'noshow',
   WAITLIST = 'waitlist',
 }
+
+// Where a checked-in patient is in the day's flow (appointments.queueStage).
+// Both nurse stages are optional: reception can bypass straight to the doctor.
+export enum QueueStage {
+  WAITING_NURSE = 'waiting_nurse',
+  WITH_NURSE = 'with_nurse',
+  READY_FOR_DOCTOR = 'ready_for_doctor',
+  WITH_DOCTOR = 'with_doctor',
+  DONE = 'done',
+}

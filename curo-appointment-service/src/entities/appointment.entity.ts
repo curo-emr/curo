@@ -50,6 +50,12 @@ export class Appointment {
   @Column({ nullable: true })
   cancelledReason: string;
 
+  // Position in the day's patient flow (a QueueStage value); null = not in the flow.
+  // Plain varchar rather than a Postgres enum so stages can be appended safely.
+  @Index()
+  @Column({ type: 'varchar', nullable: true })
+  queueStage: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
