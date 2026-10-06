@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { Vitals } from "@/types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -17,6 +18,14 @@ export function getBMICategory(bmi: number): BMICategory {
   if (bmi >= 30) return 'obese';
   if (bmi >= 25) return 'overweight';
   return 'normal';
+}
+
+// Vitals fields that should be recorded as new observations: filled in and
+// different from what was already recorded (e.g. by the nurse at triage).
+export function changedVitalKeys(current: Partial<Vitals>, recorded: Partial<Vitals> = {}): (keyof Vitals)[] {
+  return (Object.keys(current) as (keyof Vitals)[]).filter(
+    key => (current[key] ?? 0) > 0 && current[key] !== recorded[key],
+  );
 }
 
 export function formatDate(dateStr: string): string {

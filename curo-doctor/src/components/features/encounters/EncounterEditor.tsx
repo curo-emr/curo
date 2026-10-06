@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Patient, ICD10, Medication, LabTestCatalogItem,
@@ -16,9 +16,12 @@ import { ClinicalNotes } from "./sections/ClinicalNotes";
 import { DiagnosisSearch } from "./sections/DiagnosisSearch";
 import { PrescriptionForm } from "./sections/PrescriptionForm";
 import { LabOrderForm } from "./sections/LabOrderForm";
-import { VitalsPanel } from "./sections/VitalsPanel";
+import { VitalsPanel, type RecordedVitals } from "./sections/VitalsPanel";
 import { createEncounter, updateEncounterStatus } from "@/lib/api/encounters";
-import { createNote, createVitals, createPrescription, createLabOrder, VITALS_MAP } from "@/lib/api/clinical";
+import { createNote, createVitals, createPrescription, createLabOrder, getVitalsByAppointment, VITALS_MAP } from "@/lib/api/clinical";
+import { updateAppointment, updateQueueStage } from "@/lib/api/appointments";
+import { getPractitioners } from "@/lib/api/practitioners";
+import { changedVitalKeys } from "@/lib/utils";
 
 interface Props {
   patient: Patient;
@@ -42,6 +45,29 @@ export function EncounterEditor({ patient, appointmentId, icd10Catalog }: Props)
   const [labNotes, setLabNotes] = useState("");
   const [showResultsToPatient, setShowResultsToPatient] = useState(false);
   const [isSignLoading, setIsSignLoading] = useState(false);
+  const [triage, setTriage] = useState<RecordedVitals | null>(null);
+
+  // Visit opened from an appointment: mark the patient as with the doctor and
+  // prefill the vitals the nurse recorded at triage (if any).
+  useEffect(() => {
+    if (!appointmentId) return;
+    let cancelled = false;
+    // Best effort — only drives queue displays; a refused transition (e.g. visit already done) is harmless.
+    updateQueueStage(appointmentId, 'with_doctor').catch(() => {});
+    (async () => {
+      const recorded = await getVitalsByAppointment(appointmentId);
+      if (!recorded || cancelled) return;
+      const nurses = recorded.recordedById ? await getPractitioners('NURSE').catch(() => []) : [];
+      if (cancelled) return;
+      setTriage({
+        vitals: recorded.vitals,
+        recordedBy: nurses.find(n => n.id === recorded.recordedById)?.name.full ?? 'Nursing staff',
+        recordedAt: recorded.recordedAt,
+      });
+      setVitals(current => ({ ...recorded.vitals, ...current }));
+    })().catch(() => toast.error("Could not load triage vitals"));
+    return () => { cancelled = true; };
+  }, [appointmentId]);
 
   const handleSaveDraft = () => {
     toast.success("Draft saved");
@@ -75,9 +101,11 @@ export function EncounterEditor({ patient, appointmentId, icd10Catalog }: Props)
         additionalNotes: chiefComplaint,
       });
 
-      // 3. Post vitals (one observation per filled field)
+      // 3. Post vitals (one observation per field) — only values the doctor added or
+      //    changed; unchanged triage vitals are already linked to this encounter.
+      const changed = changedVitalKeys(vitals, triage?.vitals);
       const vitalPayloads = VITALS_MAP
-        .filter(v => vitals[v.key] !== undefined && (vitals[v.key] as number) > 0)
+        .filter(v => changed.includes(v.key))
         .map(v => createVitals({
           patientId: patient.id,
           encounterId,
@@ -115,6 +143,12 @@ export function EncounterEditor({ patient, appointmentId, icd10Catalog }: Props)
 
       // 6. Mark encounter as completed
       await updateEncounterStatus(encounterId, 'completed');
+
+      // 7. Close the appointment (moves the patient's queue stage to done)
+      if (appointmentId) {
+        await updateAppointment(appointmentId, { status: 'fulfilled' })
+          .catch(() => toast.warning("Visit saved, but the appointment could not be marked complete"));
+      }
 
       toast.success("Visit signed and completed");
       router.push(ROUTES.PATIENT(patient.id));
@@ -193,6 +227,7 @@ export function EncounterEditor({ patient, appointmentId, icd10Catalog }: Props)
           <VitalsPanel
             vitals={vitals}
             setVitals={setVitals}
+            recorded={triage}
           />
         </div>
       </div>

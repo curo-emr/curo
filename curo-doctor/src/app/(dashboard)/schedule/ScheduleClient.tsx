@@ -10,6 +10,7 @@ import {
 import { Appointment, Patient } from "@/types";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
 import {
   cn,
   getPatientName,
@@ -70,7 +71,7 @@ function AppointmentCard({
   const initial = name.charAt(0).toUpperCase();
   const borderColor = STATUS_BORDER[apt.status] ?? "border-l-slate-200";
 
-  const isInProgress = apt.status === APPOINTMENT_STATUS.IN_PROGRESS;
+  const isInProgress = apt.status === APPOINTMENT_STATUS.IN_PROGRESS || apt.queueStage === "with_doctor";
   const isCompleted  = apt.status === APPOINTMENT_STATUS.COMPLETED;
 
   return (
@@ -87,7 +88,10 @@ function AppointmentCard({
           <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           {formatTime(apt.time)}
         </span>
-        <StatusBadge status={apt.status} />
+        <div className="flex items-center gap-1.5">
+          <QueueStageBadge stage={apt.queueStage} />
+          <StatusBadge status={apt.status} />
+        </div>
       </div>
 
       {/* Row 2 — patient */}
