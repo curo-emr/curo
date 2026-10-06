@@ -12,8 +12,6 @@ import {
 interface WorklistFiltersProps {
   priorityFilter: string;
   onPriorityChange: (value: string) => void;
-  departmentFilter: string;
-  onDepartmentChange: (value: string) => void;
   onClear: () => void;
   hasFilters: boolean;
 }
@@ -21,8 +19,6 @@ interface WorklistFiltersProps {
 export function WorklistFilters({
   priorityFilter,
   onPriorityChange,
-  departmentFilter,
-  onDepartmentChange,
   onClear,
   hasFilters,
 }: WorklistFiltersProps) {
@@ -37,18 +33,6 @@ export function WorklistFilters({
           <SelectItem value="stat">STAT</SelectItem>
           <SelectItem value="urgent">Urgent</SelectItem>
           <SelectItem value="routine">Routine</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select value={departmentFilter} onValueChange={onDepartmentChange}>
-        <SelectTrigger className="w-[160px] h-8 text-xs">
-          <SelectValue placeholder="Department" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Departments</SelectItem>
-          <SelectItem value="Hematology">Hematology</SelectItem>
-          <SelectItem value="Biochemistry">Biochemistry</SelectItem>
-          <SelectItem value="Microbiology">Microbiology</SelectItem>
         </SelectContent>
       </Select>
 
