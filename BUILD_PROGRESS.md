@@ -716,7 +716,7 @@ Branch `chore/lint-baseline`. Lint now runs in CI: errors fail the build, warnin
   in all 7 portals (removes the set-state-in-effect error; cross-tab sign-out);
   `useClientPagination` hook (pharmacy, receptionist); `apiErrorMessage()` in every portal's
   API client (15 call sites); typed FHIR DocumentReference/Observation and zod form
-  input/output types instead of `as any`. ~70 portal warnings remain (not gated).
+  input/output types instead of `as any`. ~70 portal warnings remained (cleared below).
 - Verified: backend build/test/typecheck, all 7 `next build`, smoke PASS=109 on rebuilt
   images. In the browser: doctor login → dashboard → reload (session restored, profile
   name enriched) → sign out; pharmacy and receptionist login from a fresh load;
@@ -755,3 +755,23 @@ are errors again (as is `no-floating-promises`); root `npm run lint` uses `--max
   images. Spot checks: forged audit `userId` replaced by the caller's; task PUT ignores
   `ownerId`, bad status → 400; `/tasks?status=bogus` → 400; invalid `/instruments` → 400;
   `/organizations` without `type` → 200; `/auth/users` admin 200 / receptionist 403.
+
+---
+
+## Portal lint warnings ✅ DONE — 2026-10-06
+
+Branch `fix/portal-lint-warnings`. All 7 portals lint clean; each `lint` script uses
+`--max-warnings 0`.
+
+- 52 unused imports removed; dead `lib/data/api.ts` shims deleted (pharmacy, receptionist).
+- Dead code and props: `staff` placeholders, the pharmacy prescription page's never-loaded
+  `prescription`/`patient` state, `DemographicsTab` `allergies` (the header shows them),
+  `ReportsDashboard` `visits`, `AppointmentCard` filter props. Admin audit client no longer
+  accepts a `search` that `/audit` doesn't support.
+- Lab: the worklist's department filter is removed — orders carry no department, so it
+  never filtered anything. The order page's `loadData` is a `useCallback` on `orderId`.
+  QR `<img>`s keep `<img>` (data: URLs) with a reasoned disable.
+- Follow-ups seen, not done: the pharmacy prescription page shows dispense records only
+  (no `GET /prescriptions/:id`); receptionist `VisitHistoryTab` always gets `visits={[]}`.
+- Verified: lint + `next build` for all 7 portals; rebuilt lab portal — worklist shows only
+  the priority filter, order page loads each endpoint once (no refetch loop), QR renders.
