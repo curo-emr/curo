@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Calendar, Pill, FlaskConical, HeartPulse, AlertTriangle, Clock, ArrowRight, Activity } from "lucide-react";
+import { Loader2, Calendar, Pill, FlaskConical, HeartPulse, AlertTriangle, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import { formatDate, getDoctorName, formatTime, calculateBMI, getBMICategory } from "@/lib/utils";
+import { formatDate, formatTime } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { getMyProfile, getMyAppointments, getMyAllergies, getMyConditions, getMyPrescriptions, getMyLabOrders } from "@/lib/api/patient-portal";
 import type { Patient, Appointment, Allergy, Problem, Prescription, LabOrder } from "@/types";

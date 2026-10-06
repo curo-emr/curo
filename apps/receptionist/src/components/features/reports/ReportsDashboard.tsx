@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { Appointment, Patient, Doctor, Visit } from "@/types";
+import type { Appointment, Patient, Doctor } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,24 +13,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  CalendarCheck,
-  UserCheck,
-  CheckCircle2,
-  XCircle,
-  Ban,
-  UserPlus,
-  Clock,
-  BarChart3,
-} from "lucide-react";
-import { cn, getTodayString, getDoctorName } from "@/lib/utils";
+import { CalendarCheck, UserCheck, CheckCircle2, XCircle, Ban, UserPlus, Clock } from "lucide-react";
+import { cn, getTodayString } from "@/lib/utils";
 import { APPOINTMENT_STATUS, VISIT_TYPES } from "@/lib/constants";
 
 interface ReportsDashboardProps {
   appointments: Appointment[];
   patients: Patient[];
   doctors: Doctor[];
-  visits: Visit[];
 }
 
 type DateRange = "today" | "week" | "month";
@@ -76,7 +66,6 @@ export function ReportsDashboard({
   appointments,
   patients,
   doctors,
-  visits,
 }: ReportsDashboardProps) {
   const [dateRange, setDateRange] = useState<DateRange>("today");
 

@@ -20,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import type { StockItem } from "@/lib/api/pharmacy";
 import { formatStatus, formatCurrency, isLowStock, daysUntilExpiry } from "@/lib/utils";

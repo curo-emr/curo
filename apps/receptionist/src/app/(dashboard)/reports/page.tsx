@@ -43,7 +43,7 @@ export default function ReportsPage() {
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
       ) : (
-        <ReportsDashboard appointments={appointments} patients={patients} doctors={doctors} visits={[]} />
+        <ReportsDashboard appointments={appointments} patients={patients} doctors={doctors} />
       )}
     </div>
   );

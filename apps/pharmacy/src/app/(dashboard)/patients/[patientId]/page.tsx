@@ -4,14 +4,14 @@ import { useState, useEffect, use } from "react";
 import { Loader2 } from "lucide-react";
 import { getPatientById } from "@/lib/api/patients";
 import { getPrescriptionsByPatient, getDispensingRecordsByPatient, type DispenseRecord } from "@/lib/api/pharmacy";
-import { calculateAge, formatDate, formatDateTime, formatCurrency, formatStatus } from "@/lib/utils";
+import { calculateAge, formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
 import type { Patient, Prescription } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { User, MapPin, Pill, FileText, AlertTriangle } from "lucide-react";
+import { User, Pill, FileText, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
@@ -32,7 +32,6 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
   if (!patient) return <div className="p-8 text-center text-slate-500">Patient not found.</div>;
 
-  const staff: never[] = [];
   const age = calculateAge(patient.dob);
   const sortedPrescriptions = [...prescriptions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
