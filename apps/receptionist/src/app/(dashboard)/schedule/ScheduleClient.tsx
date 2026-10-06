@@ -75,14 +75,10 @@ function AppointmentCard({
   apt,
   patients,
   doctors,
-  selectedDateStr,
-  doctorFilter,
 }: {
   apt: Appointment;
   patients: Patient[];
   doctors: Doctor[];
-  selectedDateStr: string;
-  doctorFilter: string;
 }) {
   const name = getPatientName(apt.patientId, patients);
   const meta = getPatientMeta(apt.patientId, patients);
@@ -265,8 +261,6 @@ function DayAppointments({
               apt={apt}
               patients={patients}
               doctors={doctors}
-              selectedDateStr={dateStr}
-              doctorFilter={doctorFilter}
             />
           ))}
         </div>

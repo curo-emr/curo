@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Search, Eye } from "lucide-react";
 import { LabOrder, Patient } from "@/types";
-import { getPatientName, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorklistFilters } from "./WorklistFilters";
 import Link from "next/link";
@@ -41,7 +41,6 @@ export function WorklistTable({ orders, patients }: WorklistTableProps) {
   const [query, setQuery] = useState(initialQuery);
   const [statusTab, setStatusTab] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { all: orders.length };
@@ -70,9 +69,9 @@ export function WorklistTable({ orders, patients }: WorklistTableProps) {
       if (pa !== pb) return pa - pb;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [query, statusTab, priorityFilter, departmentFilter, orders, patients]);
+  }, [query, statusTab, priorityFilter, orders, patients]);
 
-  const hasFilters = priorityFilter !== "all" || departmentFilter !== "all" || query !== "";
+  const hasFilters = priorityFilter !== "all" || query !== "";
 
   return (
     <div className="space-y-4">
@@ -114,9 +113,7 @@ export function WorklistTable({ orders, patients }: WorklistTableProps) {
           <WorklistFilters
             priorityFilter={priorityFilter}
             onPriorityChange={setPriorityFilter}
-            departmentFilter={departmentFilter}
-            onDepartmentChange={setDepartmentFilter}
-            onClear={() => { setQuery(""); setPriorityFilter("all"); setDepartmentFilter("all"); }}
+            onClear={() => { setQuery(""); setPriorityFilter("all"); }}
             hasFilters={hasFilters}
           />
         </CardContent>
