@@ -1,10 +1,7 @@
-import { getICD10Subset } from "@/lib/data/api";
 import { ICDSearchClient } from "./ICDSearchClient";
 import { Activity } from "lucide-react";
 
-export default async function ICDPage() {
-  const catalog = await getICD10Subset();
-
+export default function ICDPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-start gap-4 mb-8 border-b border-slate-200 pb-6">
@@ -20,7 +17,7 @@ export default async function ICDPage() {
         </div>
       </div>
 
-      <ICDSearchClient catalog={catalog} />
+      <ICDSearchClient />
     </div>
   );
 }

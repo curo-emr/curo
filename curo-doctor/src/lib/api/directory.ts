@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import { unwrapBundle, type FhirBundle } from "./fhir";
 
 export interface Organization {
   id: string;
@@ -37,12 +38,14 @@ export async function getOrganizations(type?: "pharmacy" | "laboratory"): Promis
 
 // Read-only view of a chosen pharmacy's inventory (doctors check drug availability).
 export async function getPharmacyStock(organizationId: string): Promise<PharmacyStockItem[]> {
-  const res = await apiClient.get<PharmacyStockItem[]>("/stock", { params: { organizationId } });
-  return res.data;
+  const res = await apiClient.get<PharmacyStockItem[] | FhirBundle<PharmacyStockItem>>("/stock", {
+    params: { organizationId, pageSize: 100 },
+  });
+  return unwrapBundle(res.data).resources;
 }
 
 // Tests a chosen lab offers.
 export async function getLabCatalog(organizationId: string): Promise<LabCatalogTest[]> {
-  const res = await apiClient.get<LabCatalogTest[]>("/catalog", { params: { organizationId } });
-  return res.data;
+  const res = await apiClient.get<LabCatalogTest[] | FhirBundle<LabCatalogTest>>("/catalog", { params: { organizationId } });
+  return unwrapBundle(res.data).resources;
 }

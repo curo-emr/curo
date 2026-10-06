@@ -1,28 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ICD10, Diagnosis } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Search, Trash2, Stethoscope } from "lucide-react";
+import { searchICD10 } from "@/lib/api/icd";
 
 interface DiagnosisSearchProps {
-  icd10Catalog: ICD10[];
+  // Retained for backward-compat; ICD-10 matches now come from the DB via search.
+  icd10Catalog?: ICD10[];
   diagnoses: Diagnosis[];
   setDiagnoses: React.Dispatch<React.SetStateAction<Diagnosis[]>>;
 }
 
-export function DiagnosisSearch({ icd10Catalog, diagnoses, setDiagnoses }: DiagnosisSearchProps) {
+export function DiagnosisSearch({ diagnoses, setDiagnoses }: DiagnosisSearchProps) {
   const [icdQuery, setIcdQuery] = useState("");
+  const [filteredIcd, setFilteredIcd] = useState<ICD10[]>([]);
 
-  const filteredIcd = icdQuery
-    ? icd10Catalog.filter(i => {
-        const q = icdQuery.toLowerCase();
-        return i.code.toLowerCase().includes(q) || i.name.toLowerCase().includes(q) || i.keywords.some(k => k.toLowerCase().includes(q));
-      }).slice(0, 6)
-    : [];
+  // Debounced server-side ICD-10 search (top matches) for the autocomplete dropdown.
+  useEffect(() => {
+    const q = icdQuery.trim();
+    if (!q) { setFilteredIcd([]); return; }
+    let active = true;
+    const t = setTimeout(() => {
+      searchICD10(q, 6)
+        .then(r => { if (active) setFilteredIcd(r); })
+        .catch(() => { if (active) setFilteredIcd([]); });
+    }, 250);
+    return () => { active = false; clearTimeout(t); };
+  }, [icdQuery]);
 
   const addDiagnosis = (icd: ICD10) => {
     if (!diagnoses.some(d => d.icdCode === icd.code)) {

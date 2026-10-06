@@ -4,6 +4,7 @@ import {
   mapFhirMedicationRequest, mapFhirServiceRequest,
   type FhirMedicationRequest, type FhirServiceRequest,
 } from './mappers';
+import { unwrapBundle, type FhirBundle } from './fhir';
 
 // Shared LOINC ⇄ Vitals-field map, used both to write vitals (one observation per
 // field) and to read them back. Keyed by LOINC code; display/unit are for the write path.
@@ -112,13 +113,13 @@ export async function createVitals(data: Record<string, unknown>) {
 // ─── Prescriptions ───────────────────────────────────────────────────────────
 
 export async function getPrescriptionsByPatient(patientId: string): Promise<Prescription[]> {
-  const res = await apiClient.get<FhirMedicationRequest[]>('/prescriptions', { params: { patientId } });
-  return res.data.map(mapFhirMedicationRequest);
+  const res = await apiClient.get<FhirMedicationRequest[] | FhirBundle<FhirMedicationRequest>>('/prescriptions', { params: { patientId } });
+  return unwrapBundle(res.data).resources.map(mapFhirMedicationRequest);
 }
 
 export async function getPendingPrescriptions(): Promise<Prescription[]> {
-  const res = await apiClient.get<FhirMedicationRequest[]>('/prescriptions/pending');
-  return res.data.map(mapFhirMedicationRequest);
+  const res = await apiClient.get<FhirMedicationRequest[] | FhirBundle<FhirMedicationRequest>>('/prescriptions/pending');
+  return unwrapBundle(res.data).resources.map(mapFhirMedicationRequest);
 }
 
 export async function createPrescription(data: Record<string, unknown>): Promise<Prescription> {
@@ -129,13 +130,13 @@ export async function createPrescription(data: Record<string, unknown>): Promise
 // ─── Lab Orders ──────────────────────────────────────────────────────────────
 
 export async function getLabOrdersByPatient(patientId: string): Promise<LabOrder[]> {
-  const res = await apiClient.get<FhirServiceRequest[]>('/lab-orders', { params: { patientId } });
-  return res.data.map(mapFhirServiceRequest);
+  const res = await apiClient.get<FhirServiceRequest[] | FhirBundle<FhirServiceRequest>>('/lab-orders', { params: { patientId } });
+  return unwrapBundle(res.data).resources.map(mapFhirServiceRequest);
 }
 
 export async function getPendingLabOrders(): Promise<LabOrder[]> {
-  const res = await apiClient.get<FhirServiceRequest[]>('/lab-orders', { params: { status: 'results_pending' } });
-  return res.data.map(mapFhirServiceRequest);
+  const res = await apiClient.get<FhirServiceRequest[] | FhirBundle<FhirServiceRequest>>('/lab-orders', { params: { status: 'results_pending' } });
+  return unwrapBundle(res.data).resources.map(mapFhirServiceRequest);
 }
 
 export async function createLabOrder(data: Record<string, unknown>): Promise<LabOrder> {

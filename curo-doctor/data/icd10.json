@@ -1,7 +1,0 @@
-[
-  { "code": "E11.9", "name": "Type 2 diabetes mellitus without complications", "keywords": ["diabetes", "t2dm"] },
-  { "code": "I10", "name": "Essential (primary) hypertension", "keywords": ["hypertension", "high blood pressure"] },
-  { "code": "J45.909", "name": "Unspecified asthma, uncomplicated", "keywords": ["asthma"] },
-  { "code": "J45.901", "name": "Unspecified asthma with (acute) exacerbation", "keywords": ["asthma", "exacerbation", "wheezing"] },
-  { "code": "R05", "name": "Cough", "keywords": ["cough"] }
-]

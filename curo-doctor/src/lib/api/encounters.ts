@@ -1,10 +1,11 @@
 import { apiClient } from './client';
 import type { Encounter } from '@/types';
 import { mapFhirEncounter, type FhirEncounter } from './mappers';
+import { unwrapBundle, type FhirBundle } from './fhir';
 
 export async function getEncountersByPatient(patientId: string): Promise<Encounter[]> {
-  const res = await apiClient.get<FhirEncounter[]>('/encounters', { params: { patientId } });
-  return res.data.map(mapFhirEncounter);
+  const res = await apiClient.get<FhirEncounter[] | FhirBundle<FhirEncounter>>('/encounters', { params: { patientId } });
+  return unwrapBundle(res.data).resources.map(mapFhirEncounter);
 }
 
 export async function getEncounterById(id: string): Promise<Encounter | null> {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,43 +19,84 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronRight, User, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import { Search, ChevronRight, User, ShieldAlert, ShieldCheck, Loader2 } from "lucide-react";
 import { Patient, Allergy } from "@/types";
 import { calculateAge, formatDate } from "@/lib/utils";
+import { getPatientsPaginated, getAllergies } from "@/lib/api/patients";
 import Link from "next/link";
 
-interface PatientListProps {
-  initialPatients: Patient[];
-  allergyMap: Record<string, Allergy>;
-}
+type SexFilter = "all" | "male" | "female" | "other";
 
-export function PatientList({ initialPatients, allergyMap }: PatientListProps) {
+const SEX_FILTERS: { label: string; value: SexFilter }[] = [
+  { label: "All", value: "all" },
+  { label: "Male", value: "male" },
+  { label: "Female", value: "female" },
+  { label: "Other", value: "other" },
+];
+
+export function PatientList() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
   const [query, setQuery] = useState(initialQuery);
-  const [sexFilter, setSexFilter] = useState<"all" | "male" | "female" | "other">("all");
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
+  const [sexFilter, setSexFilter] = useState<SexFilter>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
-  const filtered = useMemo(() => {
-    return initialPatients.filter(p => {
-      const q = query.toLowerCase().trim();
-      const matchesQuery = !q || (
-        p.name.full.toLowerCase().includes(q) ||
-        p.mrn.toLowerCase().includes(q) ||
-        p.phone.includes(q) ||
-        p.tags.some(t => t.toLowerCase().includes(q))
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [allergyMap, setAllergyMap] = useState<Record<string, Allergy>>({});
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce the search box so each keystroke doesn't hit the backend.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // Any filter/page-size change resets to the first page.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, sexFilter, pageSize]);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await getPatientsPaginated({
+        page,
+        pageSize,
+        search: debouncedQuery || undefined,
+        gender: sexFilter === "all" ? undefined : sexFilter,
+      });
+      // Allergies live on a separate endpoint — fetch only for the current page.
+      const perPatient = await Promise.all(
+        result.items.map((p) => getAllergies(p.id).catch(() => [] as Allergy[])),
       );
-      const matchesSex = sexFilter === "all" || p.sex === sexFilter;
-      return matchesQuery && matchesSex;
-    });
-  }, [query, sexFilter, initialPatients]);
+      const map: Record<string, Allergy> = {};
+      const enriched = result.items.map((p, i) => {
+        for (const a of perPatient[i]) map[a.id] = a;
+        return { ...p, allergies: perPatient[i].map((a) => a.id) };
+      });
+      setPatients(enriched);
+      setAllergyMap(map);
+      setTotal(result.total);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load patients.");
+      setPatients([]);
+      setTotal(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, pageSize, debouncedQuery, sexFilter]);
 
-  const SEX_FILTERS: { label: string; value: typeof sexFilter }[] = [
-    { label: "All", value: "all" },
-    { label: "Male", value: "male" },
-    { label: "Female", value: "female" },
-    { label: "Other", value: "other" },
-  ];
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
     <div className="space-y-4">
@@ -66,7 +107,7 @@ export function PatientList({ initialPatients, allergyMap }: PatientListProps) {
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search by name, MRN, phone, or tags..."
+              placeholder="Search by name, MRN, phone, or NIC..."
               className="pl-9 bg-muted border"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -74,7 +115,7 @@ export function PatientList({ initialPatients, allergyMap }: PatientListProps) {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-muted-foreground font-medium">Sex:</span>
-            {SEX_FILTERS.map(f => (
+            {SEX_FILTERS.map((f) => (
               <Button
                 key={f.value}
                 variant={sexFilter === f.value ? "default" : "outline"}
@@ -103,13 +144,6 @@ export function PatientList({ initialPatients, allergyMap }: PatientListProps) {
         </CardContent>
       </Card>
 
-      {/* Result count */}
-      {(query || sexFilter !== "all") && (
-        <p className="text-sm text-muted-foreground px-1">
-          {filtered.length} of {initialPatients.length} patients shown
-        </p>
-      )}
-
       {/* Patient Table */}
       <div className="bg-white rounded-md border overflow-hidden shadow-sm">
         <Table>
@@ -124,8 +158,21 @@ export function PatientList({ initialPatients, allergyMap }: PatientListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length > 0 ? (
-              filtered.map(patient => (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />
+                  Loading patients…
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-32 text-center text-destructive">
+                  {error}
+                </TableCell>
+              </TableRow>
+            ) : patients.length > 0 ? (
+              patients.map((patient) => (
                 <TableRow key={patient.id} className="hover:bg-muted/50 transition-colors group">
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -163,7 +210,7 @@ export function PatientList({ initialPatients, allergyMap }: PatientListProps) {
                         <TooltipContent side="top" className="p-3">
                           <p className="font-semibold text-xs mb-2 text-foreground">Allergies for {patient.name.first}</p>
                           <ul className="text-xs space-y-1.5">
-                            {patient.allergies.map(id => {
+                            {patient.allergies.map((id) => {
                               const alg = allergyMap[id];
                               if (!alg) return null;
                               return (
@@ -208,6 +255,14 @@ export function PatientList({ initialPatients, allergyMap }: PatientListProps) {
           </TableBody>
         </Table>
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }
