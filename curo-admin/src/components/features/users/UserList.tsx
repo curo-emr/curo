@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -11,9 +11,11 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import { Search, Loader2 } from "lucide-react";
 import { ROUTES, ROLE_LABELS, USER_ROLES } from "@/lib/constants";
 import type { AdminUser } from "@/types";
+import { getUsersPaginated } from "@/lib/api/users";
 
 const roleBadgeClass: Record<string, string> = {
   DOCTOR: "bg-status-info-bg text-status-info-text border-status-info-border",
@@ -24,23 +26,51 @@ const roleBadgeClass: Record<string, string> = {
   SUPER_ADMIN: "bg-status-error-bg text-status-error-text border-status-error-border",
 };
 
-export function UserList({ users, initialQuery = "" }: { users: AdminUser[]; initialQuery?: string }) {
+export function UserList({ initialQuery = "" }: { initialQuery?: string }) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [roleFilter, setRoleFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    return users.filter((u) => {
-      const matchesRole = roleFilter === "all" || u.role === roleFilter;
-      const matchesQuery =
-        !q ||
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        u.role.toLowerCase().includes(q);
-      return matchesRole && matchesQuery;
-    });
-  }, [users, query, roleFilter]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, roleFilter, pageSize]);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await getUsersPaginated({
+        page,
+        pageSize,
+        search: debouncedQuery || undefined,
+        role: roleFilter === "all" ? undefined : roleFilter,
+      });
+      setUsers(result.items);
+      setTotal(result.total);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load users.");
+      setUsers([]);
+      setTotal(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, pageSize, debouncedQuery, roleFilter]);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="space-y-4">
@@ -65,8 +95,6 @@ export function UserList({ users, initialQuery = "" }: { users: AdminUser[]; ini
         </Select>
       </div>
 
-      <p className="text-sm text-muted-foreground px-1">{filtered.length} user{filtered.length !== 1 ? "s" : ""}</p>
-
       <div className="bg-white rounded-md border overflow-hidden shadow-sm">
         <Table>
           <TableHeader className="bg-muted">
@@ -78,10 +106,14 @@ export function UserList({ users, initialQuery = "" }: { users: AdminUser[]; ini
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-10"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />Loading users…</TableCell></TableRow>
+            ) : error ? (
+              <TableRow><TableCell colSpan={4} className="text-center text-destructive py-10">{error}</TableCell></TableRow>
+            ) : users.length === 0 ? (
               <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-10">No users found.</TableCell></TableRow>
             ) : (
-              filtered.map((u) => (
+              users.map((u) => (
                 <TableRow
                   key={u.id}
                   className="hover:bg-muted/50 cursor-pointer"
@@ -110,6 +142,14 @@ export function UserList({ users, initialQuery = "" }: { users: AdminUser[]; ini
           </TableBody>
         </Table>
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

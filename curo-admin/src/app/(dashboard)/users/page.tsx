@@ -1,26 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
-import { Loader2, UserPlus } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { UserList } from "@/components/features/users/UserList";
-import { getUsers } from "@/lib/api/users";
 import { ROUTES } from "@/lib/constants";
-import type { AdminUser } from "@/types";
 
-export default function UsersPage() {
+function UsersPageInner() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  return <UserList initialQuery={initialQuery} />;
+}
 
-  useEffect(() => {
-    getUsers().then(setUsers).catch(console.error).finally(() => setIsLoading(false));
-  }, []);
-
+export default function UsersPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <PageHeader title="Users" description="Manage accounts and roles for every portal.">
@@ -31,11 +26,10 @@ export default function UsersPage() {
         </Link>
       </PageHeader>
 
-      {isLoading ? (
-        <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>
-      ) : (
-        <UserList users={users} initialQuery={initialQuery} />
-      )}
+      {/* UserList fetches its own paginated data (useSearchParams needs Suspense). */}
+      <Suspense fallback={<div className="py-20 text-center text-slate-500">Loading users…</div>}>
+        <UsersPageInner />
+      </Suspense>
     </div>
   );
 }
