@@ -21,8 +21,21 @@ export interface UploadDocumentInput {
   relatedResourceType?: string;
 }
 
+// The fields of the document service's FHIR DocumentReference that the UI reads.
+interface FhirDocumentReference {
+  id: string;
+  type: string;
+  description?: string;
+  date?: string;
+  context?: {
+    encounter?: { reference: string }[];
+    related?: { reference: string }[];
+  };
+  content?: { attachment?: { title?: string; contentType?: string; size?: number } }[];
+}
+
 // FHIR DocumentReference → flat UI model.
-function mapFhirDocument(d: Record<string, any>): DocumentRef {
+function mapFhirDocument(d: FhirDocumentReference): DocumentRef {
   const attachment = d.content?.[0]?.attachment ?? {};
   const encounterRef: string | undefined = d.context?.encounter?.[0]?.reference;
   return {
@@ -38,10 +51,10 @@ function mapFhirDocument(d: Record<string, any>): DocumentRef {
 }
 
 export async function getDocumentsByPatient(patientId: string, encounterId?: string): Promise<DocumentRef[]> {
-  const res = await apiClient.get('/documents', {
+  const res = await apiClient.get<FhirDocumentReference[]>('/documents', {
     params: { patientId, ...(encounterId ? { encounterId } : {}) },
   });
-  return (res.data as Record<string, any>[]).map(mapFhirDocument);
+  return res.data.map(mapFhirDocument);
 }
 
 export async function uploadDocument(input: UploadDocumentInput): Promise<DocumentRef> {
@@ -54,7 +67,7 @@ export async function uploadDocument(input: UploadDocumentInput): Promise<Docume
   if (input.relatedResourceId) form.append('relatedResourceId', input.relatedResourceId);
   if (input.relatedResourceType) form.append('relatedResourceType', input.relatedResourceType);
 
-  const res = await apiClient.post('/documents', form, {
+  const res = await apiClient.post<FhirDocumentReference>('/documents', form, {
     // Let the browser set multipart/form-data with its boundary; the shared
     // client defaults to application/json which would break the upload.
     headers: { 'Content-Type': undefined as unknown as string },

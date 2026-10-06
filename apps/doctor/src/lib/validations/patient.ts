@@ -40,4 +40,6 @@ export const patientRegistrationSchema = z.object({
   allergies: z.array(allergyEntrySchema).optional().default([]),
 });
 
+// What the form holds (defaults not yet applied) vs. what a valid submit produces.
+export type PatientRegistrationFormValues = z.input<typeof patientRegistrationSchema>;
 export type PatientRegistrationInput = z.infer<typeof patientRegistrationSchema>;

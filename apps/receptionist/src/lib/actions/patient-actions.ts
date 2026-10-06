@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { apiClient, apiErrorMessage } from "@/lib/api/client";
 import { mapFhirPatient, type FhirPatient } from "@/lib/api/mappers";
 import { patientRegistrationSchema, type PatientRegistrationInput } from "@/lib/validations/patient";
 
@@ -36,8 +36,8 @@ export async function registerPatient(data: PatientRegistrationInput) {
     const res = await apiClient.post<FhirPatient>("/patients", payload);
     const patient = mapFhirPatient(res.data);
     return { success: true, patientId: patient.id, patientCode: patient.mrn, phn: patient.phn };
-  } catch (err: any) {
-    const msg = err?.response?.data?.message ?? "Failed to register patient";
+  } catch (err) {
+    const msg = apiErrorMessage(err, "Failed to register patient");
     return { success: false, error: { _form: [msg] } };
   }
 }
@@ -71,8 +71,8 @@ export async function updatePatientDemographics(
   try {
     await apiClient.patch(`/patients/${patientId}`, payload);
     return { success: true };
-  } catch (err: any) {
-    const msg = err?.response?.data?.message ?? "Failed to update patient";
+  } catch (err) {
+    const msg = apiErrorMessage(err, "Failed to update patient");
     return { success: false, error: { _form: [msg] } };
   }
 }
