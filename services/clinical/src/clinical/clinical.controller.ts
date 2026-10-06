@@ -192,6 +192,14 @@ export class ClinicalController {
     return this.clinicalService.getPendingPrescriptions();
   }
 
+  // Declared after the literal prescriptions/* routes so ":id" doesn't capture them.
+  @Get('prescriptions/:id')
+  @Roles('DOCTOR', 'SUPER_ADMIN', 'PHARMACIST')
+  @Header('Content-Type', 'application/fhir+json')
+  getPrescription(@Param('id') id: string) {
+    return this.clinicalService.getPrescription(id);
+  }
+
   // Lab Orders
   @Post('lab-orders')
   @Roles('DOCTOR', 'SUPER_ADMIN')

@@ -53,9 +53,13 @@ export class PharmacyController {
   @Header('Content-Type', 'application/fhir+json')
   getDispenseHistory(
     @Query('patientId') patientId?: string,
+    @Query('prescriptionId') prescriptionId?: string,
     @Query() query?: PaginationQuery,
   ) {
-    return this.pharmacyService.getDispenseHistory(patientId, query);
+    return this.pharmacyService.getDispenseHistory(
+      { patientId, prescriptionId },
+      query,
+    );
   }
 
   @Get('dispense/:id')

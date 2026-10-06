@@ -411,6 +411,12 @@ export class ClinicalService implements OnModuleInit {
     return meds.map(toFhirMedRequest);
   }
 
+  async getPrescription(id: string) {
+    const med = await this.medsRepo.findOne({ where: { id } });
+    if (!med) throw new NotFoundException(`Prescription ${id} not found`);
+    return toFhirMedRequest(med);
+  }
+
   async getPendingPrescriptions(): Promise<any[]> {
     const meds = await this.medsRepo.find({
       where: { status: MedicationRequestStatus.ACTIVE },

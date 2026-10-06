@@ -7,10 +7,6 @@ export class DispenseMedicationDto {
 
   @IsNotEmpty()
   @IsString()
-  patientId: string;
-
-  @IsNotEmpty()
-  @IsString()
   dispenserName: string;
 
   @IsOptional()

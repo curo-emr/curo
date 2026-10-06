@@ -181,13 +181,12 @@ export interface PrescriptionItem {
   id: string;
   medicationId: string;
   displayName: string;
-  dose: string;
   route: string;
   frequency: string;
-  durationDays: number;
+  durationDays: number | null;
   quantity: number;
+  quantityUnit: string;
   instructions: string;
-  substitutes: unknown[];
 }
 
 export interface Prescription {

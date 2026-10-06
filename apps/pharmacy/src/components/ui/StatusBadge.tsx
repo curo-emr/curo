@@ -14,6 +14,8 @@ interface StatusBadgeProps {
 
 const statusStyles: Record<string, { label?: string; classes: string }> = {
   pending:              { classes: "bg-status-warning-bg text-status-warning-text border-status-warning-border" },
+  sent_to_pharmacy:     { label: "Sent to Pharmacy", classes: "bg-status-warning-bg text-status-warning-text border-status-warning-border" },
+  completed:            { classes: "bg-status-success-bg text-status-success-text border-status-success-border" },
   processing:           { classes: "bg-status-info-bg text-status-info-text border-status-info-border" },
   dispensed:            { classes: "bg-status-success-bg text-status-success-text border-status-success-border" },
   partially_dispensed:  { label: "Partially Dispensed", classes: "bg-status-purple-bg text-status-purple-text border-status-purple-border" },

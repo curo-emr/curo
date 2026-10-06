@@ -2,29 +2,31 @@
 
 import { useState, useEffect, use } from "react";
 import { Loader2 } from "lucide-react";
-import { getPatientById } from "@/lib/api/patients";
+import { getPatientById, getAllergies } from "@/lib/api/patients";
 import { getPrescriptionsByPatient, getDispensingRecordsByPatient, type DispenseRecord } from "@/lib/api/pharmacy";
-import { calculateAge, formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
-import type { Patient, Prescription } from "@/types";
+import { formatDate } from "@/lib/utils";
+import type { Allergy, Patient, Prescription } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { User, Pill, FileText, AlertTriangle } from "lucide-react";
+import { Pill, FileText } from "lucide-react";
+import { PatientSummaryCard } from "@/components/features/patients/PatientSummaryCard";
+import { DispenseRecordCard } from "@/components/features/dispensing/DispenseRecordCard";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
 export default function PatientDetailPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = use(params);
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [allergies, setAllergies] = useState<Allergy[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [dispensingRecords, setDispensingRecords] = useState<DispenseRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getPatientById(patientId), getPrescriptionsByPatient(patientId), getDispensingRecordsByPatient(patientId)])
-      .then(([pt, rxs, records]) => { setPatient(pt); setPrescriptions(rxs); setDispensingRecords(records); })
+    Promise.all([getPatientById(patientId), getAllergies(patientId), getPrescriptionsByPatient(patientId), getDispensingRecordsByPatient(patientId)])
+      .then(([pt, alg, rxs, records]) => { setPatient(pt); setAllergies(alg); setPrescriptions(rxs); setDispensingRecords(records); })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [patientId]);
@@ -32,49 +34,11 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
   if (!patient) return <div className="p-8 text-center text-slate-500">Patient not found.</div>;
 
-  const age = calculateAge(patient.dob);
   const sortedPrescriptions = [...prescriptions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Patient Header */}
-      <Card className="shadow-sm border">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <User className="h-6 w-6" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-3 mb-1">
-                <h1 className="text-xl font-bold text-slate-900">{patient.name.full}</h1>
-                <Badge variant="outline" className="text-slate-600">{patient.mrn}</Badge>
-                {patient.phn && <Badge variant="outline" className="text-slate-600" title="Personal Health Number">PHN {patient.phn}</Badge>}
-              </div>
-              {/* Pharmacy sees only the identity needed for dispensing — no NIC,
-                  blood type, contact, or address (data minimization). */}
-              <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
-                <span>{age}y / {patient.sex.charAt(0).toUpperCase()}{patient.sex.slice(1)}</span>
-              </div>
-              {patient.allergies.length > 0 && (
-                <div className="flex items-center gap-2 mt-2">
-                  <AlertTriangle className="h-4 w-4 text-status-error-text" />
-                  <span className="text-sm font-medium text-status-error-text">
-                    Allergies: {patient.allergies.join(', ')}
-                  </span>
-                </div>
-              )}
-              {patient.currentMedications.length > 0 && (
-                <div className="flex items-center gap-2 mt-1">
-                  <Pill className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Current: {patient.currentMedications.join(', ')}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <PatientSummaryCard patient={patient} allergies={allergies} />
 
       {/* Tabs */}
       <Tabs defaultValue="prescriptions" className="w-full">
@@ -121,28 +85,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
           {dispensingRecords.length === 0 ? (
             <div className="text-center py-12 text-slate-500">No dispensing records for this patient.</div>
           ) : (
-            dispensingRecords.map(record => (
-              <Card key={record.id} className="shadow-sm border">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-sm text-slate-900">Receipt: {record.receiptNumber}</span>
-                    <span className="text-xs text-slate-400">{formatDateTime(record.dispensedAt)}</span>
-                  </div>
-                  <div className="bg-slate-50 rounded-md p-3 space-y-1.5">
-                    {record.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">{item.medicationName}</span>
-                        <span className="font-medium text-slate-900">x{item.quantity}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between mt-2 text-xs text-slate-400">
-                    <span>Dispensed by: {record.dispensedBy}</span>
-                    <span className="font-medium text-slate-600">{formatCurrency(record.totalAmount)}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+            dispensingRecords.map(record => <DispenseRecordCard key={record.id} record={record} />)
           )}
         </TabsContent>
       </Tabs>
