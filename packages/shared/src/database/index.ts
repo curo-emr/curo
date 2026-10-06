@@ -7,4 +7,7 @@ export { MedicationRequest } from './entities/medication-request.entity';
 export { Observation } from './entities/observation.entity';
 export { Patient } from './entities/patient.entity';
 export { QrCode } from './entities/qr-code.entity';
-export { ServiceRequest } from './entities/service-request.entity';
+export {
+  ServiceRequest,
+  type LabPanelTest,
+} from './entities/service-request.entity';

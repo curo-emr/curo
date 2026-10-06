@@ -8,6 +8,12 @@ import {
 } from 'typeorm';
 import { ServiceRequestStatus } from '../../enums';
 
+/** One test inside a lab panel order. */
+export interface LabPanelTest {
+  code: string; // LOINC
+  display: string;
+}
+
 @Entity('service_requests')
 export class ServiceRequest {
   @PrimaryGeneratedColumn('uuid')
@@ -46,7 +52,7 @@ export class ServiceRequest {
   display: string; // human-readable test name
 
   @Column({ type: 'jsonb', nullable: true })
-  testPanel: Record<string, unknown>[]; // list of individual tests in the panel
+  testPanel: LabPanelTest[] | null;
 
   @Column({ nullable: true })
   priority: string; // routine | urgent | asap | stat

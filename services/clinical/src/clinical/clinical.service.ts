@@ -427,7 +427,7 @@ export class ClinicalService implements OnModuleInit {
     // One QR per test in the panel — labs print these and stick them on each sample.
     const tests = savedOrder.testPanel ?? [];
     for (let i = 0; i < tests.length; i++) {
-      const t = tests[i] as Record<string, string>;
+      const t = tests[i];
       const testUrl = `${process.env.GATEWAY_URL || 'http://localhost:3000'}/lab/orders/${savedOrder.id}?test=${encodeURIComponent(t.code)}&i=${i}`;
       const testImg = await QRCode.toDataURL(testUrl);
       await this.qrCodesRepo.save(
@@ -467,7 +467,7 @@ export class ClinicalService implements OnModuleInit {
     );
     const out: any[] = [];
     for (let i = 0; i < (testPanel ?? []).length; i++) {
-      const t = testPanel[i] as Record<string, string>;
+      const t = testPanel[i];
       let qr = byCode.get(`${t.code}:${i}`);
       if (!qr) {
         const testUrl = `${process.env.GATEWAY_URL || 'http://localhost:3000'}/lab/orders/${orderId}?test=${encodeURIComponent(t.code)}&i=${i}`;
