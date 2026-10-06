@@ -51,6 +51,14 @@ export interface LabTestQr {
   qrId: string;
 }
 
+/** A patient's prescriptions at a glance, for a patient list row. */
+export interface PrescriptionSummary {
+  patientId: string;
+  /** Active prescriptions, i.e. awaiting dispense. */
+  pendingCount: number;
+  lastPrescribedAt: Date | null;
+}
+
 function toFhirEncounter(e: Encounter) {
   return {
     resourceType: 'Encounter',
@@ -423,6 +431,26 @@ export class ClinicalService implements OnModuleInit {
       order: { authoredOn: 'DESC' },
     });
     return meds.map(toFhirMedRequest);
+  }
+
+  /** One summary per patient; patients with no prescriptions are left out. */
+  async getPrescriptionSummaries(
+    patientIds: string[],
+  ): Promise<PrescriptionSummary[]> {
+    const rows = await this.medsRepo
+      .createQueryBuilder('m')
+      .select('m.patientId', 'patientId')
+      .addSelect('COUNT(*) FILTER (WHERE m.status = :active)', 'pendingCount')
+      .addSelect('MAX(m.authoredOn)', 'lastPrescribedAt')
+      .where('m.patientId IN (:...patientIds)', { patientIds })
+      .setParameter('active', MedicationRequestStatus.ACTIVE)
+      .groupBy('m.patientId')
+      .getRawMany<{
+        patientId: string;
+        pendingCount: string; // COUNT arrives as a string (bigint)
+        lastPrescribedAt: Date | null;
+      }>();
+    return rows.map((r) => ({ ...r, pendingCount: Number(r.pendingCount) }));
   }
 
   // Lab Orders
