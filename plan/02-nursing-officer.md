@@ -28,11 +28,11 @@ checklist.
 **What already exists and is reused (do not rebuild):**
 - Vitals are FHIR `Observation` rows with LOINC codes, created via clinical-service
   `POST /vitals` (`CreateVitalsDto`), rendered by the doctor in
-  `curo-doctor/src/components/features/encounters/sections/VitalsPanel.tsx`
+  `apps/doctor/src/components/features/encounters/sections/VitalsPanel.tsx`
   (BP sys/dia, pulse, temp, SpO2, resp, height, weight + computed BMI).
 - The doctor starts a visit from `ScheduleClient` →
   `/patients/:id/encounters/new?appointmentId=<id>` → `EncounterEditor`, which
-  POSTs vitals per LOINC code via `VITALS_MAP` in `curo-doctor/src/lib/api/clinical.ts`
+  POSTs vitals per LOINC code via `VITALS_MAP` in `apps/doctor/src/lib/api/clinical.ts`
   when the visit is signed.
 - Appointment status is FHIR (`booked/arrived/fulfilled/...`). We do NOT extend
   that enum (it's FHIR-constrained and enum migration is risky); queue position
@@ -57,14 +57,14 @@ manually via the queue-stage endpoint).
 Add `NURSE = 'NURSE'` to `UserRole` in **every copy** (grep `PHARMACIST =` to
 find them all; verified locations as of 2026-07-03):
 
-- `curo-shared/src/enums/index.ts`
-- `curo-auth-service/src/enums/index.ts`
-- `curo-patient-service/src/enums/index.ts`
-- `curo-appointment-service/src/enums/index.ts`
-- `curo-clinical-service/src/enums/index.ts`
-- `curo-pharmacy-service/src/enums/index.ts`
-- `curo-lab-service/src/enums/index.ts`
-- `curo-notification-service/src/enums/index.ts`
+- `packages/shared/src/enums/index.ts`
+- `services/auth/src/enums/index.ts`
+- `services/patient/src/enums/index.ts`
+- `services/appointment/src/enums/index.ts`
+- `services/clinical/src/enums/index.ts`
+- `services/pharmacy/src/enums/index.ts`
+- `services/lab/src/enums/index.ts`
+- `services/notification/src/enums/index.ts`
 - `scripts/seed.ts` (its local `UserRole` enum at the top)
 
 (audit-service and document-service have no UserRole enum copy — nothing to do
@@ -82,7 +82,7 @@ a value is a safe ALTER; verify after boot that login with a NURSE user works.
   and keep that behavior: nurses are practitioners with
   `specialty/qualification = 'Nursing'`).
 - `curo-admin` frontend: add "Nurse" to the role options in the Add-User form
-  and any role filter dropdowns/badges (grep `PHARMACIST` in `curo-admin/src`).
+  and any role filter dropdowns/badges (grep `PHARMACIST` in `apps/admin/src`).
 
 ### 1.3 Seed
 
@@ -109,8 +109,8 @@ In `scripts/seed.ts`, following the receptionist pattern (~line 143):
 
 ### 2.1 New column
 
-`curo-appointment-service/src/entities/appointment.entity.ts` **and**
-`curo-shared/src/entities/appointment.entity.ts` (and any other service holding
+`services/appointment/src/entities/appointment.entity.ts` **and**
+`packages/shared/src/entities/appointment.entity.ts` (and any other service holding
 an Appointment entity copy — grep `@Entity('appointments')`):
 
 ```ts
@@ -298,8 +298,8 @@ stays — clinically correct: two measurements at two times).
 
 ### 4.1 New entity
 
-`curo-clinical-service/src/entities/post-visit-checklist.entity.ts` (+ copy to
-`curo-shared/src/entities/`; register in clinical `app.module.ts` entities and
+`services/clinical/src/entities/post-visit-checklist.entity.ts` (+ copy to
+`packages/shared/src/entities/`; register in clinical `app.module.ts` entities and
 export from shared index):
 
 ```ts
@@ -358,7 +358,7 @@ service, `dto/create-checklist.dto.ts`) — registered in app.module. Routes:
 
 ### 4.4 Gateway
 
-`curo-api-gateway/src/proxy/proxy.middleware.ts` `SERVICE_MAP`: add
+`services/api-gateway/src/proxy/proxy.middleware.ts` `SERVICE_MAP`: add
 `'/nursing': CLINICAL_SERVICE_URL`. No compose change needed (env already
 exists for clinical URL).
 
@@ -464,13 +464,13 @@ In the notification consumer:
 
 ### 6.1 Scaffold
 
-Create by **copying `curo-receptionist/`** (closest feature shape: queue-centric,
+Create by **copying `apps/receptionist/`** (closest feature shape: queue-centric,
 same Topbar/Sidebar/Auth patterns) — NOT a fresh create-next-app (keeps design
 tokens, ui components, client.ts, Dockerfile, eslint config identical):
 
 ```bash
-rsync -a --exclude node_modules --exclude .next --exclude .git curo-receptionist/ curo-nurse/
-cd curo-nurse && git init && npm install
+rsync -a --exclude node_modules --exclude .next --exclude .git apps/receptionist/ apps/nurse/
+cd apps/nurse && git init && npm install
 ```
 
 Then rename/trim:
@@ -480,7 +480,7 @@ Then rename/trim:
   `components/ui/*`, `lib/api/client.ts` (JWT+refresh interceptor), `mappers`,
   `AuthContext`, layout components (Sidebar/Topbar), globals.css **unchanged**.
 - Role gate on `role === 'NURSE'`: mirror curo-admin's pattern in
-  `curo-admin/src/components/layout/ProtectedRoute.tsx` (that's where the
+  `apps/admin/src/components/layout/ProtectedRoute.tsx` (that's where the
   SUPER_ADMIN gate lives — not in AuthContext).
 - Sidebar nav items: Dashboard, Triage Queue, Post-Visit, Settings.
 - Update branding strings ("Nurse Station"); keep the same logo/wordmark
@@ -548,14 +548,14 @@ copy that constant), `getVitalsByAppointment`, `createChecklist`,
 
 ### 6.4 Wiring into the platform
 
-- Nested git repo: `git init`, initial commit inside `curo-nurse/`, then parent
+- Nested git repo: `git init`, initial commit inside `apps/nurse/`, then parent
   repo records the gitlink (matches the other 6 frontends).
 - `.env.local`: `NEXT_PUBLIC_API_URL=http://localhost:3000`.
 - docker-compose: `curo-nurse` service on 3016 (copy the `curo-receptionist`
   block; build arg NEXT_PUBLIC_API_URL, HOSTNAME 0.0.0.0, depends_on gateway).
 - Gateway CORS: add `http://localhost:3016` to `FRONTEND_ORIGINS` in compose
   **and** to the gateway's default-origins fallback in code (grep `3015` in
-  `curo-api-gateway/src` to find where origins default).
+  `services/api-gateway/src` to find where origins default).
 - Topbar notification polling works as-is (nurse users get notifications like
   any user).
 

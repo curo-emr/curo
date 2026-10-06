@@ -74,11 +74,11 @@
 
 - Insurance is represented in types (`src/types/index.ts:22-29`, patient insurance at `52`) and validation/forms include provider, policy number, group number, expiry date, holder name, relationship.
 - Patient registration/edit forms expose an optional Insurance section with those fields. However, the live patient mapper hard-codes `insurance: null` (`src/lib/api/mappers.ts:212`) and `registerPatient`/`updatePatientDemographics` payloads omit insurance fields (`src/lib/actions/patient-actions.ts`, payloads include demographics/contact/emergency only).
-- No billing, invoice, claims, payment, transaction, or receipt routes/components/API clients were found in `curo-doctor/src` (searched file names and references). Therefore payment/billing data does not appear visible to doctor users in this frontend, except optional insurance form fields that appear not persisted/displayed from backend in current code.
+- No billing, invoice, claims, payment, transaction, or receipt routes/components/API clients were found in `apps/doctor/src` (searched file names and references). Therefore payment/billing data does not appear visible to doctor users in this frontend, except optional insurance form fields that appear not persisted/displayed from backend in current code.
 
 ## Documents/files
 
-- No patient document/file upload, attachments, imaging document, scanned report, referral document, or file API client was found in `curo-doctor/src` by file-name/reference search.
+- No patient document/file upload, attachments, imaging document, scanned report, referral document, or file API client was found in `apps/doctor/src` by file-name/reference search.
 - The UI references lab “Reports” in the tab label and lab result review affordances, but no actual document/file fields or result document display are implemented in the inspected frontend. Encounter `auditTrailIds` exists in the type/mock encounters but no audit document display was found.
 
 ## Staff/facility data linked to patients

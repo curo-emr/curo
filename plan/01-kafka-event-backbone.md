@@ -203,7 +203,7 @@ tracking convention in `00-overview.md`.)*
 ## 3. Slice K2 — Shared producer module (copied into each publishing service)
 
 Following the repo convention, this module is **copied** into each service (no
-shared npm package). Canonical copy lives in `curo-shared/src/kafka/` for
+shared npm package). Canonical copy lives in `packages/shared/src/kafka/` for
 reference; working copies go into each service's `src/kafka/`.
 
 Services that get the producer: **patient, appointment, clinical, pharmacy,
@@ -370,7 +370,7 @@ Notes:
 
 ### 3.4 Checklist — Slice K2
 
-- [ ] `curo-shared/src/kafka/` canonical copy created (curo-event.ts, producer, module)
+- [ ] `packages/shared/src/kafka/` canonical copy created (curo-event.ts, producer, module)
 - [ ] `src/kafka/` copied into patient, appointment, clinical, pharmacy, lab, document, notification, audit services; `KafkaModule` imported in each `app.module.ts`
 - [ ] `kafkajs@^2.2.4` in `dependencies` of all 8 services (verify package-lock updated)
 - [ ] `KAFKA_CLIENT_ID` env per service in compose
@@ -433,7 +433,7 @@ NOTHING) keyed on eventId. When one event fans out to several recipients, store
 ### 4.4 Event → notification mapping (initial set)
 
 Extend `NotificationEventType` enum (append only!) in
-`curo-notification-service/src/enums/index.ts` AND the curo-shared copy:
+`services/notification/src/enums/index.ts` AND the curo-shared copy:
 `APPOINTMENT_BOOKED = 'appointment_booked'`, `PATIENT_REGISTERED = 'patient_registered'`,
 `NEW_PRESCRIPTION = 'new_prescription'`, `LAB_ORDER_PLACED = 'lab_order_placed'`,
 `DOCUMENT_UPLOADED = 'document_uploaded'`, `VITALS_RECORDED = 'vitals_recorded'` (used in Doc 02),

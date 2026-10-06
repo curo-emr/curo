@@ -38,7 +38,7 @@ queue-stage endpoint accepts DOCTOR as a manual fallback).
    - vitals + post-visit checklist → `curo-clinical-service` (they are clinical data)
    - patient queue stage → `curo-appointment-service` (it is scheduling state)
    - `NURSE` role → `curo-auth-service` + every service's enum copy
-   - The only new top-level project is the **frontend** `curo-nurse/` (port 3016).
+   - The only new top-level project is the **frontend** `apps/nurse/` (port 3016).
 4. **Both nurse steps are optional.** Default flow routes checked-in patients to
    the nurse queue, but the receptionist can send a patient straight to the doctor,
    the doctor can start the encounter without nurse vitals, and a visit can finish
@@ -55,7 +55,7 @@ queue-stage endpoint accepts DOCTOR as a manual fallback).
   `synchronize: true`; a service holding a *stale* copy of an entity will DROP
   columns another service added (this has bitten twice — see slices 5 & 7 notes).
   Whenever you touch an entity, update **every copy**, including
-  `curo-shared/src/entities/` (the canonical reference). Doc 02 lists every copy
+  `packages/shared/src/entities/` (the canonical reference). Doc 02 lists every copy
   location for each entity it touches.
 - Authorization enforced **server-side** from the JWT (`@Roles`, and ownership
   from `practitionerId`/`patientId` claims) — never from client-supplied params.
@@ -89,7 +89,7 @@ queue-stage endpoint accepts DOCTOR as a manual fallback).
   verifies the JWT itself in `src/common/jwt-auth.guard.ts` (gateway `x-user-*`
   headers exist but are unused by services).
 - Gateway routing is prefix-based in
-  `curo-api-gateway/src/proxy/proxy.middleware.ts` (`SERVICE_MAP`). New API
+  `services/api-gateway/src/proxy/proxy.middleware.ts` (`SERVICE_MAP`). New API
   prefixes must be added there and to the compose env of the gateway.
 - FHIR style is "pragmatic FHIR-shaped": `resourceType` + core R4 fields; custom
   fields ride in `extension` with `urn:curo:*` urls. List endpoints return

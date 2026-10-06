@@ -10,7 +10,7 @@ slice explicitly fixes one (marked ✅). Ordered by impact within each section.
 ## A. Architecture / backend
 
 ### A1. Receptionist queue is still running on mock-era data model ✅ *(fixed by Doc 02 N5)*
-`curo-receptionist/.../QueueBoard.tsx` filters on statuses (`waiting`,
+`apps/receptionist/.../QueueBoard.tsx` filters on statuses (`waiting`,
 `in_progress`, `completed`) that the backend doesn't have, and reads
 `apt.visitId` / `apt.checkInTime` / `doctor.roomNumber` — fields the API never
 returns (removed from mappers in Phase 7). The status map in
@@ -23,14 +23,14 @@ Nine services share one DB, each with hand-copied entity files, and every boot
 lets any service ALTER shared tables. Stale copies have already **dropped
 columns** twice (PHN, slice 5; QR test columns, slice 7). Recommended path:
 1. Short term: a CI-able script that diffs each service's `src/entities/*` against
-   `curo-shared/src/entities/*` and fails on drift.
+   `packages/shared/src/entities/*` and fails on drift.
 2. Medium term: turn `synchronize` off everywhere except a single designated
    "schema owner" per table; or
 3. Proper fix: TypeORM migrations run by a dedicated one-shot migration
    container (like `curo-seed`), `synchronize: false` in all services.
 
 ### A3. `curo-shared` exists but isn't consumed
-The canonical entities/enums live in `curo-shared/`, yet every service copies
+The canonical entities/enums live in `packages/shared/`, yet every service copies
 files manually (the source of A2). Since everything is already one root
 `package.json` away, converting the repo root to **npm workspaces** and
 importing `@curo/shared` would eliminate the copy-drift class of bugs entirely.

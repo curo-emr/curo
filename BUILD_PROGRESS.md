@@ -56,7 +56,7 @@ All 9 services scaffolded + deps installed.
 
 ## Phase 3: Database Entities ✅ DONE
 
-All 22 entities created in `curo-shared/src/entities/`:
+All 22 entities created in `packages/shared/src/entities/`:
 - [x] user.entity.ts
 - [x] patient.entity.ts
 - [x] practitioner.entity.ts
@@ -80,7 +80,7 @@ All 22 entities created in `curo-shared/src/entities/`:
 - [x] audit-log.entity.ts
 - [x] lab-instrument.entity.ts
 
-`curo-shared/src/index.ts` and `curo-shared/src/entities/index.ts` export all entities + enums.
+`packages/shared/src/index.ts` and `packages/shared/src/entities/index.ts` export all entities + enums.
 
 **Note:** Each service copies only the entities it needs into its own `src/entities/` — avoids local npm package linking complexity.
 
@@ -291,24 +291,24 @@ npm run seed
 ### 3. Start All Backend Services
 ```bash
 # In separate terminals (or use pm2/tmux):
-cd curo-auth-service && npm run start:dev
-cd curo-patient-service && npm run start:dev
-cd curo-appointment-service && npm run start:dev
-cd curo-clinical-service && npm run start:dev
-cd curo-pharmacy-service && npm run start:dev
-cd curo-lab-service && npm run start:dev
-cd curo-notification-service && npm run start:dev
-cd curo-audit-service && npm run start:dev
-cd curo-api-gateway && npm run start:dev
+cd services/auth && npm run start:dev
+cd services/patient && npm run start:dev
+cd services/appointment && npm run start:dev
+cd services/clinical && npm run start:dev
+cd services/pharmacy && npm run start:dev
+cd services/lab && npm run start:dev
+cd services/notification && npm run start:dev
+cd services/audit && npm run start:dev
+cd services/api-gateway && npm run start:dev
 ```
 
 ### 4. Start Frontends (once wired)
 ```bash
-cd curo-doctor && npm run dev -- -p 3010
-cd curo-patient && npm run dev -- -p 3011
-cd curo-receptionist && npm run dev -- -p 3012
-cd curo-lab && npm run dev -- -p 3013
-cd curo-pharmacy && npm run dev -- -p 3014
+cd apps/doctor && npm run dev -- -p 3010
+cd apps/patient && npm run dev -- -p 3011
+cd apps/receptionist && npm run dev -- -p 3012
+cd apps/lab && npm run dev -- -p 3013
+cd apps/pharmacy && npm run dev -- -p 3014
 ```
 
 ---
@@ -326,7 +326,7 @@ curo/
 │   ├── seed.ts                     ✅ NEW
 │   └── tsconfig.seed.json          ✅ NEW
 │
-├── curo-shared/
+├── packages/shared/
 │   ├── package.json                ✅ NEW
 │   ├── tsconfig.json               ✅ NEW
 │   └── src/
@@ -334,7 +334,7 @@ curo/
 │       ├── enums/index.ts          ✅
 │       └── entities/               ✅ NEW — all 22 entities
 │
-├── curo-auth-service/
+├── services/auth/
 │   ├── .env                        ✅
 │   └── src/
 │       ├── main.ts                 ✅ updated
@@ -343,7 +343,7 @@ curo/
 │       ├── entities/               ✅ (User, Practitioner, Patient)
 │       └── auth/                   ✅ FULL (service, controller, module, DTOs, guards, strategies)
 │
-├── curo-patient-service/
+├── services/patient/
 │   ├── .env                        ✅
 │   └── src/
 │       ├── main.ts                 ✅
@@ -353,13 +353,13 @@ curo/
 │       ├── common/                 ✅ (jwt-auth.guard, roles.guard, decorators)
 │       └── patient/                ✅ FULL (service, controller, module, DTOs, fhir.mapper)
 │
-├── curo-appointment-service/       ✅ FULL
-├── curo-clinical-service/          ✅ FULL (incl. QR code generation)
-├── curo-pharmacy-service/          ✅ FULL
-├── curo-lab-service/               ✅ FULL (incl. PDF report generation)
-├── curo-notification-service/      ✅ FULL
-├── curo-audit-service/             ✅ FULL
-└── curo-api-gateway/               ✅ FULL (JWT validation + path proxy)
+├── services/appointment/       ✅ FULL
+├── services/clinical/          ✅ FULL (incl. QR code generation)
+├── services/pharmacy/          ✅ FULL
+├── services/lab/               ✅ FULL (incl. PDF report generation)
+├── services/notification/      ✅ FULL
+├── services/audit/             ✅ FULL
+└── services/api-gateway/               ✅ FULL (JWT validation + path proxy)
 ```
 
 ---
@@ -451,25 +451,25 @@ Each frontend now has:
 docker compose up -d
 
 # 2. Start all 9 backend services (from their directories)
-cd curo-auth-service && node dist/main.js &
-cd curo-patient-service && node dist/main.js &
-cd curo-appointment-service && node dist/main.js &
-cd curo-clinical-service && node dist/main.js &
-cd curo-pharmacy-service && node dist/main.js &
-cd curo-lab-service && node dist/main.js &
-cd curo-notification-service && node dist/main.js &
-cd curo-audit-service && node dist/main.js &
-cd curo-api-gateway && node dist/main.js &
+cd services/auth && node dist/main.js &
+cd services/patient && node dist/main.js &
+cd services/appointment && node dist/main.js &
+cd services/clinical && node dist/main.js &
+cd services/pharmacy && node dist/main.js &
+cd services/lab && node dist/main.js &
+cd services/notification && node dist/main.js &
+cd services/audit && node dist/main.js &
+cd services/api-gateway && node dist/main.js &
 
 # 3. Run seed (after services have started and created tables)
 npm run seed
 
 # 4. Start frontends
-cd curo-doctor && npm run dev -- -p 3010
-cd curo-patient && npm run dev -- -p 3011
-cd curo-receptionist && npm run dev -- -p 3012
-cd curo-lab && npm run dev -- -p 3013
-cd curo-pharmacy && npm run dev -- -p 3014
+cd apps/doctor && npm run dev -- -p 3010
+cd apps/patient && npm run dev -- -p 3011
+cd apps/receptionist && npm run dev -- -p 3012
+cd apps/lab && npm run dev -- -p 3013
+cd apps/pharmacy && npm run dev -- -p 3014
 ```
 
 ### Smoke test results (all passing):
@@ -519,7 +519,7 @@ first time — all 9 backends + 5 frontends + postgres + redis + one-shot seed.
 - **Lab frontend ↔ gateway prefix mismatch** — lab frontend called `/lab/orders`,
   `/lab/results`, etc., but the gateway maps `/orders`,`/results`,`/reports`,
   `/instruments` (no `/lab` prefix) to the lab service. Dropped the `/lab/` prefix
-  in `curo-lab/src/lib/api/lab.ts`.
+  in `apps/lab/src/lib/api/lab.ts`.
 - Removed obsolete `version:` key from `docker-compose.yml`.
 
 ### End-to-end API verification (all through the gateway :3000)
@@ -570,7 +570,7 @@ reception check-in ─► nurse triage (vitals) ─► doctor visit (vitals pref
   synchronize rebuilt them in place — existing users verified intact). curo-admin can create nurses.
 - **Queue stages** — `appointments.queueStage` (nullable varchar): `waiting_nurse → with_nurse →
   ready_for_doctor → with_doctor → done`. Transitions + per-stage role rules in
-  `curo-appointment-service/src/appointment/queue-stage.ts` (unit-tested). `PUT /appointments/:id/queue-stage`;
+  `services/appointment/src/appointment/queue-stage.ts` (unit-tested). `PUT /appointments/:id/queue-stage`;
   `GET /appointments?queueStage=a,b`. Status sync: `arrived` → `waiting_nurse`, `fulfilled` → `done`,
   `cancelled|noshow` → cleared. Doctors can only move their own patients.
 - **Triage vitals** — `observations.appointmentId` + `performerRole` (all 4 entity copies). Nurses

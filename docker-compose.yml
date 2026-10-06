@@ -78,7 +78,7 @@ services:
   # ── Backend services ─────────────────────────────────────────────────────────
   curo-auth-service:
     build:
-      context: ./curo-auth-service
+      context: services/auth
       dockerfile: Dockerfile
     container_name: curo_auth
     restart: unless-stopped
@@ -96,7 +96,7 @@ services:
 
   curo-patient-service:
     build:
-      context: ./curo-patient-service
+      context: services/patient
       dockerfile: Dockerfile
     container_name: curo_patient
     restart: unless-stopped
@@ -114,7 +114,7 @@ services:
 
   curo-appointment-service:
     build:
-      context: ./curo-appointment-service
+      context: services/appointment
       dockerfile: Dockerfile
     container_name: curo_appointment
     restart: unless-stopped
@@ -133,7 +133,7 @@ services:
 
   curo-clinical-service:
     build:
-      context: ./curo-clinical-service
+      context: services/clinical
       dockerfile: Dockerfile
     container_name: curo_clinical
     restart: unless-stopped
@@ -151,7 +151,7 @@ services:
 
   curo-pharmacy-service:
     build:
-      context: ./curo-pharmacy-service
+      context: services/pharmacy
       dockerfile: Dockerfile
     container_name: curo_pharmacy_svc
     restart: unless-stopped
@@ -169,7 +169,7 @@ services:
 
   curo-lab-service:
     build:
-      context: ./curo-lab-service
+      context: services/lab
       dockerfile: Dockerfile
     container_name: curo_lab_svc
     restart: unless-stopped
@@ -187,7 +187,7 @@ services:
 
   curo-document-service:
     build:
-      context: ./curo-document-service
+      context: services/document
       dockerfile: Dockerfile
     container_name: curo_document
     restart: unless-stopped
@@ -213,7 +213,7 @@ services:
 
   curo-notification-service:
     build:
-      context: ./curo-notification-service
+      context: services/notification
       dockerfile: Dockerfile
     container_name: curo_notification
     restart: unless-stopped
@@ -231,7 +231,7 @@ services:
 
   curo-audit-service:
     build:
-      context: ./curo-audit-service
+      context: services/audit
       dockerfile: Dockerfile
     container_name: curo_audit
     restart: unless-stopped
@@ -249,7 +249,7 @@ services:
 
   curo-api-gateway:
     build:
-      context: ./curo-api-gateway
+      context: services/api-gateway
       dockerfile: Dockerfile
     container_name: curo_gateway
     restart: unless-stopped
@@ -326,7 +326,7 @@ services:
   # NEXT_PUBLIC_API_URL is baked in at build time (browser uses host-exposed port 3000)
   curo-doctor:
     build:
-      context: ./curo-doctor
+      context: apps/doctor
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3000
@@ -343,7 +343,7 @@ services:
 
   curo-patient-portal:
     build:
-      context: ./curo-patient
+      context: apps/patient
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3000
@@ -360,7 +360,7 @@ services:
 
   curo-receptionist:
     build:
-      context: ./curo-receptionist
+      context: apps/receptionist
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3000
@@ -377,7 +377,7 @@ services:
 
   curo-lab-portal:
     build:
-      context: ./curo-lab
+      context: apps/lab
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3000
@@ -394,7 +394,7 @@ services:
 
   curo-pharmacy-portal:
     build:
-      context: ./curo-pharmacy
+      context: apps/pharmacy
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3000
@@ -411,7 +411,7 @@ services:
 
   curo-admin:
     build:
-      context: ./curo-admin
+      context: apps/admin
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3000
@@ -428,7 +428,7 @@ services:
 
   curo-nurse:
     build:
-      context: ./curo-nurse
+      context: apps/nurse
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3000

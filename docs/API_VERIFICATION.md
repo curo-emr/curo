@@ -128,7 +128,7 @@ one corrects an outdated note in the build history.
 
 1. **`/organizations` works** (returns the seeded org directory; any authenticated user). Earlier
    notes called this a dead route — it is not. It is defined inline in
-   `curo-auth-service/src/organization/organization.module.ts` (not a separate `*.controller.ts`),
+   `services/auth/src/organization/organization.module.ts` (not a separate `*.controller.ts`),
    which is why a controller-file scan missed it.
 2. **Pharmacy `/prescriptions/pending` is shadowed by the gateway.** The gateway routes all
    `/prescriptions*` to the **clinical** service, so the pharmacy portal's pending queue is served
