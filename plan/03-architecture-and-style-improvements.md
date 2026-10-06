@@ -18,7 +18,10 @@ returns (removed from mappers in Phase 7). The status map in
 `completed → fulfilled`), so "Send to Doctor" is a silent no-op state-wise.
 Doc 02's `queueStage` rewires this board to real state.
 
-### A2. TypeORM `synchronize: true` + drifting entity copies is the biggest standing risk
+### A2. TypeORM `synchronize: true` + drifting entity copies is the biggest standing risk ◐ *(drift fixed by Doc 04)*
+> Doc 04: every table now has exactly one entity definition (cross-service ones in
+> `@curo/shared/database`), so copies can no longer drift. Still open: option 3 below
+> (migrations, `synchronize: false`).
 Nine services share one DB, each with hand-copied entity files, and every boot
 lets any service ALTER shared tables. Stale copies have already **dropped
 columns** twice (PHN, slice 5; QR test columns, slice 7). Recommended path:
@@ -29,7 +32,7 @@ columns** twice (PHN, slice 5; QR test columns, slice 7). Recommended path:
 3. Proper fix: TypeORM migrations run by a dedicated one-shot migration
    container (like `curo-seed`), `synchronize: false` in all services.
 
-### A3. `curo-shared` exists but isn't consumed
+### A3. `curo-shared` exists but isn't consumed ✅ *(fixed by Doc 04)*
 The canonical entities/enums live in `packages/shared/`, yet every service copies
 files manually (the source of A2). Since everything is already one root
 `package.json` away, converting the repo root to **npm workspaces** and
@@ -37,7 +40,7 @@ importing `@curo/shared` would eliminate the copy-drift class of bugs entirely.
 Cost: Dockerfiles need a workspace-aware build (copy root lockfile + shared
 package). Worth doing before the service count grows again.
 
-### A4. Duplicated `src/common/` across all 9 services
+### A4. Duplicated `src/common/` across all 9 services ✅ *(fixed by Doc 04)*
 `jwt-auth.guard.ts`, `roles.guard.ts`, `decorators.ts`, `fhir-bundle.ts` are
 near-identical ×9. Same remedy as A3 (`@curo/shared` or `@curo/nest-common`).
 Until then: any guard fix must be applied 9×; add that to the review checklist.
@@ -93,7 +96,7 @@ from Doc 02, PHN Luhn, FEFO dispense), (3) a GitHub Action running
 `tsc --noEmit` + tests per service. The queue-transition function in Doc 02 N2
 is deliberately shaped to be the first unit-tested module.
 
-### A12. Auth-service owns the canonical Patient entity by boot-order accident
+### A12. Auth-service owns the canonical Patient entity by boot-order accident ✅ *(fixed by Doc 04)*
 "Auth starts first and creates the full patients table; the patient service
 entity must match or be a subset" is fragile tribal knowledge (already caused
 the PHN synchronize hazard). Fold into A2's fix; until then it's documented in

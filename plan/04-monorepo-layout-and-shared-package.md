@@ -1,6 +1,6 @@
 # Doc 04 — Monorepo layout + `@curo/shared` (workspaces)
 
-**Status: in progress (2026-10-06).** Implements Doc 03 items **A2, A3, A4, A12**.
+**Status: ✅ done (2026-10-06).** Implements Doc 03 items **A2 (drift), A3, A4, A12**.
 
 ## Why
 
@@ -123,3 +123,17 @@ beforehand (`~/curo-backups-2026-10-06/db-before.dump`).
 - **Migrations / `synchronize: false`** (Doc 03 A2 option 3). One definition per
   table removes the drift; migrations are the next step, separately.
 - Replacing direct shared-table access with service APIs (true bounded contexts).
+
+## Result (2026-10-06)
+
+- Schema dry run (TypeORM `createSchemaBuilder().log()` vs live DB): 1 pending
+  change before (the `patients.gender` flip-flop) → **0 for every service** after.
+- All 18 images rebuilt sequentially; stack healthy; seed exited 0.
+- `pg_dump --schema-only`: identical to baseline (only pg_dump's random `\restrict` token differs).
+- `scripts/smoke-e2e.sh`: **PASS 109 / FAIL 0** (same as baseline). 19 unit tests pass.
+- `/openapi.json`: same 76 paths and schemas. Two diffs, neither from this change:
+  `AuditLog.changes` gains `additionalProperties: true` (Swagger plugin 11.4.4 → 11.4.7
+  via the fresh lockfile), and `GET /prescriptions/pending` is defined by **both**
+  clinical and pharmacy — the gateway's spec merge keeps whichever responds first.
+  That collision predates Doc 04; worth resolving separately.
+- About 2,700 lines of duplicated code removed; 17 Dockerfiles + 17 dockerignores → 2 + 2.
