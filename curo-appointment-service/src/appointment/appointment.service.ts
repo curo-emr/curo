@@ -5,6 +5,7 @@ import { Appointment } from '../entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { UserRole, AppointmentStatus } from '../enums';
+import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 function toFhirAppointment(a: Appointment) {
   return {
@@ -47,7 +48,8 @@ export class AppointmentService {
     return toFhirAppointment(saved);
   }
 
-  async findAll(requestingUser: { role: string; userId: string; practitionerId?: string; patientId?: string }, filters?: { date?: string; practitionerId?: string; patientId?: string }): Promise<any[]> {
+  async findAll(requestingUser: { role: string; userId: string; practitionerId?: string; patientId?: string }, filters?: { date?: string; practitionerId?: string; patientId?: string }, pagination: PaginationQuery = {}): Promise<any> {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
     const query = this.appointmentsRepo.createQueryBuilder('a');
 
     if (requestingUser.role === UserRole.DOCTOR && requestingUser.practitionerId) {
@@ -70,8 +72,17 @@ export class AppointmentService {
       query.andWhere('a.patientId = :pa', { pa: filters.patientId });
     }
 
-    const appointments = await query.orderBy('a.start', 'ASC').getMany();
-    return appointments.map(toFhirAppointment);
+    const [appointments, total] = await query
+      .orderBy('a.start', 'ASC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+    return toSearchset(appointments.map(toFhirAppointment), total, {
+      page,
+      pageSize,
+      baseUrl: '/appointments',
+      query: { ...filters },
+    });
   }
 
   async findOne(id: string): Promise<any> {

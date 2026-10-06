@@ -15,8 +15,17 @@ export class PharmacyController {
 
   @Get('prescriptions/pending')
   @Roles('PHARMACIST', 'SUPER_ADMIN')
-  getPendingPrescriptions() {
-    return this.pharmacyService.getPendingPrescriptions();
+  @Header('Content-Type', 'application/fhir+json')
+  getPendingPrescriptions(@Query() query: any) {
+    return this.pharmacyService.getPendingPrescriptions(query);
+  }
+
+  // Prescribing reference catalog (DB-backed) — searchable + paginated.
+  @Get('medication-catalog')
+  @Roles('DOCTOR', 'PHARMACIST', 'SUPER_ADMIN', 'PATIENT')
+  @Header('Content-Type', 'application/fhir+json')
+  getMedicationCatalog(@Query() query: any) {
+    return this.pharmacyService.getMedicationCatalog(query);
   }
 
   @Post('dispense')
@@ -29,8 +38,8 @@ export class PharmacyController {
   @Get('dispense')
   @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  getDispenseHistory(@Query('patientId') patientId?: string) {
-    return this.pharmacyService.getDispenseHistory(patientId);
+  getDispenseHistory(@Query('patientId') patientId?: string, @Query() query?: any) {
+    return this.pharmacyService.getDispenseHistory(patientId, query);
   }
 
   @Get('dispense/:id')
@@ -42,8 +51,9 @@ export class PharmacyController {
 
   @Get('stock')
   @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
-  getStock(@Query('lowOnly') lowOnly?: string, @Query('organizationId') organizationId?: string) {
-    return this.pharmacyService.getStock(lowOnly === 'true', organizationId);
+  @Header('Content-Type', 'application/fhir+json')
+  getStock(@Query('lowOnly') lowOnly?: string, @Query('organizationId') organizationId?: string, @Query() query?: any) {
+    return this.pharmacyService.getStock(lowOnly === 'true', organizationId, query);
   }
 
   // Stock grouped by drug, with batches (different expiry dates) listed FEFO-first.

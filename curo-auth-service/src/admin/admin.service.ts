@@ -11,6 +11,7 @@ import { AuditLog } from '../entities/audit-log.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Gender, UserRole } from '../enums';
+import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 type AuthUser = { userId: string; role: string };
 
@@ -113,18 +114,45 @@ export class AdminService {
     });
   }
 
-  async listUsers(filters: { search?: string; role?: string }) {
-    const users = await this.usersRepo.find({ order: { createdAt: 'DESC' } });
-    let rows = await this.listWithNames(users);
-    if (filters.role) rows = rows.filter((r) => r.role === filters.role);
+  async listUsers(filters: { search?: string; role?: string }, pagination: PaginationQuery = {}) {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
+    const qb = this.usersRepo.createQueryBuilder('u');
+    if (filters.role) qb.andWhere('u.role = :role', { role: filters.role });
+
+    // Names live on practitioner/patient. Pre-resolve matching ids there, then
+    // filter the (single-table) user query by id — pushing search into SQL so we
+    // paginate the matching set, not the whole table.
     if (filters.search) {
-      const q = filters.search.toLowerCase();
-      rows = rows.filter((r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q) ||
-        r.role.toLowerCase().includes(q));
+      const s = `%${filters.search}%`;
+      const [pracs, pats] = await Promise.all([
+        this.practitionersRepo.createQueryBuilder('p').select('p.id', 'id')
+          .where('p.firstName ILIKE :s OR p.lastName ILIKE :s', { s }).getRawMany(),
+        this.patientsRepo.createQueryBuilder('p').select('p.id', 'id')
+          .where('p.firstName ILIKE :s OR p.lastName ILIKE :s', { s }).getRawMany(),
+      ]);
+      const pracIds = pracs.map((r) => r.id);
+      const patIds = pats.map((r) => r.id);
+      qb.andWhere(
+        '(u.email ILIKE :s OR u.role::text ILIKE :s' +
+          (pracIds.length ? ' OR u.practitionerId IN (:...pracIds)' : '') +
+          (patIds.length ? ' OR u.patientId IN (:...patIds)' : '') +
+          ')',
+        { s, pracIds, patIds },
+      );
     }
-    return rows;
+
+    const [users, total] = await qb
+      .orderBy('u.createdAt', 'DESC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+    const rows = await this.listWithNames(users);
+    return toSearchset(rows, total, {
+      page,
+      pageSize,
+      baseUrl: '/admin/users',
+      query: { ...filters },
+    });
   }
 
   async getUser(id: string) {

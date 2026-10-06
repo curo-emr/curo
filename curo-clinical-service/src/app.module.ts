@@ -9,6 +9,7 @@ import { ServiceRequest } from './entities/service-request.entity';
 import { Observation } from './entities/observation.entity';
 import { QrCode } from './entities/qr-code.entity';
 import { Task } from './entities/task.entity';
+import { Icd10Code } from './entities/icd10-code.entity';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { Task } from './entities/task.entity';
       username: process.env.DB_USER || 'curo',
       password: process.env.DB_PASS || 'curo_secret',
       database: process.env.DB_NAME || 'curo_db',
-      entities: [Encounter, ClinicalNote, MedicationRequest, ServiceRequest, Observation, QrCode, Task],
+      entities: [Encounter, ClinicalNote, MedicationRequest, ServiceRequest, Observation, QrCode, Task, Icd10Code],
       synchronize: true,
     }),
     ClinicalModule,

@@ -12,6 +12,7 @@ import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
 import { ServiceRequestStatus, DiagnosticReportStatus, ObservationStatus, InstrumentStatus } from '../enums';
 import { generateLabReportPdf } from './pdf.generator';
+import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 function toFhirServiceRequest(s: ServiceRequest) {
   return {
@@ -73,12 +74,22 @@ export class LabService {
     return this.catalogRepo.find({ where, order: { name: 'ASC' } });
   }
 
-  // Lab orders queue
-  async getOrders(status?: string): Promise<any[]> {
+  // Lab orders queue → FHIR searchset Bundle (paginated, optional status filter).
+  async getOrders(status?: string, pagination: PaginationQuery = {}): Promise<any> {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
     const query = this.ordersRepo.createQueryBuilder('s');
     if (status) query.where('s.status = :status', { status });
-    const orders = await query.orderBy('s.authoredOn', 'ASC').getMany();
-    return orders.map(toFhirServiceRequest);
+    const [orders, total] = await query
+      .orderBy('s.authoredOn', 'ASC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+    return toSearchset(orders.map(toFhirServiceRequest), total, {
+      page,
+      pageSize,
+      baseUrl: '/orders',
+      query: { status },
+    });
   }
 
   async getOrder(id: string): Promise<any> {
@@ -223,10 +234,21 @@ export class LabService {
     return toFhirReport(savedReport);
   }
 
-  async getReports(patientId?: string): Promise<any[]> {
+  async getReports(patientId?: string, pagination: PaginationQuery = {}): Promise<any> {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
     const where = patientId ? { patientId } : {};
-    const reports = await this.reportsRepo.find({ where, order: { issued: 'DESC' } });
-    return reports.map(toFhirReport);
+    const [reports, total] = await this.reportsRepo.findAndCount({
+      where,
+      order: { issued: 'DESC' },
+      skip,
+      take,
+    });
+    return toSearchset(reports.map(toFhirReport), total, {
+      page,
+      pageSize,
+      baseUrl: '/reports',
+      query: { patientId },
+    });
   }
 
   async getReport(id: string): Promise<any> {
@@ -240,11 +262,26 @@ export class LabService {
     return this.instrumentsRepo.find();
   }
 
-  async getQcLogs(filters?: { instrumentId?: string; status?: QCStatus }): Promise<QCLog[]> {
+  async getQcLogs(
+    filters?: { instrumentId?: string; status?: QCStatus },
+    pagination: PaginationQuery = {},
+  ): Promise<any> {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
     const where: any = {};
     if (filters?.instrumentId) where.instrumentId = filters.instrumentId;
     if (filters?.status) where.status = filters.status;
-    return this.qcLogRepo.find({ where, order: { performedAt: 'DESC' } });
+    const [logs, total] = await this.qcLogRepo.findAndCount({
+      where,
+      order: { performedAt: 'DESC' },
+      skip,
+      take,
+    });
+    return toSearchset(logs, total, {
+      page,
+      pageSize,
+      baseUrl: '/qc-logs',
+      query: { ...filters },
+    });
   }
 
   async getLabStaff(): Promise<any[]> {

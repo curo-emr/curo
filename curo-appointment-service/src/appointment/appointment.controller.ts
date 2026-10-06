@@ -28,8 +28,9 @@ export class AppointmentController {
     @Query('date') date?: string,
     @Query('practitionerId') practitionerId?: string,
     @Query('patientId') patientId?: string,
+    @Query() query?: any,
   ) {
-    return this.appointmentService.findAll(user, { date, practitionerId, patientId });
+    return this.appointmentService.findAll(user, { date, practitionerId, patientId }, query);
   }
 
   @Get('schedule/:practitionerId')

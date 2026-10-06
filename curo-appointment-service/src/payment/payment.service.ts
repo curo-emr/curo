@@ -7,6 +7,7 @@ import { Payment } from '../entities/payment.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 type AuthUser = { userId: string; role: string; practitionerId?: string | null };
 
@@ -78,13 +79,17 @@ export class PaymentService {
   }
 
   /** A receptionist's own collected payments. `collectedBy` always comes from the JWT. */
-  async findMine(user: AuthUser, from?: string, to?: string): Promise<Payment[]> {
+  async findMine(user: AuthUser, from?: string, to?: string, pagination: PaginationQuery = {}): Promise<any> {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
     const collectedBy = user.practitionerId || user.userId;
     const range = this.dateRange(from, to);
-    return this.paymentsRepo.find({
+    const [payments, total] = await this.paymentsRepo.findAndCount({
       where: { collectedBy, ...(range ? { paidAt: range } : {}) },
       order: { paidAt: 'DESC' },
+      skip,
+      take,
     });
+    return toSearchset(payments, total, { page, pageSize, baseUrl: '/payments/mine', query: { from, to } });
   }
 
   /** Own income summary bucketed by day/week/month, plus the grand total. */
@@ -116,13 +121,15 @@ export class PaymentService {
   }
 
   // ── Admin oversight ──────────────────────────────────────────────────────
-  async findAllForAdmin(filters: { collectedBy?: string; patientId?: string; from?: string; to?: string }): Promise<Payment[]> {
+  async findAllForAdmin(filters: { collectedBy?: string; patientId?: string; from?: string; to?: string }, pagination: PaginationQuery = {}): Promise<any> {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
     const qb = this.paymentsRepo.createQueryBuilder('p');
     if (filters.collectedBy) qb.andWhere('p.collectedBy = :c', { c: filters.collectedBy });
     if (filters.patientId) qb.andWhere('p.patientId = :pid', { pid: filters.patientId });
     if (filters.from) qb.andWhere('p."paidAt" >= :from', { from: new Date(filters.from) });
     if (filters.to) qb.andWhere('p."paidAt" <= :to', { to: new Date(`${filters.to}T23:59:59.999Z`) });
-    return qb.orderBy('p.paidAt', 'DESC').getMany();
+    const [payments, total] = await qb.orderBy('p.paidAt', 'DESC').skip(skip).take(take).getManyAndCount();
+    return toSearchset(payments, total, { page, pageSize, baseUrl: '/payments', query: { ...filters } });
   }
 
   async findOne(id: string): Promise<Payment> {

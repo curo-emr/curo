@@ -26,8 +26,8 @@ export class PatientController {
   @Get()
   @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'LAB_STAFF', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  findAll(@CurrentUser() user: any, @Query('search') search?: string) {
-    return this.patientService.findAll(user, search);
+  findAll(@CurrentUser() user: any, @Query('search') search?: string, @Query() query?: any) {
+    return this.patientService.findAll(user, search, query);
   }
 
   @Get('me')

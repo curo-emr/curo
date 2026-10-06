@@ -23,7 +23,8 @@ export class AuditController {
     @Query('patientId') patientId?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query() query?: any,
   ) {
-    return this.auditService.findAll(user, { userId, resourceType, patientId, from, to });
+    return this.auditService.findAll(user, { userId, resourceType, patientId, from, to }, query);
   }
 }

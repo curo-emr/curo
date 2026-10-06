@@ -24,8 +24,8 @@ export class AdminController {
   }
 
   @Get()
-  listUsers(@Query('search') search?: string, @Query('role') role?: string) {
-    return this.adminService.listUsers({ search, role });
+  listUsers(@Query('search') search?: string, @Query('role') role?: string, @Query() query?: any) {
+    return this.adminService.listUsers({ search, role }, query);
   }
 
   @Get(':id')

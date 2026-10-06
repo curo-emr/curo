@@ -15,6 +15,8 @@ import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { CreateLabOrderDto } from './dto/create-lab-order.dto';
 import { CreateVitalsDto } from './dto/create-vitals.dto';
 import { EncounterStatus, MedicationRequestStatus, ServiceRequestStatus, ObservationStatus } from '../enums';
+import { Icd10Code } from '../entities/icd10-code.entity';
+import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 function toFhirEncounter(e: Encounter) {
   return {
@@ -110,7 +112,32 @@ export class ClinicalService implements OnModuleInit {
     private qrCodesRepo: Repository<QrCode>,
     @InjectRepository(Task)
     private tasksRepo: Repository<Task>,
+    @InjectRepository(Icd10Code)
+    private icd10Repo: Repository<Icd10Code>,
   ) {}
+
+  // ICD-10 diagnosis catalog (DB-backed) — searchable + paginated FHIR searchset.
+  async getIcd10(query: PaginationQuery & { search?: string } = {}) {
+    const { skip, take, page, pageSize } = parsePagination(query);
+    const qb = this.icd10Repo.createQueryBuilder('c');
+    if (query.search) {
+      qb.where(
+        '(c.code ILIKE :s OR c.name ILIKE :s OR c.keywords::text ILIKE :s)',
+        { s: `%${query.search}%` },
+      );
+    }
+    const [rows, total] = await qb
+      .orderBy('c.code', 'ASC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+    return toSearchset(rows, total, {
+      page,
+      pageSize,
+      baseUrl: '/icd10',
+      query: { search: query.search },
+    });
+  }
 
   /** Backfill per-test QR codes for any existing lab orders that lack them. */
   async onModuleInit(): Promise<void> {
