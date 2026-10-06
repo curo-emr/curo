@@ -15,7 +15,7 @@ import { AuditLog } from '@curo/shared/database';
 import { STORAGE_PROVIDER } from '../storage/storage.provider';
 import type { StorageProvider } from '../storage/storage.provider';
 import { CreateDocumentDto } from './dto/create-document.dto';
-import type { AuthUser } from '@curo/shared/auth';
+import { actorId, type AuthUser } from '@curo/shared/auth';
 import { UserRole } from '@curo/shared/enums';
 
 const ALLOWED_CONTENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -57,7 +57,7 @@ export class DocumentService {
 
     const doc = this.docRepo.create({
       patientId: dto.patientId,
-      authorId: user.practitionerId ?? user.userId,
+      authorId: actorId(user),
       encounterId: dto.encounterId,
       relatedResourceId: dto.relatedResourceId,
       relatedResourceType: dto.relatedResourceType,

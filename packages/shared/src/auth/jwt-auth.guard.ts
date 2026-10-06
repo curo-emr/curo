@@ -41,6 +41,11 @@ export function toAuthUser(payload: JwtPayload): AuthUser {
   };
 }
 
+/** Who to record as the actor: the practitioner for staff, otherwise the user. */
+export function actorId(user: AuthUser): string {
+  return user.practitionerId ?? user.userId;
+}
+
 /** Verifies the `Authorization: Bearer <token>` header and sets `request.user`. */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
