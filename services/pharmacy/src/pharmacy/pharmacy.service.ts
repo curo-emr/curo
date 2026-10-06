@@ -162,11 +162,12 @@ export class PharmacyService {
    * Draw `qty` units of a drug from stock, FEFO (First-Expiry-First-Out): the
    * earliest-expiring non-expired batches first, across several if needed. The
    * batches are row-locked, so concurrent dispenses of one drug can't lose updates.
-   * Best-effort: units no batch can supply are still dispensed, just not priced.
+   * Throws 409 when stock can't cover `qty`, so nothing is dispensed unpriced or
+   * left out of the stock count.
    */
   private async drawStockFEFO(
     em: EntityManager,
-    medicationCode: string,
+    rx: Pick<MedicationRequest, 'medicationCode' | 'medicationDisplay'>,
     qty: number,
   ): Promise<BatchDraw[]> {
     const today = new Date().toISOString().slice(0, 10);
@@ -175,12 +176,20 @@ export class PharmacyService {
       .createQueryBuilder('s')
       .where(
         's.medicationCode = :code AND s.active = true AND s.quantity > 0',
-        { code: medicationCode },
+        { code: rx.medicationCode },
       )
       .andWhere('(s.expiryDate IS NULL OR s.expiryDate >= :today)', { today })
       .orderBy('s.expiryDate', 'ASC', 'NULLS LAST')
       .setLock('pessimistic_write')
       .getMany();
+
+    const available = batches.reduce((sum, b) => sum + b.quantity, 0);
+    if (available < qty) {
+      throw new ConflictException(
+        `Not enough ${rx.medicationDisplay} in stock: ${available} available, ` +
+          `${qty} needed. Receive stock before dispensing.`,
+      );
+    }
 
     let remaining = qty;
     const draws: BatchDraw[] = [];
@@ -222,12 +231,7 @@ export class PharmacyService {
           `Prescription ${prescription.id} is no longer active`,
         );
 
-      const draws = await this.drawStockFEFO(
-        em,
-        prescription.medicationCode,
-        qty,
-      );
-      const drawn = draws.reduce((sum, d) => sum + d.quantity, 0);
+      const draws = await this.drawStockFEFO(em, prescription, qty);
       const totalPrice = roundMoney(
         draws.reduce((sum, d) => sum + d.quantity * d.unitPrice, 0),
       );
@@ -244,7 +248,7 @@ export class PharmacyService {
           quantityValue: qty,
           quantityUnit: dto.quantityUnit || prescription.quantityUnit,
           dosageText: prescription.dosageText,
-          unitPrice: drawn ? roundMoney(totalPrice / drawn) : 0,
+          unitPrice: roundMoney(totalPrice / qty),
           totalPrice,
           receiptNumber: `RX-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
           batchNumber:
