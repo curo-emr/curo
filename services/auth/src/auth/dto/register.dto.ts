@@ -1,5 +1,5 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { UserRole } from '../../enums';
+import { UserRole } from '@curo/shared/enums';
 
 export class RegisterDto {
   @IsEmail()

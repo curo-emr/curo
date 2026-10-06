@@ -6,12 +6,11 @@ import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
-import { Patient } from '../entities/patient.entity';
-import { AuditLog } from '../entities/audit-log.entity';
+import { Patient, AuditLog } from '@curo/shared/database';
+import { Gender, UserRole } from '@curo/shared/enums';
+import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Gender, UserRole } from '../enums';
-import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 type AuthUser = { userId: string; role: string };
 

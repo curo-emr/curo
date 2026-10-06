@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
+import { jwtSecret } from '@curo/shared/auth';
 
 const SERVICE_MAP: Record<string, string> = {
   '/auth': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
@@ -153,7 +154,7 @@ export class ProxyMiddleware implements NestMiddleware {
       }
       try {
         const token = authHeader.split(' ')[1];
-        const payload = jwt.verify(token, process.env.JWT_SECRET || 'curo_jwt_secret_dev_2024_change_in_prod') as any;
+        const payload = jwt.verify(token, jwtSecret()) as any;
         req.headers['x-user-id'] = payload.sub;
         req.headers['x-user-role'] = payload.role;
         req.headers['x-user-email'] = payload.email;

@@ -4,9 +4,7 @@ import {
 import { LabService } from './lab.service';
 import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { RolesGuard } from '../common/roles.guard';
-import { Roles, CurrentUser } from '../common/decorators';
+import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
 import { InstrumentStatus } from '../enums';
 import { QCStatus } from '../entities/qc-log.entity';
 

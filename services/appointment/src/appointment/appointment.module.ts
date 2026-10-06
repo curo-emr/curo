@@ -1,18 +1,14 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppointmentController } from './appointment.controller';
 import { AppointmentService } from './appointment.service';
 import { Appointment } from '../entities/appointment.entity';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { RolesGuard } from '../common/roles.guard';
 
 @Module({
   imports: [
-    JwtModule.register({ secret: process.env.JWT_SECRET || 'curo_jwt_secret_dev_2024_change_in_prod' }),
     TypeOrmModule.forFeature([Appointment]),
   ],
   controllers: [AppointmentController],
-  providers: [AppointmentService, JwtAuthGuard, RolesGuard],
+  providers: [AppointmentService],
 })
 export class AppointmentModule {}

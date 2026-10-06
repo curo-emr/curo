@@ -7,13 +7,14 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
-import { Patient } from '../entities/patient.entity';
+import { Patient } from '@curo/shared/database';
+import { jwtSecret } from '@curo/shared/auth';
 
 @Module({
   imports: [
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'curo_jwt_secret_dev_2024_change_in_prod',
+      secret: jwtSecret(),
       signOptions: { expiresIn: '15m' },
     }),
     TypeOrmModule.forFeature([User, Practitioner, Patient]),

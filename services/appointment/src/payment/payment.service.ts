@@ -4,10 +4,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Payment } from '../entities/payment.entity';
-import { AuditLog } from '../entities/audit-log.entity';
+import { AuditLog } from '@curo/shared/database';
+import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 type AuthUser = { userId: string; role: string; practitionerId?: string | null };
 

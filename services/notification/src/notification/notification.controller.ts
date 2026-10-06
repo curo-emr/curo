@@ -2,8 +2,7 @@ import {
   Controller, Get, Post, Put, Body, Param, Query, UseGuards,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { Roles, CurrentUser } from '../common/decorators';
+import { JwtAuthGuard, Roles, CurrentUser } from '@curo/shared/auth';
 import { NotificationEventType } from '../enums';
 
 @Controller('notifications')

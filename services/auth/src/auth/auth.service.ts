@@ -10,7 +10,8 @@ import { Practitioner } from '../entities/practitioner.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
-import { UserRole, Gender } from '../enums';
+import { UserRole, Gender } from '@curo/shared/enums';
+import { jwtSecret } from '@curo/shared/auth';
 
 @Injectable()
 export class AuthService {
@@ -137,7 +138,7 @@ export class AuthService {
     const payload = { sub: user.id, email: user.email, role: user.role, practitionerId: user.practitionerId ?? null, patientId: user.patientId ?? null };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const accessToken = this.jwtService.sign(payload as any, {
-      secret: process.env.JWT_SECRET || 'curo_jwt_secret_dev_2024_change_in_prod',
+      secret: jwtSecret(),
       expiresIn: '900s',
     } as any);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

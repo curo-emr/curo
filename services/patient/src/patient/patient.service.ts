@@ -5,17 +5,16 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import { Patient } from '../entities/patient.entity';
+import { Patient, Observation } from '@curo/shared/database';
+import { UserRole } from '@curo/shared/enums';
+import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
 import { AllergyIntolerance } from '../entities/allergy-intolerance.entity';
 import { Condition } from '../entities/condition.entity';
-import { Observation } from '../entities/observation.entity';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { CreateAllergyDto } from './dto/create-allergy.dto';
 import { CreateConditionDto } from './dto/create-condition.dto';
 import { toFhirPatient, toFhirAllergy, toFhirCondition, toFhirObservation } from './fhir.mapper';
-import { UserRole } from '../enums';
-import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

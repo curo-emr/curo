@@ -4,9 +4,10 @@ import { Repository, Between } from 'typeorm';
 import { Appointment } from '../entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
-import { UserRole, AppointmentStatus, QueueStage } from '../enums';
+import { UserRole } from '@curo/shared/enums';
+import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
+import { AppointmentStatus, QueueStage } from '../enums';
 import { assertQueueTransition, queueStageForStatus } from './queue-stage';
-import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 function toFhirAppointment(a: Appointment) {
   return {

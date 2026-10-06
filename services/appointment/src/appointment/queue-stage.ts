@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { AppointmentStatus, QueueStage, UserRole } from '../enums';
+import { UserRole } from '@curo/shared/enums';
+import { AppointmentStatus, QueueStage } from '../enums';
 
 // Legal moves through the day's patient flow. `null` = not yet in the flow.
 // Doctors may jump in from any pre-doctor stage because the nurse step is optional.
