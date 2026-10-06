@@ -8,6 +8,19 @@ import {
 } from 'typeorm';
 import { DiagnosticReportStatus } from '../enums';
 
+/** One result line in a report, as entered by lab staff. */
+export interface LabResultItem {
+  code: string; // LOINC
+  display: string;
+  value?: number;
+  unit?: string;
+  valueString?: string;
+  referenceRangeLow?: string;
+  referenceRangeHigh?: string;
+  referenceRangeText?: string;
+  interpretation?: string; // N | H | L | HH | LL
+}
+
 @Entity('diagnostic_reports')
 export class DiagnosticReport {
   @PrimaryGeneratedColumn('uuid')
@@ -38,7 +51,7 @@ export class DiagnosticReport {
   display: string; // human-readable report title
 
   @Column({ type: 'jsonb', nullable: true })
-  results: Record<string, unknown>[]; // list of result observations
+  results: LabResultItem[] | null;
 
   @Column({ nullable: true })
   conclusion: string;
