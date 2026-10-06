@@ -9,7 +9,12 @@ import { MedicationCatalog } from '../entities/medication-catalog.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([MedicationRequest, MedicationDispense, Stock, MedicationCatalog]),
+    TypeOrmModule.forFeature([
+      MedicationRequest,
+      MedicationDispense,
+      Stock,
+      MedicationCatalog,
+    ]),
   ],
   controllers: [PharmacyController],
   providers: [PharmacyService],

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useClientPagination } from "@/hooks/use-client-pagination";
 import { Loader2, Wallet, Receipt, TrendingUp } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -39,17 +40,25 @@ export default function IncomePage() {
   const [period, setPeriod] = useState<Period>("day");
   const [summary, setSummary] = useState<IncomeSummary | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // The period whose data is on screen; any other value means a fetch is in flight.
+  const [loadedPeriod, setLoadedPeriod] = useState<Period | null>(null);
+  const isLoading = loadedPeriod !== period;
 
   useEffect(() => {
-    setIsLoading(true);
+    let cancelled = false;
     Promise.all([getIncomeSummary(period), getMyPayments()])
       .then(([s, p]) => {
+        if (cancelled) return;
         setSummary(s);
         setPayments(p);
       })
       .catch(console.error)
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoadedPeriod(period);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [period]);
 
   const chartData = useMemo(
@@ -58,13 +67,8 @@ export default function IncomePage() {
   );
 
   // Client-side pagination of the recent-payments table.
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-  useEffect(() => { setPage(1); }, [period, pageSize]);
-  const pagedPayments = useMemo(
-    () => payments.slice((page - 1) * pageSize, page * pageSize),
-    [payments, page, pageSize],
-  );
+  const { page, setPage, pageSize, setPageSize, pageRows: pagedPayments } =
+    useClientPagination(payments, [period]);
 
   const currency = summary?.currency ?? "LKR";
   const avg = summary && summary.count > 0 ? summary.total / summary.count : 0;

@@ -11,7 +11,20 @@ export interface DocumentRef {
   encounterId?: string;
 }
 
-function mapFhirDocument(d: Record<string, any>): DocumentRef {
+// The fields of the document service's FHIR DocumentReference that the UI reads.
+interface FhirDocumentReference {
+  id: string;
+  type: string;
+  description?: string;
+  date?: string;
+  context?: {
+    encounter?: { reference: string }[];
+    related?: { reference: string }[];
+  };
+  content?: { attachment?: { title?: string; contentType?: string; size?: number } }[];
+}
+
+function mapFhirDocument(d: FhirDocumentReference): DocumentRef {
   const attachment = d.content?.[0]?.attachment ?? {};
   const encounterRef: string | undefined = d.context?.encounter?.[0]?.reference;
   return {
@@ -28,8 +41,8 @@ function mapFhirDocument(d: Record<string, any>): DocumentRef {
 
 /** The patient's own documents; identity is resolved from the JWT server-side. */
 export async function getMyDocuments(): Promise<DocumentRef[]> {
-  const res = await apiClient.get('/documents/me');
-  return (res.data as Record<string, any>[]).map(mapFhirDocument);
+  const res = await apiClient.get<FhirDocumentReference[]>('/documents/me');
+  return res.data.map(mapFhirDocument);
 }
 
 /** Fetch document bytes via the authenticated client and open them. */

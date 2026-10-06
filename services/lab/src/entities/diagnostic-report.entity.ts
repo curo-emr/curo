@@ -1,6 +1,10 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { DiagnosticReportStatus } from '../enums';
 
@@ -20,7 +24,11 @@ export class DiagnosticReport {
   @Column()
   performerId: string; // lab staff who entered results
 
-  @Column({ type: 'enum', enum: DiagnosticReportStatus, default: DiagnosticReportStatus.REGISTERED })
+  @Column({
+    type: 'enum',
+    enum: DiagnosticReportStatus,
+    default: DiagnosticReportStatus.REGISTERED,
+  })
   status: DiagnosticReportStatus;
 
   @Column()

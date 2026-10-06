@@ -1,11 +1,24 @@
 import {
-  Controller, Get, Post, Put, Body, Param, Query, UseGuards, Header,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Header,
 } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { UpdateQueueStageDto } from './dto/update-queue-stage.dto';
-import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
+import {
+  JwtAuthGuard,
+  RolesGuard,
+  Roles,
+  CurrentUser,
+} from '@curo/shared/auth';
 
 @Controller('appointments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,7 +43,11 @@ export class AppointmentController {
     @Query('queueStage') queueStage?: string,
     @Query() query?: any,
   ) {
-    return this.appointmentService.findAll(user, { date, practitionerId, patientId, queueStage }, query);
+    return this.appointmentService.findAll(
+      user,
+      { date, practitionerId, patientId, queueStage },
+      query,
+    );
   }
 
   @Get('schedule/:practitionerId')
@@ -39,7 +56,10 @@ export class AppointmentController {
     @Param('practitionerId') practitionerId: string,
     @Query('date') date: string,
   ) {
-    return this.appointmentService.getDoctorSchedule(practitionerId, date || new Date().toISOString().split('T')[0]);
+    return this.appointmentService.getDoctorSchedule(
+      practitionerId,
+      date || new Date().toISOString().split('T')[0],
+    );
   }
 
   @Get('patient/:patientId')
@@ -68,7 +88,11 @@ export class AppointmentController {
   @Put(':id/queue-stage')
   @Roles('NURSE', 'RECEPTIONIST', 'DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  updateQueueStage(@Param('id') id: string, @Body() dto: UpdateQueueStageDto, @CurrentUser() user: any) {
+  updateQueueStage(
+    @Param('id') id: string,
+    @Body() dto: UpdateQueueStageDto,
+    @CurrentUser() user: any,
+  ) {
     return this.appointmentService.updateQueueStage(id, dto.stage, user);
   }
 }

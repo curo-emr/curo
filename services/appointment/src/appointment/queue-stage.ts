@@ -5,10 +5,25 @@ import { AppointmentStatus, QueueStage } from '../enums';
 // Legal moves through the day's patient flow. `null` = not yet in the flow.
 // Doctors may jump in from any pre-doctor stage because the nurse step is optional.
 const TRANSITIONS: Record<QueueStage | 'none', QueueStage[]> = {
-  none: [QueueStage.WAITING_NURSE, QueueStage.READY_FOR_DOCTOR, QueueStage.WITH_DOCTOR],
-  [QueueStage.WAITING_NURSE]: [QueueStage.WITH_NURSE, QueueStage.READY_FOR_DOCTOR, QueueStage.WITH_DOCTOR],
-  [QueueStage.WITH_NURSE]: [QueueStage.READY_FOR_DOCTOR, QueueStage.WAITING_NURSE, QueueStage.WITH_DOCTOR],
-  [QueueStage.READY_FOR_DOCTOR]: [QueueStage.WITH_DOCTOR, QueueStage.WITH_NURSE],
+  none: [
+    QueueStage.WAITING_NURSE,
+    QueueStage.READY_FOR_DOCTOR,
+    QueueStage.WITH_DOCTOR,
+  ],
+  [QueueStage.WAITING_NURSE]: [
+    QueueStage.WITH_NURSE,
+    QueueStage.READY_FOR_DOCTOR,
+    QueueStage.WITH_DOCTOR,
+  ],
+  [QueueStage.WITH_NURSE]: [
+    QueueStage.READY_FOR_DOCTOR,
+    QueueStage.WAITING_NURSE,
+    QueueStage.WITH_DOCTOR,
+  ],
+  [QueueStage.READY_FOR_DOCTOR]: [
+    QueueStage.WITH_DOCTOR,
+    QueueStage.WITH_NURSE,
+  ],
   [QueueStage.WITH_DOCTOR]: [QueueStage.DONE],
   [QueueStage.DONE]: [],
 };
@@ -28,14 +43,22 @@ const STAGE_ROLES: Record<QueueStage, UserRole[]> = {
  * (an idempotent no-op the caller should skip), true when the move is legal,
  * and throws otherwise.
  */
-export function assertQueueTransition(current: string | null, next: QueueStage, role: string): boolean {
-  if (role !== UserRole.SUPER_ADMIN && !STAGE_ROLES[next].includes(role as UserRole)) {
-    throw new ForbiddenException(`Role ${role} cannot move a patient to '${next}'`);
+export function assertQueueTransition(
+  current: string | null,
+  next: QueueStage,
+  role: UserRole,
+): boolean {
+  if (role !== UserRole.SUPER_ADMIN && !STAGE_ROLES[next].includes(role)) {
+    throw new ForbiddenException(
+      `Role ${role} cannot move a patient to '${next}'`,
+    );
   }
   if (current === next) return false;
   const allowed = TRANSITIONS[(current as QueueStage) ?? 'none'] ?? [];
   if (!allowed.includes(next)) {
-    throw new BadRequestException(`Cannot move a patient from '${current ?? 'none'}' to '${next}'`);
+    throw new BadRequestException(
+      `Cannot move a patient from '${current ?? 'none'}' to '${next}'`,
+    );
   }
   return true;
 }
@@ -44,7 +67,10 @@ export function assertQueueTransition(current: string | null, next: QueueStage, 
  * Queue stage implied by an appointment status change (system-driven, no role
  * check). `undefined` = leave the stage untouched.
  */
-export function queueStageForStatus(status: AppointmentStatus, current: string | null): string | null | undefined {
+export function queueStageForStatus(
+  status: AppointmentStatus,
+  current: string | null,
+): string | null | undefined {
   switch (status) {
     case AppointmentStatus.ARRIVED:
       return current ? undefined : QueueStage.WAITING_NURSE; // check-in feeds the nurse queue

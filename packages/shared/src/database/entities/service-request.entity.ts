@@ -1,6 +1,10 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { ServiceRequestStatus } from '../../enums';
 
@@ -22,7 +26,11 @@ export class ServiceRequest {
   @Column({ nullable: true })
   performerId: string; // lab staff assigned
 
-  @Column({ type: 'enum', enum: ServiceRequestStatus, default: ServiceRequestStatus.ACTIVE })
+  @Column({
+    type: 'enum',
+    enum: ServiceRequestStatus,
+    default: ServiceRequestStatus.ACTIVE,
+  })
   status: ServiceRequestStatus;
 
   @Column({ nullable: true })

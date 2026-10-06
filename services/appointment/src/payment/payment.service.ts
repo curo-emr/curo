@@ -1,15 +1,20 @@
 import {
-  Injectable, BadRequestException, NotFoundException, ConflictException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Payment } from '../entities/payment.entity';
 import { AuditLog } from '@curo/shared/database';
-import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
+import {
+  parsePagination,
+  toSearchset,
+  PaginationQuery,
+} from '@curo/shared/fhir';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-
-type AuthUser = { userId: string; role: string; practitionerId?: string | null };
+import type { AuthUser } from '@curo/shared/auth';
 
 const CURRENCY = process.env.CURRENCY || 'LKR';
 
@@ -36,7 +41,9 @@ export class PaymentService {
         where: { appointmentId: dto.appointmentId },
       });
       if (existing) {
-        throw new ConflictException('A payment has already been recorded for this visit');
+        throw new ConflictException(
+          'A payment has already been recorded for this visit',
+        );
       }
     }
 
@@ -56,17 +63,25 @@ export class PaymentService {
     });
     const saved = await this.paymentsRepo.save(payment);
 
-    await this.auditRepo.save(this.auditRepo.create({
-      userId: user.userId,
-      userRole: user.role,
-      action: 'CREATE',
-      resourceType: 'Payment',
-      resourceId: saved.id,
-      patientId: saved.patientId,
-      changes: { after: { amount: saved.amount, currency: saved.currency, receiptNumber: saved.receiptNumber } },
-      outcome: 'success',
-      outcomeDescription: 'Receptionist recorded a visit payment',
-    }));
+    await this.auditRepo.save(
+      this.auditRepo.create({
+        userId: user.userId,
+        userRole: user.role,
+        action: 'CREATE',
+        resourceType: 'Payment',
+        resourceId: saved.id,
+        patientId: saved.patientId,
+        changes: {
+          after: {
+            amount: saved.amount,
+            currency: saved.currency,
+            receiptNumber: saved.receiptNumber,
+          },
+        },
+        outcome: 'success',
+        outcomeDescription: 'Receptionist recorded a visit payment',
+      }),
+    );
 
     return saved;
   }
@@ -79,7 +94,12 @@ export class PaymentService {
   }
 
   /** A receptionist's own collected payments. `collectedBy` always comes from the JWT. */
-  async findMine(user: AuthUser, from?: string, to?: string, pagination: PaginationQuery = {}): Promise<any> {
+  async findMine(
+    user: AuthUser,
+    from?: string,
+    to?: string,
+    pagination: PaginationQuery = {},
+  ): Promise<any> {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const collectedBy = user.practitionerId || user.userId;
     const range = this.dateRange(from, to);
@@ -89,15 +109,26 @@ export class PaymentService {
       skip,
       take,
     });
-    return toSearchset(payments, total, { page, pageSize, baseUrl: '/payments/mine', query: { from, to } });
+    return toSearchset(payments, total, {
+      page,
+      pageSize,
+      baseUrl: '/payments/mine',
+      query: { from, to },
+    });
   }
 
   /** Own income summary bucketed by day/week/month, plus the grand total. */
-  async summary(user: AuthUser, period: 'day' | 'week' | 'month', from?: string, to?: string) {
+  async summary(
+    user: AuthUser,
+    period: 'day' | 'week' | 'month',
+    from?: string,
+    to?: string,
+  ) {
     const collectedBy = user.practitionerId || user.userId;
     const unit = ['day', 'week', 'month'].includes(period) ? period : 'day';
 
-    const qb = this.paymentsRepo.createQueryBuilder('p')
+    const qb = this.paymentsRepo
+      .createQueryBuilder('p')
       .select(`date_trunc('${unit}', p."paidAt")`, 'bucket')
       .addSelect('SUM(p.amount)', 'total')
       .addSelect('COUNT(*)', 'count')
@@ -105,7 +136,8 @@ export class PaymentService {
       .andWhere(`p.status = 'paid'`);
 
     if (from) qb.andWhere('p."paidAt" >= :from', { from: new Date(from) });
-    if (to) qb.andWhere('p."paidAt" <= :to', { to: new Date(`${to}T23:59:59.999Z`) });
+    if (to)
+      qb.andWhere('p."paidAt" <= :to', { to: new Date(`${to}T23:59:59.999Z`) });
 
     qb.groupBy('bucket').orderBy('bucket', 'ASC');
 
@@ -121,15 +153,38 @@ export class PaymentService {
   }
 
   // ── Admin oversight ──────────────────────────────────────────────────────
-  async findAllForAdmin(filters: { collectedBy?: string; patientId?: string; from?: string; to?: string }, pagination: PaginationQuery = {}): Promise<any> {
+  async findAllForAdmin(
+    filters: {
+      collectedBy?: string;
+      patientId?: string;
+      from?: string;
+      to?: string;
+    },
+    pagination: PaginationQuery = {},
+  ): Promise<any> {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const qb = this.paymentsRepo.createQueryBuilder('p');
-    if (filters.collectedBy) qb.andWhere('p.collectedBy = :c', { c: filters.collectedBy });
-    if (filters.patientId) qb.andWhere('p.patientId = :pid', { pid: filters.patientId });
-    if (filters.from) qb.andWhere('p."paidAt" >= :from', { from: new Date(filters.from) });
-    if (filters.to) qb.andWhere('p."paidAt" <= :to', { to: new Date(`${filters.to}T23:59:59.999Z`) });
-    const [payments, total] = await qb.orderBy('p.paidAt', 'DESC').skip(skip).take(take).getManyAndCount();
-    return toSearchset(payments, total, { page, pageSize, baseUrl: '/payments', query: { ...filters } });
+    if (filters.collectedBy)
+      qb.andWhere('p.collectedBy = :c', { c: filters.collectedBy });
+    if (filters.patientId)
+      qb.andWhere('p.patientId = :pid', { pid: filters.patientId });
+    if (filters.from)
+      qb.andWhere('p."paidAt" >= :from', { from: new Date(filters.from) });
+    if (filters.to)
+      qb.andWhere('p."paidAt" <= :to', {
+        to: new Date(`${filters.to}T23:59:59.999Z`),
+      });
+    const [payments, total] = await qb
+      .orderBy('p.paidAt', 'DESC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+    return toSearchset(payments, total, {
+      page,
+      pageSize,
+      baseUrl: '/payments',
+      query: { ...filters },
+    });
   }
 
   async findOne(id: string): Promise<Payment> {
@@ -139,9 +194,18 @@ export class PaymentService {
   }
 
   /** SUPER_ADMIN-only correction. Records a before/after audit entry. */
-  async adminUpdate(id: string, dto: UpdatePaymentDto, user: AuthUser): Promise<Payment> {
+  async adminUpdate(
+    id: string,
+    dto: UpdatePaymentDto,
+    user: AuthUser,
+  ): Promise<Payment> {
     const payment = await this.findOne(id);
-    const before = { amount: payment.amount, paymentMethod: payment.paymentMethod, status: payment.status, notes: payment.notes };
+    const before = {
+      amount: payment.amount,
+      paymentMethod: payment.paymentMethod,
+      status: payment.status,
+      notes: payment.notes,
+    };
 
     if (dto.amount != null) payment.amount = dto.amount;
     if (dto.paymentMethod != null) payment.paymentMethod = dto.paymentMethod;
@@ -150,17 +214,27 @@ export class PaymentService {
 
     const saved = await this.paymentsRepo.save(payment);
 
-    await this.auditRepo.save(this.auditRepo.create({
-      userId: user.userId,
-      userRole: user.role,
-      action: 'UPDATE',
-      resourceType: 'Payment',
-      resourceId: id,
-      patientId: payment.patientId,
-      changes: { before, after: { amount: saved.amount, paymentMethod: saved.paymentMethod, status: saved.status, notes: saved.notes } },
-      outcome: 'success',
-      outcomeDescription: 'Admin corrected a recorded payment',
-    }));
+    await this.auditRepo.save(
+      this.auditRepo.create({
+        userId: user.userId,
+        userRole: user.role,
+        action: 'UPDATE',
+        resourceType: 'Payment',
+        resourceId: id,
+        patientId: payment.patientId,
+        changes: {
+          before,
+          after: {
+            amount: saved.amount,
+            paymentMethod: saved.paymentMethod,
+            status: saved.status,
+            notes: saved.notes,
+          },
+        },
+        outcome: 'success',
+        outcomeDescription: 'Admin corrected a recorded payment',
+      }),
+    );
 
     return saved;
   }

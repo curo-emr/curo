@@ -28,6 +28,7 @@ import { LabOrderForm } from "./sections/LabOrderForm";
 import { VitalsPanel, type RecordedVitals } from "./sections/VitalsPanel";
 import { PatientContext } from "./PatientContext";
 import { emptyVisit, signVisit, type SignProgress, type VisitDraft } from "./visit";
+import { apiErrorMessage } from "@/lib/api/client";
 
 interface Props {
   patient: Patient;
@@ -158,7 +159,7 @@ export function EncounterEditor({
       if (!appointmentClosed) toast.warning("Visit signed, but the appointment couldn't be marked complete — ask reception to close it.");
       router.push(appointmentId ? ROUTES.DASHBOARD : ROUTES.PATIENT(patient.id));
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Could not sign the visit";
+      const msg = apiErrorMessage(err, "Could not sign the visit");
       toast.error(msg, { description: "Your notes are saved. Sign again to finish — nothing will be sent twice." });
       setSigning(false);
     }

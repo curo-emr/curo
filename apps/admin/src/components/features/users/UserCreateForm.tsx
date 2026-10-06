@@ -16,6 +16,7 @@ import {
 import { createUserSchema, type CreateUserInput } from "@/lib/validations/user";
 import { createUser } from "@/lib/api/users";
 import { ROUTES, USER_ROLES, ROLE_LABELS, GENDERS } from "@/lib/constants";
+import { apiErrorMessage } from "@/lib/api/client";
 
 // Patients are created via receptionist registration (which generates the PHN),
 // so the admin form only creates staff accounts — avoids orphan patient logins.
@@ -52,8 +53,8 @@ export function UserCreateForm() {
       });
       toast.success("User created", { description: `${data.firstName} ${data.lastName} (${ROLE_LABELS[data.role]})` });
       router.push(ROUTES.USER(created.id));
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to create user");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to create user"));
     } finally {
       setSubmitting(false);
     }

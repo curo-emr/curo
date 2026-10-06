@@ -1,5 +1,9 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Index,
 } from 'typeorm';
 import { NotificationEventType } from '../enums';
 
@@ -15,7 +19,11 @@ export class Notification {
   @Column({ nullable: true })
   recipientRole: string;
 
-  @Column({ type: 'enum', enum: NotificationEventType, default: NotificationEventType.GENERAL })
+  @Column({
+    type: 'enum',
+    enum: NotificationEventType,
+    default: NotificationEventType.GENERAL,
+  })
   eventType: NotificationEventType;
 
   @Column()

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createPayment, type Payment } from "@/lib/api/payments";
+import { apiErrorMessage } from "@/lib/api/client";
 
 function formatMoney(amount: number, currency = "LKR") {
   const formatted = Number(amount).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -63,8 +64,8 @@ export function RecordPaymentCell({
       toast.success("Payment recorded", { description: `Receipt ${payment.receiptNumber}` });
       onRecorded(payment);
       setOpen(false);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to record payment");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to record payment"));
     } finally {
       setSubmitting(false);
     }

@@ -1,6 +1,10 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { Gender, MaritalStatus } from '../../enums';
 
@@ -32,7 +36,12 @@ export class Patient {
   @Column({ type: 'date', nullable: true })
   birthDate: string;
 
-  @Column({ type: 'enum', enum: Gender, default: Gender.UNKNOWN, nullable: true })
+  @Column({
+    type: 'enum',
+    enum: Gender,
+    default: Gender.UNKNOWN,
+    nullable: true,
+  })
   gender: Gender;
 
   @Column({ nullable: true })

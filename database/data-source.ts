@@ -5,7 +5,10 @@ import { DataSource, type DataSourceOptions } from 'typeorm';
 const root = join(__dirname, '..');
 
 /** Connection to the shared database from DB_* env vars, same defaults as the services. */
-export const connectionOptions: Extract<DataSourceOptions, { type: 'postgres' }> = {
+export const connectionOptions: Extract<
+  DataSourceOptions,
+  { type: 'postgres' }
+> = {
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),

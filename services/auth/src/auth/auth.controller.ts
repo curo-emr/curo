@@ -1,5 +1,12 @@
 import {
-  Controller, Post, Get, Body, Query, UseGuards, HttpCode, HttpStatus,
+  Controller,
+  Post,
+  Get,
+  Body,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -29,10 +36,7 @@ export class AuthController {
   @Post('staff')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN')
-  createStaff(
-    @Body() dto: CreateStaffDto,
-    @CurrentUser() user: any,
-  ) {
+  createStaff(@Body() dto: CreateStaffDto, @CurrentUser() user: any) {
     return this.authService.createStaff(dto, user);
   }
 

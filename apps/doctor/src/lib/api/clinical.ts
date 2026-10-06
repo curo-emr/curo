@@ -56,8 +56,8 @@ export async function getVitalsByPatient(patientId: string) {
 
 interface FhirObservation {
   encounter?: { reference?: string };
-  code?: { coding?: Array<{ code?: string }> };
-  valueQuantity?: { value?: number };
+  code?: { coding?: Array<{ code?: string; display?: string }> };
+  valueQuantity?: { value?: number; unit?: string };
   effectiveDateTime?: string;
   performer?: Array<{ reference?: string }>;
   extension?: Array<{ url: string; valueString?: string }>;
@@ -135,18 +135,21 @@ export interface TrendPoint {
 
 // Multi-code, category-agnostic trend (BP + glucose + cholesterol, etc.)
 export async function getObservationTrends(patientId: string, codes: string[]): Promise<TrendPoint[]> {
-  const res = await apiClient.get<any[]>(`/vitals/patient/${patientId}/trends`, {
+  const res = await apiClient.get<FhirObservation[]>(`/vitals/patient/${patientId}/trends`, {
     params: { codes: codes.join(",") },
   });
-  return (res.data ?? [])
-    .map((o) => ({
-      code: o?.code?.coding?.[0]?.code ?? "",
-      display: o?.code?.coding?.[0]?.display ?? "",
-      value: o?.valueQuantity?.value ?? null,
-      unit: o?.valueQuantity?.unit ?? "",
-      effectiveDateTime: o?.effectiveDateTime ?? "",
-    }))
-    .filter((p) => p.value != null && p.effectiveDateTime);
+  return (res.data ?? []).flatMap((o): TrendPoint[] => {
+    const value = o.valueQuantity?.value;
+    if (value == null || !o.effectiveDateTime) return [];
+    const coding = o.code?.coding?.[0];
+    return [{
+      code: coding?.code ?? "",
+      display: coding?.display ?? "",
+      value,
+      unit: o.valueQuantity?.unit ?? "",
+      effectiveDateTime: o.effectiveDateTime,
+    }];
+  });
 }
 
 export async function createVitals(data: Record<string, unknown>) {

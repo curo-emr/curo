@@ -12,7 +12,14 @@ import { JwtAuthModule } from '@curo/shared/auth';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     JwtAuthModule,
-    TypeOrmModule.forRoot(databaseOptions([MedicationRequest, MedicationDispense, Stock, MedicationCatalog])),
+    TypeOrmModule.forRoot(
+      databaseOptions([
+        MedicationRequest,
+        MedicationDispense,
+        Stock,
+        MedicationCatalog,
+      ]),
+    ),
     PharmacyModule,
   ],
 })

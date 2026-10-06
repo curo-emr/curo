@@ -71,11 +71,26 @@ Release branches are `dev-release/<x.y.z>`, `qa-release/<x.y.z>` and `stg-releas
 
 | Job | Checks | Run it locally |
 |---|---|---|
-| Backends | build `@curo/shared` + every service, unit tests, type-check `database/`, then on an empty Postgres: migrate, check for entity drift, seed | `npm ci && npm run build && npm test && npm run typecheck:db`, then `npm run db:migrate && npm run db:check` |
-| Portals | `next build` (includes type-check) for each of the 7 portals | `cd apps/<app> && npm ci && npm run build` |
+| Backends | build `@curo/shared` + every service, lint, unit tests, type-check `database/`, then on an empty Postgres: migrate, check for entity drift, seed | `npm ci && npm run build && npm run lint && npm test && npm run typecheck:db`, then `npm run db:migrate && npm run db:check` |
+| Portals | lint, then `next build` (includes type-check) for each of the 7 portals | `cd apps/<app> && npm ci && npm run lint && npm run build` |
 | Secret scan | gitleaks over the full git history ([allowlist](.gitleaks.toml)) | `docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo` |
 
-Lint is not part of CI yet: the existing code has outstanding ESLint errors to clear first.
+### Lint and formatting
+
+Backends (`services/`, `packages/shared`, `database/`) share one
+[ESLint config](eslint.config.mjs) and one [Prettier config](.prettierrc.json).
+Each portal keeps its own Next.js ESLint config.
+
+- `npm run lint` checks without changing anything (this is what CI runs);
+  `npm run lint:fix` fixes and formats. In a portal, use `npm run lint` there.
+- Lint errors fail CI; warnings don't. The `no-unsafe-*` rules are warnings while
+  `any` is typed out of query results and request bodies, and will become errors
+  again service by service.
+- Turn on format-on-save with the Prettier and ESLint extensions; VS Code suggests
+  them from `.vscode/extensions.json`.
+- The bulk formatting commit is listed in `.git-blame-ignore-revs`. GitHub skips it
+  automatically; for local blame, run
+  `git config blame.ignoreRevsFile .git-blame-ignore-revs` once.
 
 ## `@curo/shared`
 

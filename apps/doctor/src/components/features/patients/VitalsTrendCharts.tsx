@@ -107,10 +107,17 @@ export function VitalsTrendCharts({ patientId }: { patientId: string }) {
   );
 }
 
+// One chart row per day: the day, its axis label, and a value per LOINC code.
+interface ChartRow {
+  day: string;
+  label: string;
+  [code: string]: string | number;
+}
+
 function MetricChart({ metric, points }: { metric: Metric; points: TrendPoint[] }) {
   // Build a date-keyed dataset merging this metric's codes.
   const data = useMemo(() => {
-    const byDate = new Map<string, any>();
+    const byDate = new Map<string, ChartRow>();
     for (const p of points) {
       if (!metric.codes.some((c) => c.code === p.code)) continue;
       const day = p.effectiveDateTime.slice(0, 10);
@@ -172,9 +179,9 @@ function MetricChart({ metric, points }: { metric: Metric; points: TrendPoint[] 
                   stroke={c.color}
                   strokeWidth={2}
                   connectNulls
-                  dot={(props: any) => {
+                  dot={(props: { cx?: number; cy?: number; index?: number; payload?: ChartRow }) => {
                     const v = props.payload?.[c.code];
-                    const flag = v != null ? flagOf(c.code, v) : "normal";
+                    const flag = typeof v === "number" ? flagOf(c.code, v) : "normal";
                     const color = flag === "normal" ? c.color : "var(--status-error-text)";
                     return <Dot key={`${c.code}-${props.index}`} cx={props.cx} cy={props.cy} r={flag === "normal" ? 3 : 5} fill={color} stroke={color} />;
                   }}

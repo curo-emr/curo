@@ -11,7 +11,9 @@ import { JwtAuthModule } from '@curo/shared/auth';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     JwtAuthModule,
-    TypeOrmModule.forRoot(databaseOptions([Patient, AllergyIntolerance, Condition, Observation])),
+    TypeOrmModule.forRoot(
+      databaseOptions([Patient, AllergyIntolerance, Condition, Observation]),
+    ),
     PatientModule,
   ],
 })

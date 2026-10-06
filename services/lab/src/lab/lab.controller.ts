@@ -1,10 +1,23 @@
 import {
-  Controller, Get, Post, Put, Body, Param, Query, UseGuards, Header,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Header,
 } from '@nestjs/common';
 import { LabService } from './lab.service';
 import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
-import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
+import {
+  JwtAuthGuard,
+  RolesGuard,
+  Roles,
+  CurrentUser,
+} from '@curo/shared/auth';
 import { InstrumentStatus } from '../enums';
 import { QCStatus } from '../entities/qc-log.entity';
 
@@ -84,7 +97,11 @@ export class LabController {
   @Get('qc-logs')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  getQcLogs(@Query('instrumentId') instrumentId?: string, @Query('status') status?: QCStatus, @Query() query?: any) {
+  getQcLogs(
+    @Query('instrumentId') instrumentId?: string,
+    @Query('status') status?: QCStatus,
+    @Query() query?: any,
+  ) {
     return this.labService.getQcLogs({ instrumentId, status }, query);
   }
 

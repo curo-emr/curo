@@ -1,8 +1,15 @@
 import {
-  Controller, Get, Post, Put, Body, Param, Query, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { JwtAuthGuard, Roles, CurrentUser } from '@curo/shared/auth';
+import { JwtAuthGuard, CurrentUser } from '@curo/shared/auth';
 import { NotificationEventType } from '../enums';
 
 @Controller('notifications')
@@ -11,15 +18,18 @@ export class NotificationController {
   constructor(private notificationService: NotificationService) {}
 
   @Post()
-  create(@Body() dto: {
-    recipientId: string;
-    recipientRole?: string;
-    eventType: NotificationEventType;
-    title: string;
-    message: string;
-    relatedResourceId?: string;
-    relatedResourceType?: string;
-  }) {
+  create(
+    @Body()
+    dto: {
+      recipientId: string;
+      recipientRole?: string;
+      eventType: NotificationEventType;
+      title: string;
+      message: string;
+      relatedResourceId?: string;
+      relatedResourceType?: string;
+    },
+  ) {
     return this.notificationService.create(dto);
   }
 
@@ -29,7 +39,11 @@ export class NotificationController {
     @Query('unreadOnly') unreadOnly?: string,
     @Query() query?: any,
   ) {
-    return this.notificationService.getForUser(user.userId, unreadOnly === 'true', query);
+    return this.notificationService.getForUser(
+      user.userId,
+      unreadOnly === 'true',
+      query,
+    );
   }
 
   @Get('count')

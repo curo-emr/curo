@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useClientPagination } from "@/hooks/use-client-pagination";
 import type { Appointment, Patient, Doctor } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -125,13 +126,8 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
 
   // Client-side pagination over the filtered set (date/doctor/status filters are
   // applied client-side, so the page is sliced here).
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-  useEffect(() => { setPage(1); }, [dateFilter, doctorFilter, statusFilter, pageSize]);
-  const paged = useMemo(
-    () => filtered.slice((page - 1) * pageSize, page * pageSize),
-    [filtered, page, pageSize],
-  );
+  const { page, setPage, pageSize, setPageSize, pageRows: paged } =
+    useClientPagination(filtered, [dateFilter, doctorFilter, statusFilter]);
 
   const handleStatusChange = async (appointmentId: string, newStatus: AppointmentStatus) => {
     setPendingIds((prev) => new Set(prev).add(appointmentId));
