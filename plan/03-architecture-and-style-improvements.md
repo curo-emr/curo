@@ -18,10 +18,12 @@ returns (removed from mappers in Phase 7). The status map in
 `completed → fulfilled`), so "Send to Doctor" is a silent no-op state-wise.
 Doc 02's `queueStage` rewires this board to real state.
 
-### A2. TypeORM `synchronize: true` + drifting entity copies is the biggest standing risk ◐ *(drift fixed by Doc 04)*
+### A2. TypeORM `synchronize: true` + drifting entity copies is the biggest standing risk ✅ *(drift fixed by Doc 04, migrations 2026-10-06)*
 > Doc 04: every table now has exactly one entity definition (cross-service ones in
-> `@curo/shared/database`), so copies can no longer drift. Still open: option 3 below
-> (migrations, `synchronize: false`).
+> `@curo/shared/database`), so copies can no longer drift. Option 3 below is done:
+> `synchronize: false` everywhere, TypeORM migrations in `database/migrations` run by
+> the one-shot `curo-migrate` container, and CI's `npm run db:check` fails when an
+> entity changes without a migration.
 Nine services share one DB, each with hand-copied entity files, and every boot
 lets any service ALTER shared tables. Stale copies have already **dropped
 columns** twice (PHN, slice 5; QR test columns, slice 7). Recommended path:
@@ -123,7 +125,9 @@ doctor) as the pattern-setter. Related: many pages `"use client"` at the page
 level where a server component + client leaf would cut bundle size (Next 16 is
 being used as a pure SPA shell).
 
-### B3. "Save Draft" in EncounterEditor is fake
+### B3. "Save Draft" in EncounterEditor is fake ✅ *(fixed by the doctor portal rework)*
+> The visit flow now keeps real drafts in localStorage per appointment
+> (`apps/doctor/src/lib/visit.ts`).
 `handleSaveDraft` just toasts "Draft saved" — nothing persists. Either remove
 the button or implement drafts (localStorage keyed by appointmentId would be a
 90% solution; encounter `status: 'planned'` + PUT is the real one).

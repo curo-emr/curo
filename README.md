@@ -13,7 +13,8 @@ services/            NestJS backends (npm workspaces, @curo/<name>-service)
   api-gateway auth patient appointment clinical pharmacy lab document notification audit
   Dockerfile         shared by every backend (--build-arg SERVICE=<name>)
 packages/shared/     @curo/shared — code used by more than one backend
-scripts/             seed, smoke tests, docker helpers
+database/            migrations, seed, and the image that runs them
+scripts/             smoke tests, docker helpers
 docs/  plan/         API docs, test credentials, design plans
 ```
 
@@ -31,10 +32,34 @@ Gateway on :3000 (API reference at http://localhost:3000/docs), portals on
 ```bash
 npm install                                  # once, at the repo root
 npm run build:shared                         # services import the built package
+docker compose up -d postgres                # or point DB_* env vars at your own Postgres
+npm run db:migrate && npm run seed           # schema + dev data
 cd services/patient && npm run start:dev
 ```
 
 `npm run build` and `npm test` at the root run across every backend.
+
+## Database schema
+
+Services never change the schema (`synchronize` is off). TypeORM migrations in
+[database/migrations](database/migrations) do. In Docker, the one-shot `curo-migrate`
+container applies them before any backend starts.
+
+To change the schema:
+
+1. Edit the entity. If it lives in `@curo/shared`, run `npm run build:shared` afterwards.
+2. Run `npm run db:generate -- migrations/AddPatientNickname`. This diffs the entities
+   against your local database and writes the SQL.
+3. Review the generated file, then apply it with `npm run db:migrate`.
+4. Commit the entity change and the migration together.
+
+| Script | Does |
+|---|---|
+| `npm run db:migrate` | apply pending migrations |
+| `npm run db:revert` | undo the most recent migration (the baseline refuses) |
+| `npm run db:generate -- migrations/<Name>` | write a migration from entity changes |
+| `npm run db:check` | fail if the entities and the database schema differ (CI runs this) |
+| `npm run seed` | load dev data; safe to re-run |
 
 ## Branches and CI
 
@@ -46,7 +71,7 @@ Release branches are `dev-release/<x.y.z>`, `qa-release/<x.y.z>` and `stg-releas
 
 | Job | Checks | Run it locally |
 |---|---|---|
-| Backends | build `@curo/shared` + every service, unit tests, type-check the seed | `npm ci && npm run build && npm test && npm run typecheck:db` |
+| Backends | build `@curo/shared` + every service, unit tests, type-check `database/`, then on an empty Postgres: migrate, check for entity drift, seed | `npm ci && npm run build && npm test && npm run typecheck:db`, then `npm run db:migrate && npm run db:check` |
 | Portals | `next build` (includes type-check) for each of the 7 portals | `cd apps/<app> && npm ci && npm run build` |
 | Secret scan | gitleaks over the full git history ([allowlist](.gitleaks.toml)) | `docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo` |
 

@@ -4,9 +4,9 @@ import {
 } from 'typeorm';
 
 /**
- * FHIR-flavoured DocumentReference. Owned exclusively by curo-document-service
- * (single-owner rule for `synchronize: true`). Only metadata lives here; the
- * binary bytes live in object storage (MinIO) keyed by `filePath` (object key).
+ * FHIR-flavoured DocumentReference, owned by curo-document-service. Only
+ * metadata lives here; the binary bytes live in object storage (MinIO) keyed
+ * by `filePath` (object key).
  */
 @Entity('document_references')
 export class DocumentReference {

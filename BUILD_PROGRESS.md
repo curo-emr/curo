@@ -672,3 +672,27 @@ Plan + results: `plan/04-monorepo-layout-and-shared-package.md` (Doc 03 A2/A3/A4
 - Verified: schema dry run 0 pending for all services; schema dump identical;
   smoke PASS=109; 19 unit tests pass.
 - Local dev now: `npm install` + `npm run build:shared` at the root before `start:dev`.
+
+---
+
+## CI + database migrations ✅ DONE — 2026-10-06
+
+Doc 03 A2 (migrations part) and A11 (CI part). Branches: `ci/github-actions` (PR #1), `feat/db-migrations`.
+
+- **CI** (`.github/workflows/ci.yml`): Backends job (build, unit tests, `typecheck:db`, then
+  migrate → `db:check` → seed against an empty Postgres service), Portals matrix (`next build` × 7),
+  gitleaks over the full history (`.gitleaks.toml` allowlists the NestJS README placeholder token).
+  Node pinned by `.nvmrc` (22). Lint not gated yet (pre-existing errors).
+- **Migrations**: `synchronize: false` in `databaseOptions()`. New `database/` folder:
+  `data-source.ts` (CLI DataSource + `connectionOptions` reused by the seed), `migrations/`
+  (`1791271595506-Baseline.ts`), `seed.ts` (moved from `scripts/`), `Dockerfile` (one image for
+  `curo-migrate` and `curo-seed`, node 22). Root scripts `db:migrate|revert|generate|check`, `seed`.
+- Baseline: generated from the entities on an empty DB, plus the `uuid-ossp`/`pgcrypto` extensions
+  (`scripts/init.sql` deleted). It **adopts** existing DBs (`users` table present → records itself and
+  does nothing, Flyway baseline-on-migrate) and its `down()` throws.
+- Compose: backends depend on `curo-migrate: service_completed_successfully`; `curo-seed` depends
+  only on `curo-migrate` (no longer waits for all 9 backends).
+- Verified: live `db:check` clean before and after; fresh DB migrate → check → seed clean;
+  `pg_dump --schema-only` live vs fresh differs only in column/enum-value order (columns added
+  later by synchronize sit last); existing volume adopted (one `migrations` row), smoke PASS=109;
+  negative test (unmigrated entity column) fails `db:check`.
