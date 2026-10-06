@@ -2,7 +2,7 @@ import {
   Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
   UpdateDateColumn, Index,
 } from 'typeorm';
-import { ObservationStatus } from '../enums';
+import { ObservationStatus } from '../../enums';
 
 @Entity('observations')
 export class Observation {

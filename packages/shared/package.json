@@ -1,20 +1,68 @@
 {
-  "name": "curo-shared",
+  "name": "@curo/shared",
   "version": "1.0.0",
-  "description": "Shared entities and enums for Curo EMR services",
-  "main": "src/index.ts",
-  "scripts": {
-    "build": "tsc"
+  "description": "Shared kernel for Curo EMR backends: auth guards, cross-service entities and enums, FHIR helpers and service bootstrap",
+  "private": true,
+  "license": "UNLICENSED",
+  "exports": {
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "default": "./dist/auth/index.js"
+    },
+    "./bootstrap": {
+      "types": "./dist/bootstrap/index.d.ts",
+      "default": "./dist/bootstrap/index.js"
+    },
+    "./database": {
+      "types": "./dist/database/index.d.ts",
+      "default": "./dist/database/index.js"
+    },
+    "./enums": {
+      "types": "./dist/enums/index.d.ts",
+      "default": "./dist/enums/index.js"
+    },
+    "./fhir": {
+      "types": "./dist/fhir/index.d.ts",
+      "default": "./dist/fhir/index.js"
+    }
   },
-  "dependencies": {
-    "typeorm": "^0.3.20",
-    "reflect-metadata": "^0.2.2"
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "nest build",
+    "build:watch": "nest build --watch"
   },
   "peerDependencies": {
-    "pg": "^8.13.1"
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/swagger": "^11.4.4",
+    "@nestjs/typeorm": "^11.0.1",
+    "typeorm": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/swagger": {
+      "optional": true
+    },
+    "@nestjs/typeorm": {
+      "optional": true
+    },
+    "typeorm": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "typescript": "^5.1.3",
-    "@types/node": "^20.3.1"
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/swagger": "^11.4.4",
+    "@nestjs/typeorm": "^11.0.1",
+    "@types/node": "^24.0.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "typeorm": "^1.0.0",
+    "typescript": "^5.7.3"
   }
 }

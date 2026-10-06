@@ -1,5 +1,5 @@
 {
-  "name": "curo-document-service",
+  "name": "@curo/document-service",
   "version": "0.0.1",
   "description": "Document/media service - owns document_references, stores binaries in object storage (MinIO)",
   "author": "",
@@ -12,8 +12,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest"
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

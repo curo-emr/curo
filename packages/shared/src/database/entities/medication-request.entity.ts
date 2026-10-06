@@ -2,7 +2,7 @@ import {
   Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
   UpdateDateColumn, Index,
 } from 'typeorm';
-import { MedicationRequestStatus } from '../enums';
+import { MedicationRequestStatus } from '../../enums';
 
 @Entity('medication_requests')
 export class MedicationRequest {

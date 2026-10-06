@@ -2,7 +2,7 @@ import {
   Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
   UpdateDateColumn, Index,
 } from 'typeorm';
-import { ServiceRequestStatus } from '../enums';
+import { ServiceRequestStatus } from '../../enums';
 
 @Entity('service_requests')
 export class ServiceRequest {
