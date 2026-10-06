@@ -12,6 +12,9 @@ export interface PaginationQuery {
   _offset?: string | number;
 }
 
+/** Pagination plus a free-text `search` term. */
+export type SearchQuery = PaginationQuery & { search?: string };
+
 export interface Pagination {
   page: number;
   pageSize: number;
