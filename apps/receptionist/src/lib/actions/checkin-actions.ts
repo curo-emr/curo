@@ -1,5 +1,6 @@
 import { updateAppointmentStatus } from "./appointment-actions";
 import { updateQueueStage } from "@/lib/api/appointments";
+import { apiErrorMessage } from "@/lib/api/client";
 
 // Check-in: the backend automatically queues the patient for nurse triage.
 export async function checkInPatient(appointmentId: string) {
@@ -12,8 +13,7 @@ export async function sendToDoctor(appointmentId: string) {
   try {
     await updateQueueStage(appointmentId, "ready_for_doctor");
   } catch (err) {
-    const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-    return { success: false, error: message ?? "Failed to send patient to doctor" };
+    return { success: false, error: apiErrorMessage(err, "Failed to send patient to doctor") };
   }
   return updateAppointmentStatus(appointmentId, "arrived");
 }

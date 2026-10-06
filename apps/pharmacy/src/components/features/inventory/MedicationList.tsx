@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
+import { useClientPagination } from "@/hooks/use-client-pagination";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,13 +58,8 @@ export function MedicationList({ medications }: MedicationListProps) {
 
   // Client-side pagination over the filtered set (stock + expiry filters are
   // computed client-side, so the page is sliced here rather than server-side).
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-  useEffect(() => { setPage(1); }, [query, stockFilter, pageSize]);
-  const paged = useMemo(
-    () => filtered.slice((page - 1) * pageSize, page * pageSize),
-    [filtered, page, pageSize],
-  );
+  const { page, setPage, pageSize, setPageSize, pageRows: paged } =
+    useClientPagination(filtered, [query, stockFilter]);
 
   return (
     <div className="space-y-4">
