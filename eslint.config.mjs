@@ -35,7 +35,6 @@ export default tseslint.config(
   },
   {
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
       // `const { secret, ...rest } = obj` is how fields get dropped.
       '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
