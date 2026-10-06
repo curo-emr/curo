@@ -15,16 +15,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { Search, ChevronRight, User, Loader2 } from "lucide-react";
-import { Allergy, Patient, Prescription } from "@/types";
+import { Allergy, Patient } from "@/types";
 import { calculateAge, formatAllergies, formatDate } from "@/lib/utils";
 import { getAllergiesByPatient, getPatientsPaginated } from "@/lib/api/patients";
+import { getPrescriptionSummaries, type PrescriptionSummary } from "@/lib/api/pharmacy";
 import Link from "next/link";
 
-interface PatientListProps {
-  prescriptions: Prescription[];
-}
-
-export function PatientList({ prescriptions }: PatientListProps) {
+export function PatientList() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
@@ -34,8 +31,9 @@ export function PatientList({ prescriptions }: PatientListProps) {
   const [pageSize, setPageSize] = useState(25);
 
   const [patients, setPatients] = useState<Patient[]>([]);
-  // null when the lookup failed: show "Unavailable", never "None known".
+  // null when a lookup failed: show "Unavailable", never "None known" or 0.
   const [allergies, setAllergies] = useState<Map<string, Allergy[]> | null>(null);
+  const [rxSummaries, setRxSummaries] = useState<Map<string, PrescriptionSummary> | null>(null);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +54,13 @@ export function PatientList({ prescriptions }: PatientListProps) {
       const result = await getPatientsPaginated({ page, pageSize, search: debouncedQuery || undefined });
       setPatients(result.items);
       setTotal(result.total);
-      setAllergies(await getAllergiesByPatient(result.items.map(p => p.id)).catch(() => null));
+      const ids = result.items.map(p => p.id);
+      const [allergyMap, rxMap] = await Promise.all([
+        getAllergiesByPatient(ids).catch(() => null),
+        getPrescriptionSummaries(ids).catch(() => null),
+      ]);
+      setAllergies(allergyMap);
+      setRxSummaries(rxMap);
     } catch (err) {
       console.error(err);
       setError("Failed to load patients.");
@@ -68,12 +72,6 @@ export function PatientList({ prescriptions }: PatientListProps) {
   }, [page, pageSize, debouncedQuery]);
 
   useEffect(() => { load(); }, [load]);
-
-  const getPatientRxInfo = (patientId: string) => {
-    const patientRx = prescriptions.filter(rx => rx.patientId === patientId);
-    const lastRx = [...patientRx].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-    return { count: patientRx.length, lastRx };
-  };
 
   return (
     <div className="space-y-4">
@@ -99,8 +97,8 @@ export function PatientList({ prescriptions }: PatientListProps) {
               <TableHead>Patient</TableHead>
               <TableHead>Age / Sex</TableHead>
               <TableHead>Allergies</TableHead>
-              <TableHead>Last Prescription</TableHead>
-              <TableHead>Total Rx</TableHead>
+              <TableHead>Pending Rx</TableHead>
+              <TableHead>Last Prescribed</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -118,7 +116,7 @@ export function PatientList({ prescriptions }: PatientListProps) {
               </TableRow>
             ) : patients.length > 0 ? (
               patients.map(patient => {
-                const { count, lastRx } = getPatientRxInfo(patient.id);
+                const rx = rxSummaries?.get(patient.id);
                 const patientAllergies = allergies?.get(patient.id);
                 return (
                   <TableRow key={patient.id} className="hover:bg-muted/50 transition-colors group">
@@ -145,10 +143,18 @@ export function PatientList({ prescriptions }: PatientListProps) {
                         <span className="text-muted-foreground">None known</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {lastRx ? formatDate(lastRx.createdAt) : '-'}
+                    <TableCell className="text-sm">
+                      {!rx ? (
+                        <span className="text-muted-foreground">Unavailable</span>
+                      ) : rx.pendingCount > 0 ? (
+                        <span className="font-medium text-foreground">{rx.pendingCount}</span>
+                      ) : (
+                        <span className="text-muted-foreground">0</span>
+                      )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{count}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {rx?.lastPrescribedAt ? formatDate(rx.lastPrescribedAt) : '-'}
+                    </TableCell>
                     <TableCell>
                       <Link href={`/patients/${patient.id}`}>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground group-hover:text-primary hover:bg-primary/10">
