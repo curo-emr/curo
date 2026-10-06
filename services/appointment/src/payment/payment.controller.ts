@@ -16,7 +16,9 @@ import {
   RolesGuard,
   Roles,
   CurrentUser,
+  type AuthUser,
 } from '@curo/shared/auth';
+import type { PaginationQuery } from '@curo/shared/fhir';
 
 @Controller('payments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -26,7 +28,7 @@ export class PaymentController {
   // Receptionist records a visit amount (immutable once submitted).
   @Post()
   @Roles('RECEPTIONIST', 'SUPER_ADMIN')
-  create(@Body() dto: CreatePaymentDto, @CurrentUser() user: any) {
+  create(@Body() dto: CreatePaymentDto, @CurrentUser() user: AuthUser) {
     return this.paymentService.create(dto, user);
   }
 
@@ -34,10 +36,10 @@ export class PaymentController {
   @Get('mine')
   @Roles('RECEPTIONIST', 'SUPER_ADMIN')
   findMine(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
-    @Query() query?: any,
+    @Query() query?: PaginationQuery,
   ) {
     return this.paymentService.findMine(user, from, to, query);
   }
@@ -45,7 +47,7 @@ export class PaymentController {
   @Get('summary')
   @Roles('RECEPTIONIST', 'SUPER_ADMIN')
   summary(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Query('period') period: 'day' | 'week' | 'month' = 'day',
     @Query('from') from?: string,
     @Query('to') to?: string,
@@ -61,7 +63,7 @@ export class PaymentController {
     @Query('patientId') patientId?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
-    @Query() query?: any,
+    @Query() query?: PaginationQuery,
   ) {
     return this.paymentService.findAllForAdmin(
       { collectedBy, patientId, from, to },
@@ -81,7 +83,7 @@ export class PaymentController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdatePaymentDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.paymentService.adminUpdate(id, dto, user);
   }

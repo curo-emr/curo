@@ -141,7 +141,12 @@ export class PaymentService {
 
     qb.groupBy('bucket').orderBy('bucket', 'ASC');
 
-    const rows = await qb.getRawMany();
+    // pg returns SUM/COUNT as strings.
+    const rows = await qb.getRawMany<{
+      bucket: Date;
+      total: string;
+      count: string;
+    }>();
     const buckets = rows.map((r) => ({
       bucket: r.bucket,
       total: Number(r.total),
