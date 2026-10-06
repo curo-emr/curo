@@ -5,14 +5,19 @@ import {
   type FhirDiagnosticReport,
   type FhirServiceRequest,
 } from './mappers';
+import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from './fhir';
 import type { LabOrder } from '@/types';
 import type { LabStaff, LabTestCatalogItem, QCLog, QCStatus, SpecimenType } from '@/types';
 
 // ─── Lab Orders ───────────────────────────────────────────────────────────────
 
+// Back-compat: returns up to 100 orders as a flat array (worklist computes status
+// counts across the set). Unwraps either a bare array or a FHIR searchset Bundle.
 export async function getLabOrders(params?: { status?: string; patientId?: string }): Promise<LabOrder[]> {
-  const res = await apiClient.get<FhirServiceRequest[]>('/orders', { params });
-  return res.data.map(mapFhirServiceRequest);
+  const res = await apiClient.get<FhirServiceRequest[] | FhirBundle<FhirServiceRequest>>('/orders', {
+    params: { pageSize: 100, ...params },
+  });
+  return unwrapBundle(res.data).resources.map(mapFhirServiceRequest);
 }
 
 export async function getLabOrderById(id: string): Promise<LabOrder | null> {
@@ -118,15 +123,15 @@ export async function enterResults(data: {
 }
 
 export async function getLabResultsByOrder(orderId: string, patientId?: string): Promise<LabResult[]> {
-  const res = await apiClient.get<FhirDiagnosticReport[]>('/reports', { params: { patientId, orderId } });
-  return res.data
+  const res = await apiClient.get<FhirDiagnosticReport[] | FhirBundle<FhirDiagnosticReport>>('/reports', { params: { patientId, orderId, pageSize: 100 } });
+  return unwrapBundle(res.data).resources
     .map(mapFhirDiagnosticReport)
     .filter(report => report.orderId === orderId);
 }
 
 export async function getLabResultsByPatient(patientId: string): Promise<LabResult[]> {
-  const res = await apiClient.get<FhirDiagnosticReport[]>('/reports', { params: { patientId } });
-  return res.data.map(mapFhirDiagnosticReport);
+  const res = await apiClient.get<FhirDiagnosticReport[] | FhirBundle<FhirDiagnosticReport>>('/reports', { params: { patientId, pageSize: 100 } });
+  return unwrapBundle(res.data).resources.map(mapFhirDiagnosticReport);
 }
 
 // ─── Instruments ─────────────────────────────────────────────────────────────
@@ -159,13 +164,40 @@ interface ApiQCLog extends Omit<QCLog, 'expectedValue' | 'observedValue'> {
   observedValue: number | string;
 }
 
-export async function getQCLogs(params?: { instrumentId?: string; status?: QCStatus }): Promise<QCLog[]> {
-  const res = await apiClient.get<ApiQCLog[]>('/qc-logs', { params });
-  return res.data.map(log => ({
+function mapQcLog(log: ApiQCLog): QCLog {
+  return {
     ...log,
     expectedValue: Number(log.expectedValue),
     observedValue: Number(log.observedValue),
-  }));
+  };
+}
+
+export async function getQCLogs(params?: { instrumentId?: string; status?: QCStatus }): Promise<QCLog[]> {
+  const res = await apiClient.get<ApiQCLog[] | FhirBundle<ApiQCLog>>('/qc-logs', {
+    params: { pageSize: 100, ...params },
+  });
+  return unwrapBundle(res.data).resources.map(mapQcLog);
+}
+
+// Server-driven pagination for the QC log table.
+export async function getQCLogsPaginated(
+  params: PaginationParams & { instrumentId?: string; status?: QCStatus } = {},
+): Promise<PaginatedResult<QCLog>> {
+  const { instrumentId, status, ...rest } = params;
+  const res = await apiClient.get<ApiQCLog[] | FhirBundle<ApiQCLog>>('/qc-logs', {
+    params: {
+      ...paginationParams(rest),
+      ...(instrumentId ? { instrumentId } : {}),
+      ...(status ? { status } : {}),
+    },
+  });
+  const { resources, total } = unwrapBundle(res.data);
+  return {
+    items: resources.map(mapQcLog),
+    total,
+    page: params.page ?? 1,
+    pageSize: params.pageSize ?? 25,
+  };
 }
 
 export async function getLabStaff(): Promise<LabStaff[]> {

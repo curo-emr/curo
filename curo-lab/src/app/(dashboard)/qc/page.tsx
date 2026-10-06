@@ -5,20 +5,20 @@ import { Loader2, Cpu } from "lucide-react";
 import { QCLogTable } from "@/components/features/qc/QCLogTable";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getLabInstruments, getLabStaff, getQCLogs, type LabInstrument } from "@/lib/api/lab";
-import type { LabStaff, QCLog } from "@/types";
+import { getLabInstruments, getLabStaff, type LabInstrument } from "@/lib/api/lab";
+import type { LabStaff } from "@/types";
 
 export default function QCPage() {
+  // Instruments feed the status cards + the table's filter dropdown; staff feeds the
+  // "performed by" lookup. The QC log table fetches its own paginated records.
   const [instruments, setInstruments] = useState<LabInstrument[]>([]);
-  const [logs, setLogs] = useState<QCLog[]>([]);
   const [staff, setStaff] = useState<LabStaff[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getLabInstruments(), getQCLogs(), getLabStaff()])
-      .then(([insts, qcLogs, labStaff]) => {
+    Promise.all([getLabInstruments(), getLabStaff()])
+      .then(([insts, labStaff]) => {
         setInstruments(insts);
-        setLogs(qcLogs);
         setStaff(labStaff);
       })
       .catch(console.error)
@@ -56,7 +56,7 @@ export default function QCPage() {
         </div>
       )}
 
-      <QCLogTable logs={logs} instruments={instruments} staff={staff} />
+      <QCLogTable instruments={instruments} staff={staff} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -17,29 +17,56 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { QCLog, LabInstrument, LabStaff } from "@/types";
+import { Pagination } from "@/components/ui/pagination";
+import { Loader2 } from "lucide-react";
+import { QCLog, LabInstrument, LabStaff, QCStatus } from "@/types";
 import { formatDate, getStaffName } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { getQCLogsPaginated } from "@/lib/api/lab";
 
 interface QCLogTableProps {
-  logs: QCLog[];
   instruments: LabInstrument[];
   staff: LabStaff[];
 }
 
-export function QCLogTable({ logs, instruments, staff }: QCLogTableProps) {
+export function QCLogTable({ instruments, staff }: QCLogTableProps) {
   const [instrumentFilter, setInstrumentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
-  const filtered = useMemo(() => {
-    return logs
-      .filter(l => {
-        const matchesInst = instrumentFilter === "all" || l.instrumentId === instrumentFilter;
-        const matchesStatus = statusFilter === "all" || l.status === statusFilter;
-        return matchesInst && matchesStatus;
-      })
-      .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
-  }, [instrumentFilter, statusFilter, logs]);
+  const [logs, setLogs] = useState<QCLog[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPage(1);
+  }, [instrumentFilter, statusFilter, pageSize]);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await getQCLogsPaginated({
+        page,
+        pageSize,
+        instrumentId: instrumentFilter === "all" ? undefined : instrumentFilter,
+        status: statusFilter === "all" ? undefined : (statusFilter as QCStatus),
+      });
+      setLogs(result.items);
+      setTotal(result.total);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load QC records.");
+      setLogs([]);
+      setTotal(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, pageSize, instrumentFilter, statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
 
   const getInstrumentName = (id: string) => instruments.find(i => i.id === id)?.name || id;
 
@@ -69,7 +96,7 @@ export function QCLogTable({ logs, instruments, staff }: QCLogTableProps) {
               <SelectItem value="warning">Warning</SelectItem>
             </SelectContent>
           </Select>
-          <span className="text-sm text-muted-foreground ml-auto">{filtered.length} records</span>
+          <span className="text-sm text-muted-foreground ml-auto">{total} records</span>
         </CardContent>
       </Card>
 
@@ -88,8 +115,19 @@ export function QCLogTable({ logs, instruments, staff }: QCLogTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length > 0 ? (
-              filtered.map(log => {
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />
+                  Loading QC records…
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-32 text-center text-destructive">{error}</TableCell>
+              </TableRow>
+            ) : logs.length > 0 ? (
+              logs.map(log => {
                 const rowClass = log.status === 'fail' ? 'bg-status-error-bg/50' : log.status === 'warning' ? 'bg-status-warning-bg/50' : '';
                 return (
                   <TableRow key={log.id} className={`${rowClass} hover:bg-muted/50 transition-colors`}>
@@ -114,6 +152,14 @@ export function QCLogTable({ logs, instruments, staff }: QCLogTableProps) {
           </TableBody>
         </Table>
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }
