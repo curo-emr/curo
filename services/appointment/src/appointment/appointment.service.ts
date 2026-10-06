@@ -58,7 +58,7 @@ export class AppointmentService {
     private appointmentsRepo: Repository<Appointment>,
   ) {}
 
-  async create(dto: CreateAppointmentDto): Promise<any> {
+  async create(dto: CreateAppointmentDto) {
     const appointment = this.appointmentsRepo.create({
       ...dto,
       start: new Date(dto.start),
@@ -77,7 +77,7 @@ export class AppointmentService {
       queueStage?: string;
     },
     pagination: PaginationQuery = {},
-  ): Promise<any> {
+  ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const query = this.appointmentsRepo.createQueryBuilder('a');
 
@@ -127,13 +127,13 @@ export class AppointmentService {
     });
   }
 
-  async findOne(id: string): Promise<any> {
+  async findOne(id: string) {
     const a = await this.appointmentsRepo.findOne({ where: { id } });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);
     return toFhirAppointment(a);
   }
 
-  async update(id: string, dto: UpdateAppointmentDto): Promise<any> {
+  async update(id: string, dto: UpdateAppointmentDto) {
     const a = await this.appointmentsRepo.findOne({ where: { id } });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);
     if (dto.status && dto.status !== a.status) {
@@ -149,7 +149,7 @@ export class AppointmentService {
     id: string,
     stage: QueueStage,
     user: Pick<AuthUser, 'role' | 'practitionerId'>,
-  ): Promise<any> {
+  ) {
     const a = await this.appointmentsRepo.findOne({ where: { id } });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);
     if (
@@ -165,7 +165,7 @@ export class AppointmentService {
     return toFhirAppointment(saved);
   }
 
-  async getDoctorSchedule(practitionerId: string, date: string): Promise<any> {
+  async getDoctorSchedule(practitionerId: string, date: string) {
     const dayStart = new Date(date);
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(date);
@@ -205,7 +205,7 @@ export class AppointmentService {
     };
   }
 
-  async getPatientAppointments(patientId: string): Promise<any[]> {
+  async getPatientAppointments(patientId: string) {
     const appointments = await this.appointmentsRepo.find({
       where: { patientId },
       order: { start: 'DESC' },

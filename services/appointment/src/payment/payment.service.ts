@@ -99,7 +99,7 @@ export class PaymentService {
     from?: string,
     to?: string,
     pagination: PaginationQuery = {},
-  ): Promise<any> {
+  ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const collectedBy = actorId(user);
     const range = this.dateRange(from, to);
@@ -166,7 +166,7 @@ export class PaymentService {
       to?: string;
     },
     pagination: PaginationQuery = {},
-  ): Promise<any> {
+  ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const qb = this.paymentsRepo.createQueryBuilder('p');
     if (filters.collectedBy)

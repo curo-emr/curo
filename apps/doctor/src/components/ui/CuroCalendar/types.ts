@@ -20,9 +20,6 @@ export interface CalendarEvent {
   title: string;
   subtitle?: string;
   color?: CalendarEventColor;
-  /** Arbitrary domain data attached to the event */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
 }
 
 export type CalendarView = "month";
