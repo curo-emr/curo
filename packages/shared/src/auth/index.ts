@@ -2,6 +2,7 @@ export { JwtAuthModule } from './jwt-auth.module';
 export {
   JwtAuthGuard,
   toAuthUser,
+  actorId,
   type AuthUser,
   type AuthRequest,
   type JwtPayload,

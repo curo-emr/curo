@@ -14,7 +14,7 @@ import {
 } from '@curo/shared/fhir';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-import type { AuthUser } from '@curo/shared/auth';
+import { actorId, type AuthUser } from '@curo/shared/auth';
 
 const CURRENCY = process.env.CURRENCY || 'LKR';
 
@@ -33,7 +33,7 @@ export class PaymentService {
 
   /** Receptionist records the amount collected for a patient visit. Immutable afterwards. */
   async create(dto: CreatePaymentDto, user: AuthUser): Promise<Payment> {
-    const collectedBy = user.practitionerId || user.userId;
+    const collectedBy = actorId(user);
 
     // One consultation payment per appointment — prevents double entry / silent edits.
     if (dto.appointmentId) {
@@ -101,7 +101,7 @@ export class PaymentService {
     pagination: PaginationQuery = {},
   ): Promise<any> {
     const { page, pageSize, skip, take } = parsePagination(pagination);
-    const collectedBy = user.practitionerId || user.userId;
+    const collectedBy = actorId(user);
     const range = this.dateRange(from, to);
     const [payments, total] = await this.paymentsRepo.findAndCount({
       where: { collectedBy, ...(range ? { paidAt: range } : {}) },
@@ -124,7 +124,7 @@ export class PaymentService {
     from?: string,
     to?: string,
   ) {
-    const collectedBy = user.practitionerId || user.userId;
+    const collectedBy = actorId(user);
     const unit = ['day', 'week', 'month'].includes(period) ? period : 'day';
 
     const qb = this.paymentsRepo
