@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
+import type { LabPanelTest } from '@curo/shared/database';
 
 export class CreateLabOrderDto {
   @IsNotEmpty()
@@ -19,7 +20,7 @@ export class CreateLabOrderDto {
 
   @IsOptional()
   @IsArray()
-  testPanel?: Record<string, string>[];
+  testPanel?: LabPanelTest[];
 
   @IsOptional()
   @IsString()
