@@ -1,5 +1,6 @@
 import { apiClient } from "./client";
 import type { AdminUser } from "@/types";
+import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from "./fhir";
 
 export interface CreateUserInput {
   email: string;
@@ -26,8 +27,21 @@ export interface UpdateUserInput {
 }
 
 export async function getUsers(search?: string, role?: string): Promise<AdminUser[]> {
-  const res = await apiClient.get<AdminUser[]>("/auth/users", { params: { search, role } });
-  return res.data;
+  const res = await apiClient.get<AdminUser[] | FhirBundle<AdminUser>>("/auth/users", {
+    params: { search, role, pageSize: 100 },
+  });
+  return unwrapBundle(res.data).resources;
+}
+
+export async function getUsersPaginated(
+  params: PaginationParams & { role?: string } = {},
+): Promise<PaginatedResult<AdminUser>> {
+  const { role, ...rest } = params;
+  const res = await apiClient.get<AdminUser[] | FhirBundle<AdminUser>>("/auth/users", {
+    params: { ...paginationParams(rest), ...(role ? { role } : {}) },
+  });
+  const { resources, total } = unwrapBundle(res.data);
+  return { items: resources, total, page: params.page ?? 1, pageSize: params.pageSize ?? 25 };
 }
 
 export async function getUser(id: string): Promise<AdminUser> {

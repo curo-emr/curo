@@ -1,5 +1,6 @@
 import { apiClient } from "./client";
 import type { Payment } from "@/types";
+import { unwrapBundle, type FhirBundle } from "./fhir";
 
 // Admin oversight of receptionist-collected income.
 export async function getAllPayments(filters?: {
@@ -8,8 +9,10 @@ export async function getAllPayments(filters?: {
   from?: string;
   to?: string;
 }): Promise<Payment[]> {
-  const res = await apiClient.get<Payment[]>("/payments", { params: filters });
-  return res.data;
+  const res = await apiClient.get<Payment[] | FhirBundle<Payment>>("/payments", {
+    params: { pageSize: 100, ...filters },
+  });
+  return unwrapBundle(res.data).resources;
 }
 
 export async function correctPayment(
