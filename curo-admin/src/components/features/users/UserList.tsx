@@ -22,6 +22,7 @@ const roleBadgeClass: Record<string, string> = {
   RECEPTIONIST: "bg-status-teal-bg text-status-teal-text border-status-teal-border",
   PHARMACIST: "bg-status-purple-bg text-status-purple-text border-status-purple-border",
   LAB_STAFF: "bg-status-warning-bg text-status-warning-text border-status-warning-border",
+  NURSE: "bg-status-success-bg text-status-success-text border-status-success-border",
   PATIENT: "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
   SUPER_ADMIN: "bg-status-error-bg text-status-error-text border-status-error-border",
 };
