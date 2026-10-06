@@ -114,7 +114,7 @@ export class PatientService implements OnModuleInit {
     }
   }
 
-  async create(dto: CreatePatientDto): Promise<any> {
+  async create(dto: CreatePatientDto) {
     // Generate unique patient code
     let patientCode: string;
     let exists: boolean;
@@ -140,7 +140,7 @@ export class PatientService implements OnModuleInit {
     requestingUser: Pick<AuthUser, 'role' | 'userId'>,
     search?: string,
     pagination: PaginationQuery = {},
-  ): Promise<any> {
+  ) {
     if (requestingUser.role === UserRole.PATIENT) {
       throw new ForbiddenException('Patients cannot list all patients');
     }
@@ -185,7 +185,7 @@ export class PatientService implements OnModuleInit {
   async findOne(
     id: string,
     requestingUser: Pick<AuthUser, 'role' | 'userId' | 'patientId'>,
-  ): Promise<any> {
+  ) {
     const patient = await this.patientsRepo.findOne({ where: { id } });
     if (!patient) throw new NotFoundException(`Patient ${id} not found`);
 
@@ -204,7 +204,7 @@ export class PatientService implements OnModuleInit {
     id: string,
     dto: UpdatePatientDto,
     requestingUser: Pick<AuthUser, 'role'>,
-  ): Promise<any> {
+  ) {
     if (requestingUser.role === UserRole.PATIENT) {
       throw new ForbiddenException(
         'Patients cannot update records via this endpoint',
@@ -217,7 +217,7 @@ export class PatientService implements OnModuleInit {
     return toFhirPatient(saved);
   }
 
-  async findByCode(code: string, role?: string): Promise<any> {
+  async findByCode(code: string, role?: string) {
     const patient = await this.patientsRepo.findOne({
       where: { patientCode: code },
     });
@@ -226,7 +226,7 @@ export class PatientService implements OnModuleInit {
     return toFhirPatient(patient, role);
   }
 
-  async findMyRecord(userId: string): Promise<any> {
+  async findMyRecord(userId: string) {
     const patient = await this.patientsRepo.findOne({ where: { userId } });
     if (!patient)
       throw new NotFoundException('Patient record not found for this user');
@@ -234,7 +234,7 @@ export class PatientService implements OnModuleInit {
   }
 
   // Allergies
-  async getAllergies(patientId: string): Promise<any[]> {
+  async getAllergies(patientId: string) {
     const allergies = await this.allergiesRepo.find({ where: { patientId } });
     return allergies.map(toFhirAllergy);
   }
@@ -250,7 +250,7 @@ export class PatientService implements OnModuleInit {
     patientId: string,
     dto: CreateAllergyDto,
     practitionerId: string,
-  ): Promise<any> {
+  ) {
     const patient = await this.patientsRepo.findOne({
       where: { id: patientId },
     });
@@ -269,7 +269,7 @@ export class PatientService implements OnModuleInit {
   }
 
   // Conditions
-  async getConditions(patientId: string): Promise<any[]> {
+  async getConditions(patientId: string) {
     const conditions = await this.conditionsRepo.find({ where: { patientId } });
     return conditions.map(toFhirCondition);
   }
@@ -278,7 +278,7 @@ export class PatientService implements OnModuleInit {
     patientId: string,
     dto: CreateConditionDto,
     practitionerId: string,
-  ): Promise<any> {
+  ) {
     const patient = await this.patientsRepo.findOne({
       where: { id: patientId },
     });
@@ -293,7 +293,7 @@ export class PatientService implements OnModuleInit {
   }
 
   // Vitals / Observations
-  async getVitals(patientId: string): Promise<any[]> {
+  async getVitals(patientId: string) {
     const obs = await this.observationsRepo.find({
       where: { patientId, category: 'vital-signs' },
       order: { effectiveDateTime: 'DESC' },
@@ -301,7 +301,7 @@ export class PatientService implements OnModuleInit {
     return obs.map(toFhirObservation);
   }
 
-  async getVitalsTrend(patientId: string, code: string): Promise<any[]> {
+  async getVitalsTrend(patientId: string, code: string) {
     const obs = await this.observationsRepo.find({
       where: { patientId, category: 'vital-signs', code },
       order: { effectiveDateTime: 'ASC' },

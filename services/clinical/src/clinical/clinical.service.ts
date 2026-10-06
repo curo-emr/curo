@@ -246,10 +246,7 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // Encounters
-  async createEncounter(
-    dto: CreateEncounterDto,
-    practitionerId: string,
-  ): Promise<any> {
+  async createEncounter(dto: CreateEncounterDto, practitionerId: string) {
     const encounter = this.encountersRepo.create({
       ...dto,
       practitionerId,
@@ -267,7 +264,7 @@ export class ClinicalService implements OnModuleInit {
     return toFhirEncounter(saved);
   }
 
-  async getPatientEncounters(patientId: string): Promise<any[]> {
+  async getPatientEncounters(patientId: string) {
     const encounters = await this.encountersRepo.find({
       where: { patientId },
       order: { createdAt: 'DESC' },
@@ -276,7 +273,7 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // List encounters, optionally filtered by patient (GET /encounters?patientId=)
-  async getEncounters(patientId?: string): Promise<any[]> {
+  async getEncounters(patientId?: string) {
     const encounters = await this.encountersRepo.find({
       where: patientId ? { patientId } : {},
       order: { createdAt: 'DESC' },
@@ -284,16 +281,13 @@ export class ClinicalService implements OnModuleInit {
     return encounters.map(toFhirEncounter);
   }
 
-  async getEncounter(id: string): Promise<any> {
+  async getEncounter(id: string) {
     const e = await this.encountersRepo.findOne({ where: { id } });
     if (!e) throw new NotFoundException(`Encounter ${id} not found`);
     return toFhirEncounter(e);
   }
 
-  async updateEncounterStatus(
-    id: string,
-    status: EncounterStatus,
-  ): Promise<any> {
+  async updateEncounterStatus(id: string, status: EncounterStatus) {
     const e = await this.encountersRepo.findOne({ where: { id } });
     if (!e) throw new NotFoundException(`Encounter ${id} not found`);
     e.status = status;
@@ -303,16 +297,16 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // Clinical Notes
-  async createNote(dto: CreateNoteDto, practitionerId: string): Promise<any> {
+  async createNote(dto: CreateNoteDto, practitionerId: string) {
     const note = this.notesRepo.create({ ...dto, practitionerId });
     return this.notesRepo.save(note);
   }
 
-  async getEncounterNotes(encounterId: string): Promise<any[]> {
+  async getEncounterNotes(encounterId: string) {
     return this.notesRepo.find({ where: { encounterId } });
   }
 
-  async getPatientNotes(patientId: string): Promise<any[]> {
+  async getPatientNotes(patientId: string) {
     return this.notesRepo.find({
       where: { patientId },
       order: { createdAt: 'DESC' },
@@ -324,7 +318,7 @@ export class ClinicalService implements OnModuleInit {
     dto: CreateVitalsDto,
     practitionerId: string,
     performerRole: string,
-  ): Promise<any> {
+  ) {
     const obs = this.observationsRepo.create({
       ...dto,
       practitionerId,
@@ -339,10 +333,7 @@ export class ClinicalService implements OnModuleInit {
     return toFhirObservation(saved);
   }
 
-  async getVitals(filter: {
-    patientId?: string;
-    appointmentId?: string;
-  }): Promise<any[]> {
+  async getVitals(filter: { patientId?: string; appointmentId?: string }) {
     if (!filter.patientId && !filter.appointmentId) {
       throw new BadRequestException('patientId or appointmentId is required');
     }
@@ -358,7 +349,7 @@ export class ClinicalService implements OnModuleInit {
     return obs.map(toFhirObservation);
   }
 
-  async getVitalsTrend(patientId: string, code: string): Promise<any[]> {
+  async getVitalsTrend(patientId: string, code: string) {
     const obs = await this.observationsRepo.find({
       where: { patientId, code, category: 'vital-signs' },
       order: { effectiveDateTime: 'ASC' },
@@ -371,10 +362,7 @@ export class ClinicalService implements OnModuleInit {
    * this does NOT filter by category, so it also returns lab-sourced values
    * (e.g. glucose, cholesterol) for charting alongside vitals like blood pressure.
    */
-  async getObservationsTrend(
-    patientId: string,
-    codes: string[],
-  ): Promise<any[]> {
+  async getObservationsTrend(patientId: string, codes: string[]) {
     const where: FindOptionsWhere<Observation> = {
       patientId,
       ...(codes.length && { code: In(codes) }),
@@ -387,10 +375,7 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // Prescriptions
-  async createPrescription(
-    dto: CreatePrescriptionDto,
-    practitionerId: string,
-  ): Promise<any> {
+  async createPrescription(dto: CreatePrescriptionDto, practitionerId: string) {
     const med = this.medsRepo.create({
       ...dto,
       practitionerId,
@@ -402,7 +387,7 @@ export class ClinicalService implements OnModuleInit {
     return toFhirMedRequest(saved);
   }
 
-  async getPatientPrescriptions(patientId: string): Promise<any[]> {
+  async getPatientPrescriptions(patientId: string) {
     const meds = await this.medsRepo.find({
       where: { patientId },
       order: { authoredOn: 'DESC' },
@@ -410,7 +395,7 @@ export class ClinicalService implements OnModuleInit {
     return meds.map(toFhirMedRequest);
   }
 
-  async getPrescriptions(patientId?: string): Promise<any[]> {
+  async getPrescriptions(patientId?: string) {
     const where = patientId ? { patientId } : {};
     const meds = await this.medsRepo.find({
       where,
@@ -425,7 +410,7 @@ export class ClinicalService implements OnModuleInit {
     return toFhirMedRequest(med);
   }
 
-  async getPendingPrescriptions(): Promise<any[]> {
+  async getPendingPrescriptions() {
     const meds = await this.medsRepo.find({
       where: { status: MedicationRequestStatus.ACTIVE },
       order: { authoredOn: 'DESC' },
@@ -454,10 +439,7 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // Lab Orders
-  async createLabOrder(
-    dto: CreateLabOrderDto,
-    practitionerId: string,
-  ): Promise<any> {
+  async createLabOrder(dto: CreateLabOrderDto, practitionerId: string) {
     const order = this.labOrdersRepo.create({
       ...dto,
       requesterId: practitionerId,
@@ -531,7 +513,7 @@ export class ClinicalService implements OnModuleInit {
     return out;
   }
 
-  async getLabOrders(patientId?: string): Promise<any[]> {
+  async getLabOrders(patientId?: string) {
     const where = patientId ? { patientId } : {};
     const orders = await this.labOrdersRepo.find({
       where,
@@ -540,7 +522,7 @@ export class ClinicalService implements OnModuleInit {
     return orders.map(toFhirServiceRequest);
   }
 
-  async getLabOrder(id: string): Promise<any> {
+  async getLabOrder(id: string) {
     const order = await this.labOrdersRepo.findOne({ where: { id } });
     if (!order) throw new NotFoundException(`Lab order ${id} not found`);
     const qr = order.qrCodeId

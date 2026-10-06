@@ -33,7 +33,6 @@ export function ScheduleClient({ appointments, patients }: Props) {
       title: patients[a.patientId]?.name.full ?? "Patient",
       subtitle: a.time,
       color: a.status === "cancelled" || a.status === "no_show" ? "gray" : GROUP_COLOR[getQueueGroup(a)],
-      appointment: a,
     })),
     [appointments, patients],
   );

@@ -35,7 +35,7 @@ export class AuditService {
       to?: string;
     },
     pagination: PaginationQuery = {},
-  ): Promise<any> {
+  ) {
     if (requestingUser.role !== UserRole.SUPER_ADMIN) {
       throw new ForbiddenException('Only super admin can view audit logs');
     }
