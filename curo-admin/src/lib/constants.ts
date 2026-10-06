@@ -17,6 +17,7 @@ export const USER_ROLES = [
   "RECEPTIONIST",
   "PHARMACIST",
   "LAB_STAFF",
+  "NURSE",
   "PATIENT",
   "SUPER_ADMIN",
 ] as const;
@@ -29,6 +30,7 @@ export const ROLE_LABELS: Record<string, string> = {
   RECEPTIONIST: "Receptionist",
   PHARMACIST: "Pharmacist",
   LAB_STAFF: "Lab Staff",
+  NURSE: "Nursing Officer",
   PATIENT: "Patient",
   SUPER_ADMIN: "Super Admin",
 };
