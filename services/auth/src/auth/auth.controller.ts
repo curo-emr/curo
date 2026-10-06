@@ -14,9 +14,12 @@ import { RegisterDto } from './dto/register.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
-import { Roles } from './decorators/roles.decorator';
-import { CurrentUser } from './decorators/current-user.decorator';
+import {
+  RolesGuard,
+  Roles,
+  CurrentUser,
+  type AuthUser,
+} from '@curo/shared/auth';
 
 @Controller('auth')
 export class AuthController {
@@ -36,7 +39,7 @@ export class AuthController {
   @Post('staff')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN')
-  createStaff(@Body() dto: CreateStaffDto, @CurrentUser() user: any) {
+  createStaff(@Body() dto: CreateStaffDto, @CurrentUser() user: AuthUser) {
     return this.authService.createStaff(dto, user);
   }
 
@@ -48,7 +51,7 @@ export class AuthController {
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
-  getProfile(@CurrentUser() user: any) {
+  getProfile(@CurrentUser() user: AuthUser) {
     return this.authService.getProfile(user.userId);
   }
 
