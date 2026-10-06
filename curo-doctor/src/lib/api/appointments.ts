@@ -1,14 +1,17 @@
 import { apiClient } from './client';
 import type { Appointment } from '@/types';
 import { mapFhirAppointment, type FhirAppointment } from './mappers';
+import { unwrapBundle, type FhirBundle } from './fhir';
 
 export async function getAppointments(filters?: {
   date?: string;
   practitionerId?: string;
   patientId?: string;
 }): Promise<Appointment[]> {
-  const res = await apiClient.get<FhirAppointment[]>('/appointments', { params: filters });
-  return res.data.map(mapFhirAppointment);
+  const res = await apiClient.get<FhirAppointment[] | FhirBundle<FhirAppointment>>('/appointments', {
+    params: { pageSize: 100, ...filters },
+  });
+  return unwrapBundle(res.data).resources.map(mapFhirAppointment);
 }
 
 export async function getAppointmentsByDate(date: string): Promise<Appointment[]> {

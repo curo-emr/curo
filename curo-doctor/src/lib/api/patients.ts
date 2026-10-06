@@ -1,11 +1,32 @@
 import { apiClient } from './client';
 import type { Patient, Allergy, Problem } from '@/types';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, type FhirPatient, type FhirAllergy, type FhirCondition } from './mappers';
+import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from './fhir';
 
+// Backward-compatible: returns up to 100 patients as a flat array (used by
+// dropdowns / lookups). Unwraps either a bare array or a FHIR searchset Bundle.
 export async function getPatients(search?: string): Promise<Patient[]> {
-  const params = search ? { search } : {};
-  const res = await apiClient.get<FhirPatient[]>('/patients', { params });
-  return res.data.map(mapFhirPatient);
+  const res = await apiClient.get<FhirPatient[] | FhirBundle<FhirPatient>>('/patients', {
+    params: { pageSize: 100, ...(search ? { search } : {}) },
+  });
+  return unwrapBundle(res.data).resources.map(mapFhirPatient);
+}
+
+// Server-driven pagination for the patient table (supports a gender filter).
+export async function getPatientsPaginated(
+  params: PaginationParams & { gender?: string } = {},
+): Promise<PaginatedResult<Patient>> {
+  const { gender, ...rest } = params;
+  const res = await apiClient.get<FhirPatient[] | FhirBundle<FhirPatient>>('/patients', {
+    params: { ...paginationParams(rest), ...(gender ? { gender } : {}) },
+  });
+  const { resources, total } = unwrapBundle(res.data);
+  return {
+    items: resources.map(mapFhirPatient),
+    total,
+    page: params.page ?? 1,
+    pageSize: params.pageSize ?? 25,
+  };
 }
 
 export async function getPatientById(id: string): Promise<Patient | null> {

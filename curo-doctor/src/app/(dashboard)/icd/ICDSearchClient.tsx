@@ -1,28 +1,51 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ICD10 } from "@/types";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
+import { getICD10Paginated } from "@/lib/api/icd";
 
-import { Search, Activity, Hash, Tag } from "lucide-react";
+import { Search, Activity, Hash, Tag, Loader2 } from "lucide-react";
 
-interface Props {
-  catalog: ICD10[];
-}
-
-export function ICDSearchClient({ catalog }: Props) {
+export function ICDSearchClient() {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
-  const results = useMemo(() => {
-    if (!query.trim()) return catalog; // Show all if no query
-    
-    const q = query.toLowerCase();
-    return catalog.filter(item => 
-      item.code.toLowerCase().includes(q) || 
-      item.name.toLowerCase().includes(q) || 
-      item.keywords.some(k => k.toLowerCase().includes(q))
-    );
-  }, [query, catalog]);
+  const [results, setResults] = useState<ICD10[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, pageSize]);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await getICD10Paginated({ page, pageSize, search: debouncedQuery || undefined });
+      setResults(result.items);
+      setTotal(result.total);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load ICD-10 codes.");
+      setResults([]);
+      setTotal(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, pageSize, debouncedQuery]);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="space-y-6">
@@ -30,23 +53,30 @@ export function ICDSearchClient({ catalog }: Props) {
         <label htmlFor="icd-search" className="sr-only">Search ICD-10 Catalog</label>
         <div className="relative">
           <Search className="absolute left-4 top-3.5 h-6 w-6 text-blue-400" />
-          <Input 
-            id="icd-search" 
-            value={query} 
-            onChange={e => setQuery(e.target.value)} 
-            placeholder="Search by diagnosis code, description, or alias..." 
+          <Input
+            id="icd-search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search by diagnosis code, description, or alias..."
             className="pl-14 h-14 text-lg bg-white border-2 border-slate-200 focus-visible:ring-blue-500 rounded-xl shadow-sm"
             autoComplete="off"
             autoFocus
           />
         </div>
         <p className="text-sm text-slate-500 mt-2 ml-2">
-          {results.length} {results.length === 1 ? 'result' : 'results'} found out of {catalog.length} codes.
+          {total} {total === 1 ? 'code' : 'codes'}{debouncedQuery ? ` matching “${debouncedQuery}”` : ''}.
         </p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {results.length === 0 ? (
+        {isLoading ? (
+          <div className="p-12 text-center text-slate-500 flex flex-col items-center">
+            <Loader2 className="h-8 w-8 text-blue-400 mb-3 animate-spin" />
+            <p>Loading…</p>
+          </div>
+        ) : error ? (
+          <div className="p-12 text-center text-red-600">{error}</div>
+        ) : results.length === 0 ? (
           <div className="p-12 text-center text-slate-500 flex flex-col items-center">
             <Activity className="h-12 w-12 text-slate-300 mb-4" />
             <p className="text-lg font-medium text-slate-700">No matching diagnoses found.</p>
@@ -74,12 +104,12 @@ export function ICDSearchClient({ catalog }: Props) {
                   </td>
                   <td className="md:px-6 md:py-4 align-top block lg:table-cell text-slate-500 text-sm">
                     <div className="flex flex-wrap gap-1.5">
-                      {icd.keywords.map((k, idx) => (
+                      {(icd.keywords ?? []).map((k, idx) => (
                         <span key={idx} className="bg-slate-100 px-2 py-0.5 rounded-full text-xs">
                           {k}
                         </span>
                       ))}
-                      {icd.keywords.length === 0 && <span className="text-slate-400 italic">None</span>}
+                      {(icd.keywords ?? []).length === 0 && <span className="text-slate-400 italic">None</span>}
                     </div>
                   </td>
                 </tr>
@@ -88,6 +118,14 @@ export function ICDSearchClient({ catalog }: Props) {
           </table>
         )}
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }
