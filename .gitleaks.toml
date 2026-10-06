@@ -1,0 +1,9 @@
+# Secret scanning config for gitleaks (run by CI over the full git history).
+[extend]
+useDefault = true
+
+# NestJS scaffold READMEs ship a fake CircleCI badge token.
+[[allowlists]]
+description = "NestJS README placeholder token"
+regexTarget = "line"
+regexes = ['''circleci/build/github/nestjs/nest/master\?token=abc123def456''']
