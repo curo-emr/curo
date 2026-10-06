@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -19,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { checkInPatient } from "@/lib/actions/checkin-actions";
 import {
   cn,
   getPatientName,
@@ -87,7 +90,20 @@ function AppointmentCard({
   const initial = name.charAt(0).toUpperCase();
   const borderColor = STATUS_BORDER[apt.status] ?? "border-l-slate-200";
 
-  const checkInUrl = `${ROUTES.QUEUE}?appointmentId=${apt.id}`;
+  const router = useRouter();
+  const [isCheckingIn, startCheckIn] = useTransition();
+
+  // Check-in queues the patient for nurse triage (backend), then shows the queue board.
+  const handleCheckIn = () =>
+    startCheckIn(async () => {
+      const result = await checkInPatient(apt.id);
+      if (!result.success) {
+        toast.error(result.error || "Failed to check in patient");
+        return;
+      }
+      toast.success(`${name} checked in — waiting for nurse triage`);
+      router.push(ROUTES.QUEUE);
+    });
 
   return (
     <div
@@ -138,22 +154,22 @@ function AppointmentCard({
       {/* Row 4 — actions */}
       <div className="flex items-center gap-2 pt-0.5">
         {canCheckIn(apt.status) && (
-          <Link href={checkInUrl} className="flex-1">
-            <Button
-              size="sm"
-              className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-            >
-              Check In
-            </Button>
-          </Link>
+          <Button
+            size="sm"
+            className="flex-1 h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+            onClick={handleCheckIn}
+            disabled={isCheckingIn}
+          >
+            {isCheckingIn ? "Checking in…" : "Check In"}
+          </Button>
         )}
         {apt.status === APPOINTMENT_STATUS.ARRIVED && (
-          <Link href={checkInUrl} className="flex-1">
+          <Link href={ROUTES.QUEUE} className="flex-1">
             <Button
               size="sm"
               className="w-full h-8 text-xs bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
             >
-              Send to Queue
+              View in Queue
             </Button>
           </Link>
         )}

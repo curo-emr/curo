@@ -109,14 +109,3 @@ export function generateMRN(): string {
   return `MRN-${num}`;
 }
 
-/**
- * Returns the left-border color class for a given appointment status.
- */
-export function getStatusBorderClass(status: string): string {
-  switch (status) {
-    case 'waiting': return 'border-l-4 border-l-status-warning-text';
-    case 'in_progress': return 'border-l-4 border-l-primary';
-    case 'completed': return 'border-l-4 border-l-status-success-text';
-    default: return 'border-l-4 border-l-border';
-  }
-}

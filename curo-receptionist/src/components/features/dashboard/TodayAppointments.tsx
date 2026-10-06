@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
 import { checkInPatient, sendToDoctor, completeVisit } from "@/lib/actions/checkin-actions";
 import { getPatientName, getPatientMeta, getDoctorName, formatTime } from "@/lib/utils";
 import { ROUTES, APPOINTMENT_STATUS } from "@/lib/constants";
@@ -30,7 +31,7 @@ export function TodayAppointments({ appointments: initialAppointments, patients,
         setAppointments((prev) =>
           prev.map((a) =>
             a.id === appointmentId
-              ? { ...a, status: "arrived" as const, checkInTime: new Date().toISOString(), checkedInBy: "rec_8001", visitId: result.visitId ?? null }
+              ? { ...a, status: "arrived" as const, queueStage: a.queueStage ?? "waiting_nurse", stageSince: new Date().toISOString() }
               : a
           )
         );
@@ -47,10 +48,12 @@ export function TodayAppointments({ appointments: initialAppointments, patients,
       if (result.success) {
         setAppointments((prev) =>
           prev.map((a) =>
-            a.id === appointmentId ? { ...a, status: "in_progress" as const } : a
+            a.id === appointmentId
+              ? { ...a, status: "arrived" as const, queueStage: "ready_for_doctor" as const, stageSince: new Date().toISOString() }
+              : a
           )
         );
-        toast.success("Patient sent to doctor");
+        toast.success("Patient sent directly to the doctor");
       } else {
         toast.error(result.error || "Failed to send patient to doctor");
       }
@@ -63,7 +66,7 @@ export function TodayAppointments({ appointments: initialAppointments, patients,
       if (result.success) {
         setAppointments((prev) =>
           prev.map((a) =>
-            a.id === appointmentId ? { ...a, status: "completed" as const } : a
+            a.id === appointmentId ? { ...a, status: "completed" as const, queueStage: "done" as const } : a
           )
         );
         toast.success("Visit completed");
@@ -98,10 +101,8 @@ export function TodayAppointments({ appointments: initialAppointments, patients,
               const canCheckIn =
                 apt.status === APPOINTMENT_STATUS.SCHEDULED ||
                 apt.status === APPOINTMENT_STATUS.NOT_ARRIVED;
-              const canSendToDoctor =
-                apt.status === APPOINTMENT_STATUS.ARRIVED ||
-                apt.status === APPOINTMENT_STATUS.WAITING;
-              const canComplete = apt.status === APPOINTMENT_STATUS.IN_PROGRESS;
+              const canSendToDoctor = apt.queueStage === "waiting_nurse";
+              const canComplete = apt.queueStage === "with_doctor";
 
               return (
                 <div
@@ -121,6 +122,7 @@ export function TodayAppointments({ appointments: initialAppointments, patients,
                           {getPatientName(apt.patientId, patients)}
                         </Link>
                         <StatusBadge status={apt.status} />
+                        <QueueStageBadge stage={apt.queueStage} />
                       </div>
                       <div className="text-sm text-muted-foreground mb-1">
                         <span className="font-medium text-muted-foreground">
@@ -158,7 +160,7 @@ export function TodayAppointments({ appointments: initialAppointments, patients,
                         onClick={() => handleSendToDoctor(apt.id)}
                         disabled={isPending}
                       >
-                        Send to Doctor
+                        Skip Nurse
                       </Button>
                     )}
                     {canComplete && (

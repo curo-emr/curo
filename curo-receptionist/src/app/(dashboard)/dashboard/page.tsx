@@ -11,6 +11,7 @@ import { TodayAppointments } from "@/components/features/dashboard/TodayAppointm
 import { QuickActions } from "@/components/features/dashboard/QuickActions";
 import { QueueSummary } from "@/components/features/dashboard/QueueSummary";
 import { getAppointments } from "@/lib/api/appointments";
+import { isAwaitingDoctor } from "@/lib/queue";
 import { getPatients } from "@/lib/api/patients";
 import { getDoctors, type Practitioner } from "@/lib/api/practitioners";
 import type { Appointment, Patient, Doctor } from "@/types";
@@ -60,10 +61,8 @@ export default function DashboardPage() {
   });
 
   const totalCount = todaysSchedule.length;
-  const checkedInCount = todaysSchedule.filter(
-    a => a.status === APPOINTMENT_STATUS.ARRIVED || a.status === APPOINTMENT_STATUS.WAITING
-  ).length;
-  const withDoctorCount = todaysSchedule.filter(a => a.status === APPOINTMENT_STATUS.IN_PROGRESS).length;
+  const checkedInCount = todaysSchedule.filter(isAwaitingDoctor).length;
+  const withDoctorCount = todaysSchedule.filter(a => a.queueStage === "with_doctor").length;
   const completedCount = todaysSchedule.filter(a => a.status === APPOINTMENT_STATUS.COMPLETED).length;
 
   const statCards = [
