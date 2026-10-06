@@ -20,6 +20,7 @@ import {
   RolesGuard,
   Roles,
   CurrentUser,
+  type AuthUser,
 } from '@curo/shared/auth';
 
 @Controller('documents')
@@ -37,7 +38,7 @@ export class DocumentController {
   upload(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreateDocumentDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.documentService.upload(file, dto, user);
   }
@@ -57,7 +58,7 @@ export class DocumentController {
   @Get('me')
   @Roles('PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  listMine(@CurrentUser() user: any) {
+  listMine(@CurrentUser() user: AuthUser) {
     return this.documentService.listForPatient(user.patientId);
   }
 
@@ -66,7 +67,7 @@ export class DocumentController {
   @Roles('PATIENT', 'DOCTOR', 'LAB_STAFF', 'SUPER_ADMIN')
   async content(
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Res() res: Response,
   ) {
     const { doc, stream } = await this.documentService.openContent(id, user);
