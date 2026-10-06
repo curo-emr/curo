@@ -133,7 +133,7 @@ export class LabService {
     const { orderId, testCode, testIndex } = this.parseQrData(dto.qrData);
 
     // Mark the specific per-test QR (or order-level QR) as scanned.
-    let qr: QrCode | null = null;
+    let qr: QrCode | null;
     if (testCode != null) {
       qr = await this.qrRepo.findOne({
         where: { serviceRequestId: orderId, testCode },

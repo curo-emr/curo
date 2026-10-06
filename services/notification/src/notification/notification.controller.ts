@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { JwtAuthGuard, Roles, CurrentUser } from '@curo/shared/auth';
+import { JwtAuthGuard, CurrentUser } from '@curo/shared/auth';
 import { NotificationEventType } from '../enums';
 
 @Controller('notifications')

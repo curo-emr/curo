@@ -65,7 +65,7 @@ export interface SearchsetOptions {
   /** Path used to build self/next/previous links, e.g. '/patients'. */
   baseUrl?: string;
   /** Filter params to preserve in the generated links. */
-  query?: Record<string, unknown>;
+  query?: Record<string, string | number | boolean | null | undefined>;
 }
 
 export function toSearchset<T>(

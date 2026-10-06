@@ -208,6 +208,7 @@ export class ProxyMiddleware implements NestMiddleware {
       return res.status(502).json({ message: 'Proxy not configured' });
     }
 
-    proxy(req, res, next);
+    // Proxy errors are answered by the `on.error` handler above.
+    void proxy(req, res, next);
   }
 }

@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { Repository } from 'typeorm';
 import { MedicationRequest } from '@curo/shared/database';
 import { MedicationRequestStatus } from '@curo/shared/enums';
 import {

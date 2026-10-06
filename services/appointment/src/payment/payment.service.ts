@@ -1,6 +1,5 @@
 import {
   Injectable,
-  BadRequestException,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
@@ -15,12 +14,7 @@ import {
 } from '@curo/shared/fhir';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-
-type AuthUser = {
-  userId: string;
-  role: string;
-  practitionerId?: string | null;
-};
+import type { AuthUser } from '@curo/shared/auth';
 
 const CURRENCY = process.env.CURRENCY || 'LKR';
 

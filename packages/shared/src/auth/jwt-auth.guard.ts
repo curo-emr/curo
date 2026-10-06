@@ -5,12 +5,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { UserRole } from '../enums';
 
 /** The user attached to `request.user` once the access token is verified. */
 export interface AuthUser {
   userId: string;
   email: string;
-  role: string;
+  role: UserRole;
   practitionerId: string | null;
   patientId: string | null;
 }

@@ -7,6 +7,8 @@ import {
   toSearchset,
   PaginationQuery,
 } from '@curo/shared/fhir';
+import type { AuthUser } from '@curo/shared/auth';
+import { UserRole } from '@curo/shared/enums';
 
 @Injectable()
 export class AuditService {
@@ -33,7 +35,7 @@ export class AuditService {
   }
 
   async findAll(
-    requestingUser: { role: string },
+    requestingUser: Pick<AuthUser, 'role'>,
     filters?: {
       userId?: string;
       resourceType?: string;
@@ -43,7 +45,7 @@ export class AuditService {
     },
     pagination: PaginationQuery = {},
   ): Promise<any> {
-    if (requestingUser.role !== 'SUPER_ADMIN') {
+    if (requestingUser.role !== UserRole.SUPER_ADMIN) {
       throw new ForbiddenException('Only super admin can view audit logs');
     }
 

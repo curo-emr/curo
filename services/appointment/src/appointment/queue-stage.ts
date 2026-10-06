@@ -46,12 +46,9 @@ const STAGE_ROLES: Record<QueueStage, UserRole[]> = {
 export function assertQueueTransition(
   current: string | null,
   next: QueueStage,
-  role: string,
+  role: UserRole,
 ): boolean {
-  if (
-    role !== UserRole.SUPER_ADMIN &&
-    !STAGE_ROLES[next].includes(role as UserRole)
-  ) {
+  if (role !== UserRole.SUPER_ADMIN && !STAGE_ROLES[next].includes(role)) {
     throw new ForbiddenException(
       `Role ${role} cannot move a patient to '${next}'`,
     );

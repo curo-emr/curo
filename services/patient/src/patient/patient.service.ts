@@ -2,13 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
-  ConflictException,
   OnModuleInit,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { Repository } from 'typeorm';
 import { Patient, Observation } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import {
@@ -28,6 +26,7 @@ import {
   toFhirCondition,
   toFhirObservation,
 } from './fhir.mapper';
+import type { AuthUser } from '@curo/shared/auth';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -84,7 +83,7 @@ export class PatientService implements OnModuleInit {
 
   private async generateUniquePhn(): Promise<string> {
     let phn: string;
-    let exists = true;
+    let exists: boolean;
     do {
       phn = this.generatePhn();
       exists = !!(await this.patientsRepo.findOne({
@@ -118,7 +117,7 @@ export class PatientService implements OnModuleInit {
   async create(dto: CreatePatientDto): Promise<any> {
     // Generate unique patient code
     let patientCode: string;
-    let exists = true;
+    let exists: boolean;
     do {
       patientCode = this.generatePatientCode();
       exists = !!(await this.patientsRepo.findOne({ where: { patientCode } }));
@@ -138,7 +137,7 @@ export class PatientService implements OnModuleInit {
   }
 
   async findAll(
-    requestingUser: { role: string; userId: string },
+    requestingUser: Pick<AuthUser, 'role' | 'userId'>,
     search?: string,
     pagination: PaginationQuery = {},
   ): Promise<any> {
@@ -185,7 +184,7 @@ export class PatientService implements OnModuleInit {
 
   async findOne(
     id: string,
-    requestingUser: { role: string; userId: string; patientId?: string },
+    requestingUser: Pick<AuthUser, 'role' | 'userId' | 'patientId'>,
   ): Promise<any> {
     const patient = await this.patientsRepo.findOne({ where: { id } });
     if (!patient) throw new NotFoundException(`Patient ${id} not found`);
@@ -204,7 +203,7 @@ export class PatientService implements OnModuleInit {
   async update(
     id: string,
     dto: UpdatePatientDto,
-    requestingUser: { role: string },
+    requestingUser: Pick<AuthUser, 'role'>,
   ): Promise<any> {
     if (requestingUser.role === UserRole.PATIENT) {
       throw new ForbiddenException(

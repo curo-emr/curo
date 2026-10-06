@@ -1,12 +1,10 @@
 import {
-  IsDate,
   IsEmail,
   IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
 import { Gender, MaritalStatus } from '@curo/shared/enums';
 
 export class CreatePatientDto {

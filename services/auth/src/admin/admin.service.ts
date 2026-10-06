@@ -17,8 +17,7 @@ import {
 } from '@curo/shared/fhir';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-
-type AuthUser = { userId: string; role: string };
+import type { AuthUser } from '@curo/shared/auth';
 
 @Injectable()
 export class AdminService {
@@ -110,8 +109,10 @@ export class AdminService {
   private async listWithNames(users: User[]) {
     const pracIds = users
       .map((u) => u.practitionerId)
-      .filter(Boolean) as string[];
-    const patIds = users.map((u) => u.patientId).filter(Boolean) as string[];
+      .filter((id): id is string => !!id);
+    const patIds = users
+      .map((u) => u.patientId)
+      .filter((id): id is string => !!id);
     const pracs = pracIds.length
       ? await this.practitionersRepo.find({ where: { id: In(pracIds) } })
       : [];
@@ -238,7 +239,7 @@ export class AdminService {
       action: 'UPDATE',
       resourceType: 'User',
       resourceId: id,
-      changes: { before, after: dto as Record<string, unknown> },
+      changes: { before, after: dto },
       outcomeDescription: 'Admin updated a user account',
     });
 
