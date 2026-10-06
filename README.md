@@ -36,6 +36,22 @@ cd services/patient && npm run start:dev
 
 `npm run build` and `npm test` at the root run across every backend.
 
+## Branches and CI
+
+Work happens on short-lived branches named by type: `feat/`, `fix/`, `docs/`, `ci/`,
+`chore/`, `refactor/`, `test/` (e.g. `feat/nurse-vitals-history`). Open a PR into `main`.
+Release branches are `dev-release/<x.y.z>`, `qa-release/<x.y.z>` and `stg-release/<x.y.z>`.
+
+[CI](.github/workflows/ci.yml) runs on every PR and on pushes to `main` and release branches:
+
+| Job | Checks | Run it locally |
+|---|---|---|
+| Backends | build `@curo/shared` + every service, unit tests, type-check the seed | `npm ci && npm run build && npm test && npm run typecheck:db` |
+| Portals | `next build` (includes type-check) for each of the 7 portals | `cd apps/<app> && npm ci && npm run build` |
+| Secret scan | gitleaks over the full git history ([allowlist](.gitleaks.toml)) | `docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo` |
+
+Lint is not part of CI yet: the existing code has outstanding ESLint errors to clear first.
+
 ## `@curo/shared`
 
 One package, one entry point per concern, so a service imports only what it needs:
