@@ -15,9 +15,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { Search, ChevronRight, User, Loader2 } from "lucide-react";
-import { Patient, Prescription } from "@/types";
-import { calculateAge, formatDate } from "@/lib/utils";
-import { getPatientsPaginated } from "@/lib/api/patients";
+import { Allergy, Patient, Prescription } from "@/types";
+import { calculateAge, formatAllergies, formatDate } from "@/lib/utils";
+import { getAllergiesByPatient, getPatientsPaginated } from "@/lib/api/patients";
 import Link from "next/link";
 
 interface PatientListProps {
@@ -34,6 +34,8 @@ export function PatientList({ prescriptions }: PatientListProps) {
   const [pageSize, setPageSize] = useState(25);
 
   const [patients, setPatients] = useState<Patient[]>([]);
+  // null when the lookup failed: show "Unavailable", never "None known".
+  const [allergies, setAllergies] = useState<Map<string, Allergy[]> | null>(null);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +56,7 @@ export function PatientList({ prescriptions }: PatientListProps) {
       const result = await getPatientsPaginated({ page, pageSize, search: debouncedQuery || undefined });
       setPatients(result.items);
       setTotal(result.total);
+      setAllergies(await getAllergiesByPatient(result.items.map(p => p.id)).catch(() => null));
     } catch (err) {
       console.error(err);
       setError("Failed to load patients.");
@@ -116,6 +119,7 @@ export function PatientList({ prescriptions }: PatientListProps) {
             ) : patients.length > 0 ? (
               patients.map(patient => {
                 const { count, lastRx } = getPatientRxInfo(patient.id);
+                const patientAllergies = allergies?.get(patient.id);
                 return (
                   <TableRow key={patient.id} className="hover:bg-muted/50 transition-colors group">
                     <TableCell>
@@ -133,8 +137,10 @@ export function PatientList({ prescriptions }: PatientListProps) {
                       {calculateAge(patient.dob)}y / {patient.sex.charAt(0).toUpperCase()}{patient.sex.slice(1)}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {patient.allergies.length > 0 ? (
-                        <span className="text-status-error-text font-medium">{patient.allergies.join(', ')}</span>
+                      {!patientAllergies ? (
+                        <span className="text-muted-foreground">Unavailable</span>
+                      ) : patientAllergies.length > 0 ? (
+                        <span className="text-status-error-text font-medium">{formatAllergies(patientAllergies)}</span>
                       ) : (
                         <span className="text-muted-foreground">None known</span>
                       )}

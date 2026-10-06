@@ -46,7 +46,20 @@ export async function getPatientByCode(code: string): Promise<Patient | null> {
 
 export async function getAllergies(patientId: string): Promise<Allergy[]> {
   const res = await apiClient.get<FhirAllergy[]>(`/patients/${patientId}/allergies`);
-  return res.data.map(a => mapFhirAllergy({ ...a, patient: { reference: `Patient/${patientId}` } }));
+  return res.data.map(mapFhirAllergy);
+}
+
+// Allergies for a page of patients in one request, grouped by patient id.
+export async function getAllergiesByPatient(patientIds: string[]): Promise<Map<string, Allergy[]>> {
+  const byPatient = new Map<string, Allergy[]>(patientIds.map(id => [id, []]));
+  if (patientIds.length === 0) return byPatient;
+  const res = await apiClient.get<FhirAllergy[]>('/patients/allergies', {
+    params: { patientIds: patientIds.join(',') },
+  });
+  for (const allergy of res.data.map(mapFhirAllergy)) {
+    byPatient.get(allergy.patientId)?.push(allergy);
+  }
+  return byPatient;
 }
 
 export async function getConditions(patientId: string): Promise<Problem[]> {
