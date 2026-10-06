@@ -10,7 +10,9 @@ import { jwtSecret } from './jwt-secret';
  */
 @Global()
 @Module({
-  imports: [JwtModule.registerAsync({ useFactory: () => ({ secret: jwtSecret() }) })],
+  imports: [
+    JwtModule.registerAsync({ useFactory: () => ({ secret: jwtSecret() }) }),
+  ],
   providers: [JwtAuthGuard, RolesGuard],
   exports: [JwtModule, JwtAuthGuard, RolesGuard],
 })

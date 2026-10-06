@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { apiClient, apiErrorMessage } from "@/lib/api/client";
 import { mapFhirAppointment, type FhirAppointment } from "@/lib/api/mappers";
 import { bookAppointmentSchema, type BookAppointmentInput } from "@/lib/validations/appointment";
 import type { Appointment } from "@/types";
@@ -33,8 +33,8 @@ export async function bookNewAppointment(data: BookAppointmentInput) {
     const res = await apiClient.post<FhirAppointment>("/appointments", payload);
     const appt = mapFhirAppointment(res.data);
     return { success: true, appointmentId: appt.id };
-  } catch (err: any) {
-    const msg = err?.response?.data?.message ?? "Failed to book appointment";
+  } catch (err) {
+    const msg = apiErrorMessage(err, "Failed to book appointment");
     return { success: false, error: { _form: [msg] } };
   }
 }
@@ -60,8 +60,8 @@ export async function updateAppointmentStatus(
       status: statusMap[newStatus] ?? newStatus,
     });
     return { success: true };
-  } catch (err: any) {
-    const msg = err?.response?.data?.message ?? "Failed to update appointment";
+  } catch (err) {
+    const msg = apiErrorMessage(err, "Failed to update appointment");
     return { success: false, error: msg };
   }
 }

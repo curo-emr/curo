@@ -1,5 +1,11 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsBoolean, IsDateString, IsNumber } from 'class-validator';
-import { AppointmentStatus } from '../../enums';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsDateString,
+  IsNumber,
+} from 'class-validator';
 
 export class CreateAppointmentDto {
   @IsNotEmpty()

@@ -1,6 +1,10 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { MedicationDispenseStatus } from '../enums';
 
@@ -20,7 +24,11 @@ export class MedicationDispense {
   @Column()
   pharmacistId: string; // practitioner dispensing
 
-  @Column({ type: 'enum', enum: MedicationDispenseStatus, default: MedicationDispenseStatus.IN_PROGRESS })
+  @Column({
+    type: 'enum',
+    enum: MedicationDispenseStatus,
+    default: MedicationDispenseStatus.IN_PROGRESS,
+  })
   status: MedicationDispenseStatus;
 
   @Column()

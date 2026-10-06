@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import {
   patientRegistrationSchema,
-  type PatientRegistrationInput,
+  type PatientRegistrationInput, type PatientRegistrationFormValues,
 } from "@/lib/validations/patient";
 import { updatePatientDemographics } from "@/lib/actions/patient-actions";
 import { ROUTES, MARITAL_STATUS } from "@/lib/constants";
@@ -45,9 +45,8 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
     watch,
     control,
     formState: { errors },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } = useForm<PatientRegistrationInput>({
-    resolver: zodResolver(patientRegistrationSchema) as any,
+  } = useForm<PatientRegistrationFormValues, unknown, PatientRegistrationInput>({
+    resolver: zodResolver(patientRegistrationSchema),
     defaultValues: {
       nic: patient.nic,
       firstName: patient.name.first,

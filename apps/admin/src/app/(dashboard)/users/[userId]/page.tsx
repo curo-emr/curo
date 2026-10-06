@@ -17,6 +17,7 @@ import { getAllPayments, correctPayment } from "@/lib/api/payments";
 import { ROUTES, ROLE_LABELS } from "@/lib/constants";
 import { format, parseISO } from "date-fns";
 import type { AdminUser, Payment } from "@/types";
+import { apiErrorMessage } from "@/lib/api/client";
 
 function money(amount: number, currency = "LKR") {
   const f = Number(amount).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -50,8 +51,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ userId: s
       const updated = await updateUser(user.id, { isActive: !user.isActive });
       setUser(updated);
       toast.success(updated.isActive ? "Account activated" : "Account suspended");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to update");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to update"));
     }
   };
 
@@ -138,8 +139,8 @@ function ResetPasswordDialog({ userId }: { userId: string }) {
       toast.success("Password reset");
       setOpen(false);
       setPw("");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to reset password");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to reset password"));
     } finally {
       setBusy(false);
     }
@@ -182,8 +183,8 @@ function EditPaymentDialog({ payment, onSaved }: { payment: Payment; onSaved: (p
       toast.success("Payment corrected");
       onSaved(updated);
       setOpen(false);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to correct payment");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to correct payment"));
     } finally {
       setBusy(false);
     }

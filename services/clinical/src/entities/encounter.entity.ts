@@ -1,6 +1,10 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { EncounterStatus } from '../enums';
 
@@ -20,7 +24,11 @@ export class Encounter {
   @Column({ nullable: true })
   appointmentId: string;
 
-  @Column({ type: 'enum', enum: EncounterStatus, default: EncounterStatus.IN_PROGRESS })
+  @Column({
+    type: 'enum',
+    enum: EncounterStatus,
+    default: EncounterStatus.IN_PROGRESS,
+  })
   status: EncounterStatus;
 
   @Column({ nullable: true })

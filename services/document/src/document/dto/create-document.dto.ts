@@ -18,7 +18,7 @@ export class CreateDocumentDto {
   patientId: string;
 
   @IsString()
-  @IsIn(DOCUMENT_TYPES as unknown as string[])
+  @IsIn(DOCUMENT_TYPES)
   type: string;
 
   @IsOptional()

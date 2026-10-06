@@ -27,7 +27,11 @@ export class NotificationService {
   async getForUser(
     userId: string,
     unreadOnly = false,
-    pagination?: { page?: string | number; pageSize?: string | number; _count?: string | number },
+    pagination?: {
+      page?: string | number;
+      pageSize?: string | number;
+      _count?: string | number;
+    },
   ): Promise<Notification[]> {
     const query = this.notificationsRepo
       .createQueryBuilder('n')
@@ -65,6 +69,8 @@ export class NotificationService {
   }
 
   async getUnreadCount(userId: string): Promise<number> {
-    return this.notificationsRepo.count({ where: { recipientId: userId, isRead: false } });
+    return this.notificationsRepo.count({
+      where: { recipientId: userId, isRead: false },
+    });
   }
 }

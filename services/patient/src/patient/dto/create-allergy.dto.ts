@@ -1,5 +1,8 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { AllergyIntoleranceCriticality, AllergyIntoleranceType } from '../../enums';
+import {
+  AllergyIntoleranceCriticality,
+  AllergyIntoleranceType,
+} from '../../enums';
 
 export class CreateAllergyDto {
   @IsEnum(AllergyIntoleranceType)

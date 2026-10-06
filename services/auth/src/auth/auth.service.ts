@@ -1,5 +1,8 @@
 import {
-  Injectable, UnauthorizedException, ConflictException, ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,7 +14,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UserRole, Gender } from '@curo/shared/enums';
-import { jwtSecret } from '@curo/shared/auth';
+import { jwtSecret, type AuthUser } from '@curo/shared/auth';
 
 @Injectable()
 export class AuthService {
@@ -25,7 +28,8 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.usersRepo.findOne({ where: { email: dto.email } });
-    if (!user || !user.isActive) throw new UnauthorizedException('Invalid credentials');
+    if (!user || !user.isActive)
+      throw new UnauthorizedException('Invalid credentials');
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
@@ -34,7 +38,9 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
-    const existing = await this.usersRepo.findOne({ where: { email: dto.email } });
+    const existing = await this.usersRepo.findOne({
+      where: { email: dto.email },
+    });
     if (existing) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -49,12 +55,19 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
-  async createStaff(dto: CreateStaffDto, requestingUser: { role: string }) {
+  async createStaff(
+    dto: CreateStaffDto,
+    requestingUser: Pick<AuthUser, 'role'>,
+  ) {
     if (requestingUser.role !== UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('Only super admin can create staff accounts');
+      throw new ForbiddenException(
+        'Only super admin can create staff accounts',
+      );
     }
 
-    const existing = await this.usersRepo.findOne({ where: { email: dto.email } });
+    const existing = await this.usersRepo.findOne({
+      where: { email: dto.email },
+    });
     if (existing) throw new ConflictException('Email already registered');
 
     // Create practitioner record
@@ -63,8 +76,8 @@ export class AuthService {
       lastName: dto.lastName,
       email: dto.email,
       phone: dto.phone,
-      gender: (dto.gender as Gender) || Gender.UNKNOWN,
-      role: dto.role as UserRole,
+      gender: dto.gender || Gender.UNKNOWN,
+      role: dto.role,
       specialization: dto.specialization,
       qualification: dto.qualification,
       licenseNumber: dto.licenseNumber,
@@ -75,13 +88,15 @@ export class AuthService {
     const user = this.usersRepo.create({
       email: dto.email,
       passwordHash,
-      role: dto.role as UserRole,
+      role: dto.role,
       practitionerId: savedPractitioner.id,
     });
     const savedUser = await this.usersRepo.save(user);
 
     // Link user back to practitioner
-    await this.practitionersRepo.update(savedPractitioner.id, { userId: savedUser.id });
+    await this.practitionersRepo.update(savedPractitioner.id, {
+      userId: savedUser.id,
+    });
 
     return {
       userId: savedUser.id,
@@ -95,7 +110,9 @@ export class AuthService {
   async refresh(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'curo_refresh_secret_dev_2024_change_in_prod',
+        secret:
+          process.env.JWT_REFRESH_SECRET ||
+          'curo_refresh_secret_dev_2024_change_in_prod',
       });
       const user = await this.usersRepo.findOne({ where: { id: payload.sub } });
       if (!user || !user.isActive) throw new UnauthorizedException();
@@ -113,12 +130,14 @@ export class AuthService {
   }
 
   async getPractitioners(role?: string) {
-    const query = this.practitionersRepo.createQueryBuilder('p').where('p.active = true');
+    const query = this.practitionersRepo
+      .createQueryBuilder('p')
+      .where('p.active = true');
     if (role) {
       query.andWhere('p.role = :role', { role });
     }
     const practitioners = await query.orderBy('p.lastName', 'ASC').getMany();
-    return practitioners.map(p => ({
+    return practitioners.map((p) => ({
       id: p.id,
       name: {
         first: p.firstName,
@@ -135,17 +154,29 @@ export class AuthService {
   }
 
   private issueTokens(user: User) {
-    const payload = { sub: user.id, email: user.email, role: user.role, practitionerId: user.practitionerId ?? null, patientId: user.patientId ?? null };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const accessToken = this.jwtService.sign(payload as any, {
-      secret: jwtSecret(),
-      expiresIn: '900s',
-    } as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const refreshToken = this.jwtService.sign(payload as any, {
-      secret: process.env.JWT_REFRESH_SECRET || 'curo_refresh_secret_dev_2024_change_in_prod',
-      expiresIn: '604800s',
-    } as any);
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      practitionerId: user.practitionerId ?? null,
+      patientId: user.patientId ?? null,
+    };
+    const accessToken = this.jwtService.sign(
+      payload as any,
+      {
+        secret: jwtSecret(),
+        expiresIn: '900s',
+      } as any,
+    );
+    const refreshToken = this.jwtService.sign(
+      payload as any,
+      {
+        secret:
+          process.env.JWT_REFRESH_SECRET ||
+          'curo_refresh_secret_dev_2024_change_in_prod',
+        expiresIn: '604800s',
+      } as any,
+    );
     return {
       accessToken,
       refreshToken,

@@ -696,3 +696,29 @@ Doc 03 A2 (migrations part) and A11 (CI part). Branches: `ci/github-actions` (PR
   `pg_dump --schema-only` live vs fresh differs only in column/enum-value order (columns added
   later by synchronize sit last); existing volume adopted (one `migrations` row), smoke PASS=109;
   negative test (unmigrated entity column) fails `db:check`.
+
+---
+
+## Lint baseline ✅ DONE — 2026-10-06
+
+Branch `chore/lint-baseline`. Lint now runs in CI: errors fail the build, warnings don't.
+
+- **Backends:** one root `eslint.config.mjs` (ESLint 10, typed) and `.prettierrc.json`
+  replace 9 identical per-service copies; it now covers `packages/shared` and `database/`
+  too (`database/migrations` ignored as generated). Root `npm run lint` / `lint:fix`;
+  per-service lint/format scripts and lint devDeps removed.
+- Formatting-only commit `6df32e7` (822 Prettier errors) is in `.git-blame-ignore-revs`.
+- Backend fixes: `AuthUser.role` typed `UserRole` and services use the shared `AuthUser`
+  (3 local copies removed); unused imports and dead seed enums removed; type guards instead
+  of `as string[]`; `void` on the gateway's intentional fire-and-forget promises.
+- `no-unsafe-*` rules are **warnings** (~320 remaining); make them errors service by
+  service as `any` is typed out.
+- **Portals (36 errors → 0):** `AuthContext` uses `useSyncExternalStore` over localStorage
+  in all 7 portals (removes the set-state-in-effect error; cross-tab sign-out);
+  `useClientPagination` hook (pharmacy, receptionist); `apiErrorMessage()` in every portal's
+  API client (15 call sites); typed FHIR DocumentReference/Observation and zod form
+  input/output types instead of `as any`. ~70 portal warnings remain (not gated).
+- Verified: backend build/test/typecheck, all 7 `next build`, smoke PASS=109 on rebuilt
+  images. In the browser: doctor login → dashboard → reload (session restored, profile
+  name enriched) → sign out; pharmacy and receptionist login from a fresh load;
+  receptionist appointments pagination resets to page 1 on filter or page-size change.

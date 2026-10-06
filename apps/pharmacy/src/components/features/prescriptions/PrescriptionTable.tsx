@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
+import { useClientPagination } from "@/hooks/use-client-pagination";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
@@ -61,13 +62,8 @@ export function PrescriptionTable({ prescriptions, patients }: PrescriptionTable
 
   // Client-side pagination over the filtered set (search joins patient names from
   // a separate service, so it can't be pushed server-side).
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-  useEffect(() => { setPage(1); }, [query, statusFilter, pageSize]);
-  const paged = useMemo(
-    () => filtered.slice((page - 1) * pageSize, page * pageSize),
-    [filtered, page, pageSize],
-  );
+  const { page, setPage, pageSize, setPageSize, pageRows: paged } =
+    useClientPagination(filtered, [query, statusFilter]);
 
   return (
     <div className="space-y-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import { getPractitioners } from "@/lib/api/practitioners";
@@ -31,6 +31,43 @@ const TOKEN_KEY = "curo_access_token";
 const REFRESH_KEY = "curo_refresh_token";
 const USER_KEY = "curo_user";
 
+// The session lives in localStorage, which React reads as an external store: the
+// server render and hydration see `undefined` ("loading"), then the stored user.
+// Writes go through `notifySession`; other tabs arrive as `storage` events.
+const sessionListeners = new Set<() => void>();
+
+function subscribeToSession(listener: () => void) {
+  sessionListeners.add(listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    sessionListeners.delete(listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+
+function notifySession() {
+  sessionListeners.forEach((listener) => listener());
+}
+
+let storedRaw: string | null = null;
+let storedUser: AuthUser | null = null;
+
+// Must return the same object until storage changes, so parse only on change.
+function readStoredUser(): AuthUser | null {
+  const raw = localStorage.getItem(TOKEN_KEY) ? localStorage.getItem(USER_KEY) : null;
+  if (raw !== storedRaw) {
+    storedRaw = raw;
+    try {
+      storedUser = raw ? JSON.parse(raw) : null;
+    } catch {
+      storedUser = null;
+    }
+  }
+  return storedUser;
+}
+
+const readServerUser = () => undefined;
+
 // The login payload carries no display name — look the doctor up once and cache it.
 async function withProfile(user: AuthUser): Promise<AuthUser> {
   if (user.name || !user.practitionerId) return user;
@@ -43,32 +80,19 @@ async function withProfile(user: AuthUser): Promise<AuthUser> {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const user = useSyncExternalStore(subscribeToSession, readStoredUser, readServerUser);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  // Sessions stored before the profile lookup existed have no name; fill it in once.
   useEffect(() => {
-    const stored = localStorage.getItem(USER_KEY);
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (stored && token) {
-      try {
-        const restored: AuthUser = JSON.parse(stored);
-        setUser(restored);
-        // Older sessions were cached before the profile lookup existed.
-        if (!restored.name) {
-          withProfile(restored).then(enriched => {
-            localStorage.setItem(USER_KEY, JSON.stringify(enriched));
-            setUser(enriched);
-          });
-        }
-      } catch {
-        localStorage.removeItem(USER_KEY);
-        localStorage.removeItem(TOKEN_KEY);
-      }
-    }
-    setIsLoading(false);
-  }, []);
+    if (!user || user.name) return;
+    void withProfile(user).then((enriched) => {
+      if (enriched === user) return;
+      localStorage.setItem(USER_KEY, JSON.stringify(enriched));
+      notifySession();
+    });
+  }, [user]);
 
   const login = async (email: string, password: string) => {
     setError(null);
@@ -83,20 +107,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(REFRESH_KEY, refreshToken);
     const authUser = await withProfile(res.data.user);
     localStorage.setItem(USER_KEY, JSON.stringify(authUser));
-    setUser(authUser);
+    notifySession();
   };
 
   const logout = () => {
-    setUser(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
     clearAllDrafts();
+    notifySession();
     router.push("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, logout }}>
+    <AuthContext.Provider
+      value={{ user: user ?? null, isLoading: user === undefined, error, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

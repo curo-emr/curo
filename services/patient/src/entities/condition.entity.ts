@@ -1,6 +1,10 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { ConditionClinicalStatus } from '../enums';
 
@@ -19,7 +23,11 @@ export class Condition {
   @Column()
   practitionerId: string;
 
-  @Column({ type: 'enum', enum: ConditionClinicalStatus, default: ConditionClinicalStatus.ACTIVE })
+  @Column({
+    type: 'enum',
+    enum: ConditionClinicalStatus,
+    default: ConditionClinicalStatus.ACTIVE,
+  })
   clinicalStatus: ConditionClinicalStatus;
 
   @Column({ nullable: true })

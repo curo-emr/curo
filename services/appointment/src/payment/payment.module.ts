@@ -6,9 +6,7 @@ import { Payment } from '../entities/payment.entity';
 import { AuditLog } from '@curo/shared/database';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Payment, AuditLog]),
-  ],
+  imports: [TypeOrmModule.forFeature([Payment, AuditLog])],
   controllers: [PaymentController],
   providers: [PaymentService],
 })

@@ -1,8 +1,15 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
-import { AllergyIntoleranceCriticality, AllergyIntoleranceType } from '../enums';
+import {
+  AllergyIntoleranceCriticality,
+  AllergyIntoleranceType,
+} from '../enums';
 
 @Entity('allergy_intolerances')
 export class AllergyIntolerance {
@@ -16,10 +23,18 @@ export class AllergyIntolerance {
   @Column()
   practitionerId: string;
 
-  @Column({ type: 'enum', enum: AllergyIntoleranceType, default: AllergyIntoleranceType.ALLERGY })
+  @Column({
+    type: 'enum',
+    enum: AllergyIntoleranceType,
+    default: AllergyIntoleranceType.ALLERGY,
+  })
   type: AllergyIntoleranceType;
 
-  @Column({ type: 'enum', enum: AllergyIntoleranceCriticality, default: AllergyIntoleranceCriticality.LOW })
+  @Column({
+    type: 'enum',
+    enum: AllergyIntoleranceCriticality,
+    default: AllergyIntoleranceCriticality.LOW,
+  })
   criticality: AllergyIntoleranceCriticality;
 
   @Column()

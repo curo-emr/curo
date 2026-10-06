@@ -1,22 +1,35 @@
 import {
-  Injectable, NotFoundException, ForbiddenException, ConflictException,
-  OnModuleInit, Logger,
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  OnModuleInit,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { Repository } from 'typeorm';
 import { Patient, Observation } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
-import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
+import {
+  parsePagination,
+  toSearchset,
+  PaginationQuery,
+} from '@curo/shared/fhir';
 import { AllergyIntolerance } from '../entities/allergy-intolerance.entity';
 import { Condition } from '../entities/condition.entity';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { CreateAllergyDto } from './dto/create-allergy.dto';
 import { CreateConditionDto } from './dto/create-condition.dto';
-import { toFhirPatient, toFhirAllergy, toFhirCondition, toFhirObservation } from './fhir.mapper';
+import {
+  toFhirPatient,
+  toFhirAllergy,
+  toFhirCondition,
+  toFhirObservation,
+} from './fhir.mapper';
+import type { AuthUser } from '@curo/shared/auth';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class PatientService implements OnModuleInit {
@@ -62,17 +75,20 @@ export class PatientService implements OnModuleInit {
   private generatePhn(): string {
     const year = new Date().getFullYear().toString();
     let seq = '';
-    for (let i = 0; i < 7; i++) seq += Math.floor(Math.random() * 10).toString();
+    for (let i = 0; i < 7; i++)
+      seq += Math.floor(Math.random() * 10).toString();
     const payload = year + seq; // 11 digits
     return payload + this.luhnCheckDigit(payload).toString();
   }
 
   private async generateUniquePhn(): Promise<string> {
     let phn: string;
-    let exists = true;
+    let exists: boolean;
     do {
       phn = this.generatePhn();
-      exists = !!(await this.patientsRepo.findOne({ where: { personalHealthNumber: phn } }));
+      exists = !!(await this.patientsRepo.findOne({
+        where: { personalHealthNumber: phn },
+      }));
     } while (exists);
     return phn;
   }
@@ -89,7 +105,9 @@ export class PatientService implements OnModuleInit {
         p.personalHealthNumber = await this.generateUniquePhn();
         await this.patientsRepo.save(p);
       }
-      this.logger.log(`Backfilled PHN for ${missing.length} existing patient(s)`);
+      this.logger.log(
+        `Backfilled PHN for ${missing.length} existing patient(s)`,
+      );
     } catch (err) {
       // Table may not exist yet if migrations haven't run (npm run db:migrate).
       this.logger.warn(`PHN backfill skipped: ${(err as Error).message}`);
@@ -99,22 +117,27 @@ export class PatientService implements OnModuleInit {
   async create(dto: CreatePatientDto): Promise<any> {
     // Generate unique patient code
     let patientCode: string;
-    let exists = true;
+    let exists: boolean;
     do {
       patientCode = this.generatePatientCode();
       exists = !!(await this.patientsRepo.findOne({ where: { patientCode } }));
     } while (exists);
 
     // Generate the Personal Health Number unless one was explicitly supplied.
-    const personalHealthNumber = dto.personalHealthNumber || (await this.generateUniquePhn());
+    const personalHealthNumber =
+      dto.personalHealthNumber || (await this.generateUniquePhn());
 
-    const patient = this.patientsRepo.create({ ...dto, patientCode, personalHealthNumber });
+    const patient = this.patientsRepo.create({
+      ...dto,
+      patientCode,
+      personalHealthNumber,
+    });
     const saved = await this.patientsRepo.save(patient);
     return toFhirPatient(saved);
   }
 
   async findAll(
-    requestingUser: { role: string; userId: string },
+    requestingUser: Pick<AuthUser, 'role' | 'userId'>,
     search?: string,
     pagination: PaginationQuery = {},
   ): Promise<any> {
@@ -123,7 +146,9 @@ export class PatientService implements OnModuleInit {
     }
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const { gender, _id } = pagination as { gender?: string; _id?: string };
-    const query = this.patientsRepo.createQueryBuilder('p').where('p.active = true');
+    const query = this.patientsRepo
+      .createQueryBuilder('p')
+      .where('p.active = true');
     if (search) {
       query.andWhere(
         '(p.firstName ILIKE :s OR p.lastName ILIKE :s OR p.patientCode ILIKE :s OR p.personalHealthNumber ILIKE :s OR p.nic ILIKE :s OR p.phone ILIKE :s)',
@@ -135,7 +160,10 @@ export class PatientService implements OnModuleInit {
     }
     // FHIR `_id` search: comma-separated ids — lets list screens resolve just the patients they show.
     if (_id) {
-      const ids = _id.split(',').map((id) => id.trim()).filter((id) => UUID_RE.test(id));
+      const ids = _id
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => UUID_RE.test(id));
       query.andWhere(ids.length ? 'p.id IN (:...ids)' : '1 = 0', { ids });
     }
     const [patients, total] = await query
@@ -143,7 +171,9 @@ export class PatientService implements OnModuleInit {
       .skip(skip)
       .take(take)
       .getManyAndCount();
-    const resources = patients.map((p) => toFhirPatient(p, requestingUser.role));
+    const resources = patients.map((p) =>
+      toFhirPatient(p, requestingUser.role),
+    );
     return toSearchset(resources, total, {
       page,
       pageSize,
@@ -152,12 +182,17 @@ export class PatientService implements OnModuleInit {
     });
   }
 
-  async findOne(id: string, requestingUser: { role: string; userId: string; patientId?: string }): Promise<any> {
+  async findOne(
+    id: string,
+    requestingUser: Pick<AuthUser, 'role' | 'userId' | 'patientId'>,
+  ): Promise<any> {
     const patient = await this.patientsRepo.findOne({ where: { id } });
     if (!patient) throw new NotFoundException(`Patient ${id} not found`);
 
     if (requestingUser.role === UserRole.PATIENT) {
-      const userPatient = await this.patientsRepo.findOne({ where: { userId: requestingUser.userId } });
+      const userPatient = await this.patientsRepo.findOne({
+        where: { userId: requestingUser.userId },
+      });
       if (!userPatient || userPatient.id !== id) {
         throw new ForbiddenException('Patients can only view their own record');
       }
@@ -165,9 +200,15 @@ export class PatientService implements OnModuleInit {
     return toFhirPatient(patient, requestingUser.role);
   }
 
-  async update(id: string, dto: UpdatePatientDto, requestingUser: { role: string }): Promise<any> {
+  async update(
+    id: string,
+    dto: UpdatePatientDto,
+    requestingUser: Pick<AuthUser, 'role'>,
+  ): Promise<any> {
     if (requestingUser.role === UserRole.PATIENT) {
-      throw new ForbiddenException('Patients cannot update records via this endpoint');
+      throw new ForbiddenException(
+        'Patients cannot update records via this endpoint',
+      );
     }
     const patient = await this.patientsRepo.findOne({ where: { id } });
     if (!patient) throw new NotFoundException(`Patient ${id} not found`);
@@ -177,14 +218,18 @@ export class PatientService implements OnModuleInit {
   }
 
   async findByCode(code: string, role?: string): Promise<any> {
-    const patient = await this.patientsRepo.findOne({ where: { patientCode: code } });
-    if (!patient) throw new NotFoundException(`Patient with code ${code} not found`);
+    const patient = await this.patientsRepo.findOne({
+      where: { patientCode: code },
+    });
+    if (!patient)
+      throw new NotFoundException(`Patient with code ${code} not found`);
     return toFhirPatient(patient, role);
   }
 
   async findMyRecord(userId: string): Promise<any> {
     const patient = await this.patientsRepo.findOne({ where: { userId } });
-    if (!patient) throw new NotFoundException('Patient record not found for this user');
+    if (!patient)
+      throw new NotFoundException('Patient record not found for this user');
     return toFhirPatient(patient);
   }
 
@@ -194,10 +239,20 @@ export class PatientService implements OnModuleInit {
     return allergies.map(toFhirAllergy);
   }
 
-  async addAllergy(patientId: string, dto: CreateAllergyDto, practitionerId: string): Promise<any> {
-    const patient = await this.patientsRepo.findOne({ where: { id: patientId } });
+  async addAllergy(
+    patientId: string,
+    dto: CreateAllergyDto,
+    practitionerId: string,
+  ): Promise<any> {
+    const patient = await this.patientsRepo.findOne({
+      where: { id: patientId },
+    });
     if (!patient) throw new NotFoundException(`Patient ${patientId} not found`);
-    const allergy = this.allergiesRepo.create({ ...dto, patientId, practitionerId });
+    const allergy = this.allergiesRepo.create({
+      ...dto,
+      patientId,
+      practitionerId,
+    });
     const saved = await this.allergiesRepo.save(allergy);
     return toFhirAllergy(saved);
   }
@@ -212,10 +267,20 @@ export class PatientService implements OnModuleInit {
     return conditions.map(toFhirCondition);
   }
 
-  async addCondition(patientId: string, dto: CreateConditionDto, practitionerId: string): Promise<any> {
-    const patient = await this.patientsRepo.findOne({ where: { id: patientId } });
+  async addCondition(
+    patientId: string,
+    dto: CreateConditionDto,
+    practitionerId: string,
+  ): Promise<any> {
+    const patient = await this.patientsRepo.findOne({
+      where: { id: patientId },
+    });
     if (!patient) throw new NotFoundException(`Patient ${patientId} not found`);
-    const condition = this.conditionsRepo.create({ ...dto, patientId, practitionerId });
+    const condition = this.conditionsRepo.create({
+      ...dto,
+      patientId,
+      practitionerId,
+    });
     const saved = await this.conditionsRepo.save(condition);
     return toFhirCondition(saved);
   }

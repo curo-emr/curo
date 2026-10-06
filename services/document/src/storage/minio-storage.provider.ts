@@ -29,7 +29,9 @@ export class MinioStorageProvider implements StorageProvider, OnModuleInit {
     // Best-effort: if MinIO isn't up yet at boot, ensureBucket() retries lazily
     // on the first upload, so startup is decoupled from MinIO readiness.
     await this.ensureBucket().catch((err) =>
-      this.logger.warn(`MinIO not ready at boot (will retry on first use): ${(err as Error).message}`),
+      this.logger.warn(
+        `MinIO not ready at boot (will retry on first use): ${(err as Error).message}`,
+      ),
     );
   }
 

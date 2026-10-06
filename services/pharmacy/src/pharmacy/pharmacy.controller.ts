@@ -1,10 +1,23 @@
 import {
-  Controller, Get, Post, Put, Body, Param, Query, UseGuards, Header,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Header,
 } from '@nestjs/common';
 import { PharmacyService } from './pharmacy.service';
 import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
-import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
+import {
+  JwtAuthGuard,
+  RolesGuard,
+  Roles,
+  CurrentUser,
+} from '@curo/shared/auth';
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -36,7 +49,10 @@ export class PharmacyController {
   @Get('dispense')
   @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  getDispenseHistory(@Query('patientId') patientId?: string, @Query() query?: any) {
+  getDispenseHistory(
+    @Query('patientId') patientId?: string,
+    @Query() query?: any,
+  ) {
     return this.pharmacyService.getDispenseHistory(patientId, query);
   }
 
@@ -50,8 +66,16 @@ export class PharmacyController {
   @Get('stock')
   @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  getStock(@Query('lowOnly') lowOnly?: string, @Query('organizationId') organizationId?: string, @Query() query?: any) {
-    return this.pharmacyService.getStock(lowOnly === 'true', organizationId, query);
+  getStock(
+    @Query('lowOnly') lowOnly?: string,
+    @Query('organizationId') organizationId?: string,
+    @Query() query?: any,
+  ) {
+    return this.pharmacyService.getStock(
+      lowOnly === 'true',
+      organizationId,
+      query,
+    );
   }
 
   // Stock grouped by drug, with batches (different expiry dates) listed FEFO-first.

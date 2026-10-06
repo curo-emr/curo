@@ -8,9 +8,7 @@ import { STORAGE_PROVIDER } from '../storage/storage.provider';
 import { MinioStorageProvider } from '../storage/minio-storage.provider';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([DocumentReference, AuditLog]),
-  ],
+  imports: [TypeOrmModule.forFeature([DocumentReference, AuditLog])],
   controllers: [DocumentController],
   providers: [
     DocumentService,

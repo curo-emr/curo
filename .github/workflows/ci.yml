@@ -38,6 +38,8 @@ jobs:
       - run: npm ci
       # Workspaces run in declaration order, so @curo/shared builds before the services.
       - run: npm run build
+      # Errors fail the build; warnings (the no-unsafe-* backlog) are reported only.
+      - run: npm run lint
       - run: npm test
       - run: npm run typecheck:db
       # Against an empty database: migrations apply, entities match them, and the seed runs.
@@ -67,6 +69,7 @@ jobs:
           cache: npm
           cache-dependency-path: apps/${{ matrix.app }}/package-lock.json
       - run: npm ci
+      - run: npm run lint
       # next build also type-checks the app.
       - run: npm run build
 

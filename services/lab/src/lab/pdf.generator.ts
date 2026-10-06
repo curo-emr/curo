@@ -32,24 +32,39 @@ export async function generateLabReportPdf(data: ReportData): Promise<string> {
     doc.on('error', reject);
 
     // Header
-    doc.fontSize(20).font('Helvetica-Bold').text(data.clinicName, { align: 'center' });
-    doc.fontSize(14).font('Helvetica').text('Laboratory Report', { align: 'center' });
+    doc
+      .fontSize(20)
+      .font('Helvetica-Bold')
+      .text(data.clinicName, { align: 'center' });
+    doc
+      .fontSize(14)
+      .font('Helvetica')
+      .text('Laboratory Report', { align: 'center' });
     doc.moveDown();
     doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
     doc.moveDown(0.5);
 
     // Patient info
-    doc.fontSize(11).font('Helvetica-Bold').text('Patient Information', { underline: true });
+    doc
+      .fontSize(11)
+      .font('Helvetica-Bold')
+      .text('Patient Information', { underline: true });
     doc.moveDown(0.3);
-    doc.font('Helvetica')
+    doc
+      .font('Helvetica')
       .text(`Name: ${data.patientName}`, { continued: true })
       .text(`   Code: ${data.patientCode}`, { align: 'right' });
-    doc.text(`Date of Birth: ${data.birthDate}`, { continued: true })
+    doc
+      .text(`Date of Birth: ${data.birthDate}`, { continued: true })
       .text(`   Report Date: ${data.reportDate}`, { align: 'right' });
     doc.moveDown();
 
     // Test name
-    doc.font('Helvetica-Bold').text('Test: ', { continued: true }).font('Helvetica').text(data.testName);
+    doc
+      .font('Helvetica-Bold')
+      .text('Test: ', { continued: true })
+      .font('Helvetica')
+      .text(data.testName);
     doc.moveDown();
 
     // Results table header
@@ -57,7 +72,11 @@ export async function generateLabReportPdf(data: ReportData): Promise<string> {
     doc.moveDown(0.3);
 
     const tableTop = doc.y;
-    const col1 = 50, col2 = 200, col3 = 280, col4 = 360, col5 = 440;
+    const col1 = 50,
+      col2 = 200,
+      col3 = 280,
+      col4 = 360,
+      col5 = 440;
     const rowHeight = 20;
 
     doc.font('Helvetica-Bold').fontSize(10);
@@ -66,15 +85,21 @@ export async function generateLabReportPdf(data: ReportData): Promise<string> {
     doc.text('Unit', col3, tableTop);
     doc.text('Ref Range', col4, tableTop);
     doc.text('Flag', col5, tableTop);
-    doc.moveTo(50, tableTop + rowHeight - 2).lineTo(550, tableTop + rowHeight - 2).stroke();
+    doc
+      .moveTo(50, tableTop + rowHeight - 2)
+      .lineTo(550, tableTop + rowHeight - 2)
+      .stroke();
 
     doc.font('Helvetica').fontSize(10);
     let y = tableTop + rowHeight;
 
     for (const r of data.results) {
-      const resultText = r.value != null ? `${r.value}` : (r.valueString || '--');
-      const refRange = r.referenceRangeText ||
-        (r.referenceRangeLow && r.referenceRangeHigh ? `${r.referenceRangeLow} - ${r.referenceRangeHigh}` : '--');
+      const resultText = r.value != null ? `${r.value}` : r.valueString || '--';
+      const refRange =
+        r.referenceRangeText ||
+        (r.referenceRangeLow && r.referenceRangeHigh
+          ? `${r.referenceRangeLow} - ${r.referenceRangeHigh}`
+          : '--');
       const flag = r.interpretation || '';
 
       if (flag === 'H' || flag === 'HH') {
@@ -106,8 +131,15 @@ export async function generateLabReportPdf(data: ReportData): Promise<string> {
     // Footer
     doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
     doc.moveDown(0.5);
-    doc.fontSize(10).text(`Reported by: ${data.labStaffName}`, { align: 'right' });
-    doc.fillColor('grey').text(`This report is generated electronically and is valid without signature.`, { align: 'center' });
+    doc
+      .fontSize(10)
+      .text(`Reported by: ${data.labStaffName}`, { align: 'right' });
+    doc
+      .fillColor('grey')
+      .text(
+        `This report is generated electronically and is valid without signature.`,
+        { align: 'center' },
+      );
     doc.fillColor('black');
 
     doc.end();

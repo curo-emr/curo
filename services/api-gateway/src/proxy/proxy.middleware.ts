@@ -9,7 +9,8 @@ const SERVICE_MAP: Record<string, string> = {
   '/auth': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
   '/organizations': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
   '/patients': process.env.PATIENT_SERVICE_URL || 'http://localhost:3002',
-  '/appointments': process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
+  '/appointments':
+    process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
   '/payments': process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
   '/encounters': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
   '/notes': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
@@ -20,7 +21,8 @@ const SERVICE_MAP: Record<string, string> = {
   '/icd10': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
   '/dispense': process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
   '/stock': process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
-  '/medication-catalog': process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
+  '/medication-catalog':
+    process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
   '/orders': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/catalog': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/results': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
@@ -29,31 +31,47 @@ const SERVICE_MAP: Record<string, string> = {
   '/qc-logs': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/lab-staff': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
   '/documents': process.env.DOCUMENT_SERVICE_URL || 'http://localhost:3009',
-  '/notifications': process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3007',
+  '/notifications':
+    process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3007',
   '/audit': process.env.AUDIT_SERVICE_URL || 'http://localhost:3008',
 };
 
-const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/health'];
+const PUBLIC_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/health',
+];
 
 // Pre-create one proxy per unique target URL
 const proxies = new Map<string, RequestHandler>();
 for (const target of new Set(Object.values(SERVICE_MAP))) {
-  proxies.set(target, createProxyMiddleware({
+  proxies.set(
     target,
-    changeOrigin: true,
-    on: {
-      error: (err: Error, _req: Request, res: any) => {
-        if (!res.headersSent) {
-          res.status(502).json({ message: 'Service temporarily unavailable', error: err.message });
-        }
+    createProxyMiddleware({
+      target,
+      changeOrigin: true,
+      on: {
+        error: (err: Error, _req: Request, res: any) => {
+          if (!res.headersSent) {
+            res.status(502).json({
+              message: 'Service temporarily unavailable',
+              error: err.message,
+            });
+          }
+        },
       },
-    },
-  }) as RequestHandler);
+    }) as RequestHandler,
+  );
 }
 
 function getTarget(path: string): string | null {
   for (const [prefix, target] of Object.entries(SERVICE_MAP)) {
-    if (path === prefix || path.startsWith(prefix + '/') || path.startsWith(prefix + '?')) {
+    if (
+      path === prefix ||
+      path.startsWith(prefix + '/') ||
+      path.startsWith(prefix + '?')
+    ) {
       return target;
     }
   }
@@ -67,7 +85,8 @@ function getTarget(path: string): string | null {
 // serve it at GET /openapi.json. GET /docs renders it with Scalar. Both routes
 // are handled here in the middleware so they are never proxied and need no auth.
 const SPEC_BASES = Array.from(new Set(Object.values(SERVICE_MAP)));
-const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL || 'http://localhost:3000';
+const GATEWAY_PUBLIC_URL =
+  process.env.GATEWAY_PUBLIC_URL || 'http://localhost:3000';
 
 let mergedSpecCache: any = null;
 async function buildMergedSpec(): Promise<any> {
@@ -87,7 +106,9 @@ async function buildMergedSpec(): Promise<any> {
     paths: {} as Record<string, any>,
     components: {
       schemas: {} as Record<string, any>,
-      securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
+      securitySchemes: {
+        bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      },
     },
     security: [{ bearerAuth: [] }],
   };
@@ -95,15 +116,23 @@ async function buildMergedSpec(): Promise<any> {
   await Promise.all(
     SPEC_BASES.map(async (base) => {
       try {
-        const { data } = await axios.get(`${base}/api-docs-json`, { timeout: 5000 });
+        const { data } = await axios.get(`${base}/api-docs-json`, {
+          timeout: 5000,
+        });
         for (const [p, item] of Object.entries(data.paths || {})) {
           // First service to declare a path wins (clinical precedes pharmacy in
           // SERVICE_MAP, so the reachable /prescriptions handler is kept).
           if (!merged.paths[p]) merged.paths[p] = item;
         }
-        Object.assign(merged.components.schemas, data.components?.schemas || {});
+        Object.assign(
+          merged.components.schemas,
+          data.components?.schemas || {},
+        );
         for (const t of data.tags || []) {
-          if (!seenTags.has(t.name)) { seenTags.add(t.name); merged.tags.push(t); }
+          if (!seenTags.has(t.name)) {
+            seenTags.add(t.name);
+            merged.tags.push(t);
+          }
         }
       } catch {
         // service unreachable / no spec — leave the merged doc partial
@@ -137,7 +166,9 @@ export class ProxyMiddleware implements NestMiddleware {
       if (req.query.refresh) mergedSpecCache = null;
       buildMergedSpec()
         .then((spec) => res.json(spec))
-        .catch(() => res.status(502).json({ message: 'Failed to build aggregated spec' }));
+        .catch(() =>
+          res.status(502).json({ message: 'Failed to build aggregated spec' }),
+        );
       return;
     }
     if (path === '/docs' || path === '/docs/') {
@@ -145,12 +176,14 @@ export class ProxyMiddleware implements NestMiddleware {
       return res.send(SCALAR_HTML);
     }
 
-    const isPublic = PUBLIC_PATHS.some(p => path.startsWith(p));
+    const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
 
     if (!isPublic) {
       const authHeader = req.headers.authorization;
       if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Unauthorized: No token provided' });
+        return res
+          .status(401)
+          .json({ message: 'Unauthorized: No token provided' });
       }
       try {
         const token = authHeader.split(' ')[1];
@@ -165,7 +198,9 @@ export class ProxyMiddleware implements NestMiddleware {
 
     const target = getTarget(path);
     if (!target) {
-      return res.status(404).json({ message: `No service found for path ${path}` });
+      return res
+        .status(404)
+        .json({ message: `No service found for path ${path}` });
     }
 
     const proxy = proxies.get(target);
@@ -173,6 +208,7 @@ export class ProxyMiddleware implements NestMiddleware {
       return res.status(502).json({ message: 'Proxy not configured' });
     }
 
-    proxy(req, res, next);
+    // Proxy errors are answered by the `on.error` handler above.
+    void proxy(req, res, next);
   }
 }
