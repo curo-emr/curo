@@ -5,18 +5,29 @@ import {
   type FhirMedicationDispense,
   type FhirMedicationRequest,
 } from './mappers';
+import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from './fhir';
 import type { Prescription } from '@/types';
 
 // ─── Prescriptions ───────────────────────────────────────────────────────────
 
 export async function getPendingPrescriptions(): Promise<Prescription[]> {
-  const res = await apiClient.get<FhirMedicationRequest[]>('/prescriptions/pending');
-  return res.data.map(mapFhirMedicationRequest);
+  const res = await apiClient.get<FhirMedicationRequest[] | FhirBundle<FhirMedicationRequest>>('/prescriptions/pending', {
+    params: { pageSize: 100 },
+  });
+  return unwrapBundle(res.data).resources.map(mapFhirMedicationRequest);
+}
+
+export async function getPendingPrescriptionsPaginated(params: PaginationParams = {}): Promise<PaginatedResult<Prescription>> {
+  const res = await apiClient.get<FhirMedicationRequest[] | FhirBundle<FhirMedicationRequest>>('/prescriptions/pending', {
+    params: paginationParams(params),
+  });
+  const { resources, total } = unwrapBundle(res.data);
+  return { items: resources.map(mapFhirMedicationRequest), total, page: params.page ?? 1, pageSize: params.pageSize ?? 25 };
 }
 
 export async function getPrescriptionsByPatient(patientId: string): Promise<Prescription[]> {
-  const res = await apiClient.get<FhirMedicationRequest[]>('/prescriptions', { params: { patientId } });
-  return res.data.map(mapFhirMedicationRequest);
+  const res = await apiClient.get<FhirMedicationRequest[] | FhirBundle<FhirMedicationRequest>>('/prescriptions', { params: { patientId } });
+  return unwrapBundle(res.data).resources.map(mapFhirMedicationRequest);
 }
 
 // ─── Dispense ────────────────────────────────────────────────────────────────
@@ -42,19 +53,27 @@ export async function dispense(prescriptionId: string): Promise<DispenseRecord> 
   return mapFhirMedicationDispense(res.data);
 }
 
+type DispenseApi = FhirMedicationDispense | DispenseRecord;
+
 export async function getDispensingRecords(): Promise<DispenseRecord[]> {
-  const res = await apiClient.get<Array<FhirMedicationDispense | DispenseRecord>>('/dispense');
-  return res.data.map(mapFhirMedicationDispense);
+  const res = await apiClient.get<DispenseApi[] | FhirBundle<DispenseApi>>('/dispense', { params: { pageSize: 100 } });
+  return unwrapBundle(res.data).resources.map(mapFhirMedicationDispense);
+}
+
+export async function getDispensingRecordsPaginated(params: PaginationParams = {}): Promise<PaginatedResult<DispenseRecord>> {
+  const res = await apiClient.get<DispenseApi[] | FhirBundle<DispenseApi>>('/dispense', { params: paginationParams(params) });
+  const { resources, total } = unwrapBundle(res.data);
+  return { items: resources.map(mapFhirMedicationDispense), total, page: params.page ?? 1, pageSize: params.pageSize ?? 25 };
 }
 
 export async function getDispensingRecordsByPatient(patientId: string): Promise<DispenseRecord[]> {
-  const res = await apiClient.get<Array<FhirMedicationDispense | DispenseRecord>>('/dispense', { params: { patientId } });
-  return res.data.map(mapFhirMedicationDispense);
+  const res = await apiClient.get<DispenseApi[] | FhirBundle<DispenseApi>>('/dispense', { params: { patientId, pageSize: 100 } });
+  return unwrapBundle(res.data).resources.map(mapFhirMedicationDispense);
 }
 
 export async function getDispensingRecordsByPrescription(prescriptionId: string): Promise<DispenseRecord[]> {
-  const res = await apiClient.get<Array<FhirMedicationDispense | DispenseRecord>>('/dispense', { params: { prescriptionId } });
-  return res.data
+  const res = await apiClient.get<DispenseApi[] | FhirBundle<DispenseApi>>('/dispense', { params: { prescriptionId, pageSize: 100 } });
+  return unwrapBundle(res.data).resources
     .map(mapFhirMedicationDispense)
     .filter(record => record.prescriptionId === prescriptionId);
 }
@@ -79,8 +98,14 @@ export interface StockItem {
 }
 
 export async function getStock(): Promise<StockItem[]> {
-  const res = await apiClient.get<StockItem[]>('/stock');
-  return res.data;
+  const res = await apiClient.get<StockItem[] | FhirBundle<StockItem>>('/stock', { params: { pageSize: 100 } });
+  return unwrapBundle(res.data).resources;
+}
+
+export async function getStockPaginated(params: PaginationParams = {}): Promise<PaginatedResult<StockItem>> {
+  const res = await apiClient.get<StockItem[] | FhirBundle<StockItem>>('/stock', { params: paginationParams(params) });
+  const { resources, total } = unwrapBundle(res.data);
+  return { items: resources, total, page: params.page ?? 1, pageSize: params.pageSize ?? 25 };
 }
 
 export interface StockBatch {
