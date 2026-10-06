@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Pagination } from "@/components/ui/pagination";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -54,6 +55,15 @@ export default function IncomePage() {
   const chartData = useMemo(
     () => (summary?.buckets ?? []).map((b) => ({ label: bucketLabel(b.bucket, period), total: b.total })),
     [summary, period],
+  );
+
+  // Client-side pagination of the recent-payments table.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  useEffect(() => { setPage(1); }, [period, pageSize]);
+  const pagedPayments = useMemo(
+    () => payments.slice((page - 1) * pageSize, page * pageSize),
+    [payments, page, pageSize],
   );
 
   const currency = summary?.currency ?? "LKR";
@@ -150,7 +160,7 @@ export default function IncomePage() {
                   {payments.length === 0 ? (
                     <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No payments yet.</TableCell></TableRow>
                   ) : (
-                    payments.map((p) => (
+                    pagedPayments.map((p) => (
                       <TableRow key={p.id} className="hover:bg-muted/50">
                         <TableCell className="font-mono text-xs">{p.receiptNumber}</TableCell>
                         <TableCell className="text-muted-foreground">{p.paidAt ? format(parseISO(p.paidAt), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
@@ -161,6 +171,15 @@ export default function IncomePage() {
                   )}
                 </TableBody>
               </Table>
+              {payments.length > 0 && (
+                <Pagination
+                  page={page}
+                  pageSize={pageSize}
+                  total={payments.length}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                />
+              )}
             </CardContent>
           </Card>
         </>

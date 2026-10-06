@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import { unwrapBundle, type FhirBundle } from "./fhir";
 
 export interface Payment {
   id: string;
@@ -40,10 +41,10 @@ export async function createPayment(input: CreatePaymentInput): Promise<Payment>
 }
 
 export async function getMyPayments(from?: string, to?: string): Promise<Payment[]> {
-  const res = await apiClient.get<Payment[]>("/payments/mine", {
-    params: { from, to },
+  const res = await apiClient.get<Payment[] | FhirBundle<Payment>>("/payments/mine", {
+    params: { from, to, pageSize: 100 },
   });
-  return res.data;
+  return unwrapBundle(res.data).resources;
 }
 
 export async function getIncomeSummary(
@@ -59,6 +60,6 @@ export async function getIncomeSummary(
 
 // A payment already recorded for an appointment cannot be edited — used to lock the UI.
 export async function getPaymentForAppointment(appointmentId: string): Promise<Payment | null> {
-  const res = await apiClient.get<Payment[]>("/payments/mine");
-  return res.data.find((p) => p.appointmentId === appointmentId) ?? null;
+  const res = await apiClient.get<Payment[] | FhirBundle<Payment>>("/payments/mine", { params: { pageSize: 100 } });
+  return unwrapBundle(res.data).resources.find((p) => p.appointmentId === appointmentId) ?? null;
 }

@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Pagination } from "@/components/ui/pagination";
 import { Calendar, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -121,6 +122,16 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
         return b.time.localeCompare(a.time);
       });
   }, [appointments, dateFilter, doctorFilter, statusFilter]);
+
+  // Client-side pagination over the filtered set (date/doctor/status filters are
+  // applied client-side, so the page is sliced here).
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  useEffect(() => { setPage(1); }, [dateFilter, doctorFilter, statusFilter, pageSize]);
+  const paged = useMemo(
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize],
+  );
 
   const handleStatusChange = async (appointmentId: string, newStatus: AppointmentStatus) => {
     setPendingIds((prev) => new Set(prev).add(appointmentId));
@@ -238,7 +249,7 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((apt) => {
+              {paged.map((apt) => {
                 const isPending = pendingIds.has(apt.id);
                 const status = apt.status as AppointmentStatus;
                 return (
@@ -310,6 +321,16 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
           </Table>
         )}
       </div>
+
+      {filtered.length > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={filtered.length}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
     </div>
   );
 }
