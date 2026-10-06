@@ -203,8 +203,8 @@ docker run --rm node:20-alpine sh -c \
 
 # Reproduce the crash directly (no Dockerfile needed):
 docker run --rm \
-  -v "$PWD/curo-auth-service/package.json:/app/package.json:ro" \
-  -v "$PWD/curo-auth-service/package-lock.json:/app/package-lock.json:ro" \
+  -v "$PWD/services/auth/package.json:/app/package.json:ro" \
+  -v "$PWD/services/auth/package-lock.json:/app/package-lock.json:ro" \
   -w /app node:20-alpine sh -c 'npm ci --no-audit --no-fund; ls node_modules/.bin/nest || echo MISSING'
 ```
 

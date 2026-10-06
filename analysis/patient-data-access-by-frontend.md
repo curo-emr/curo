@@ -2,11 +2,11 @@
 
 Generated from a frontend code review of:
 
-- `curo-pharmacy/`
-- `curo-doctor/`
-- `curo-patient/`
-- `curo-lab/`
-- `curo-receptionist/`
+- `apps/pharmacy/`
+- `apps/doctor/`
+- `apps/patient/`
+- `apps/lab/`
+- `apps/receptionist/`
 
 This report describes **what patient-related data each frontend can display or collect in its current UI**, plus **patient-related API/type data that is wired into that frontend but may not currently be rendered**.
 
@@ -33,7 +33,7 @@ This report describes **what patient-related data each frontend can display or c
 
 ---
 
-# 1. `curo-doctor/` — Doctor frontend
+# 1. `apps/doctor/` — Doctor frontend
 
 ## Summary
 
@@ -41,11 +41,11 @@ The doctor portal has the broadest patient data exposure. It is a clinical chart
 
 Primary evidence:
 
-- Patient chart page fetches patient, allergies, conditions, encounters, lab orders, prescriptions, and lab catalog: `curo-doctor/src/app/(dashboard)/patients/[patientId]/page.tsx`.
-- Patient header and tabs render these objects: `curo-doctor/src/components/features/patients/PatientHeader.tsx`, `PatientChartTabs.tsx`, and `tabs/*`.
-- New visit editor collects SOAP, vitals, diagnoses, prescriptions, and lab orders: `curo-doctor/src/components/features/encounters/EncounterEditor.tsx` and `sections/*`.
-- Core data model: `curo-doctor/src/types/index.ts`.
-- API helpers: `curo-doctor/src/lib/api/patients.ts`, `appointments.ts`, `encounters.ts`, `clinical.ts`, `tasks.ts`.
+- Patient chart page fetches patient, allergies, conditions, encounters, lab orders, prescriptions, and lab catalog: `apps/doctor/src/app/(dashboard)/patients/[patientId]/page.tsx`.
+- Patient header and tabs render these objects: `apps/doctor/src/components/features/patients/PatientHeader.tsx`, `PatientChartTabs.tsx`, and `tabs/*`.
+- New visit editor collects SOAP, vitals, diagnoses, prescriptions, and lab orders: `apps/doctor/src/components/features/encounters/EncounterEditor.tsx` and `sections/*`.
+- Core data model: `apps/doctor/src/types/index.ts`.
+- API helpers: `apps/doctor/src/lib/api/patients.ts`, `appointments.ts`, `encounters.ts`, `clinical.ts`, `tasks.ts`.
 
 ## Data visible to doctor users
 
@@ -77,10 +77,10 @@ Visible in patient lists, headers, registration/edit forms, schedule, and chart:
 
 Evidence:
 
-- `curo-doctor/src/types/index.ts` — `Patient`, `Address`, `EmergencyContact`, `Insurance` interfaces.
-- `curo-doctor/src/components/features/patients/PatientHeader.tsx` — displays name, MRN, sex, age/DOB, blood type, phone, city, tags.
-- `curo-doctor/src/components/features/patients/PatientList.tsx` — displays/searches name, MRN, phone, tags; shows age/sex and allergies.
-- `curo-doctor/src/lib/api/mappers.ts` — maps FHIR Patient identifiers, name, gender, birthDate, telecom, address, emergency contact, and extensions.
+- `apps/doctor/src/types/index.ts` — `Patient`, `Address`, `EmergencyContact`, `Insurance` interfaces.
+- `apps/doctor/src/components/features/patients/PatientHeader.tsx` — displays name, MRN, sex, age/DOB, blood type, phone, city, tags.
+- `apps/doctor/src/components/features/patients/PatientList.tsx` — displays/searches name, MRN, phone, tags; shows age/sex and allergies.
+- `apps/doctor/src/lib/api/mappers.ts` — maps FHIR Patient identifiers, name, gender, birthDate, telecom, address, emergency contact, and extensions.
 
 ### Emergency contact data
 
@@ -90,7 +90,7 @@ The patient header includes an expandable emergency contact section:
 - Relationship.
 - Phone number.
 
-Evidence: `curo-doctor/src/components/features/patients/PatientHeader.tsx`.
+Evidence: `apps/doctor/src/components/features/patients/PatientHeader.tsx`.
 
 ### Insurance/billing-related data
 
@@ -107,9 +107,9 @@ However, current FHIR patient mapping often sets `insurance: null`, and the revi
 
 Evidence:
 
-- `curo-doctor/src/types/index.ts` — `Insurance` and `Patient.insurance`.
-- `curo-doctor/src/lib/validations/patient.ts` — insurance-related form fields.
-- `curo-doctor/src/lib/actions/patient-actions.ts` — current create/update payload caveat.
+- `apps/doctor/src/types/index.ts` — `Insurance` and `Patient.insurance`.
+- `apps/doctor/src/lib/validations/patient.ts` — insurance-related form fields.
+- `apps/doctor/src/lib/actions/patient-actions.ts` — current create/update payload caveat.
 
 ### Allergies
 
@@ -130,10 +130,10 @@ Visible in:
 
 Evidence:
 
-- `curo-doctor/src/components/features/patients/PatientHeader.tsx`.
-- `curo-doctor/src/components/features/patients/tabs/AllergiesTab.tsx`.
-- `curo-doctor/src/lib/api/patients.ts` — `GET /patients/{patientId}/allergies`.
-- `curo-doctor/src/lib/api/mappers.ts` — FHIR AllergyIntolerance mapping.
+- `apps/doctor/src/components/features/patients/PatientHeader.tsx`.
+- `apps/doctor/src/components/features/patients/tabs/AllergiesTab.tsx`.
+- `apps/doctor/src/lib/api/patients.ts` — `GET /patients/{patientId}/allergies`.
+- `apps/doctor/src/lib/api/mappers.ts` — FHIR AllergyIntolerance mapping.
 
 ### Problems/conditions
 
@@ -152,9 +152,9 @@ Visible in:
 
 Evidence:
 
-- `curo-doctor/src/components/features/patients/tabs/OverviewTab.tsx`.
-- `curo-doctor/src/components/features/patients/tabs/ProblemsTab.tsx`.
-- `curo-doctor/src/lib/api/patients.ts` — `GET /patients/{patientId}/conditions`.
+- `apps/doctor/src/components/features/patients/tabs/OverviewTab.tsx`.
+- `apps/doctor/src/components/features/patients/tabs/ProblemsTab.tsx`.
+- `apps/doctor/src/lib/api/patients.ts` — `GET /patients/{patientId}/conditions`.
 
 ### Encounters, visits, SOAP, diagnoses, vitals
 
@@ -195,14 +195,14 @@ Current UI specifics:
 
 Evidence:
 
-- `curo-doctor/src/types/index.ts` — `Encounter`, `SOAP`, `Vitals`, `Diagnosis`.
-- `curo-doctor/src/components/features/patients/tabs/EncountersTab.tsx`.
-- `curo-doctor/src/components/features/encounters/EncounterEditor.tsx`.
-- `curo-doctor/src/components/features/encounters/sections/ClinicalNotes.tsx`.
-- `curo-doctor/src/components/features/encounters/sections/VitalsPanel.tsx`.
-- `curo-doctor/src/components/features/encounters/sections/DiagnosisSearch.tsx`.
-- `curo-doctor/src/lib/api/encounters.ts`.
-- `curo-doctor/src/lib/api/clinical.ts`.
+- `apps/doctor/src/types/index.ts` — `Encounter`, `SOAP`, `Vitals`, `Diagnosis`.
+- `apps/doctor/src/components/features/patients/tabs/EncountersTab.tsx`.
+- `apps/doctor/src/components/features/encounters/EncounterEditor.tsx`.
+- `apps/doctor/src/components/features/encounters/sections/ClinicalNotes.tsx`.
+- `apps/doctor/src/components/features/encounters/sections/VitalsPanel.tsx`.
+- `apps/doctor/src/components/features/encounters/sections/DiagnosisSearch.tsx`.
+- `apps/doctor/src/lib/api/encounters.ts`.
+- `apps/doctor/src/lib/api/clinical.ts`.
 
 ### Prescriptions and medications
 
@@ -234,10 +234,10 @@ Visible in:
 
 Evidence:
 
-- `curo-doctor/src/types/index.ts` — `Prescription`, `PrescriptionItem`, `Medication`.
-- `curo-doctor/src/components/features/patients/tabs/MedicationsTab.tsx`.
-- `curo-doctor/src/components/features/encounters/sections/PrescriptionForm.tsx`.
-- `curo-doctor/src/lib/api/clinical.ts` — prescription endpoints.
+- `apps/doctor/src/types/index.ts` — `Prescription`, `PrescriptionItem`, `Medication`.
+- `apps/doctor/src/components/features/patients/tabs/MedicationsTab.tsx`.
+- `apps/doctor/src/components/features/encounters/sections/PrescriptionForm.tsx`.
+- `apps/doctor/src/lib/api/clinical.ts` — prescription endpoints.
 
 ### Lab orders and reports
 
@@ -269,10 +269,10 @@ Caveat: current doctor lab tab appears to display order/test status and review s
 
 Evidence:
 
-- `curo-doctor/src/types/index.ts` — `LabOrder`, `LabOrderTest`, `LabOrderReview`.
-- `curo-doctor/src/components/features/patients/tabs/LabsTab.tsx`.
-- `curo-doctor/src/components/features/encounters/sections/LabOrderForm.tsx`.
-- `curo-doctor/src/lib/api/clinical.ts`.
+- `apps/doctor/src/types/index.ts` — `LabOrder`, `LabOrderTest`, `LabOrderReview`.
+- `apps/doctor/src/components/features/patients/tabs/LabsTab.tsx`.
+- `apps/doctor/src/components/features/encounters/sections/LabOrderForm.tsx`.
+- `apps/doctor/src/lib/api/clinical.ts`.
 
 ### Appointments and schedule
 
@@ -291,9 +291,9 @@ Doctors can see appointment/schedule data:
 
 Evidence:
 
-- `curo-doctor/src/app/(dashboard)/dashboard/page.tsx`.
-- `curo-doctor/src/app/(dashboard)/schedule/ScheduleClient.tsx`.
-- `curo-doctor/src/lib/api/appointments.ts`.
+- `apps/doctor/src/app/(dashboard)/dashboard/page.tsx`.
+- `apps/doctor/src/app/(dashboard)/schedule/ScheduleClient.tsx`.
+- `apps/doctor/src/lib/api/appointments.ts`.
 
 ### Tasks linked to patients
 
@@ -305,7 +305,7 @@ Doctor task model includes patient-linked task information:
 - Status.
 - Related patient ID.
 
-Evidence: `curo-doctor/src/types/index.ts`, `curo-doctor/src/lib/api/tasks.ts`.
+Evidence: `apps/doctor/src/types/index.ts`, `apps/doctor/src/lib/api/tasks.ts`.
 
 ### Documents/files
 
@@ -321,7 +321,7 @@ No patient document/file upload/download UI or API was found in the doctor front
 
 ---
 
-# 2. `curo-receptionist/` — Receptionist frontend
+# 2. `apps/receptionist/` — Receptionist frontend
 
 ## Summary
 
@@ -329,11 +329,11 @@ The receptionist portal exposes broad administrative patient data: identity, dem
 
 Primary evidence:
 
-- Patient detail fetches patient, allergies, appointments, doctors: `curo-receptionist/src/app/(dashboard)/patients/[patientId]/page.tsx`.
-- Patient header and demographics tabs: `curo-receptionist/src/components/features/patients/PatientHeader.tsx`, `tabs/DemographicsTab.tsx`.
+- Patient detail fetches patient, allergies, appointments, doctors: `apps/receptionist/src/app/(dashboard)/patients/[patientId]/page.tsx`.
+- Patient header and demographics tabs: `apps/receptionist/src/components/features/patients/PatientHeader.tsx`, `tabs/DemographicsTab.tsx`.
 - Registration/edit forms and validation: `PatientRegistrationForm.tsx`, `PatientEditForm.tsx`, `src/lib/validations/patient.ts`.
-- Appointment booking: `curo-receptionist/src/components/features/appointments/BookAppointmentForm.tsx`.
-- Data model/API: `curo-receptionist/src/types/index.ts`, `src/lib/api/patients.ts`, `appointments.ts`, `practitioners.ts`.
+- Appointment booking: `apps/receptionist/src/components/features/appointments/BookAppointmentForm.tsx`.
+- Data model/API: `apps/receptionist/src/types/index.ts`, `src/lib/api/patients.ts`, `appointments.ts`, `practitioners.ts`.
 
 ## Data visible to receptionist users
 
@@ -358,10 +358,10 @@ Visible in patient directory, patient detail, registration, edit demographics, a
 
 Evidence:
 
-- `curo-receptionist/src/types/index.ts` — `Patient` includes all above fields.
-- `curo-receptionist/src/components/features/patients/PatientList.tsx` — patient directory shows name, MRN, NIC, age/sex, phone, registered date.
-- `curo-receptionist/src/components/features/patients/PatientHeader.tsx` — header shows full name, MRN, NIC, sex, age, blood type, phone.
-- `curo-receptionist/src/components/features/patients/tabs/DemographicsTab.tsx` — shows NIC/passport, DOB, sex, blood type, nationality, marital status, occupation.
+- `apps/receptionist/src/types/index.ts` — `Patient` includes all above fields.
+- `apps/receptionist/src/components/features/patients/PatientList.tsx` — patient directory shows name, MRN, NIC, age/sex, phone, registered date.
+- `apps/receptionist/src/components/features/patients/PatientHeader.tsx` — header shows full name, MRN, NIC, sex, age, blood type, phone.
+- `apps/receptionist/src/components/features/patients/tabs/DemographicsTab.tsx` — shows NIC/passport, DOB, sex, blood type, nationality, marital status, occupation.
 
 ### Contact and address data
 
@@ -378,9 +378,9 @@ Visible in demographics/registration/edit:
 
 Evidence:
 
-- `curo-receptionist/src/components/features/patients/tabs/DemographicsTab.tsx`.
-- `curo-receptionist/src/lib/validations/patient.ts`.
-- `curo-receptionist/src/lib/api/mappers.ts`.
+- `apps/receptionist/src/components/features/patients/tabs/DemographicsTab.tsx`.
+- `apps/receptionist/src/lib/validations/patient.ts`.
+- `apps/receptionist/src/lib/api/mappers.ts`.
 
 ### Emergency contact data
 
@@ -392,8 +392,8 @@ Visible in patient header expandable section and demographics tab:
 
 Evidence:
 
-- `curo-receptionist/src/components/features/patients/PatientHeader.tsx`.
-- `curo-receptionist/src/components/features/patients/tabs/DemographicsTab.tsx`.
+- `apps/receptionist/src/components/features/patients/PatientHeader.tsx`.
+- `apps/receptionist/src/components/features/patients/tabs/DemographicsTab.tsx`.
 
 ### Insurance/billing-related data
 
@@ -413,10 +413,10 @@ No payment collection, invoices, balances, receipts, or claims screens were foun
 
 Evidence:
 
-- `curo-receptionist/src/types/index.ts` — `Insurance` and `Patient.insurance`.
-- `curo-receptionist/src/components/features/patients/tabs/DemographicsTab.tsx` — insurance section.
-- `curo-receptionist/src/components/features/patients/PatientHeader.tsx` — insured/no-insurance badge.
-- `curo-receptionist/src/lib/validations/patient.ts` — insurance fields in registration schema.
+- `apps/receptionist/src/types/index.ts` — `Insurance` and `Patient.insurance`.
+- `apps/receptionist/src/components/features/patients/tabs/DemographicsTab.tsx` — insurance section.
+- `apps/receptionist/src/components/features/patients/PatientHeader.tsx` — insured/no-insurance badge.
+- `apps/receptionist/src/lib/validations/patient.ts` — insurance fields in registration schema.
 
 ### Allergies and limited clinical data
 
@@ -437,9 +437,9 @@ The app has `Problem`, `Encounter`, `Prescription`, and `LabOrder` types/mappers
 
 Evidence:
 
-- `curo-receptionist/src/app/(dashboard)/patients/[patientId]/page.tsx` — fetches `getAllergies(patientId)`.
-- `curo-receptionist/src/components/features/patients/PatientHeader.tsx` — allergy banner.
-- `curo-receptionist/src/lib/api/patients.ts` — allergies and conditions helper endpoints exist.
+- `apps/receptionist/src/app/(dashboard)/patients/[patientId]/page.tsx` — fetches `getAllergies(patientId)`.
+- `apps/receptionist/src/components/features/patients/PatientHeader.tsx` — allergy banner.
+- `apps/receptionist/src/lib/api/patients.ts` — allergies and conditions helper endpoints exist.
 
 ### Appointments and scheduling data
 
@@ -471,12 +471,12 @@ Visible in:
 
 Evidence:
 
-- `curo-receptionist/src/types/index.ts` — `Appointment`, `Doctor`, `Visit`.
-- `curo-receptionist/src/components/features/patients/tabs/AppointmentsTab.tsx`.
-- `curo-receptionist/src/components/features/appointments/BookAppointmentForm.tsx`.
-- `curo-receptionist/src/lib/api/appointments.ts`.
-- `curo-receptionist/src/lib/actions/appointment-actions.ts`.
-- `curo-receptionist/src/lib/actions/checkin-actions.ts`.
+- `apps/receptionist/src/types/index.ts` — `Appointment`, `Doctor`, `Visit`.
+- `apps/receptionist/src/components/features/patients/tabs/AppointmentsTab.tsx`.
+- `apps/receptionist/src/components/features/appointments/BookAppointmentForm.tsx`.
+- `apps/receptionist/src/lib/api/appointments.ts`.
+- `apps/receptionist/src/lib/actions/appointment-actions.ts`.
+- `apps/receptionist/src/lib/actions/checkin-actions.ts`.
 
 ### Visit/queue data
 
@@ -497,9 +497,9 @@ Current patient detail passes `visits={[]}`, so the visit history tab normally s
 
 Evidence:
 
-- `curo-receptionist/src/types/index.ts` — `Visit`.
-- `curo-receptionist/src/components/features/patients/tabs/VisitHistoryTab.tsx`.
-- `curo-receptionist/src/app/(dashboard)/patients/[patientId]/page.tsx` — passes empty visits.
+- `apps/receptionist/src/types/index.ts` — `Visit`.
+- `apps/receptionist/src/components/features/patients/tabs/VisitHistoryTab.tsx`.
+- `apps/receptionist/src/app/(dashboard)/patients/[patientId]/page.tsx` — passes empty visits.
 
 ### Prescriptions/medications and lab data
 
@@ -519,7 +519,7 @@ No patient documents, scans, attachments, upload/download components, or file AP
 
 ---
 
-# 3. `curo-patient/` — Patient portal
+# 3. `apps/patient/` — Patient portal
 
 ## Summary
 
@@ -527,13 +527,13 @@ The patient portal exposes patient data about the logged-in patient only. I foun
 
 Primary evidence:
 
-- Patient portal API: `curo-patient/src/lib/api/patient-portal.ts`.
-- Profile page: `curo-patient/src/app/(dashboard)/profile/page.tsx`.
-- Health records: `curo-patient/src/app/(dashboard)/health-records/page.tsx`.
-- Appointments: `curo-patient/src/app/(dashboard)/appointments/page.tsx`.
-- Visits: `curo-patient/src/app/(dashboard)/visits/page.tsx`, `visits/[visitId]/page.tsx`.
-- Prescriptions: `curo-patient/src/app/(dashboard)/prescriptions/page.tsx`, `prescriptions/[prescriptionId]/page.tsx`.
-- Lab reports: `curo-patient/src/app/(dashboard)/lab-reports/page.tsx`.
+- Patient portal API: `apps/patient/src/lib/api/patient-portal.ts`.
+- Profile page: `apps/patient/src/app/(dashboard)/profile/page.tsx`.
+- Health records: `apps/patient/src/app/(dashboard)/health-records/page.tsx`.
+- Appointments: `apps/patient/src/app/(dashboard)/appointments/page.tsx`.
+- Visits: `apps/patient/src/app/(dashboard)/visits/page.tsx`, `visits/[visitId]/page.tsx`.
+- Prescriptions: `apps/patient/src/app/(dashboard)/prescriptions/page.tsx`, `prescriptions/[prescriptionId]/page.tsx`.
+- Lab reports: `apps/patient/src/app/(dashboard)/lab-reports/page.tsx`.
 
 ## Data visible to patient users
 
@@ -551,8 +551,8 @@ The auth context stores:
 
 Evidence:
 
-- `curo-patient/src/contexts/AuthContext.tsx`.
-- `curo-patient/src/lib/api/client.ts`.
+- `apps/patient/src/contexts/AuthContext.tsx`.
+- `apps/patient/src/lib/api/client.ts`.
 
 ### Profile/patient-identifying data
 
@@ -572,7 +572,7 @@ The profile page displays:
 - Patient since/created date.
 - Last updated date.
 
-Evidence: `curo-patient/src/app/(dashboard)/profile/page.tsx`.
+Evidence: `apps/patient/src/app/(dashboard)/profile/page.tsx`.
 
 ### Contact and address data
 
@@ -587,7 +587,7 @@ Profile page displays:
 - Postal code.
 - Country.
 
-Evidence: `curo-patient/src/app/(dashboard)/profile/page.tsx`.
+Evidence: `apps/patient/src/app/(dashboard)/profile/page.tsx`.
 
 ### Emergency contact data
 
@@ -597,7 +597,7 @@ Profile page displays:
 - Relationship.
 - Phone.
 
-Evidence: `curo-patient/src/app/(dashboard)/profile/page.tsx`.
+Evidence: `apps/patient/src/app/(dashboard)/profile/page.tsx`.
 
 ### Insurance data
 
@@ -610,7 +610,7 @@ If present, profile page displays:
 - Holder relationship.
 - Expiry date.
 
-Evidence: `curo-patient/src/app/(dashboard)/profile/page.tsx`.
+Evidence: `apps/patient/src/app/(dashboard)/profile/page.tsx`.
 
 ### Allergies
 
@@ -624,8 +624,8 @@ Health Records page displays:
 
 Evidence:
 
-- `curo-patient/src/app/(dashboard)/health-records/page.tsx`.
-- `curo-patient/src/lib/api/patient-portal.ts` — `GET /patients/{patientId}/allergies`.
+- `apps/patient/src/app/(dashboard)/health-records/page.tsx`.
+- `apps/patient/src/lib/api/patient-portal.ts` — `GET /patients/{patientId}/allergies`.
 
 ### Conditions/problems
 
@@ -643,8 +643,8 @@ Health Records page displays:
 
 Evidence:
 
-- `curo-patient/src/app/(dashboard)/health-records/page.tsx`.
-- `curo-patient/src/lib/api/patient-portal.ts` — `GET /patients/{patientId}/conditions`.
+- `apps/patient/src/app/(dashboard)/health-records/page.tsx`.
+- `apps/patient/src/lib/api/patient-portal.ts` — `GET /patients/{patientId}/conditions`.
 
 ### Current medications and prescriptions
 
@@ -675,10 +675,10 @@ Prescription list/detail pages display:
 
 Evidence:
 
-- `curo-patient/src/app/(dashboard)/health-records/page.tsx`.
-- `curo-patient/src/app/(dashboard)/prescriptions/page.tsx`.
-- `curo-patient/src/app/(dashboard)/prescriptions/[prescriptionId]/page.tsx`.
-- `curo-patient/src/lib/api/patient-portal.ts` — `GET /prescriptions?patientId={patientId}`.
+- `apps/patient/src/app/(dashboard)/health-records/page.tsx`.
+- `apps/patient/src/app/(dashboard)/prescriptions/page.tsx`.
+- `apps/patient/src/app/(dashboard)/prescriptions/[prescriptionId]/page.tsx`.
+- `apps/patient/src/lib/api/patient-portal.ts` — `GET /prescriptions?patientId={patientId}`.
 
 ### Lab orders and lab reports
 
@@ -712,9 +712,9 @@ The frontend maps lab orders from FHIR ServiceRequest, including:
 
 Evidence:
 
-- `curo-patient/src/app/(dashboard)/lab-reports/page.tsx`.
-- `curo-patient/src/lib/api/patient-portal.ts` — `GET /lab-orders?patientId={patientId}`.
-- `curo-patient/src/types/index.ts`.
+- `apps/patient/src/app/(dashboard)/lab-reports/page.tsx`.
+- `apps/patient/src/lib/api/patient-portal.ts` — `GET /lab-orders?patientId={patientId}`.
+- `apps/patient/src/types/index.ts`.
 
 ### Appointments
 
@@ -733,8 +733,8 @@ Appointments page displays:
 
 Evidence:
 
-- `curo-patient/src/app/(dashboard)/appointments/page.tsx`.
-- `curo-patient/src/lib/api/patient-portal.ts` — `GET /appointments`.
+- `apps/patient/src/app/(dashboard)/appointments/page.tsx`.
+- `apps/patient/src/lib/api/patient-portal.ts` — `GET /appointments`.
 
 ### Visits/encounters
 
@@ -764,9 +764,9 @@ But current patient detail page with route `/visits/[visitId]` does not render f
 
 Evidence:
 
-- `curo-patient/src/app/(dashboard)/visits/page.tsx`.
-- `curo-patient/src/app/(dashboard)/visits/[visitId]/page.tsx`.
-- `curo-patient/src/lib/api/patient-portal.ts` — `GET /encounters/patient/{patientId}`.
+- `apps/patient/src/app/(dashboard)/visits/page.tsx`.
+- `apps/patient/src/app/(dashboard)/visits/[visitId]/page.tsx`.
+- `apps/patient/src/lib/api/patient-portal.ts` — `GET /encounters/patient/{patientId}`.
 
 ### Dependents/guardians
 
@@ -785,7 +785,7 @@ No patient documents, scans, uploads, attachments, downloads, or file APIs were 
 
 ---
 
-# 4. `curo-lab/` — Lab frontend
+# 4. `apps/lab/` — Lab frontend
 
 ## Summary
 
@@ -793,13 +793,13 @@ The lab portal is centered around lab worklists, orders, specimens/results entry
 
 Primary evidence:
 
-- Lab API: `curo-lab/src/lib/api/lab.ts`.
-- Patient API: `curo-lab/src/lib/api/patients.ts`.
-- Worklist: `curo-lab/src/app/(dashboard)/worklist/page.tsx`, `components/features/worklist/WorklistTable.tsx`.
-- Order detail: `curo-lab/src/app/(dashboard)/worklist/[orderId]/page.tsx`.
-- Results entry: `curo-lab/src/app/(dashboard)/worklist/[orderId]/results/page.tsx`, `ResultsEntryForm.tsx`.
-- Patient lab history: `curo-lab/src/app/(dashboard)/patients/[patientId]/page.tsx`.
-- Data model: `curo-lab/src/types/index.ts`.
+- Lab API: `apps/lab/src/lib/api/lab.ts`.
+- Patient API: `apps/lab/src/lib/api/patients.ts`.
+- Worklist: `apps/lab/src/app/(dashboard)/worklist/page.tsx`, `components/features/worklist/WorklistTable.tsx`.
+- Order detail: `apps/lab/src/app/(dashboard)/worklist/[orderId]/page.tsx`.
+- Results entry: `apps/lab/src/app/(dashboard)/worklist/[orderId]/results/page.tsx`, `ResultsEntryForm.tsx`.
+- Patient lab history: `apps/lab/src/app/(dashboard)/patients/[patientId]/page.tsx`.
+- Data model: `apps/lab/src/types/index.ts`.
 
 ## Data visible to lab users
 
@@ -817,10 +817,10 @@ Visible in worklist/order detail/results entry/patient lab history:
 
 Evidence:
 
-- `curo-lab/src/components/features/worklist/WorklistTable.tsx` — worklist shows patient name and MRN.
-- `curo-lab/src/app/(dashboard)/worklist/[orderId]/page.tsx` — order detail shows name, MRN, age/sex, blood type.
-- `curo-lab/src/app/(dashboard)/worklist/[orderId]/results/page.tsx` — results entry header shows order ID, patient name, MRN.
-- `curo-lab/src/app/(dashboard)/patients/[patientId]/page.tsx` — patient header shows name, MRN, age/sex, blood type, phone, email.
+- `apps/lab/src/components/features/worklist/WorklistTable.tsx` — worklist shows patient name and MRN.
+- `apps/lab/src/app/(dashboard)/worklist/[orderId]/page.tsx` — order detail shows name, MRN, age/sex, blood type.
+- `apps/lab/src/app/(dashboard)/worklist/[orderId]/results/page.tsx` — results entry header shows order ID, patient name, MRN.
+- `apps/lab/src/app/(dashboard)/patients/[patientId]/page.tsx` — patient header shows name, MRN, age/sex, blood type, phone, email.
 
 ### Patient-identifying data available in frontend object/API mapping but not prominent in lab UI
 
@@ -842,9 +842,9 @@ Current lab screens do not prominently render all of these fields.
 
 Evidence:
 
-- `curo-lab/src/types/index.ts` — `Patient`.
-- `curo-lab/src/lib/api/mappers.ts`.
-- `curo-lab/src/lib/api/patients.ts`.
+- `apps/lab/src/types/index.ts` — `Patient`.
+- `apps/lab/src/lib/api/mappers.ts`.
+- `apps/lab/src/lib/api/patients.ts`.
 
 ### Lab orders
 
@@ -873,10 +873,10 @@ Visible in:
 
 Evidence:
 
-- `curo-lab/src/lib/api/lab.ts` — `GET /orders`, `GET /orders/{id}`, `PUT /orders/{id}/receive`, `POST /orders/scan`.
-- `curo-lab/src/components/features/worklist/WorklistTable.tsx`.
-- `curo-lab/src/app/(dashboard)/worklist/[orderId]/page.tsx`.
-- `curo-lab/src/app/(dashboard)/patients/[patientId]/page.tsx`.
+- `apps/lab/src/lib/api/lab.ts` — `GET /orders`, `GET /orders/{id}`, `PUT /orders/{id}/receive`, `POST /orders/scan`.
+- `apps/lab/src/components/features/worklist/WorklistTable.tsx`.
+- `apps/lab/src/app/(dashboard)/worklist/[orderId]/page.tsx`.
+- `apps/lab/src/app/(dashboard)/patients/[patientId]/page.tsx`.
 
 ### Lab results/reports
 
@@ -908,10 +908,10 @@ Current UI details:
 
 Evidence:
 
-- `curo-lab/src/lib/api/lab.ts` — `enterResults`, `getLabResultsByOrder`, `getLabResultsByPatient`.
-- `curo-lab/src/app/(dashboard)/worklist/[orderId]/page.tsx`.
-- `curo-lab/src/components/features/worklist/ResultsEntryForm.tsx`.
-- `curo-lab/src/types/index.ts` — `LabResult`, `ResultValue`, `ResultFlag`.
+- `apps/lab/src/lib/api/lab.ts` — `enterResults`, `getLabResultsByOrder`, `getLabResultsByPatient`.
+- `apps/lab/src/app/(dashboard)/worklist/[orderId]/page.tsx`.
+- `apps/lab/src/components/features/worklist/ResultsEntryForm.tsx`.
+- `apps/lab/src/types/index.ts` — `LabResult`, `ResultValue`, `ResultFlag`.
 
 ### Test catalog/specimen/instrument/QC data linked to patient work
 
@@ -946,10 +946,10 @@ Some of this is operational rather than patient-specific, but it can be attached
 
 Evidence:
 
-- `curo-lab/src/types/index.ts` — `LabTestCatalogItem`, `LabInstrument`, `QCLog`.
-- `curo-lab/src/data/lab-tests.json`.
-- `curo-lab/src/app/(dashboard)/test-catalog/page.tsx`.
-- `curo-lab/src/app/(dashboard)/qc/page.tsx`.
+- `apps/lab/src/types/index.ts` — `LabTestCatalogItem`, `LabInstrument`, `QCLog`.
+- `apps/lab/src/data/lab-tests.json`.
+- `apps/lab/src/app/(dashboard)/test-catalog/page.tsx`.
+- `apps/lab/src/app/(dashboard)/qc/page.tsx`.
 
 ### Allergies/problems/medications/encounters
 
@@ -976,7 +976,7 @@ No patient documents, uploads, attachments, scans, PDFs, or file download UI/API
 
 ---
 
-# 5. `curo-pharmacy/` — Pharmacy frontend
+# 5. `apps/pharmacy/` — Pharmacy frontend
 
 ## Summary
 
@@ -984,12 +984,12 @@ The pharmacy portal is focused on prescriptions, dispensing, patient prescriptio
 
 Primary evidence:
 
-- Pharmacy API: `curo-pharmacy/src/lib/api/pharmacy.ts`.
-- Patient API: `curo-pharmacy/src/lib/api/patients.ts`.
-- Prescription list/table: `curo-pharmacy/src/app/(dashboard)/prescriptions/page.tsx`, `components/features/prescriptions/PrescriptionTable.tsx`.
-- Patient directory/detail: `curo-pharmacy/src/app/(dashboard)/patients/page.tsx`, `components/features/patients/PatientList.tsx`, `app/(dashboard)/patients/[patientId]/page.tsx`.
-- Prescription detail/dispense: `curo-pharmacy/src/app/(dashboard)/prescriptions/[prescriptionId]/page.tsx`.
-- Type model: `curo-pharmacy/src/types/index.ts`.
+- Pharmacy API: `apps/pharmacy/src/lib/api/pharmacy.ts`.
+- Patient API: `apps/pharmacy/src/lib/api/patients.ts`.
+- Prescription list/table: `apps/pharmacy/src/app/(dashboard)/prescriptions/page.tsx`, `components/features/prescriptions/PrescriptionTable.tsx`.
+- Patient directory/detail: `apps/pharmacy/src/app/(dashboard)/patients/page.tsx`, `components/features/patients/PatientList.tsx`, `app/(dashboard)/patients/[patientId]/page.tsx`.
+- Prescription detail/dispense: `apps/pharmacy/src/app/(dashboard)/prescriptions/[prescriptionId]/page.tsx`.
+- Type model: `apps/pharmacy/src/types/index.ts`.
 
 ## Data visible to pharmacy users
 
@@ -1011,10 +1011,10 @@ Visible in patient directory, prescription list, patient detail:
 
 Evidence:
 
-- `curo-pharmacy/src/components/features/patients/PatientList.tsx` — search by name, MRN, NIC, phone; displays name, MRN, age/sex, allergies, last prescription, total Rx.
-- `curo-pharmacy/src/app/(dashboard)/patients/[patientId]/page.tsx` — patient header shows name, MRN, age/sex, NIC, blood type, phone, email.
-- `curo-pharmacy/src/components/features/prescriptions/PrescriptionTable.tsx` — prescription list displays patient name.
-- `curo-pharmacy/src/types/index.ts` — `Patient` fields.
+- `apps/pharmacy/src/components/features/patients/PatientList.tsx` — search by name, MRN, NIC, phone; displays name, MRN, age/sex, allergies, last prescription, total Rx.
+- `apps/pharmacy/src/app/(dashboard)/patients/[patientId]/page.tsx` — patient header shows name, MRN, age/sex, NIC, blood type, phone, email.
+- `apps/pharmacy/src/components/features/prescriptions/PrescriptionTable.tsx` — prescription list displays patient name.
+- `apps/pharmacy/src/types/index.ts` — `Patient` fields.
 
 ### Contact/address/emergency contact
 
@@ -1029,9 +1029,9 @@ Current pharmacy UI visibly shows phone and email in patient detail; it does not
 
 Evidence:
 
-- `curo-pharmacy/src/types/index.ts`.
-- `curo-pharmacy/src/app/(dashboard)/patients/[patientId]/page.tsx`.
-- `curo-pharmacy/src/lib/api/mappers.ts`.
+- `apps/pharmacy/src/types/index.ts`.
+- `apps/pharmacy/src/app/(dashboard)/patients/[patientId]/page.tsx`.
+- `apps/pharmacy/src/lib/api/mappers.ts`.
 
 ### Allergies and current medications
 
@@ -1044,9 +1044,9 @@ The pharmacy API client also has helpers for detailed allergy and condition endp
 
 Evidence:
 
-- `curo-pharmacy/src/components/features/patients/PatientList.tsx`.
-- `curo-pharmacy/src/app/(dashboard)/patients/[patientId]/page.tsx`.
-- `curo-pharmacy/src/lib/api/patients.ts` — `getAllergies`, `getConditions` exist.
+- `apps/pharmacy/src/components/features/patients/PatientList.tsx`.
+- `apps/pharmacy/src/app/(dashboard)/patients/[patientId]/page.tsx`.
+- `apps/pharmacy/src/lib/api/patients.ts` — `getAllergies`, `getConditions` exist.
 
 ### Prescriptions and medication details
 
@@ -1079,10 +1079,10 @@ Visible in:
 
 Evidence:
 
-- `curo-pharmacy/src/lib/api/pharmacy.ts` — `GET /prescriptions/pending`, `GET /prescriptions?patientId={id}`.
-- `curo-pharmacy/src/components/features/prescriptions/PrescriptionTable.tsx`.
-- `curo-pharmacy/src/app/(dashboard)/patients/[patientId]/page.tsx`.
-- `curo-pharmacy/src/types/index.ts`.
+- `apps/pharmacy/src/lib/api/pharmacy.ts` — `GET /prescriptions/pending`, `GET /prescriptions?patientId={id}`.
+- `apps/pharmacy/src/components/features/prescriptions/PrescriptionTable.tsx`.
+- `apps/pharmacy/src/app/(dashboard)/patients/[patientId]/page.tsx`.
+- `apps/pharmacy/src/types/index.ts`.
 
 ### Dispensing records and payment-like data
 
@@ -1113,10 +1113,10 @@ Visible in:
 
 Evidence:
 
-- `curo-pharmacy/src/lib/api/pharmacy.ts` — `POST /dispense`, `GET /dispense`, `GET /dispense?patientId=...`, `GET /dispense?prescriptionId=...`.
-- `curo-pharmacy/src/app/(dashboard)/patients/[patientId]/page.tsx`.
-- `curo-pharmacy/src/app/(dashboard)/prescriptions/[prescriptionId]/page.tsx`.
-- `curo-pharmacy/src/types/index.ts` — `DispensingRecord`, `DispensingItem`.
+- `apps/pharmacy/src/lib/api/pharmacy.ts` — `POST /dispense`, `GET /dispense`, `GET /dispense?patientId=...`, `GET /dispense?prescriptionId=...`.
+- `apps/pharmacy/src/app/(dashboard)/patients/[patientId]/page.tsx`.
+- `apps/pharmacy/src/app/(dashboard)/prescriptions/[prescriptionId]/page.tsx`.
+- `apps/pharmacy/src/types/index.ts` — `DispensingRecord`, `DispensingItem`.
 
 This is not full patient billing, but it is payment/receipt-like medication transaction data.
 
@@ -1140,8 +1140,8 @@ This is not patient data by itself, but it is linked to dispensing patient presc
 
 Evidence:
 
-- `curo-pharmacy/src/lib/api/pharmacy.ts` — `GET /stock`, `GET /stock/alerts`, `PUT /stock/{id}`, `POST /stock`.
-- `curo-pharmacy/src/types/index.ts`.
+- `apps/pharmacy/src/lib/api/pharmacy.ts` — `GET /stock`, `GET /stock/alerts`, `PUT /stock/{id}`, `POST /stock`.
+- `apps/pharmacy/src/types/index.ts`.
 
 ### Appointments/encounters/labs
 

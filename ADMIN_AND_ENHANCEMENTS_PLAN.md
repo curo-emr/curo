@@ -66,7 +66,7 @@ via `docker compose up -d --build` (no volume wipe) with a valid seed.
 
 ### Slice 4 — curo-admin portal (item 1) ✅
 - [x] Auth-service AdminModule: `POST/GET /auth/users`, `GET /auth/users/:id`, `PATCH /auth/users/:id`, `POST /auth/users/:id/reset-password` (SUPER_ADMIN, audited; mounted under /auth so no gateway change)
-- [x] New `curo-admin/` frontend (port 3015): SUPER_ADMIN-gated; Users list/search/create/detail (suspend/activate/reset); per-receptionist income oversight with admin amount correction; Audit log; Dashboard (recharts)
+- [x] New `apps/admin/` frontend (port 3015): SUPER_ADMIN-gated; Users list/search/create/detail (suspend/activate/reset); per-receptionist income oversight with admin amount correction; Audit log; Dashboard (recharts)
 - [x] Docker service (3015) + gateway `FRONTEND_ORIGINS`/default origins
 - **Verified live:** admin create doctor (logs in), suspend (login 401), reset, receptionist 403; curo-admin builds + serves /login (200)
 

@@ -68,7 +68,7 @@ Swagger UI, with a built-in API client. Redoc or Swagger UI would also work agai
 - **Per service** (`curo-*-service/src/main.ts`): a `DocumentBuilder` + `SwaggerModule.setup('api-docs', …)`
   exposes that service's spec. The CLI plugin (enabled in each `nest-cli.json` via
   `compilerOptions.plugins: ["@nestjs/swagger"]`) auto-derives schemas from DTOs.
-- **Gateway** (`curo-api-gateway/src/proxy/proxy.middleware.ts`): on first request to `/openapi.json`
+- **Gateway** (`services/api-gateway/src/proxy/proxy.middleware.ts`): on first request to `/openapi.json`
   it fetches each downstream `/api-docs-json` (using the same `SERVICE_MAP` it proxies with), merges
   them (first declarer of a path wins, so the reachable `/prescriptions` handler is kept), attaches a
   single `bearerAuth` scheme + the gateway as the only server, and caches the result. `/docs` serves

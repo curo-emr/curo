@@ -101,7 +101,7 @@ Visible data includes:
 
 ## Lab data
 
-- No visible lab result screens, lab API calls, or lab hooks were found in `curo-pharmacy/src`.
+- No visible lab result screens, lab API calls, or lab hooks were found in `apps/pharmacy/src`.
 - `FhirServiceRequest` exists in the mapper with subject/requester/encounter/code/note (`src/lib/api/mappers.ts:130-142`), but it is not mapped/exported to visible lab UI in the pharmacy app. CSS has generic clinical lab color variables, not a data flow.
 - Conclusion: no patient lab data is currently visible to pharmacy users in this frontend.
 
@@ -113,7 +113,7 @@ Visible data includes:
 
 ## Documents/files
 
-- No patient documents, uploads, attachments, scans, files, or download components/API calls were found in `curo-pharmacy/src`.
+- No patient documents, uploads, attachments, scans, files, or download components/API calls were found in `apps/pharmacy/src`.
 - The only “FileText” usage is an icon for Dispensing History/Dispensing Log, not actual documents (`src/app/(dashboard)/patients/[patientId]/page.tsx:14`, `:87-88`; Sidebar uses FileText icon for log at `src/components/layout/Sidebar.tsx:13`, `:24`).
 - `printedInstructions` exists in legacy/mock and older type data (`data/dispensing-records.json:33-35`; `src/types/index.ts:226-227`) but is not exposed by current live `DispenseRecord` interface or rendered.
 
