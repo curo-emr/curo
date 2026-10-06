@@ -266,7 +266,7 @@ services:
       NOTIFICATION_SERVICE_URL: http://curo-notification-service:3007
       AUDIT_SERVICE_URL: http://curo-audit-service:3008
       # browser-facing origins stay as localhost (host machine ports)
-      FRONTEND_ORIGINS: http://localhost:3010,http://localhost:3011,http://localhost:3012,http://localhost:3013,http://localhost:3014,http://localhost:3015
+      FRONTEND_ORIGINS: http://localhost:3010,http://localhost:3011,http://localhost:3012,http://localhost:3013,http://localhost:3014,http://localhost:3015,http://localhost:3016
     ports:
       - "3000:3000"
     depends_on:
@@ -422,6 +422,23 @@ services:
       HOSTNAME: "0.0.0.0"
     ports:
       - "3015:3015"
+    depends_on:
+      curo-api-gateway:
+        condition: service_healthy
+
+  curo-nurse:
+    build:
+      context: ./curo-nurse
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    container_name: curo_nurse_ui
+    restart: unless-stopped
+    environment:
+      PORT: "3016"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "3016:3016"
     depends_on:
       curo-api-gateway:
         condition: service_healthy
