@@ -1,11 +1,19 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Appointment } from '../entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { UserRole } from '@curo/shared/enums';
-import { parsePagination, toSearchset, PaginationQuery } from '@curo/shared/fhir';
+import {
+  parsePagination,
+  toSearchset,
+  PaginationQuery,
+} from '@curo/shared/fhir';
 import { AppointmentStatus, QueueStage } from '../enums';
 import { assertQueueTransition, queueStageForStatus } from './queue-stage';
 
@@ -14,7 +22,9 @@ function toFhirAppointment(a: Appointment) {
     resourceType: 'Appointment',
     id: a.id,
     status: a.status,
-    serviceType: a.serviceType ? [{ coding: [{ code: a.serviceType }] }] : undefined,
+    serviceType: a.serviceType
+      ? [{ coding: [{ code: a.serviceType }] }]
+      : undefined,
     reasonCode: a.reasonCode ? [{ text: a.reasonCode }] : undefined,
     description: a.description,
     start: a.start,
@@ -22,12 +32,18 @@ function toFhirAppointment(a: Appointment) {
     comment: a.comment,
     participant: [
       { actor: { reference: `Patient/${a.patientId}` }, status: 'accepted' },
-      { actor: { reference: `Practitioner/${a.practitionerId}` }, status: 'accepted' },
+      {
+        actor: { reference: `Practitioner/${a.practitionerId}` },
+        status: 'accepted',
+      },
     ],
     extension: [
       { url: 'urn:curo:slotNumber', valueInteger: a.slotNumber },
       { url: 'urn:curo:isWalkIn', valueBoolean: a.isWalkIn },
-      a.cancelledReason && { url: 'urn:curo:cancelledReason', valueString: a.cancelledReason },
+      a.cancelledReason && {
+        url: 'urn:curo:cancelledReason',
+        valueString: a.cancelledReason,
+      },
       a.queueStage && { url: 'urn:curo:queueStage', valueString: a.queueStage },
     ].filter(Boolean),
     meta: { lastUpdated: a.updatedAt },
@@ -51,13 +67,35 @@ export class AppointmentService {
     return toFhirAppointment(saved);
   }
 
-  async findAll(requestingUser: { role: string; userId: string; practitionerId?: string; patientId?: string }, filters?: { date?: string; practitionerId?: string; patientId?: string; queueStage?: string }, pagination: PaginationQuery = {}): Promise<any> {
+  async findAll(
+    requestingUser: {
+      role: string;
+      userId: string;
+      practitionerId?: string;
+      patientId?: string;
+    },
+    filters?: {
+      date?: string;
+      practitionerId?: string;
+      patientId?: string;
+      queueStage?: string;
+    },
+    pagination: PaginationQuery = {},
+  ): Promise<any> {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const query = this.appointmentsRepo.createQueryBuilder('a');
 
-    if (requestingUser.role === UserRole.DOCTOR && requestingUser.practitionerId) {
-      query.where('a.practitionerId = :pid', { pid: requestingUser.practitionerId });
-    } else if (requestingUser.role === UserRole.PATIENT && requestingUser.patientId) {
+    if (
+      requestingUser.role === UserRole.DOCTOR &&
+      requestingUser.practitionerId
+    ) {
+      query.where('a.practitionerId = :pid', {
+        pid: requestingUser.practitionerId,
+      });
+    } else if (
+      requestingUser.role === UserRole.PATIENT &&
+      requestingUser.patientId
+    ) {
       query.where('a.patientId = :pid', { pid: requestingUser.patientId });
     }
 
@@ -75,7 +113,9 @@ export class AppointmentService {
       query.andWhere('a.patientId = :pa', { pa: filters.patientId });
     }
     if (filters?.queueStage) {
-      query.andWhere('a.queueStage IN (:...stages)', { stages: filters.queueStage.split(',') });
+      query.andWhere('a.queueStage IN (:...stages)', {
+        stages: filters.queueStage.split(','),
+      });
     }
 
     const [appointments, total] = await query
@@ -116,10 +156,14 @@ export class AppointmentService {
   ): Promise<any> {
     const a = await this.appointmentsRepo.findOne({ where: { id } });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);
-    if (user.role === UserRole.DOCTOR && a.practitionerId !== user.practitionerId) {
+    if (
+      user.role === UserRole.DOCTOR &&
+      a.practitionerId !== user.practitionerId
+    ) {
       throw new ForbiddenException('Doctors can only move their own patients');
     }
-    if (!assertQueueTransition(a.queueStage, stage, user.role)) return toFhirAppointment(a);
+    if (!assertQueueTransition(a.queueStage, stage, user.role))
+      return toFhirAppointment(a);
     a.queueStage = stage;
     const saved = await this.appointmentsRepo.save(a);
     return toFhirAppointment(saved);
@@ -140,15 +184,27 @@ export class AppointmentService {
     });
 
     const queue = appointments
-      .filter(a => [AppointmentStatus.BOOKED, AppointmentStatus.ARRIVED, AppointmentStatus.FULFILLED].includes(a.status))
+      .filter((a) =>
+        [
+          AppointmentStatus.BOOKED,
+          AppointmentStatus.ARRIVED,
+          AppointmentStatus.FULFILLED,
+        ].includes(a.status),
+      )
       .map((a, idx) => ({ queuePosition: idx + 1, ...toFhirAppointment(a) }));
 
     return {
       practitionerId,
       date,
-      totalBooked: appointments.filter(a => a.status === AppointmentStatus.BOOKED).length,
-      totalArrived: appointments.filter(a => a.status === AppointmentStatus.ARRIVED).length,
-      totalFulfilled: appointments.filter(a => a.status === AppointmentStatus.FULFILLED).length,
+      totalBooked: appointments.filter(
+        (a) => a.status === AppointmentStatus.BOOKED,
+      ).length,
+      totalArrived: appointments.filter(
+        (a) => a.status === AppointmentStatus.ARRIVED,
+      ).length,
+      totalFulfilled: appointments.filter(
+        (a) => a.status === AppointmentStatus.FULFILLED,
+      ).length,
       queue,
     };
   }

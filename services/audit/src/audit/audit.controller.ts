@@ -1,6 +1,11 @@
 import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { AuditService } from './audit.service';
-import { JwtAuthGuard, Roles, CurrentUser, RolesGuard } from '@curo/shared/auth';
+import {
+  JwtAuthGuard,
+  Roles,
+  CurrentUser,
+  RolesGuard,
+} from '@curo/shared/auth';
 
 @Controller('audit')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,6 +28,10 @@ export class AuditController {
     @Query('to') to?: string,
     @Query() query?: any,
   ) {
-    return this.auditService.findAll(user, { userId, resourceType, patientId, from, to }, query);
+    return this.auditService.findAll(
+      user,
+      { userId, resourceType, patientId, from, to },
+      query,
+    );
   }
 }

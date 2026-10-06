@@ -1,6 +1,4 @@
-import {
-  Entity, PrimaryColumn, Column, Index,
-} from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 
 /**
  * ICD-10 diagnosis code catalog. Doctors search this when recording conditions.

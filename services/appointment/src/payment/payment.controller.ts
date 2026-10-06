@@ -1,10 +1,22 @@
 import {
-  Controller, Get, Post, Put, Body, Param, Query, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
+import {
+  JwtAuthGuard,
+  RolesGuard,
+  Roles,
+  CurrentUser,
+} from '@curo/shared/auth';
 
 @Controller('payments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -51,7 +63,10 @@ export class PaymentController {
     @Query('to') to?: string,
     @Query() query?: any,
   ) {
-    return this.paymentService.findAllForAdmin({ collectedBy, patientId, from, to }, query);
+    return this.paymentService.findAllForAdmin(
+      { collectedBy, patientId, from, to },
+      query,
+    );
   }
 
   @Get(':id')
@@ -63,7 +78,11 @@ export class PaymentController {
   // Only SUPER_ADMIN can correct a payment; receptionists have no edit route.
   @Put(':id')
   @Roles('SUPER_ADMIN')
-  update(@Param('id') id: string, @Body() dto: UpdatePaymentDto, @CurrentUser() user: any) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdatePaymentDto,
+    @CurrentUser() user: any,
+  ) {
     return this.paymentService.adminUpdate(id, dto, user);
   }
 }

@@ -9,7 +9,10 @@ export interface ServiceInfo {
 }
 
 /** Creates and starts a Curo backend service with the standard pipes, CORS and OpenAPI docs. */
-export async function bootstrapService(appModule: Type<unknown>, info: ServiceInfo): Promise<void> {
+export async function bootstrapService(
+  appModule: Type<unknown>,
+  info: ServiceInfo,
+): Promise<void> {
   const app = await NestFactory.create(appModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors();
@@ -23,7 +26,11 @@ export async function bootstrapService(appModule: Type<unknown>, info: ServiceIn
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-  SwaggerModule.setup('api-docs', app, SwaggerModule.createDocument(app, swaggerConfig));
+  SwaggerModule.setup(
+    'api-docs',
+    app,
+    SwaggerModule.createDocument(app, swaggerConfig),
+  );
 
   const port = process.env.PORT ?? info.defaultPort;
   await app.listen(port);

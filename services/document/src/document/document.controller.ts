@@ -1,12 +1,26 @@
 import {
-  Controller, Get, Post, Param, Query, Body, Res, UseGuards, UseInterceptors,
-  UploadedFile, Header,
+  Controller,
+  Get,
+  Post,
+  Param,
+  Query,
+  Body,
+  Res,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Header,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { DocumentService } from './document.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
-import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
+import {
+  JwtAuthGuard,
+  RolesGuard,
+  Roles,
+  CurrentUser,
+} from '@curo/shared/auth';
 
 @Controller('documents')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -16,7 +30,9 @@ export class DocumentController {
   // Doctor or lab staff uploads a document (multipart/form-data: `file` + fields).
   @Post()
   @Roles('DOCTOR', 'LAB_STAFF', 'SUPER_ADMIN')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }),
+  )
   @Header('Content-Type', 'application/fhir+json')
   upload(
     @UploadedFile() file: Express.Multer.File,
@@ -30,7 +46,10 @@ export class DocumentController {
   @Get()
   @Roles('DOCTOR', 'LAB_STAFF', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  list(@Query('patientId') patientId?: string, @Query('encounterId') encounterId?: string) {
+  list(
+    @Query('patientId') patientId?: string,
+    @Query('encounterId') encounterId?: string,
+  ) {
     return this.documentService.listForStaff(patientId, encounterId);
   }
 
@@ -45,10 +64,20 @@ export class DocumentController {
   // Stream the binary content (access-checked inside the service).
   @Get(':id/content')
   @Roles('PATIENT', 'DOCTOR', 'LAB_STAFF', 'SUPER_ADMIN')
-  async content(@Param('id') id: string, @CurrentUser() user: any, @Res() res: Response) {
+  async content(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Res() res: Response,
+  ) {
     const { doc, stream } = await this.documentService.openContent(id, user);
-    res.setHeader('Content-Type', doc.contentType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `inline; filename="${doc.fileName || 'document'}"`);
+    res.setHeader(
+      'Content-Type',
+      doc.contentType || 'application/octet-stream',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${doc.fileName || 'document'}"`,
+    );
     stream.on('error', () => {
       if (!res.headersSent) res.status(500).end();
     });

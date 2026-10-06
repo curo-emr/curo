@@ -7,7 +7,9 @@ import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
  * Services never change the schema: migrations in database/migrations do
  * (`npm run db:migrate`, or the curo-migrate container in Docker).
  */
-export function databaseOptions(entities: TypeOrmModuleOptions['entities']): TypeOrmModuleOptions {
+export function databaseOptions(
+  entities: TypeOrmModuleOptions['entities'],
+): TypeOrmModuleOptions {
   return {
     type: 'postgres',
     host: process.env.DB_HOST || 'localhost',

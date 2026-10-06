@@ -1,5 +1,12 @@
 import {
-  Controller, Get, Post, Patch, Body, Param, Query, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -24,7 +31,11 @@ export class AdminController {
   }
 
   @Get()
-  listUsers(@Query('search') search?: string, @Query('role') role?: string, @Query() query?: any) {
+  listUsers(
+    @Query('search') search?: string,
+    @Query('role') role?: string,
+    @Query() query?: any,
+  ) {
     return this.adminService.listUsers({ search, role }, query);
   }
 
@@ -34,12 +45,20 @@ export class AdminController {
   }
 
   @Patch(':id')
-  updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() user: any) {
+  updateUser(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: any,
+  ) {
     return this.adminService.updateUser(id, dto, user);
   }
 
   @Post(':id/reset-password')
-  resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto, @CurrentUser() user: any) {
+  resetPassword(
+    @Param('id') id: string,
+    @Body() dto: ResetPasswordDto,
+    @CurrentUser() user: any,
+  ) {
     return this.adminService.resetPassword(id, dto.newPassword, user);
   }
 }

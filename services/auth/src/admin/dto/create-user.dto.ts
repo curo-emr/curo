@@ -1,5 +1,10 @@
 import {
-  IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength,
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
 } from 'class-validator';
 import { Gender, UserRole } from '@curo/shared/enums';
 

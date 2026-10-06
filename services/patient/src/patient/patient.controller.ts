@@ -1,13 +1,27 @@
 import {
-  Controller, Get, Post, Put, Patch, Body, Param, Query,
-  UseGuards, Request, Header,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+  Header,
 } from '@nestjs/common';
 import { PatientService } from './patient.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { CreateAllergyDto } from './dto/create-allergy.dto';
 import { CreateConditionDto } from './dto/create-condition.dto';
-import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@curo/shared/auth';
+import {
+  JwtAuthGuard,
+  RolesGuard,
+  Roles,
+  CurrentUser,
+} from '@curo/shared/auth';
 
 @Controller('patients')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -22,9 +36,20 @@ export class PatientController {
   }
 
   @Get()
-  @Roles('DOCTOR', 'NURSE', 'RECEPTIONIST', 'SUPER_ADMIN', 'LAB_STAFF', 'PHARMACIST')
+  @Roles(
+    'DOCTOR',
+    'NURSE',
+    'RECEPTIONIST',
+    'SUPER_ADMIN',
+    'LAB_STAFF',
+    'PHARMACIST',
+  )
   @Header('Content-Type', 'application/fhir+json')
-  findAll(@CurrentUser() user: any, @Query('search') search?: string, @Query() query?: any) {
+  findAll(
+    @CurrentUser() user: any,
+    @Query('search') search?: string,
+    @Query() query?: any,
+  ) {
     return this.patientService.findAll(user, search, query);
   }
 
@@ -45,7 +70,15 @@ export class PatientController {
   // Pharmacy & lab can fetch a patient by id, but receive a minimized projection
   // (see toFhirPatient). Patients are restricted to their own record in the service.
   @Get(':id')
-  @Roles('DOCTOR', 'NURSE', 'RECEPTIONIST', 'SUPER_ADMIN', 'PATIENT', 'LAB_STAFF', 'PHARMACIST')
+  @Roles(
+    'DOCTOR',
+    'NURSE',
+    'RECEPTIONIST',
+    'SUPER_ADMIN',
+    'PATIENT',
+    'LAB_STAFF',
+    'PHARMACIST',
+  )
   @Header('Content-Type', 'application/fhir+json')
   findOne(@Param('id') id: string, @CurrentUser() user: any) {
     return this.patientService.findOne(id, user);
@@ -54,20 +87,35 @@ export class PatientController {
   @Put(':id')
   @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  update(@Param('id') id: string, @Body() dto: UpdatePatientDto, @CurrentUser() user: any) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdatePatientDto,
+    @CurrentUser() user: any,
+  ) {
     return this.patientService.update(id, dto, user);
   }
 
   @Patch(':id')
   @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  patch(@Param('id') id: string, @Body() dto: UpdatePatientDto, @CurrentUser() user: any) {
+  patch(
+    @Param('id') id: string,
+    @Body() dto: UpdatePatientDto,
+    @CurrentUser() user: any,
+  ) {
     return this.patientService.update(id, dto, user);
   }
 
   // Allergies — pharmacy needs these for safe dispensing, nurses for safe triage; lab does not.
   @Get(':id/allergies')
-  @Roles('DOCTOR', 'NURSE', 'RECEPTIONIST', 'SUPER_ADMIN', 'PATIENT', 'PHARMACIST')
+  @Roles(
+    'DOCTOR',
+    'NURSE',
+    'RECEPTIONIST',
+    'SUPER_ADMIN',
+    'PATIENT',
+    'PHARMACIST',
+  )
   @Header('Content-Type', 'application/fhir+json')
   getAllergies(@Param('id') id: string) {
     return this.patientService.getAllergies(id);
@@ -76,7 +124,11 @@ export class PatientController {
   @Post(':id/allergies')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  addAllergy(@Param('id') id: string, @Body() dto: CreateAllergyDto, @CurrentUser() user: any) {
+  addAllergy(
+    @Param('id') id: string,
+    @Body() dto: CreateAllergyDto,
+    @CurrentUser() user: any,
+  ) {
     return this.patientService.addAllergy(id, dto, user.userId);
   }
 
@@ -91,7 +143,11 @@ export class PatientController {
   @Post(':id/conditions')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  addCondition(@Param('id') id: string, @Body() dto: CreateConditionDto, @CurrentUser() user: any) {
+  addCondition(
+    @Param('id') id: string,
+    @Body() dto: CreateConditionDto,
+    @CurrentUser() user: any,
+  ) {
     return this.patientService.addCondition(id, dto, user.userId);
   }
 

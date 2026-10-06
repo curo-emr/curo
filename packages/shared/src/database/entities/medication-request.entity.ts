@@ -1,6 +1,10 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { MedicationRequestStatus } from '../../enums';
 
@@ -19,7 +23,11 @@ export class MedicationRequest {
   @Column({ nullable: true })
   encounterId: string;
 
-  @Column({ type: 'enum', enum: MedicationRequestStatus, default: MedicationRequestStatus.ACTIVE })
+  @Column({
+    type: 'enum',
+    enum: MedicationRequestStatus,
+    default: MedicationRequestStatus.ACTIVE,
+  })
   status: MedicationRequestStatus;
 
   @Column({ nullable: true })

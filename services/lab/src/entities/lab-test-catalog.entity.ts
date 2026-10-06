@@ -1,5 +1,9 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('lab_test_catalog')

@@ -1,6 +1,10 @@
 import {
-  Injectable, Inject, BadRequestException, NotFoundException,
-  ForbiddenException, Logger,
+  Injectable,
+  Inject,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -28,12 +32,17 @@ export class DocumentService {
   private readonly logger = new Logger(DocumentService.name);
 
   constructor(
-    @InjectRepository(DocumentReference) private docRepo: Repository<DocumentReference>,
+    @InjectRepository(DocumentReference)
+    private docRepo: Repository<DocumentReference>,
     @InjectRepository(AuditLog) private auditRepo: Repository<AuditLog>,
     @Inject(STORAGE_PROVIDER) private storage: StorageProvider,
   ) {}
 
-  async upload(file: Express.Multer.File, dto: CreateDocumentDto, user: AuthUser) {
+  async upload(
+    file: Express.Multer.File,
+    dto: CreateDocumentDto,
+    user: AuthUser,
+  ) {
     if (!file) throw new BadRequestException('No file provided');
     if (!ALLOWED_CONTENT_TYPES.includes(file.mimetype)) {
       throw new BadRequestException(
@@ -64,7 +73,10 @@ export class DocumentService {
       date: new Date(),
     });
     const saved = await this.docRepo.save(doc);
-    await this.audit(user, 'CREATE', saved, { fileName: saved.fileName, type: saved.type });
+    await this.audit(user, 'CREATE', saved, {
+      fileName: saved.fileName,
+      type: saved.type,
+    });
     return this.toFhir(saved);
   }
 
@@ -77,13 +89,20 @@ export class DocumentService {
   }
 
   async listForPatient(patientId: string | null) {
-    if (!patientId) throw new ForbiddenException('No patient identity on token');
-    const docs = await this.docRepo.find({ where: { patientId }, order: { date: 'DESC' } });
+    if (!patientId)
+      throw new ForbiddenException('No patient identity on token');
+    const docs = await this.docRepo.find({
+      where: { patientId },
+      order: { date: 'DESC' },
+    });
     return docs.map((d) => this.toFhir(d));
   }
 
   /** Resolve a document the caller is allowed to read and open its byte stream. */
-  async openContent(id: string, user: AuthUser): Promise<{ doc: DocumentReference; stream: Readable }> {
+  async openContent(
+    id: string,
+    user: AuthUser,
+  ): Promise<{ doc: DocumentReference; stream: Readable }> {
     const doc = await this.docRepo.findOne({ where: { id } });
     if (!doc) throw new NotFoundException('Document not found');
 
@@ -139,10 +158,16 @@ export class DocumentService {
       author: [{ reference: `Practitioner/${doc.authorId}` }],
       date: doc.date,
       context: {
-        encounter: doc.encounterId ? [{ reference: `Encounter/${doc.encounterId}` }] : undefined,
+        encounter: doc.encounterId
+          ? [{ reference: `Encounter/${doc.encounterId}` }]
+          : undefined,
         related:
           doc.relatedResourceId && doc.relatedResourceType
-            ? [{ reference: `${doc.relatedResourceType}/${doc.relatedResourceId}` }]
+            ? [
+                {
+                  reference: `${doc.relatedResourceType}/${doc.relatedResourceId}`,
+                },
+              ]
             : undefined,
       },
       content: [
