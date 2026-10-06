@@ -62,7 +62,6 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
       <PatientChartTabs
         patient={patient}
         appointments={appointments}
-        visits={[]}
         doctors={doctors}
       />
     </div>
