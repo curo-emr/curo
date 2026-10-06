@@ -823,7 +823,8 @@ Branch `fix/pharmacy-dispense-integrity`. Follow-ups from the prescription detai
   back), then draw FEFO batches under `pessimistic_write` row locks, then save the dispense.
 - **Price:** computed on the server from the batches drawn (Σ quantity × batch `unitPrice`;
   `unitPrice` on the record is the average). `unitPrice` and `dispenserName` left the DTO.
-  Units no batch can supply are still dispensed, unpriced (best-effort, as before).
+  Units no batch can supply were still dispensed, unpriced — now refused, in
+  `fix/pharmacy-rx-summary-short-stock` (below).
 - **Staff names:** access/refresh tokens and the login response carry `name` (the linked
   practitioner's full name, `null` otherwise); `AuthUser.name` comes from the token. The
   dispense records it (falls back to the email for older tokens), and every portal's sidebar
@@ -834,8 +835,9 @@ Branch `fix/pharmacy-dispense-integrity`. Follow-ups from the prescription detai
   (≤100 UUIDs, validated; staff roles, not PATIENT) — one request per page; a failed lookup
   shows "Unavailable". The always-empty `allergies`/`problemList`/`currentMedications` are
   gone from the pharmacy `Patient` type. Shared `formatAllergies()`.
-- Not done: the list's Last Prescription / Total Rx columns count pending prescriptions only
-  (the page loads `/prescriptions/pending`). Portals keep a session stored before this change
+- Not done here: the list's Last Prescription / Total Rx columns counted pending prescriptions
+  only (the page loaded `/prescriptions/pending`) — fixed in
+  `fix/pharmacy-rx-summary-short-stock` (below). Portals keep a session stored before this change
   (no name) until the next login.
 - Verified: root build, lint, tests, `typecheck:db`, `db:check` (no drift), `tsc --noEmit` for
   every service; pharmacy + doctor portal lint and typecheck; smoke PASS=122 on rebuilt images
@@ -843,3 +845,32 @@ Branch `fix/pharmacy-dispense-integrity`. Follow-ups from the prescription detai
   dispenses → one 201 + one 409, stock drawn once). Race repro before/after: 201+201 →
   201+409. In the browser: patient list shows real allergies; receipt "Dispensed by Kasun
   Bandara", Rs. 55.00; pharmacy sidebar shows the name; doctor greeting and specialty intact.
+
+---
+
+## Patient-list Rx summary, no short-stock dispense ✅ DONE — 2026-10-06
+
+Branch `fix/pharmacy-rx-summary-short-stock`. Follow-ups from dispense integrity.
+
+- **Rx columns:** the pharmacy patient list counted every pending prescription in the system
+  on the client, and showed nothing about prescriptions already dispensed. New
+  `GET /prescriptions/summary?patientIds=` (clinical; DOCTOR, PHARMACIST, SUPER_ADMIN): one
+  grouped query returns each patient's pending count and latest `authoredOn`. The list fetches
+  it per page alongside allergies; columns are now **Pending Rx** and **Last Prescribed**, and a
+  failed lookup shows "Unavailable", not 0. The patients page no longer loads pending
+  prescriptions.
+- **Short stock:** a dispense that non-expired stock can't cover is refused with 409 ("Not
+  enough X in stock: N available, M needed. Receive stock before dispensing."), shown on the
+  prescription page. The transaction rolls back, so the prescription stays active and no batch
+  is drawn. Every dispense is now fully priced, and its `unitPrice` is `totalPrice / quantity`.
+- **Shared DTO:** `PatientIdsQueryDto` (≤100 UUIDs, comma-separated) moved to
+  `@curo/shared/dto`; the allergies and prescription-summary endpoints both use it.
+  `class-validator`/`class-transformer` are optional peer deps of the shared package.
+- Note: `/prescriptions/*` routes to clinical at the gateway, so pharmacy's own
+  `GET /prescriptions/pending` is unreachable (left as is).
+- Verified: root build, lint, tests, `tsc --noEmit` (clinical, patient, pharmacy), pharmacy portal lint and
+  typecheck; smoke PASS=129 on rebuilt images (new: summary pending count, 400/403;
+  Metformin stocked before its dispense; short-stock 409 with its message, stock and
+  prescription unchanged). In the browser: patient list shows Pending Rx / Last Prescribed;
+  dispensing an 81-tablet prescription against 80 in stock shows the message and the
+  prescription stays "Sent to Pharmacy".
