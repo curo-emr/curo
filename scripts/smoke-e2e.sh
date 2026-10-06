@@ -54,6 +54,17 @@ req() {
   printf '%s' "$resp"
 }
 
+# expect_eq <label> <actual> <expected> — content assertion (counts like req)
+expect_eq() {
+  if [[ "$2" == "$3" ]]; then
+    PASS=$((PASS+1)); printf '%sPASS %s  check  %-42s %s[%s]%s\n' "$c_green" "$c_reset" "$1" "$c_dim" "$2" "$c_reset" >&2
+    ROWS+=("| check: $1 | — | $3 | $2 | PASS |")
+  else
+    FAIL=$((FAIL+1)); printf '%sFAIL %s  check  %-42s %s[got %s, expect %s]%s\n' "$c_red" "$c_reset" "$1" "$c_dim" "$2" "$3" "$c_reset" >&2
+    ROWS+=("| check: $1 | — | $3 | $2 | FAIL |")
+  fi
+}
+
 login() {  # login <email> <password> -> echoes accessToken
   curl -s -X POST "$BASE/auth/login" -H 'Content-Type: application/json' \
     -d "{\"email\":\"$1\",\"password\":\"$2\"}"
@@ -72,6 +83,7 @@ RECEP_R=$(login chamali@curo.health Recept@123)
 PHARM_R=$(login kasun.pharma@curo.health Pharma@123)
 LAB_R=$(login tharindi.lab@curo.health LabStaff@123)
 PAT_R=$(login samantha@email.com Patient@123)
+NURSE_R=$(login nimasha@curo.health Nurse@123)
 
 ADMIN=$(jq -r .accessToken <<<"$ADMIN_R")
 DOC=$(jq -r .accessToken <<<"$DOC_R")
@@ -79,11 +91,12 @@ RECEP=$(jq -r .accessToken <<<"$RECEP_R")
 PHARM=$(jq -r .accessToken <<<"$PHARM_R")
 LAB=$(jq -r .accessToken <<<"$LAB_R")
 PAT=$(jq -r .accessToken <<<"$PAT_R")
+NURSE=$(jq -r .accessToken <<<"$NURSE_R")
 
 DOC_PID=$(jq -r .user.practitionerId <<<"$DOC_R")
 PAT_ID_SELF=$(jq -r .user.patientId <<<"$PAT_R")
 
-for r in "ADMIN:$ADMIN" "DOCTOR:$DOC" "RECEP:$RECEP" "PHARM:$PHARM" "LAB:$LAB" "PATIENT:$PAT"; do
+for r in "ADMIN:$ADMIN" "DOCTOR:$DOC" "RECEP:$RECEP" "PHARM:$PHARM" "LAB:$LAB" "PATIENT:$PAT" "NURSE:$NURSE"; do
   name="${r%%:*}"; tok="${r#*:}"
   if [[ -n "$tok" && "$tok" != "null" ]]; then
     PASS=$((PASS+1)); echo "${c_green}PASS ${c_reset} login $name" >&2
@@ -264,6 +277,58 @@ req "patient→write" 403 POST /patients "$PAT_BODY" "$PAT" >/dev/null
 req "receptionist→audit" 403 GET "/audit" "" "$RECEP" >/dev/null
 req "pharmacist→encounters" 403 POST /encounters "{\"patientId\":\"$PATIENT_ID\"}" "$PHARM" >/dev/null
 req "no-token" 401 GET "/patients" "" "" >/dev/null
+
+# ---------------------------------------------------------------------------
+# 8b. NURSE TRIAGE — queue stages + appointment-linked vitals
+#     check-in → nurse queue → triage vitals → ready for doctor → doctor visit
+# ---------------------------------------------------------------------------
+echo "-- nurse triage --" >&2
+expect_eq "nurse JWT role" "$(jq -r .user.role <<<"$NURSE_R")" "NURSE"
+expect_eq "nurse JWT has practitionerId" "$(jq -r '.user.practitionerId != null' <<<"$NURSE_R")" "true"
+
+TODAY=$(date -u +%F)
+NA=$(req "receptionist" 201 POST /appointments \
+  "{\"patientId\":\"$PATIENT_ID\",\"practitionerId\":\"$DOC_PID\",\"start\":\"${TODAY}T10:00:00.000Z\",\"end\":\"${TODAY}T10:30:00.000Z\",\"reasonCode\":\"triage smoke\"}" "$RECEP")
+NAPPT=$(jq -r '.id' <<<"$NA")
+echo "   appointmentId=$NAPPT" >&2
+stage_of() { jq -r '[.extension[]? | select(.url=="urn:curo:queueStage") | .valueString][0] // "none"' <<<"$1"; }
+
+R=$(req "receptionist" 200 PUT "/appointments/$NAPPT" '{"status":"arrived"}' "$RECEP")
+expect_eq "check-in queues for nurse" "$(stage_of "$R")" "waiting_nurse"
+Q=$(req "nurse" 200 GET "/appointments?date=$TODAY&queueStage=waiting_nurse,with_nurse" "" "$NURSE")
+expect_eq "nurse queue lists the patient" "$(jq -r --arg id "$NAPPT" '[.entry[].resource.id] | index($id) != null' <<<"$Q")" "true"
+
+req "nurse" 200 GET "/patients/$PATIENT_ID" "" "$NURSE" >/dev/null
+req "nurse" 200 GET "/patients/$PATIENT_ID/allergies" "" "$NURSE" >/dev/null
+req "nurse" 200 GET "/patients/$PATIENT_ID/conditions" "" "$NURSE" >/dev/null
+PI=$(req "nurse" 200 GET "/patients?_id=$PATIENT_ID" "" "$NURSE")
+expect_eq "patients ?_id= resolves one patient" "$(jq -r .total <<<"$PI")" "1"
+
+req "receptionist→with_nurse" 403 PUT "/appointments/$NAPPT/queue-stage" '{"stage":"with_nurse"}' "$RECEP" >/dev/null
+req "nurse" 200 PUT "/appointments/$NAPPT/queue-stage" '{"stage":"with_nurse"}' "$NURSE" >/dev/null
+req "nurse" 201 POST /vitals "{\"patientId\":\"$PATIENT_ID\",\"appointmentId\":\"$NAPPT\",\"code\":\"8480-6\",\"display\":\"Blood Pressure Systolic\",\"valueQuantity\":150,\"valueUnit\":\"mmHg\"}" "$NURSE" >/dev/null
+req "nurse" 201 POST /vitals "{\"patientId\":\"$PATIENT_ID\",\"appointmentId\":\"$NAPPT\",\"code\":\"8462-4\",\"display\":\"Blood Pressure Diastolic\",\"valueQuantity\":95,\"valueUnit\":\"mmHg\"}" "$NURSE" >/dev/null
+V=$(req "doctor" 200 GET "/vitals?appointmentId=$NAPPT" "" "$DOC")
+expect_eq "visit has 2 triage vitals" "$(jq -r length <<<"$V")" "2"
+expect_eq "triage vitals marked NURSE" "$(jq -r '[.[].extension[]? | select(.url=="urn:curo:performerRole") | .valueString] | unique | join(",")' <<<"$V")" "NURSE"
+req "nurse" 200 PUT "/appointments/$NAPPT/queue-stage" '{"stage":"ready_for_doctor"}' "$NURSE" >/dev/null
+
+req "nurse→with_doctor" 403 PUT "/appointments/$NAPPT/queue-stage" '{"stage":"with_doctor"}' "$NURSE" >/dev/null
+req "illegal ready→done" 400 PUT "/appointments/$NAPPT/queue-stage" '{"stage":"done"}' "$DOC" >/dev/null
+req "bad stage value" 400 PUT "/appointments/$NAPPT/queue-stage" '{"stage":"teleported"}' "$DOC" >/dev/null
+req "doctor" 200 PUT "/appointments/$NAPPT/queue-stage" '{"stage":"with_doctor"}' "$DOC" >/dev/null
+req "doctor (idempotent)" 200 PUT "/appointments/$NAPPT/queue-stage" '{"stage":"with_doctor"}' "$DOC" >/dev/null
+
+NE=$(req "doctor" 201 POST /encounters "{\"patientId\":\"$PATIENT_ID\",\"appointmentId\":\"$NAPPT\",\"reasonCode\":\"triage smoke\"}" "$DOC")
+NENC=$(jq -r .id <<<"$NE")
+V=$(req "doctor" 200 GET "/vitals?appointmentId=$NAPPT" "" "$DOC")
+expect_eq "triage vitals linked to encounter" "$(jq -r --arg e "Encounter/$NENC" '[.[] | .encounter.reference == $e] | all' <<<"$V")" "true"
+R=$(req "doctor" 200 PUT "/appointments/$NAPPT" '{"status":"fulfilled"}' "$DOC")
+expect_eq "fulfilled closes the queue" "$(stage_of "$R")" "done"
+
+req "nurse→prescriptions" 403 POST /prescriptions "{\"patientId\":\"$PATIENT_ID\"}" "$NURSE" >/dev/null
+req "nurse→encounters" 403 POST /encounters "{\"patientId\":\"$PATIENT_ID\"}" "$NURSE" >/dev/null
+req "vitals without filter" 400 GET "/vitals" "" "$NURSE" >/dev/null
 
 # ---------------------------------------------------------------------------
 # 9. Organizations directory (any authenticated user) + known-anomaly probes

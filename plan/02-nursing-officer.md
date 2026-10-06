@@ -1,5 +1,16 @@
 # Doc 02 — Nursing Officer: Triage Vitals + Post-Visit Checklist + `curo-nurse` Frontend
 
+> **Implemented 2026-10-06 with a narrowed scope (user decision) — see `BUILD_PROGRESS.md` → "Nursing Officer".**
+> - **Done:** NURSE role (N1), queue stages (N2), appointment-linked triage vitals (N3), doctor + receptionist
+>   integration (N5), `curo-nurse` portal on 3016 (N6), seed + smoke tests (N7).
+> - **Dropped:** the post-visit checklist (N4 and every checklist step/stage/UI below) — not needed.
+> - **No Kafka:** Doc 01 was not implemented. Queue stages move over HTTP instead of the §2.4 consumer:
+>   check-in (`arrived`) → `waiting_nurse`, `fulfilled` → `done`, cancel/no-show → cleared (appointment-service),
+>   and the doctor portal sets `with_doctor` when it opens the visit. Stages: `waiting_nurse → with_nurse →
+>   ready_for_doctor → with_doctor → done` (`ready_for_doctor → with_nurse` lets a nurse correct vitals).
+> - Not built: the PATIENT_READY doctor notification (needed the Kafka consumer); the doctor schedule shows a
+>   "Vitals ready" badge instead.
+
 **Goal:** add a Nursing Officer role and workstation to the patient flow:
 
 ```

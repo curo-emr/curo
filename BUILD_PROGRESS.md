@@ -552,3 +552,52 @@ docker compose ps                 # all healthy; curo-seed exits 0
 # Frontends: doctor :3010  patient :3011  receptionist :3012  lab :3013  pharmacy :3014
 # Gateway   :3000   (seed data already present; admin@curo.health / Admin@12345)
 ```
+
+---
+
+## Nursing Officer (triage) ✅ DONE — 2026-10-06
+
+Pre-visit nurse triage added to the patient flow (scope narrowed from `plan/02`:
+**no post-visit checklist, no Kafka** — see the note at the top of that doc).
+
+```
+reception check-in ─► nurse triage (vitals) ─► doctor visit (vitals prefilled) ─► done
+        └──────── "Skip nurse" bypass ─────────┘
+```
+
+### What was built
+- **NURSE role** in every `UserRole` copy (auth owns the `users`/`practitioners` Postgres enums;
+  synchronize rebuilt them in place — existing users verified intact). curo-admin can create nurses.
+- **Queue stages** — `appointments.queueStage` (nullable varchar): `waiting_nurse → with_nurse →
+  ready_for_doctor → with_doctor → done`. Transitions + per-stage role rules in
+  `curo-appointment-service/src/appointment/queue-stage.ts` (unit-tested). `PUT /appointments/:id/queue-stage`;
+  `GET /appointments?queueStage=a,b`. Status sync: `arrived` → `waiting_nurse`, `fulfilled` → `done`,
+  `cancelled|noshow` → cleared. Doctors can only move their own patients.
+- **Triage vitals** — `observations.appointmentId` + `performerRole` (all 4 entity copies). Nurses
+  `POST /vitals` with `appointmentId`; `GET /vitals?appointmentId=`; `createEncounter` links the visit's
+  triage vitals to the new encounter. patient-service: NURSE read access + FHIR `_id` filter.
+- **curo-nurse** (port 3016, nested repo) — dashboard (patient-flow strip, up next, waits), triage queue
+  (15 s polling, start/resume/skip/edit), triage screen (allergy/condition banner, vital tiles flagged
+  against normal ranges with range gauges, BMI, last recorded values, review rail).
+- **curo-doctor** — visit editor prefills triage vitals ("recorded by" banner, *edited* markers), posts only
+  new/changed vitals (overrides become new doctor observations; nurse rows stay), marks the patient
+  `with_doctor` on open and fulfils the appointment on sign. Queue badges on schedule/dashboard; encounter
+  detail shows a "Nurse triage" marker + respiration. Fixed: signed encounters showed "Scheduled"
+  (`completed` was missing from the status map).
+- **curo-receptionist** — Queue Board rewired to real stages (was mock-era statuses), 15 s polling,
+  "Skip nurse" bypass, schedule Check In actually checks in, Queue in the nav, dashboard stats live.
+- **Seed** — idempotent `topUps()` runs on existing volumes too (nurses, medication catalog, ICD-10);
+  fresh seeds also get today's patient flow across all stages.
+
+### Verified
+- `docker compose up -d` after building images **one at a time** (building all Next.js images in parallel
+  exhausts the 8 GB Docker VM — `cannot allocate memory`). All containers healthy; no sync errors.
+- `scripts/smoke-e2e.sh` — **PASS=109, FAIL=0** (new nurse-triage section: role/JWT, check-in → nurse queue,
+  `_id` lookup, 403/400 transition rules, appointment-linked vitals, encounter auto-link, fulfil → done).
+- Browser walkthrough: reception check-in → nurse triage (BP 150/95 flagged) → doctor sees prefilled
+  vitals + banner, overrides weight → DB shows 8 nurse rows linked to the encounter + exactly 1 doctor row;
+  bypass path → doctor gets an empty panel; queue board follows every step.
+
+### Not built (follow-ups)
+- "Patient ready" notification to the doctor (the schedule badge covers it; needs either Kafka or a
+  notification write from appointment-service).
