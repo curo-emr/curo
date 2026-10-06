@@ -17,6 +17,8 @@ import { toFhirPatient, toFhirAllergy, toFhirCondition, toFhirObservation } from
 import { UserRole } from '../enums';
 import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 @Injectable()
 export class PatientService implements OnModuleInit {
   private readonly logger = new Logger(PatientService.name);
@@ -121,7 +123,7 @@ export class PatientService implements OnModuleInit {
       throw new ForbiddenException('Patients cannot list all patients');
     }
     const { page, pageSize, skip, take } = parsePagination(pagination);
-    const gender = (pagination as { gender?: string }).gender;
+    const { gender, _id } = pagination as { gender?: string; _id?: string };
     const query = this.patientsRepo.createQueryBuilder('p').where('p.active = true');
     if (search) {
       query.andWhere(
@@ -131,6 +133,11 @@ export class PatientService implements OnModuleInit {
     }
     if (gender) {
       query.andWhere('p.gender = :gender', { gender });
+    }
+    // FHIR `_id` search: comma-separated ids — lets list screens resolve just the patients they show.
+    if (_id) {
+      const ids = _id.split(',').map((id) => id.trim()).filter((id) => UUID_RE.test(id));
+      query.andWhere(ids.length ? 'p.id IN (:...ids)' : '1 = 0', { ids });
     }
     const [patients, total] = await query
       .orderBy('p.createdAt', 'DESC')
@@ -142,7 +149,7 @@ export class PatientService implements OnModuleInit {
       page,
       pageSize,
       baseUrl: '/patients',
-      query: { search, gender },
+      query: { search, gender, _id },
     });
   }
 

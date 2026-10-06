@@ -88,24 +88,25 @@ export class ClinicalController {
 
   // Vitals
   @Post('vitals')
-  @Roles('DOCTOR', 'SUPER_ADMIN')
+  @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   addVitals(@Body() dto: CreateVitalsDto, @CurrentUser() user: any) {
-    return this.clinicalService.addVitals(dto, user.practitionerId ?? user.userId);
+    return this.clinicalService.addVitals(dto, user.practitionerId ?? user.userId, user.role);
   }
 
+  // ?patientId= (history) or ?appointmentId= (one visit's triage vitals)
   @Get('vitals')
-  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
+  @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getVitalsByQuery(@Query('patientId') patientId: string) {
-    return this.clinicalService.getVitals(patientId);
+  getVitalsByQuery(@Query('patientId') patientId?: string, @Query('appointmentId') appointmentId?: string) {
+    return this.clinicalService.getVitals({ patientId, appointmentId });
   }
 
   @Get('vitals/patient/:patientId')
-  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
+  @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getVitals(@Param('patientId') patientId: string) {
-    return this.clinicalService.getVitals(patientId);
+    return this.clinicalService.getVitals({ patientId });
   }
 
   @Get('vitals/patient/:patientId/trend')

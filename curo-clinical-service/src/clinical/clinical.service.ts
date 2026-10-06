@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Not } from 'typeorm';
+import { Repository, In, Not, IsNull } from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Encounter } from '../entities/encounter.entity';
 import { ClinicalNote } from '../entities/clinical-note.entity';
@@ -90,6 +90,10 @@ function toFhirObservation(o: Observation) {
     valueQuantity: o.valueQuantity != null ? { value: Number(o.valueQuantity), unit: o.valueUnit } : undefined,
     valueString: o.valueString,
     component: o.components,
+    extension: [
+      o.appointmentId && { url: 'urn:curo:appointmentId', valueString: o.appointmentId },
+      o.performerRole && { url: 'urn:curo:performerRole', valueString: o.performerRole },
+    ].filter(Boolean),
   };
 }
 
@@ -169,6 +173,13 @@ export class ClinicalService implements OnModuleInit {
       periodStart: dto.periodStart ? new Date(dto.periodStart) : new Date(),
     });
     const saved = await this.encountersRepo.save(encounter);
+    if (dto.appointmentId) {
+      // Pull the visit's triage vitals (recorded before the encounter existed) into it.
+      await this.observationsRepo.update(
+        { appointmentId: dto.appointmentId, encounterId: IsNull() },
+        { encounterId: saved.id },
+      );
+    }
     return toFhirEncounter(saved);
   }
 
@@ -219,10 +230,11 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // Vitals
-  async addVitals(dto: CreateVitalsDto, practitionerId: string): Promise<any> {
+  async addVitals(dto: CreateVitalsDto, practitionerId: string, performerRole: string): Promise<any> {
     const obs = this.observationsRepo.create({
       ...dto,
       practitionerId,
+      performerRole,
       category: 'vital-signs',
       status: ObservationStatus.FINAL,
       effectiveDateTime: dto.effectiveDateTime ? new Date(dto.effectiveDateTime) : new Date(),
@@ -231,9 +243,15 @@ export class ClinicalService implements OnModuleInit {
     return toFhirObservation(saved);
   }
 
-  async getVitals(patientId: string): Promise<any[]> {
+  async getVitals(filter: { patientId?: string; appointmentId?: string }): Promise<any[]> {
+    if (!filter.patientId && !filter.appointmentId) {
+      throw new BadRequestException('patientId or appointmentId is required');
+    }
+    const where: any = { category: 'vital-signs' };
+    if (filter.patientId) where.patientId = filter.patientId;
+    if (filter.appointmentId) where.appointmentId = filter.appointmentId;
     const obs = await this.observationsRepo.find({
-      where: { patientId, category: 'vital-signs' },
+      where,
       order: { effectiveDateTime: 'DESC' },
     });
     return obs.map(toFhirObservation);
