@@ -4,7 +4,8 @@ import { Repository, Between } from 'typeorm';
 import { Appointment } from '../entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
-import { UserRole, AppointmentStatus } from '../enums';
+import { UserRole, AppointmentStatus, QueueStage } from '../enums';
+import { assertQueueTransition, queueStageForStatus } from './queue-stage';
 import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 function toFhirAppointment(a: Appointment) {
@@ -26,6 +27,7 @@ function toFhirAppointment(a: Appointment) {
       { url: 'urn:curo:slotNumber', valueInteger: a.slotNumber },
       { url: 'urn:curo:isWalkIn', valueBoolean: a.isWalkIn },
       a.cancelledReason && { url: 'urn:curo:cancelledReason', valueString: a.cancelledReason },
+      a.queueStage && { url: 'urn:curo:queueStage', valueString: a.queueStage },
     ].filter(Boolean),
     meta: { lastUpdated: a.updatedAt },
   };
@@ -48,7 +50,7 @@ export class AppointmentService {
     return toFhirAppointment(saved);
   }
 
-  async findAll(requestingUser: { role: string; userId: string; practitionerId?: string; patientId?: string }, filters?: { date?: string; practitionerId?: string; patientId?: string }, pagination: PaginationQuery = {}): Promise<any> {
+  async findAll(requestingUser: { role: string; userId: string; practitionerId?: string; patientId?: string }, filters?: { date?: string; practitionerId?: string; patientId?: string; queueStage?: string }, pagination: PaginationQuery = {}): Promise<any> {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const query = this.appointmentsRepo.createQueryBuilder('a');
 
@@ -70,6 +72,9 @@ export class AppointmentService {
     }
     if (filters?.patientId) {
       query.andWhere('a.patientId = :pa', { pa: filters.patientId });
+    }
+    if (filters?.queueStage) {
+      query.andWhere('a.queueStage IN (:...stages)', { stages: filters.queueStage.split(',') });
     }
 
     const [appointments, total] = await query
@@ -94,7 +99,27 @@ export class AppointmentService {
   async update(id: string, dto: UpdateAppointmentDto): Promise<any> {
     const a = await this.appointmentsRepo.findOne({ where: { id } });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);
+    if (dto.status && dto.status !== a.status) {
+      const stage = queueStageForStatus(dto.status, a.queueStage);
+      if (stage !== undefined) a.queueStage = stage;
+    }
     Object.assign(a, dto);
+    const saved = await this.appointmentsRepo.save(a);
+    return toFhirAppointment(saved);
+  }
+
+  async updateQueueStage(
+    id: string,
+    stage: QueueStage,
+    user: { role: string; practitionerId?: string },
+  ): Promise<any> {
+    const a = await this.appointmentsRepo.findOne({ where: { id } });
+    if (!a) throw new NotFoundException(`Appointment ${id} not found`);
+    if (user.role === UserRole.DOCTOR && a.practitionerId !== user.practitionerId) {
+      throw new ForbiddenException('Doctors can only move their own patients');
+    }
+    if (!assertQueueTransition(a.queueStage, stage, user.role)) return toFhirAppointment(a);
+    a.queueStage = stage;
     const saved = await this.appointmentsRepo.save(a);
     return toFhirAppointment(saved);
   }
