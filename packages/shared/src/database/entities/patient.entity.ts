@@ -1,8 +1,8 @@
 import {
   Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, Index, OneToMany,
+  UpdateDateColumn, Index,
 } from 'typeorm';
-import { Gender, MaritalStatus } from '../enums';
+import { Gender, MaritalStatus } from '../../enums';
 
 @Entity('patients')
 export class Patient {
@@ -11,10 +11,11 @@ export class Patient {
 
   @Index({ unique: true })
   @Column()
-  patientCode: string; // CUR-XXXXXXXX
+  patientCode: string;
 
   // Personal Health Number: YYYY + 7-digit sequence + Luhn check digit (12 digits).
-  // Primary unique patient identifier; nullable + unique so it can be backfilled live.
+  // Primary unique patient identifier. Nullable so it can be backfilled on a live DB
+  // (Postgres allows multiple NULLs under a unique index).
   @Index({ unique: true })
   @Column({ nullable: true })
   personalHealthNumber: string;
@@ -28,10 +29,10 @@ export class Patient {
   @Column({ nullable: true })
   middleName: string;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: true })
   birthDate: string;
 
-  @Column({ type: 'enum', enum: Gender, default: Gender.UNKNOWN })
+  @Column({ type: 'enum', enum: Gender, default: Gender.UNKNOWN, nullable: true })
   gender: Gender;
 
   @Column({ nullable: true })
