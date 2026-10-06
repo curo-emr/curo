@@ -220,8 +220,8 @@ req "recep"  403 GET  "/prescriptions/$RX_ID" "" "$RECEP" >/dev/null
 req "pharma" 200 GET  "/stock/grouped" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock?lowOnly=true" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock/alerts" "" "$PHARM" >/dev/null
-# Same body shape as the pharmacy portal: the patient comes from the prescription.
-DISP_BODY="{\"medicationRequestId\":\"$RX_ID\",\"dispenserName\":\"Kasun Bandara\",\"quantityValue\":60,\"quantityUnit\":\"tablet\"}"
+# Same body shape as the pharmacy portal: patient, price and dispenser come from the server.
+DISP_BODY="{\"medicationRequestId\":\"$RX_ID\",\"quantityValue\":60,\"quantityUnit\":\"tablet\"}"
 D=$(req "pharma" 201 POST "/dispense" "$DISP_BODY" "$PHARM")
 DISP_ID=$(jq -r '.id' <<<"$D")
 expect_eq "dispense patient from prescription" "$(jq -r '.subject.reference' <<<"$D")" "Patient/$PATIENT_ID"
@@ -234,6 +234,26 @@ req "pharma" 200 GET  "/stock" "" "$PHARM" >/dev/null
 ST=$(req "pharma" 201 POST "/stock" '{"medicationCode":"SMK1","medicationName":"Smoke Tablet","quantity":100,"unit":"tablet","reorderThreshold":10,"unitPrice":5}' "$PHARM")
 STOCK_ID=$(jq -r '.id' <<<"$ST")
 [[ -n "$STOCK_ID" && "$STOCK_ID" != "null" ]] && req "pharma" 200 PUT "/stock/$STOCK_ID" '{"quantity":120}' "$PHARM" >/dev/null
+
+# Pricing, dispenser name and concurrency, on a fresh batch with a known price.
+PRICED_CODE="SMK-RX-$RANDOM$RANDOM"
+req "pharma" 201 POST "/stock" "{\"medicationCode\":\"$PRICED_CODE\",\"medicationName\":\"Smoke Priced\",\"quantity\":100,\"unit\":\"tablet\",\"unitPrice\":2.5}" "$PHARM" >/dev/null
+prescribe_priced() {
+  req "doctor" 201 POST /prescriptions "{\"patientId\":\"$PATIENT_ID\",\"medicationCode\":\"$PRICED_CODE\",\"medicationDisplay\":\"Smoke Priced\",\"dosageText\":\"1 tab OD\",\"quantityValue\":10,\"quantityUnit\":\"tablet\"}" "$DOC" | jq -r '.id'
+}
+ext() { jq -r --arg u "urn:curo:$1" '.extension[] | select(.url == $u) | (.valueDecimal // .valueString)'; }
+D2=$(req "pharma" 201 POST "/dispense" "{\"medicationRequestId\":\"$(prescribe_priced)\"}" "$PHARM")
+expect_eq "dispense priced from its stock batch" "$(ext totalPrice <<<"$D2")" "25"
+expect_eq "dispenser is the pharmacist's name" "$(ext dispenserName <<<"$D2")" "Kasun Bandara"
+# Two pharmacists dispensing the same prescription at once: exactly one wins.
+RX3=$(prescribe_priced)
+CODES=$(for _ in 1 2; do
+  curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/dispense" -H 'Content-Type: application/json' \
+    -H "Authorization: Bearer $PHARM" -d "{\"medicationRequestId\":\"$RX3\"}" &
+done; wait)
+expect_eq "concurrent dispenses: one 201, one 409" "$(sort <<<"$CODES" | tr '\n' ' ')" "201 409 "
+LEFT=$(req "pharma" 200 GET "/stock/grouped" "" "$PHARM" | jq -r --arg c "$PRICED_CODE" '.[] | select(.medicationCode == $c) | .totalQuantity')
+expect_eq "stock drawn once per dispense" "$LEFT" "80"
 
 # ---------------------------------------------------------------------------
 # 6. READ-BACK to doctor + patient

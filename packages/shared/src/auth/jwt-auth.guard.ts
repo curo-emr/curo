@@ -14,6 +14,8 @@ export interface JwtPayload {
   role: UserRole;
   practitionerId?: string | null;
   patientId?: string | null;
+  /** Staff display name; absent for patients, admins and tokens issued before it existed. */
+  name?: string | null;
 }
 
 /** The user attached to `request.user` once the access token is verified. */
@@ -23,6 +25,7 @@ export interface AuthUser {
   role: UserRole;
   practitionerId: string | null;
   patientId: string | null;
+  name: string | null;
 }
 
 /** The parts of an HTTP request the auth guards read and write. */
@@ -38,6 +41,7 @@ export function toAuthUser(payload: JwtPayload): AuthUser {
     role: payload.role,
     practitionerId: payload.practitionerId ?? null,
     patientId: payload.patientId ?? null,
+    name: payload.name ?? null,
   };
 }
 

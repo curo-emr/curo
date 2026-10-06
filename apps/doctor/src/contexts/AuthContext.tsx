@@ -68,9 +68,10 @@ function readStoredUser(): AuthUser | null {
 
 const readServerUser = () => undefined;
 
-// The login payload carries no display name — look the doctor up once and cache it.
+// The login payload carries the name but not first name or specialty — look the
+// doctor up once and cache them.
 async function withProfile(user: AuthUser): Promise<AuthUser> {
-  if (user.name || !user.practitionerId) return user;
+  if (user.firstName || !user.practitionerId) return user;
   try {
     const me = (await getPractitioners("DOCTOR")).find(p => p.id === user.practitionerId);
     return me ? { ...user, name: me.name.full, firstName: me.name.first, specialty: me.specialty } : user;
@@ -84,9 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Sessions stored before the profile lookup existed have no name; fill it in once.
+  // Sessions stored before the profile lookup existed lack it; fill it in once.
   useEffect(() => {
-    if (!user || user.name) return;
+    if (!user || user.firstName) return;
     void withProfile(user).then((enriched) => {
       if (enriched === user) return;
       localStorage.setItem(USER_KEY, JSON.stringify(enriched));
