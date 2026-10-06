@@ -91,7 +91,7 @@ export class PatientService implements OnModuleInit {
       }
       this.logger.log(`Backfilled PHN for ${missing.length} existing patient(s)`);
     } catch (err) {
-      // Table may not exist yet on a brand-new DB; synchronize creates it on boot.
+      // Table may not exist yet if migrations haven't run (npm run db:migrate).
       this.logger.warn(`PHN backfill skipped: ${(err as Error).message}`);
     }
   }

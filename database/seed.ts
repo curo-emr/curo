@@ -2,14 +2,10 @@ import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as QRCode from 'qrcode';
+import { connectionOptions } from './data-source';
 
-// ===== Inline entity definitions for seeder =====
-import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index,
-} from 'typeorm';
-
-// We re-declare minimal entity classes here to avoid cross-service deps
-// The real entities are in each service — these must match the DB schema
+// The seed writes raw SQL against the schema created by `npm run db:migrate`.
+// These enums are just the column values it inserts.
 
 enum UserRole { PATIENT='PATIENT', DOCTOR='DOCTOR', RECEPTIONIST='RECEPTIONIST', PHARMACIST='PHARMACIST', LAB_STAFF='LAB_STAFF', NURSE='NURSE', SUPER_ADMIN='SUPER_ADMIN' }
 enum Gender { MALE='male', FEMALE='female', OTHER='other', UNKNOWN='unknown' }
@@ -28,16 +24,7 @@ enum AllergyCrit { LOW='low', HIGH='high', UNABLE_TO_ASSESS='unable-to-assess' }
 enum CondStatus { ACTIVE='active', RESOLVED='resolved' }
 enum NotifType { APPOINTMENT_CONFIRMED='appointment_confirmed', LAB_RESULTS_READY='lab_results_ready', PRESCRIPTION_READY='prescription_ready', GENERAL='general' }
 
-const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  username: process.env.DB_USER || 'curo',
-  password: process.env.DB_PASS || 'curo_secret',
-  database: process.env.DB_NAME || 'curo_db',
-  synchronize: false,
-  logging: false,
-});
+const AppDataSource = new DataSource(connectionOptions);
 
 function genCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

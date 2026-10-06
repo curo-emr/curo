@@ -1,7 +1,7 @@
 # Curo EMR — Test Account Credentials
 
 > ⚠️ **Development seed data only.** These accounts and passwords are created by
-> `scripts/seed.ts` for local testing. **Never use them in production.** Passwords are
+> `database/seed.ts` for local testing. **Never use them in production.** Passwords are
 > stored bcrypt-hashed; the plaintext values below are hardcoded in the seed script.
 
 All logins go through the gateway: `POST http://localhost:3000/auth/login` with

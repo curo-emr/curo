@@ -1,0 +1,8 @@
+# The context is the repo root: the image needs only the root manifests, the base tsconfig and database/.
+**
+!package.json
+!package-lock.json
+!tsconfig.base.json
+!database/**
+**/node_modules
+**/.env*
