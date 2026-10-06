@@ -17,9 +17,9 @@ export async function getAuditLogs(filters?: AuditFilters): Promise<AuditEntry[]
 }
 
 export async function getAuditLogsPaginated(
-  params: PaginationParams & AuditFilters = {},
+  params: Omit<PaginationParams, "search"> & AuditFilters = {},
 ): Promise<PaginatedResult<AuditEntry>> {
-  const { page, pageSize, search, ...filters } = params;
+  const { page, pageSize, ...filters } = params;
   const res = await apiClient.get<AuditEntry[] | FhirBundle<AuditEntry>>("/audit", {
     params: { ...paginationParams({ page, pageSize }), ...filters },
   });

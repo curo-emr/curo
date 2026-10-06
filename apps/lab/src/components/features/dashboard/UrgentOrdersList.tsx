@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
-import { getPatientName, getTestName, formatStatus } from "@/lib/utils";
+import { getPatientName, getTestName } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";

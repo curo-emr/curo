@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { Badge } from "@/components/ui/badge";
 import {
   User,
   Stethoscope,
@@ -28,7 +27,7 @@ import {
   MapPin,
 } from "lucide-react";
 import Link from "next/link";
-import { cn, formatTime, getPatientName } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 import { ROUTES, VISIT_TYPES } from "@/lib/constants";
 import { bookNewAppointment } from "@/lib/actions/appointment-actions";
 import { toast } from "sonner";

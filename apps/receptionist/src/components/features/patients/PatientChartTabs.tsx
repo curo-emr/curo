@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Patient, Allergy, Appointment, Visit, Doctor } from "@/types";
+import { Patient, Appointment, Visit, Doctor } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DemographicsTab } from "./tabs/DemographicsTab";
 import { AppointmentsTab } from "./tabs/AppointmentsTab";
@@ -9,7 +9,6 @@ import { VisitHistoryTab } from "./tabs/VisitHistoryTab";
 
 interface Props {
   patient: Patient;
-  allergies: Allergy[];
   appointments: Appointment[];
   visits: Visit[];
   doctors: Doctor[];
@@ -17,7 +16,6 @@ interface Props {
 
 export function PatientChartTabs({
   patient,
-  allergies,
   appointments,
   visits,
   doctors,
@@ -49,7 +47,7 @@ export function PatientChartTabs({
 
       <div className="mt-6">
         <TabsContent value="demographics" className="space-y-6 outline-none">
-          <DemographicsTab patient={patient} allergies={allergies} />
+          <DemographicsTab patient={patient} />
         </TabsContent>
 
         <TabsContent value="appointments" className="outline-none">

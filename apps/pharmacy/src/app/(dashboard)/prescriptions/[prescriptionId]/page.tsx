@@ -1,23 +1,17 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { Loader2, User, Phone, Pill, ClipboardList, ArrowLeft } from "lucide-react";
+import { Loader2, Pill, ClipboardList, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
-import { formatDate, calculateAge } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
-import { getPrescriptionsByPatient, getDispensingRecordsByPrescription, dispense, type DispenseRecord } from "@/lib/api/pharmacy";
-import { getPatientById } from "@/lib/api/patients";
-import type { Patient, Prescription } from "@/types";
+import { getDispensingRecordsByPrescription, dispense, type DispenseRecord } from "@/lib/api/pharmacy";
 import { apiErrorMessage } from "@/lib/api/client";
 
 export default function PrescriptionDetailPage({ params }: { params: Promise<{ prescriptionId: string }> }) {
   const { prescriptionId } = use(params);
-  const [prescription, setPrescription] = useState<Prescription | null>(null);
-  const [patient, setPatient] = useState<Patient | null>(null);
   const [dispensingRecords, setDispensingRecords] = useState<DispenseRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDispensing, setIsDispensing] = useState(false);
@@ -27,13 +21,9 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ p
   useEffect(() => {
     const loadData = async () => {
       try {
-        // We don't have a direct GET /prescriptions/:id endpoint, so fetch by patient context
-        // The prescriptionId is passed in; we need to find the patient first via a scan
+        // There is no GET /prescriptions/:id, so the page shows dispense records only.
         const records = await getDispensingRecordsByPrescription(prescriptionId).catch(() => []);
         setDispensingRecords(records);
-
-        // Try to load full details if we can get patientId from any source
-        // For now, load dispense records and show what we have
       } catch (err) {
         console.error(err);
       } finally {

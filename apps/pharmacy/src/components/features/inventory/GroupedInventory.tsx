@@ -36,7 +36,8 @@ export function GroupedInventory({ groups }: { groups: GroupedStock[] }) {
   const toggle = (code: string) =>
     setOpen((prev) => {
       const next = new Set(prev);
-      next.has(code) ? next.delete(code) : next.add(code);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
       return next;
     });
 

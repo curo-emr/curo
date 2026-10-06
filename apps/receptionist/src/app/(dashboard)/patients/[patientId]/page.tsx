@@ -61,7 +61,6 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
       <PatientHeader patient={patient} allergies={allergies} />
       <PatientChartTabs
         patient={patient}
-        allergies={allergies}
         appointments={appointments}
         visits={[]}
         doctors={doctors}
