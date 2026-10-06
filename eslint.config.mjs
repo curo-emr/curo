@@ -36,16 +36,8 @@ export default tseslint.config(
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-floating-promises': 'warn',
       // `const { secret, ...rest } = obj` is how fields get dropped.
       '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
-      // `any` flowing out of query results and request bodies. Warnings for now;
-      // switch back to errors service by service as each one is typed properly.
-      '@typescript-eslint/no-unsafe-argument': 'warn',
-      '@typescript-eslint/no-unsafe-assignment': 'warn',
-      '@typescript-eslint/no-unsafe-call': 'warn',
-      '@typescript-eslint/no-unsafe-member-access': 'warn',
-      '@typescript-eslint/no-unsafe-return': 'warn',
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
