@@ -592,6 +592,9 @@ reception check-in ─► nurse triage (vitals) ─► doctor visit (vitals pref
 ### Verified
 - `docker compose up -d` after building images **one at a time** (building all Next.js images in parallel
   exhausts the 8 GB Docker VM — `cannot allocate memory`). All containers healthy; no sync errors.
+  **Use `npm run docker:rebuild`** (`scripts/docker-rebuild.sh`) instead of `docker compose up -d --build`:
+  it builds every image from `docker-compose.yml` sequentially, then starts the stack.
+  `npm run docker:rebuild -- curo-nurse curo-doctor` rebuilds/restarts just those; `--no-up` builds only.
 - `scripts/smoke-e2e.sh` — **PASS=109, FAIL=0** (new nurse-triage section: role/JWT, check-in → nurse queue,
   `_id` lookup, 403/400 transition rules, appointment-linked vitals, encounter auto-link, fulfil → done).
 - Browser walkthrough: reception check-in → nurse triage (BP 150/95 flagged) → doctor sees prefilled
