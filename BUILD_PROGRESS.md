@@ -747,8 +747,7 @@ are errors again (as is `no-floating-promises`); root `npm run lint` uses `--max
   `SERVICE_MAP` order; `queue-stage.spec.ts` didn't type-check (`tsc --noEmit` only — jest
   and `nest build` skip it). TypeORM 1.x throws on `undefined` in `where`, so optional
   filters use conditional spreads.
-- `no-explicit-any` is still off: ~150 explicit `any`s remain, mostly `Promise<any>` on
-  FHIR mapper return types. Typing those (FHIR resource types) is the next step.
+- `no-explicit-any` was still off here; turned on in `refactor/type-explicit-anys` (below).
 - Verified: `npm run lint` clean, backend build/test, `tsc --noEmit` for every service
   (specs included), `typecheck:db`; fresh scratch DB migrate → `db:check` (no drift) → seed
   (all staff linked both ways) → re-seed takes the top-up path; smoke PASS=109 on rebuilt
@@ -843,3 +842,22 @@ Branch `fix/pharmacy-dispense-integrity`. Follow-ups from the prescription detai
   dispenses → one 201 + one 409, stock drawn once). Race repro before/after: 201+201 →
   201+409. In the browser: patient list shows real allergies; receipt "Dispensed by Kasun
   Bandara", Rs. 55.00; pharmacy sidebar shows the name; doctor greeting and specialty intact.
+
+---
+
+## `no-explicit-any` on ✅ DONE — 2026-10-06
+
+Branch `refactor/type-explicit-anys`. The backend rule is back to `error` (from
+`recommendedTypeChecked`); the portals already had it on.
+
+- 55 explicit `any`s remained (earlier cleanups took the rest of the ~150). 54 were
+  `Promise<any>` / `Promise<any[]>` annotations on service methods returning a mapper's
+  output — removed, so the type is inferred from the mapper (one source of truth). No type
+  errors surfaced; emitted declarations contain no `any`.
+- `CreateVitalsDto.components` is `Record<string, unknown>[]` (the entity's type), validated
+  with `@IsArray()` + `@IsObject({ each: true })` — a malformed body is now a 400.
+- Portals: the calendar's `[key: string]: any` (admin, doctor, receptionist) only let
+  callers attach an `appointment` the calendar never read; both removed.
+- Verified: root lint/build/tests/`typecheck:db`, `tsc --noEmit` for every service; admin,
+  doctor and receptionist portal lint + typecheck + `next build`; smoke PASS=123 on rebuilt
+  images (new: vitals with non-object `components` → 400).

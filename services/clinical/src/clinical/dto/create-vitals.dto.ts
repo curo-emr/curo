@@ -1,4 +1,6 @@
 import {
+  IsArray,
+  IsObject,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -50,5 +52,7 @@ export class CreateVitalsDto {
   effectiveDateTime?: string;
 
   @IsOptional()
-  components?: any[];
+  @IsArray()
+  @IsObject({ each: true })
+  components?: Record<string, unknown>[];
 }
