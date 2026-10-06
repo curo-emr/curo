@@ -1,7 +1,7 @@
 {
   "name": "@curo/shared",
   "version": "1.0.0",
-  "description": "Shared kernel for Curo EMR backends: auth guards, cross-service entities and enums, FHIR helpers and service bootstrap",
+  "description": "Shared kernel for Curo EMR backends: auth guards, cross-service entities, enums and DTOs, FHIR helpers and service bootstrap",
   "private": true,
   "license": "UNLICENSED",
   "exports": {
@@ -16,6 +16,10 @@
     "./database": {
       "types": "./dist/database/index.d.ts",
       "default": "./dist/database/index.js"
+    },
+    "./dto": {
+      "types": "./dist/dto/index.d.ts",
+      "default": "./dist/dto/index.js"
     },
     "./enums": {
       "types": "./dist/enums/index.d.ts",
@@ -39,6 +43,8 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/swagger": "^11.4.4",
     "@nestjs/typeorm": "^11.0.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "typeorm": "^1.0.0"
   },
   "peerDependenciesMeta": {
@@ -46,6 +52,12 @@
       "optional": true
     },
     "@nestjs/typeorm": {
+      "optional": true
+    },
+    "class-transformer": {
+      "optional": true
+    },
+    "class-validator": {
       "optional": true
     },
     "typeorm": {
@@ -60,6 +72,8 @@
     "@nestjs/swagger": "^11.4.4",
     "@nestjs/typeorm": "^11.0.1",
     "@types/node": "^24.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^1.0.0",
