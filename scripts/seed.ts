@@ -11,7 +11,7 @@ import {
 // We re-declare minimal entity classes here to avoid cross-service deps
 // The real entities are in each service — these must match the DB schema
 
-enum UserRole { PATIENT='PATIENT', DOCTOR='DOCTOR', RECEPTIONIST='RECEPTIONIST', PHARMACIST='PHARMACIST', LAB_STAFF='LAB_STAFF', SUPER_ADMIN='SUPER_ADMIN' }
+enum UserRole { PATIENT='PATIENT', DOCTOR='DOCTOR', RECEPTIONIST='RECEPTIONIST', PHARMACIST='PHARMACIST', LAB_STAFF='LAB_STAFF', NURSE='NURSE', SUPER_ADMIN='SUPER_ADMIN' }
 enum Gender { MALE='male', FEMALE='female', OTHER='other', UNKNOWN='unknown' }
 enum MaritalStatus { SINGLE='S', MARRIED='M', DIVORCED='D', WIDOWED='W', SEPARATED='L', UNKNOWN='UNK' }
 enum AppointmentStatus { BOOKED='booked', ARRIVED='arrived', FULFILLED='fulfilled', CANCELLED='cancelled' }
@@ -74,6 +74,80 @@ function hoursFromNow(h: number) { const d = new Date(); d.setHours(d.getHours()
 
 const HASH = (p: string) => bcrypt.hashSync(p, 12);
 
+// ===== Idempotent top-ups =====
+// Runs on every seed invocation — both after a fresh seed and against an
+// already-seeded volume — so data added after the initial seed (new roles,
+// DB-backed catalogs) reaches existing databases without a volume wipe.
+// Every statement must be safe to re-run.
+
+async function ensureStaffUser(
+  db: DataSource,
+  s: { firstName: string; lastName: string; email: string; role: UserRole; password: string; qualification?: string },
+): Promise<boolean> {
+  const existing = await db.query(`SELECT id FROM users WHERE email = $1 LIMIT 1`, [s.email]);
+  if (existing.length > 0) return false;
+  const [clinic] = await db.query(`SELECT id FROM organizations WHERE type = 'clinic' ORDER BY "createdAt" LIMIT 1`);
+  const [prac] = await db.query(`
+    INSERT INTO practitioners (id, "firstName", "lastName", email, gender, role, qualification, "organizationId", active)
+    VALUES (gen_random_uuid(), $1, $2, $3, 'unknown', $4, $5, $6, true)
+    RETURNING id
+  `, [s.firstName, s.lastName, s.email, s.role, s.qualification ?? null, clinic?.id ?? null]);
+  const [user] = await db.query(`
+    INSERT INTO users (id, email, "passwordHash", role, "practitionerId", "isActive")
+    VALUES (gen_random_uuid(), $1, $2, $3, $4, true)
+    RETURNING id
+  `, [s.email, HASH(s.password), s.role, prac.id]);
+  await db.query(`UPDATE practitioners SET "userId" = $1 WHERE id = $2`, [user.id, prac.id]);
+  return true;
+}
+
+async function topUps(db: DataSource) {
+  // ---- NURSES (Nursing Officers — pre-visit triage) ----
+  const nurses = [
+    { firstName: 'Nimasha', lastName: 'Herath', email: 'nimasha@curo.health' },
+    { firstName: 'Ruwan', lastName: 'Ekanayake', email: 'ruwan@curo.health' },
+  ];
+  let nursesCreated = 0;
+  for (const n of nurses) {
+    const created = await ensureStaffUser(db, { ...n, role: UserRole.NURSE, password: 'Nurse@123', qualification: 'Nursing' });
+    if (created) nursesCreated++;
+  }
+  console.log(`✅ nurses ensured (${nursesCreated} new)`);
+
+  // ---- MEDICATION CATALOG (prescribing reference, DB-backed) ----
+  const medicationCatalog = [
+    { id: 'med_0101', name: 'Metformin 500mg Tablet', genericName: 'Metformin', form: 'tablet', strength: '500mg', atc: 'A10BA02', commonSubstitutes: ['med_0102'] },
+    { id: 'med_0102', name: 'Metformin 850mg Tablet', genericName: 'Metformin', form: 'tablet', strength: '850mg', atc: 'A10BA02', commonSubstitutes: ['med_0101'] },
+    { id: 'med_0201', name: 'Salbutamol Inhaler 100mcg', genericName: 'Salbutamol', form: 'inhaler', strength: '100mcg', atc: 'R03AC02', commonSubstitutes: ['med_0202'] },
+    { id: 'med_0202', name: 'Levosalbutamol Inhaler 50mcg', genericName: 'Levosalbutamol', form: 'inhaler', strength: '50mcg', atc: 'R03CC13', commonSubstitutes: ['med_0201'] },
+  ];
+  for (const m of medicationCatalog) {
+    await db.query(`
+      INSERT INTO medication_catalog (id, name, "genericName", form, strength, atc, "commonSubstitutes", active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true)
+      ON CONFLICT (id) DO NOTHING
+    `, [m.id, m.name, m.genericName, m.form, m.strength, m.atc, JSON.stringify(m.commonSubstitutes)]);
+  }
+  console.log(`✅ ${medicationCatalog.length} medication catalog entries ensured`);
+
+  // ---- ICD-10 DIAGNOSIS CATALOG (DB-backed) ----
+  const icd10Codes = [
+    { code: 'E11.9', name: 'Type 2 diabetes mellitus without complications', keywords: ['diabetes', 't2dm'] },
+    { code: 'I10', name: 'Essential (primary) hypertension', keywords: ['hypertension', 'high blood pressure'] },
+    { code: 'J45.909', name: 'Unspecified asthma, uncomplicated', keywords: ['asthma'] },
+    { code: 'J45.901', name: 'Unspecified asthma with (acute) exacerbation', keywords: ['asthma', 'exacerbation', 'wheezing'] },
+    { code: 'R05', name: 'Cough', keywords: ['cough'] },
+  ];
+  for (const c of icd10Codes) {
+    await db.query(`
+      INSERT INTO icd10_codes (code, name, keywords)
+      VALUES ($1, $2, $3::jsonb)
+      ON CONFLICT (code) DO NOTHING
+    `, [c.code, c.name, JSON.stringify(c.keywords)]);
+  }
+  console.log(`✅ ${icd10Codes.length} ICD-10 codes ensured`);
+}
+
 async function seed() {
   await AppDataSource.initialize();
   const db = AppDataSource;
@@ -83,7 +157,9 @@ async function seed() {
   // ---- SUPER ADMIN ----
   const existingAdmin = await db.query(`SELECT id FROM users WHERE email = 'admin@curo.health' LIMIT 1`);
   if (existingAdmin.length > 0) {
-    console.log('⚠️  Data already seeded. Drop tables or use --force to re-seed.');
+    console.log('⚠️  Data already seeded — applying idempotent top-ups only.');
+    await topUps(db);
+    await AppDataSource.destroy();
     process.exit(0);
   }
 
@@ -590,39 +666,6 @@ async function seed() {
   }
   console.log(`✅ ${catalogCount} lab catalog tests created`);
 
-  // ---- MEDICATION CATALOG (prescribing reference, DB-backed) ----
-  const medicationCatalog = [
-    { id: 'med_0101', name: 'Metformin 500mg Tablet', genericName: 'Metformin', form: 'tablet', strength: '500mg', atc: 'A10BA02', commonSubstitutes: ['med_0102'] },
-    { id: 'med_0102', name: 'Metformin 850mg Tablet', genericName: 'Metformin', form: 'tablet', strength: '850mg', atc: 'A10BA02', commonSubstitutes: ['med_0101'] },
-    { id: 'med_0201', name: 'Salbutamol Inhaler 100mcg', genericName: 'Salbutamol', form: 'inhaler', strength: '100mcg', atc: 'R03AC02', commonSubstitutes: ['med_0202'] },
-    { id: 'med_0202', name: 'Levosalbutamol Inhaler 50mcg', genericName: 'Levosalbutamol', form: 'inhaler', strength: '50mcg', atc: 'R03CC13', commonSubstitutes: ['med_0201'] },
-  ];
-  for (const m of medicationCatalog) {
-    await db.query(`
-      INSERT INTO medication_catalog (id, name, "genericName", form, strength, atc, "commonSubstitutes", active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true)
-      ON CONFLICT (id) DO NOTHING
-    `, [m.id, m.name, m.genericName, m.form, m.strength, m.atc, JSON.stringify(m.commonSubstitutes)]);
-  }
-  console.log(`✅ ${medicationCatalog.length} medication catalog entries created`);
-
-  // ---- ICD-10 DIAGNOSIS CATALOG (DB-backed) ----
-  const icd10Codes = [
-    { code: 'E11.9', name: 'Type 2 diabetes mellitus without complications', keywords: ['diabetes', 't2dm'] },
-    { code: 'I10', name: 'Essential (primary) hypertension', keywords: ['hypertension', 'high blood pressure'] },
-    { code: 'J45.909', name: 'Unspecified asthma, uncomplicated', keywords: ['asthma'] },
-    { code: 'J45.901', name: 'Unspecified asthma with (acute) exacerbation', keywords: ['asthma', 'exacerbation', 'wheezing'] },
-    { code: 'R05', name: 'Cough', keywords: ['cough'] },
-  ];
-  for (const c of icd10Codes) {
-    await db.query(`
-      INSERT INTO icd10_codes (code, name, keywords)
-      VALUES ($1, $2, $3::jsonb)
-      ON CONFLICT (code) DO NOTHING
-    `, [c.code, c.name, JSON.stringify(c.keywords)]);
-  }
-  console.log(`✅ ${icd10Codes.length} ICD-10 codes created`);
-
   // ---- LAB INSTRUMENTS ----
   const instruments = [
     { name: 'Sysmex XN-550', model: 'XN-550', manufacturer: 'Sysmex', serial: 'SYS-XN-2023-001', category: 'hematology', status: 'operational', location: 'Lab Room 1' },
@@ -681,6 +724,7 @@ async function seed() {
   }
   console.log('✅ Notifications created');
 
+  await topUps(db);
   await AppDataSource.destroy();
 
   console.log('\n🎉 Seed complete! Login credentials:');
@@ -694,6 +738,8 @@ async function seed() {
   console.log('                 niluka.pharma@curo.health / Pharma@123');
   console.log('   Lab Staff:    tharindi.lab@curo.health / LabStaff@123');
   console.log('                 rukshan.lab@curo.health  / LabStaff@123');
+  console.log('   Nurses:       nimasha@curo.health      / Nurse@123');
+  console.log('                 ruwan@curo.health        / Nurse@123');
   console.log('   Patients:     samantha@email.com       / Patient@123 (and others)');
 }
 
