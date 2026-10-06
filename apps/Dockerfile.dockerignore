@@ -1,0 +1,7 @@
+# Applies to every portal build (context = the portal directory).
+node_modules
+.next
+.env*
+*.log
+coverage
+.git

@@ -3,9 +3,9 @@
 FROM node:20-alpine
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
-# install root-level deps (ts-node, typeorm, pg, bcrypt, etc.)
+# root-level deps only (ts-node, typeorm, pg, bcrypt, ...); the workspaces aren't needed
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --no-workspaces
 # copy only the scripts folder
 COPY scripts/ ./scripts/
 CMD ["npm", "run", "seed"]
