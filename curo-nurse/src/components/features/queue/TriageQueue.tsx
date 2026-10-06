@@ -83,7 +83,7 @@ export function TriageQueue() {
             <Card key={stage} className="shadow-sm border">
               <CardHeader className="bg-muted/50 border-b py-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <span className={cn("h-2 w-2 rounded-full", STAGE_META[stage].dot)} />
+                  <span className={cn("h-2 w-2 rounded-full", STAGE_META[stage].color)} />
                   {title}
                   <Badge variant="secondary" className="font-mono tabular-nums">{items.length}</Badge>
                 </CardTitle>

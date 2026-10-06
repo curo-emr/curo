@@ -30,9 +30,9 @@ export function PatientBanner({ patient, appointment, doctor, allergies, conditi
         <PatientAvatar name={patient.name.full} className="h-14 w-14 text-lg" />
         <div className="min-w-0 flex-1 space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground truncate">{patient.name.full}</h1>
-          <p className="text-sm text-muted-foreground capitalize">
-            {patient.sex} · {calculateAge(patient.dob)} years
-            {patient.phn && <> · <span className="font-mono normal-case">PHN {formatPhn(patient.phn)}</span></>}
+          <p className="text-sm text-muted-foreground">
+            <span className="capitalize">{patient.sex}</span> · {calculateAge(patient.dob)} years
+            {patient.phn && <> · <span className="font-mono">PHN {formatPhn(patient.phn)}</span></>}
             {patient.bloodType && <> · Blood {patient.bloodType}</>}
           </p>
         </div>

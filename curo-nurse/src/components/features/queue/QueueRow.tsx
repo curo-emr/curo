@@ -37,14 +37,14 @@ export function QueueRow({ entry, pending, onOpen, onSkip }: QueueRowProps) {
         <PatientAvatar name={patientName(entry)} />
         <div className="min-w-0">
           <p className="font-semibold text-foreground truncate">{patientName(entry)}</p>
-          <p className="text-xs text-muted-foreground truncate capitalize">
-            {patient ? `${calculateAge(patient.dob)}y · ${patient.sex} · ` : ""}
+          <p className="text-xs text-muted-foreground truncate">
+            {patient && <>{calculateAge(patient.dob)}y · <span className="capitalize">{patient.sex}</span> · </>}
             {patient?.phn ? <span className="font-mono">PHN {formatPhn(patient.phn)}</span> : "No PHN"}
           </p>
         </div>
       </div>
 
-      <div className="min-w-0 sm:w-56 text-xs text-muted-foreground space-y-0.5">
+      <div className="hidden min-w-0 shrink-0 text-xs text-muted-foreground space-y-0.5 md:block md:w-44 xl:w-52">
         <p className="flex items-center gap-1.5 truncate text-foreground/80">
           <Stethoscope className="h-3.5 w-3.5 shrink-0" />
           {doctor ? `Dr. ${doctor.name.full}` : "Doctor not assigned"}
@@ -55,7 +55,7 @@ export function QueueRow({ entry, pending, onOpen, onSkip }: QueueRowProps) {
         </p>
       </div>
 
-      <div className="flex items-center gap-2 sm:w-[19rem] sm:justify-end">
+      <div className="flex shrink-0 items-center gap-2 sm:justify-end">
         <Badge
           variant="outline"
           className={cn("font-mono tabular-nums", sent ? "bg-muted text-muted-foreground border-border" : waitBadgeClass(minutes))}

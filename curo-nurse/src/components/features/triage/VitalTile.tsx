@@ -84,7 +84,7 @@ export function VitalTile({
                     value={draft[field.key] ?? ""}
                     onChange={e => onChange(field.key, e.target.value)}
                     className={cn(
-                      "w-full min-w-0 rounded-md bg-transparent font-mono text-4xl font-semibold tabular-nums text-foreground",
+                      "field-sizing-content min-w-[2ch] max-w-full rounded-md bg-transparent font-mono text-4xl font-semibold tabular-nums text-foreground",
                       "placeholder:text-muted-foreground/40 focus:outline-none disabled:opacity-60",
                       "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
                       isInvalid && "text-status-error-text",

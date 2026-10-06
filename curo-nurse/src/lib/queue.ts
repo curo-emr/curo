@@ -9,12 +9,13 @@ export const FLOW_STAGES: QueueStage[] = ["waiting_nurse", "with_nurse", "ready_
 // The nurse's own work: waiting, in triage, and triaged but not yet seen (vitals still editable).
 export const TRIAGE_STAGES: QueueStage[] = ["waiting_nurse", "with_nurse", "ready_for_doctor"];
 
-export const STAGE_META: Record<QueueStage, { label: string; bar: string; dot: string }> = {
-  waiting_nurse: { label: "Waiting", bar: "bg-status-warning-text", dot: "bg-status-warning-text" },
-  with_nurse: { label: "In triage", bar: "bg-status-teal-text", dot: "bg-status-teal-text" },
-  ready_for_doctor: { label: "Ready for doctor", bar: "bg-status-success-text", dot: "bg-status-success-text" },
-  with_doctor: { label: "With doctor", bar: "bg-primary", dot: "bg-primary" },
-  done: { label: "Done", bar: "bg-status-neutral-border", dot: "bg-status-neutral-text" },
+// `color` drives both the flow-strip segment and the legend dot.
+export const STAGE_META: Record<QueueStage, { label: string; color: string }> = {
+  waiting_nurse: { label: "Waiting", color: "bg-amber-400" },
+  with_nurse: { label: "In triage", color: "bg-teal-500" },
+  ready_for_doctor: { label: "Ready for doctor", color: "bg-emerald-500" },
+  with_doctor: { label: "With doctor", color: "bg-primary" },
+  done: { label: "Done", color: "bg-slate-300" },
 };
 
 // Minutes a patient has been waiting → badge colour (green → amber after 15m → red after 30m).

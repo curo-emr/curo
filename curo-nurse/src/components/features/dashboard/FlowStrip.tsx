@@ -20,7 +20,7 @@ export function FlowStrip({ counts }: { counts: Record<QueueStage, number> }) {
           FLOW_STAGES.filter(s => counts[s] > 0).map(stage => (
             <div
               key={stage}
-              className={cn("h-full rounded-full transition-[flex-grow] duration-700 ease-out", STAGE_META[stage].bar)}
+              className={cn("h-full rounded-full transition-[flex-grow] duration-700 ease-out", STAGE_META[stage].color)}
               style={{ flexGrow: counts[stage] }}
               title={`${STAGE_META[stage].label}: ${counts[stage]}`}
             />
@@ -31,7 +31,7 @@ export function FlowStrip({ counts }: { counts: Record<QueueStage, number> }) {
         {FLOW_STAGES.map(stage => (
           <div key={stage} className="min-w-0">
             <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className={cn("h-2 w-2 shrink-0 rounded-full", STAGE_META[stage].dot)} />
+              <span className={cn("h-2 w-2 shrink-0 rounded-full", STAGE_META[stage].color)} />
               <span className="truncate">{STAGE_META[stage].label}</span>
             </dt>
             <dd className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">{counts[stage]}</dd>
