@@ -5,9 +5,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { MedicationRequest } from '../entities/medication-request.entity';
 import { MedicationDispense } from '../entities/medication-dispense.entity';
 import { Stock } from '../entities/stock.entity';
+import { MedicationCatalog } from '../entities/medication-catalog.entity';
 import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
 import { MedicationRequestStatus, MedicationDispenseStatus } from '../enums';
+import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 function toFhirDispense(d: MedicationDispense) {
   return {
@@ -41,15 +43,43 @@ export class PharmacyService {
     private dispenseRepo: Repository<MedicationDispense>,
     @InjectRepository(Stock)
     private stockRepo: Repository<Stock>,
+    @InjectRepository(MedicationCatalog)
+    private catalogRepo: Repository<MedicationCatalog>,
   ) {}
 
+  // Prescribing reference catalog — searchable, paginated FHIR searchset Bundle.
+  async getMedicationCatalog(query: PaginationQuery & { search?: string } = {}) {
+    const { skip, take, page, pageSize } = parsePagination(query);
+    const qb = this.catalogRepo.createQueryBuilder('m').where('m.active = true');
+    if (query.search) {
+      qb.andWhere(
+        '(m.name ILIKE :s OR m.genericName ILIKE :s OR m.atc ILIKE :s)',
+        { s: `%${query.search}%` },
+      );
+    }
+    const [rows, total] = await qb
+      .orderBy('m.name', 'ASC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+    return toSearchset(rows, total, {
+      page,
+      pageSize,
+      baseUrl: '/medication-catalog',
+      query: { search: query.search },
+    });
+  }
+
   // Pending prescriptions - PHARMACIST only sees name+DOB+meds, not full clinical data
-  async getPendingPrescriptions(): Promise<any[]> {
-    const pending = await this.medsRepo.find({
+  async getPendingPrescriptions(pagination: PaginationQuery = {}): Promise<any> {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
+    const [pending, total] = await this.medsRepo.findAndCount({
       where: { status: MedicationRequestStatus.ACTIVE },
       order: { authoredOn: 'DESC' },
+      skip,
+      take,
     });
-    return pending.map(p => ({
+    const resources = pending.map(p => ({
       id: p.id,
       patientId: p.patientId,
       medicationCode: p.medicationCode,
@@ -62,6 +92,7 @@ export class PharmacyService {
       authoredOn: p.authoredOn,
       note: p.note,
     }));
+    return toSearchset(resources, total, { page, pageSize, baseUrl: '/prescriptions/pending' });
   }
 
   /**
@@ -130,10 +161,21 @@ export class PharmacyService {
     return toFhirDispense(saved);
   }
 
-  async getDispenseHistory(patientId?: string): Promise<any[]> {
+  async getDispenseHistory(patientId?: string, pagination: PaginationQuery = {}): Promise<any> {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
     const where = patientId ? { patientId } : {};
-    const dispenses = await this.dispenseRepo.find({ where, order: { createdAt: 'DESC' } });
-    return dispenses.map(toFhirDispense);
+    const [dispenses, total] = await this.dispenseRepo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip,
+      take,
+    });
+    return toSearchset(dispenses.map(toFhirDispense), total, {
+      page,
+      pageSize,
+      baseUrl: '/dispense',
+      query: { patientId },
+    });
   }
 
   async getDispense(id: string): Promise<any> {
@@ -142,12 +184,23 @@ export class PharmacyService {
     return toFhirDispense(d);
   }
 
-  // Stock management
-  async getStock(lowOnly?: boolean, organizationId?: string): Promise<Stock[]> {
+  // Stock management → FHIR searchset Bundle (paginated).
+  async getStock(lowOnly?: boolean, organizationId?: string, pagination: PaginationQuery = {}): Promise<any> {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
     const qb = this.stockRepo.createQueryBuilder('s').where('s.active = true');
     if (lowOnly) qb.andWhere('s.quantity <= s.reorderThreshold');
     if (organizationId) qb.andWhere('s.organizationId = :org', { org: organizationId });
-    return qb.orderBy('s.medicationName', 'ASC').getMany();
+    const [stock, total] = await qb
+      .orderBy('s.medicationName', 'ASC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+    return toSearchset(stock, total, {
+      page,
+      pageSize,
+      baseUrl: '/stock',
+      query: { lowOnly: lowOnly ? 'true' : undefined, organizationId },
+    });
   }
 
   /**

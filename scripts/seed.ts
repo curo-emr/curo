@@ -590,6 +590,39 @@ async function seed() {
   }
   console.log(`✅ ${catalogCount} lab catalog tests created`);
 
+  // ---- MEDICATION CATALOG (prescribing reference, DB-backed) ----
+  const medicationCatalog = [
+    { id: 'med_0101', name: 'Metformin 500mg Tablet', genericName: 'Metformin', form: 'tablet', strength: '500mg', atc: 'A10BA02', commonSubstitutes: ['med_0102'] },
+    { id: 'med_0102', name: 'Metformin 850mg Tablet', genericName: 'Metformin', form: 'tablet', strength: '850mg', atc: 'A10BA02', commonSubstitutes: ['med_0101'] },
+    { id: 'med_0201', name: 'Salbutamol Inhaler 100mcg', genericName: 'Salbutamol', form: 'inhaler', strength: '100mcg', atc: 'R03AC02', commonSubstitutes: ['med_0202'] },
+    { id: 'med_0202', name: 'Levosalbutamol Inhaler 50mcg', genericName: 'Levosalbutamol', form: 'inhaler', strength: '50mcg', atc: 'R03CC13', commonSubstitutes: ['med_0201'] },
+  ];
+  for (const m of medicationCatalog) {
+    await db.query(`
+      INSERT INTO medication_catalog (id, name, "genericName", form, strength, atc, "commonSubstitutes", active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true)
+      ON CONFLICT (id) DO NOTHING
+    `, [m.id, m.name, m.genericName, m.form, m.strength, m.atc, JSON.stringify(m.commonSubstitutes)]);
+  }
+  console.log(`✅ ${medicationCatalog.length} medication catalog entries created`);
+
+  // ---- ICD-10 DIAGNOSIS CATALOG (DB-backed) ----
+  const icd10Codes = [
+    { code: 'E11.9', name: 'Type 2 diabetes mellitus without complications', keywords: ['diabetes', 't2dm'] },
+    { code: 'I10', name: 'Essential (primary) hypertension', keywords: ['hypertension', 'high blood pressure'] },
+    { code: 'J45.909', name: 'Unspecified asthma, uncomplicated', keywords: ['asthma'] },
+    { code: 'J45.901', name: 'Unspecified asthma with (acute) exacerbation', keywords: ['asthma', 'exacerbation', 'wheezing'] },
+    { code: 'R05', name: 'Cough', keywords: ['cough'] },
+  ];
+  for (const c of icd10Codes) {
+    await db.query(`
+      INSERT INTO icd10_codes (code, name, keywords)
+      VALUES ($1, $2, $3::jsonb)
+      ON CONFLICT (code) DO NOTHING
+    `, [c.code, c.name, JSON.stringify(c.keywords)]);
+  }
+  console.log(`✅ ${icd10Codes.length} ICD-10 codes created`);
+
   // ---- LAB INSTRUMENTS ----
   const instruments = [
     { name: 'Sysmex XN-550', model: 'XN-550', manufacturer: 'Sysmex', serial: 'SYS-XN-2023-001', category: 'hematology', status: 'operational', location: 'Lab Room 1' },

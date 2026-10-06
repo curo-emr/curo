@@ -15,6 +15,7 @@ import { CreateAllergyDto } from './dto/create-allergy.dto';
 import { CreateConditionDto } from './dto/create-condition.dto';
 import { toFhirPatient, toFhirAllergy, toFhirCondition, toFhirObservation } from './fhir.mapper';
 import { UserRole } from '../enums';
+import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 @Injectable()
 export class PatientService implements OnModuleInit {
@@ -111,10 +112,16 @@ export class PatientService implements OnModuleInit {
     return toFhirPatient(saved);
   }
 
-  async findAll(requestingUser: { role: string; userId: string }, search?: string): Promise<any[]> {
+  async findAll(
+    requestingUser: { role: string; userId: string },
+    search?: string,
+    pagination: PaginationQuery = {},
+  ): Promise<any> {
     if (requestingUser.role === UserRole.PATIENT) {
       throw new ForbiddenException('Patients cannot list all patients');
     }
+    const { page, pageSize, skip, take } = parsePagination(pagination);
+    const gender = (pagination as { gender?: string }).gender;
     const query = this.patientsRepo.createQueryBuilder('p').where('p.active = true');
     if (search) {
       query.andWhere(
@@ -122,8 +129,21 @@ export class PatientService implements OnModuleInit {
         { s: `%${search}%` },
       );
     }
-    const patients = await query.orderBy('p.createdAt', 'DESC').getMany();
-    return patients.map((p) => toFhirPatient(p, requestingUser.role));
+    if (gender) {
+      query.andWhere('p.gender = :gender', { gender });
+    }
+    const [patients, total] = await query
+      .orderBy('p.createdAt', 'DESC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+    const resources = patients.map((p) => toFhirPatient(p, requestingUser.role));
+    return toSearchset(resources, total, {
+      page,
+      pageSize,
+      baseUrl: '/patients',
+      query: { search, gender },
+    });
   }
 
   async findOne(id: string, requestingUser: { role: string; userId: string; patientId?: string }): Promise<any> {

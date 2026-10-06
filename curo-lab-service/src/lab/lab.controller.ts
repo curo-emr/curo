@@ -18,13 +18,13 @@ export class LabController {
   @Get('orders')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  getOrders(@Query('status') status?: string) {
-    return this.labService.getOrders(status);
+  getOrders(@Query('status') status?: string, @Query() query?: any) {
+    return this.labService.getOrders(status, query);
   }
 
   // Test catalog a lab offers — doctors browse before ordering.
   @Get('catalog')
-  @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
+  @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT')
   getCatalog(@Query('organizationId') organizationId?: string) {
     return this.labService.getCatalog(organizationId);
   }
@@ -66,8 +66,8 @@ export class LabController {
   @Get('reports')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getReports(@Query('patientId') patientId?: string) {
-    return this.labService.getReports(patientId);
+  getReports(@Query('patientId') patientId?: string, @Query() query?: any) {
+    return this.labService.getReports(patientId, query);
   }
 
   @Get('reports/:id')
@@ -85,8 +85,9 @@ export class LabController {
 
   @Get('qc-logs')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
-  getQcLogs(@Query('instrumentId') instrumentId?: string, @Query('status') status?: QCStatus) {
-    return this.labService.getQcLogs({ instrumentId, status });
+  @Header('Content-Type', 'application/fhir+json')
+  getQcLogs(@Query('instrumentId') instrumentId?: string, @Query('status') status?: QCStatus, @Query() query?: any) {
+    return this.labService.getQcLogs({ instrumentId, status }, query);
   }
 
   @Get('lab-staff')

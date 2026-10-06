@@ -27,8 +27,9 @@ export class PaymentController {
     @CurrentUser() user: any,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query() query?: any,
   ) {
-    return this.paymentService.findMine(user, from, to);
+    return this.paymentService.findMine(user, from, to, query);
   }
 
   @Get('summary')
@@ -50,8 +51,9 @@ export class PaymentController {
     @Query('patientId') patientId?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query() query?: any,
   ) {
-    return this.paymentService.findAllForAdmin({ collectedBy, patientId, from, to });
+    return this.paymentService.findAllForAdmin({ collectedBy, patientId, from, to }, query);
   }
 
   @Get(':id')

@@ -28,8 +28,9 @@ export class NotificationController {
   getForUser(
     @CurrentUser() user: any,
     @Query('unreadOnly') unreadOnly?: string,
+    @Query() query?: any,
   ) {
-    return this.notificationService.getForUser(user.userId, unreadOnly === 'true');
+    return this.notificationService.getForUser(user.userId, unreadOnly === 'true', query);
   }
 
   @Get('count')

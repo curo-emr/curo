@@ -10,13 +10,14 @@ import { ServiceRequest } from '../entities/service-request.entity';
 import { Observation } from '../entities/observation.entity';
 import { QrCode } from '../entities/qr-code.entity';
 import { Task } from '../entities/task.entity';
+import { Icd10Code } from '../entities/icd10-code.entity';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 
 @Module({
   imports: [
     JwtModule.register({ secret: process.env.JWT_SECRET || 'curo_jwt_secret_dev_2024_change_in_prod' }),
-    TypeOrmModule.forFeature([Encounter, ClinicalNote, MedicationRequest, ServiceRequest, Observation, QrCode, Task]),
+    TypeOrmModule.forFeature([Encounter, ClinicalNote, MedicationRequest, ServiceRequest, Observation, QrCode, Task, Icd10Code]),
   ],
   controllers: [ClinicalController],
   providers: [ClinicalService, JwtAuthGuard, RolesGuard],

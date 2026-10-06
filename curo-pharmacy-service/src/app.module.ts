@@ -5,6 +5,7 @@ import { PharmacyModule } from './pharmacy/pharmacy.module';
 import { MedicationRequest } from './entities/medication-request.entity';
 import { MedicationDispense } from './entities/medication-dispense.entity';
 import { Stock } from './entities/stock.entity';
+import { MedicationCatalog } from './entities/medication-catalog.entity';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { Stock } from './entities/stock.entity';
       username: process.env.DB_USER || 'curo',
       password: process.env.DB_PASS || 'curo_secret',
       database: process.env.DB_NAME || 'curo_db',
-      entities: [MedicationRequest, MedicationDispense, Stock],
+      entities: [MedicationRequest, MedicationDispense, Stock, MedicationCatalog],
       synchronize: true,
     }),
     PharmacyModule,

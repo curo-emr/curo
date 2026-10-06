@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuditLog } from '../entities/audit-log.entity';
+import { parsePagination, toSearchset, PaginationQuery } from '../common/fhir-bundle';
 
 @Injectable()
 export class AuditService {
@@ -33,11 +34,12 @@ export class AuditService {
     patientId?: string;
     from?: string;
     to?: string;
-  }): Promise<AuditLog[]> {
+  }, pagination: PaginationQuery = {}): Promise<any> {
     if (requestingUser.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Only super admin can view audit logs');
     }
 
+    const { page, pageSize, skip, take } = parsePagination(pagination);
     const query = this.auditRepo.createQueryBuilder('a');
     if (filters?.userId) query.andWhere('a.userId = :uid', { uid: filters.userId });
     if (filters?.resourceType) query.andWhere('a.resourceType = :rt', { rt: filters.resourceType });
@@ -45,6 +47,16 @@ export class AuditService {
     if (filters?.from) query.andWhere('a.createdAt >= :from', { from: new Date(filters.from) });
     if (filters?.to) query.andWhere('a.createdAt <= :to', { to: new Date(filters.to) });
 
-    return query.orderBy('a.createdAt', 'DESC').limit(500).getMany();
+    const [logs, total] = await query
+      .orderBy('a.createdAt', 'DESC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+    return toSearchset(logs, total, {
+      page,
+      pageSize,
+      baseUrl: '/audit',
+      query: { ...filters },
+    });
   }
 }

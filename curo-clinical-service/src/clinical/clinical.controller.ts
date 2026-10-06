@@ -17,6 +17,14 @@ import { EncounterStatus } from '../enums';
 export class ClinicalController {
   constructor(private clinicalService: ClinicalService) {}
 
+  // ICD-10 diagnosis catalog (DB-backed) — searchable + paginated.
+  @Get('icd10')
+  @Roles('DOCTOR', 'SUPER_ADMIN')
+  @Header('Content-Type', 'application/fhir+json')
+  getIcd10(@Query() query: any) {
+    return this.clinicalService.getIcd10(query);
+  }
+
   // Encounters
   @Post('encounters')
   @Roles('DOCTOR', 'SUPER_ADMIN')
