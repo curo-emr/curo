@@ -9,6 +9,7 @@ import {
 } from '@curo/shared/fhir';
 import type { AuthUser } from '@curo/shared/auth';
 import { UserRole } from '@curo/shared/enums';
+import { CreateAuditLogDto } from './dto/create-audit-log.dto';
 
 @Injectable()
 export class AuditService {
@@ -17,19 +18,9 @@ export class AuditService {
     private auditRepo: Repository<AuditLog>,
   ) {}
 
-  async log(data: {
-    userId: string;
-    userRole?: string;
-    action: string;
-    resourceType: string;
-    resourceId: string;
-    patientId?: string;
-    ipAddress?: string;
-    userAgent?: string;
-    changes?: Record<string, unknown>;
-    outcome?: string;
-    outcomeDescription?: string;
-  }): Promise<AuditLog> {
+  async log(
+    data: CreateAuditLogDto & Pick<AuditLog, 'userId' | 'userRole'>,
+  ): Promise<AuditLog> {
     const log = this.auditRepo.create(data);
     return this.auditRepo.save(log);
   }
