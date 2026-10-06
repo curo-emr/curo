@@ -5,10 +5,6 @@ export class DispenseMedicationDto {
   @IsString()
   medicationRequestId: string;
 
-  @IsNotEmpty()
-  @IsString()
-  dispenserName: string;
-
   @IsOptional()
   @IsNumber()
   quantityValue?: number;
@@ -16,10 +12,6 @@ export class DispenseMedicationDto {
   @IsOptional()
   @IsString()
   quantityUnit?: string;
-
-  @IsOptional()
-  @IsNumber()
-  unitPrice?: number;
 
   @IsOptional()
   @IsString()

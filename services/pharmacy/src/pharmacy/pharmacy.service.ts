@@ -4,9 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { MedicationRequest } from '@curo/shared/database';
 import { MedicationRequestStatus } from '@curo/shared/enums';
+import type { AuthUser } from '@curo/shared/auth';
 import {
   parsePagination,
   toSearchset,
@@ -19,6 +20,15 @@ import { MedicationCatalog } from '../entities/medication-catalog.entity';
 import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
 import { MedicationDispenseStatus } from '../enums';
+
+/** What one stock batch supplied to a dispense. */
+interface BatchDraw {
+  batchNumber: string | null;
+  quantity: number;
+  unitPrice: number;
+}
+
+const roundMoney = (amount: number) => Math.round(amount * 100) / 100;
 
 /** Optional filters for GET /dispense. */
 export interface DispenseHistoryFilter {
@@ -149,17 +159,19 @@ export class PharmacyService {
   }
 
   /**
-   * Decrement stock for a drug using FEFO (First-Expiry-First-Out): consume the
-   * earliest-expiring non-expired batches first, across multiple rows if needed.
-   * Best-effort — if no matching stock exists, dispensing still proceeds (returns []).
-   * Returns the batch numbers drawn from.
+   * Draw `qty` units of a drug from stock, FEFO (First-Expiry-First-Out): the
+   * earliest-expiring non-expired batches first, across several if needed. The
+   * batches are row-locked, so concurrent dispenses of one drug can't lose updates.
+   * Best-effort: units no batch can supply are still dispensed, just not priced.
    */
-  private async decrementStockFEFO(
+  private async drawStockFEFO(
+    em: EntityManager,
     medicationCode: string,
     qty: number,
-  ): Promise<string[]> {
+  ): Promise<BatchDraw[]> {
     const today = new Date().toISOString().slice(0, 10);
-    const batches = await this.stockRepo
+    const batches = await em
+      .getRepository(Stock)
       .createQueryBuilder('s')
       .where(
         's.medicationCode = :code AND s.active = true AND s.quantity > 0',
@@ -167,25 +179,27 @@ export class PharmacyService {
       )
       .andWhere('(s.expiryDate IS NULL OR s.expiryDate >= :today)', { today })
       .orderBy('s.expiryDate', 'ASC', 'NULLS LAST')
+      .setLock('pessimistic_write')
       .getMany();
 
     let remaining = qty;
-    const used: string[] = [];
+    const draws: BatchDraw[] = [];
     for (const b of batches) {
       if (remaining <= 0) break;
       const take = Math.min(b.quantity, remaining);
       b.quantity -= take;
       remaining -= take;
-      await this.stockRepo.save(b);
-      if (b.batchNumber) used.push(`${b.batchNumber}×${take}`);
+      await em.save(b);
+      draws.push({
+        batchNumber: b.batchNumber,
+        quantity: take,
+        unitPrice: Number(b.unitPrice ?? 0), // decimal columns arrive as strings
+      });
     }
-    return used;
+    return draws;
   }
 
-  async dispense(
-    dto: DispenseMedicationDto,
-    pharmacistId: string,
-  ): Promise<any> {
+  async dispense(dto: DispenseMedicationDto, pharmacist: AuthUser) {
     const prescription = await this.medsRepo.findOne({
       where: { id: dto.medicationRequestId },
     });
@@ -193,45 +207,55 @@ export class PharmacyService {
       throw new NotFoundException(
         `Prescription ${dto.medicationRequestId} not found`,
       );
-    if (prescription.status !== MedicationRequestStatus.ACTIVE)
-      throw new ConflictException(
-        `Prescription ${dto.medicationRequestId} is ${prescription.status}, not active`,
+    const qty = dto.quantityValue || prescription.quantityValue || 1;
+
+    const saved = await this.dispenseRepo.manager.transaction(async (em) => {
+      // Claim the prescription first. A concurrent dispense waits on this row,
+      // then matches nothing and gets the 409, which rolls its transaction back.
+      const { affected } = await em.update(
+        MedicationRequest,
+        { id: prescription.id, status: MedicationRequestStatus.ACTIVE },
+        { status: MedicationRequestStatus.COMPLETED },
+      );
+      if (!affected)
+        throw new ConflictException(
+          `Prescription ${prescription.id} is no longer active`,
+        );
+
+      const draws = await this.drawStockFEFO(
+        em,
+        prescription.medicationCode,
+        qty,
+      );
+      const drawn = draws.reduce((sum, d) => sum + d.quantity, 0);
+      const totalPrice = roundMoney(
+        draws.reduce((sum, d) => sum + d.quantity * d.unitPrice, 0),
       );
 
-    const receiptNumber = `RX-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-    const unitPrice = dto.unitPrice || 0;
-    const qty = dto.quantityValue || prescription.quantityValue || 1;
-    const totalPrice = unitPrice * qty;
-
-    // FEFO stock decrement (best-effort) — record which batch(es) were used.
-    const usedBatches = await this.decrementStockFEFO(
-      prescription.medicationCode,
-      qty,
-    );
-
-    const dispense = this.dispenseRepo.create({
-      medicationRequestId: dto.medicationRequestId,
-      patientId: prescription.patientId,
-      pharmacistId,
-      status: MedicationDispenseStatus.COMPLETED,
-      medicationCode: prescription.medicationCode,
-      medicationDisplay: prescription.medicationDisplay,
-      quantityValue: qty,
-      quantityUnit: dto.quantityUnit || prescription.quantityUnit,
-      dosageText: prescription.dosageText,
-      dispenserName: dto.dispenserName,
-      unitPrice,
-      totalPrice,
-      receiptNumber,
-      batchNumber: usedBatches.length ? usedBatches.join(', ') : undefined,
-      note: dto.note,
-      whenHandedOver: new Date(),
-    });
-    const saved = await this.dispenseRepo.save(dispense);
-
-    // Mark prescription as completed
-    await this.medsRepo.update(dto.medicationRequestId, {
-      status: MedicationRequestStatus.COMPLETED,
+      return em.save(
+        em.create(MedicationDispense, {
+          medicationRequestId: prescription.id,
+          patientId: prescription.patientId,
+          pharmacistId: pharmacist.userId,
+          dispenserName: pharmacist.name ?? pharmacist.email,
+          status: MedicationDispenseStatus.COMPLETED,
+          medicationCode: prescription.medicationCode,
+          medicationDisplay: prescription.medicationDisplay,
+          quantityValue: qty,
+          quantityUnit: dto.quantityUnit || prescription.quantityUnit,
+          dosageText: prescription.dosageText,
+          unitPrice: drawn ? roundMoney(totalPrice / drawn) : 0,
+          totalPrice,
+          receiptNumber: `RX-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+          batchNumber:
+            draws
+              .filter((d) => d.batchNumber)
+              .map((d) => `${d.batchNumber}×${d.quantity}`)
+              .join(', ') || undefined,
+          note: dto.note,
+          whenHandedOver: new Date(),
+        }),
+      );
     });
 
     return toFhirDispense(saved);

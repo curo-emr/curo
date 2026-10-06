@@ -45,7 +45,7 @@ export class PharmacyController {
   @Roles('PHARMACIST', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   dispense(@Body() dto: DispenseMedicationDto, @CurrentUser() user: AuthUser) {
-    return this.pharmacyService.dispense(dto, user.userId);
+    return this.pharmacyService.dispense(dto, user);
   }
 
   @Get('dispense')
