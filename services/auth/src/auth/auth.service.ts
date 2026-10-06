@@ -14,7 +14,17 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UserRole, Gender } from '@curo/shared/enums';
-import { jwtSecret, type AuthUser } from '@curo/shared/auth';
+import { jwtSecret, type AuthUser, type JwtPayload } from '@curo/shared/auth';
+
+const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
+const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+function refreshSecret(): string {
+  return (
+    process.env.JWT_REFRESH_SECRET ||
+    'curo_refresh_secret_dev_2024_change_in_prod'
+  );
+}
 
 @Injectable()
 export class AuthService {
@@ -109,10 +119,8 @@ export class AuthService {
 
   async refresh(refreshToken: string) {
     try {
-      const payload = this.jwtService.verify(refreshToken, {
-        secret:
-          process.env.JWT_REFRESH_SECRET ||
-          'curo_refresh_secret_dev_2024_change_in_prod',
+      const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
+        secret: refreshSecret(),
       });
       const user = await this.usersRepo.findOne({ where: { id: payload.sub } });
       if (!user || !user.isActive) throw new UnauthorizedException();
@@ -154,29 +162,21 @@ export class AuthService {
   }
 
   private issueTokens(user: User) {
-    const payload = {
+    const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       role: user.role,
       practitionerId: user.practitionerId ?? null,
       patientId: user.patientId ?? null,
     };
-    const accessToken = this.jwtService.sign(
-      payload as any,
-      {
-        secret: jwtSecret(),
-        expiresIn: '900s',
-      } as any,
-    );
-    const refreshToken = this.jwtService.sign(
-      payload as any,
-      {
-        secret:
-          process.env.JWT_REFRESH_SECRET ||
-          'curo_refresh_secret_dev_2024_change_in_prod',
-        expiresIn: '604800s',
-      } as any,
-    );
+    const accessToken = this.jwtService.sign(payload, {
+      secret: jwtSecret(),
+      expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+    });
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: refreshSecret(),
+      expiresIn: REFRESH_TOKEN_TTL_SECONDS,
+    });
     return {
       accessToken,
       refreshToken,
