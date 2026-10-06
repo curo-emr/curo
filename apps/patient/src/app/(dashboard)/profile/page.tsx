@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, User, Phone, Mail, MapPin, Heart, Shield, Droplets, Briefcase, Calendar } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Loader2, User, Phone, Mail, MapPin, Heart, Shield, Droplets, Calendar } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { calculateAge, formatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SectionCard } from "@/components/ui/SectionCard";

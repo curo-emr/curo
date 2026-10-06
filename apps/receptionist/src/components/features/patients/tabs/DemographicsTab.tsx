@@ -1,15 +1,14 @@
 import Link from "next/link";
-import { Patient, Allergy } from "@/types";
+import { Patient } from "@/types";
 import { ROUTES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, User, Phone, Mail, MapPin, Shield } from "lucide-react";
+import { Edit, User, Phone, MapPin, Shield } from "lucide-react";
 
 interface DemographicsTabProps {
   patient: Patient;
-  allergies: Allergy[];
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -23,7 +22,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function DemographicsTab({ patient, allergies }: DemographicsTabProps) {
+export function DemographicsTab({ patient }: DemographicsTabProps) {
   const formattedAddress = [
     patient.address.line1,
     patient.address.line2,
