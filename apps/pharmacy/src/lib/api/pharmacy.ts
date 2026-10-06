@@ -25,6 +25,11 @@ export async function getPendingPrescriptionsPaginated(params: PaginationParams 
   return { items: resources.map(mapFhirMedicationRequest), total, page: params.page ?? 1, pageSize: params.pageSize ?? 25 };
 }
 
+export async function getPrescription(id: string): Promise<Prescription> {
+  const res = await apiClient.get<FhirMedicationRequest>(`/prescriptions/${id}`);
+  return mapFhirMedicationRequest(res.data);
+}
+
 export async function getPrescriptionsByPatient(patientId: string): Promise<Prescription[]> {
   const res = await apiClient.get<FhirMedicationRequest[] | FhirBundle<FhirMedicationRequest>>('/prescriptions', { params: { patientId } });
   return unwrapBundle(res.data).resources.map(mapFhirMedicationRequest);
@@ -48,8 +53,12 @@ export interface DispenseRecord {
   }>;
 }
 
-export async function dispense(prescriptionId: string): Promise<DispenseRecord> {
-  const res = await apiClient.post<FhirMedicationDispense>('/dispense', { prescriptionId });
+// The server takes the patient, medication and quantity from the prescription.
+export async function dispense(prescriptionId: string, dispenserName: string): Promise<DispenseRecord> {
+  const res = await apiClient.post<FhirMedicationDispense>('/dispense', {
+    medicationRequestId: prescriptionId,
+    dispenserName,
+  });
   return mapFhirMedicationDispense(res.data);
 }
 
@@ -73,9 +82,7 @@ export async function getDispensingRecordsByPatient(patientId: string): Promise<
 
 export async function getDispensingRecordsByPrescription(prescriptionId: string): Promise<DispenseRecord[]> {
   const res = await apiClient.get<DispenseApi[] | FhirBundle<DispenseApi>>('/dispense', { params: { prescriptionId, pageSize: 100 } });
-  return unwrapBundle(res.data).resources
-    .map(mapFhirMedicationDispense)
-    .filter(record => record.prescriptionId === prescriptionId);
+  return unwrapBundle(res.data).resources.map(mapFhirMedicationDispense);
 }
 
 // ─── Stock ───────────────────────────────────────────────────────────────────
