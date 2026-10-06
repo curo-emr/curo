@@ -35,6 +35,25 @@ export async function getPrescriptionsByPatient(patientId: string): Promise<Pres
   return unwrapBundle(res.data).resources.map(mapFhirMedicationRequest);
 }
 
+export interface PrescriptionSummary {
+  /** Prescriptions awaiting dispense. */
+  pendingCount: number;
+  lastPrescribedAt: string | null;
+}
+
+// Prescription summaries for a page of patients in one request, keyed by patient id.
+export async function getPrescriptionSummaries(patientIds: string[]): Promise<Map<string, PrescriptionSummary>> {
+  const byPatient = new Map<string, PrescriptionSummary>(
+    patientIds.map(id => [id, { pendingCount: 0, lastPrescribedAt: null }]),
+  );
+  if (patientIds.length === 0) return byPatient;
+  const res = await apiClient.get<Array<PrescriptionSummary & { patientId: string }>>('/prescriptions/summary', {
+    params: { patientIds: patientIds.join(',') },
+  });
+  for (const { patientId, ...summary } of res.data) byPatient.set(patientId, summary);
+  return byPatient;
+}
+
 // ─── Dispense ────────────────────────────────────────────────────────────────
 
 export interface DispenseRecord {

@@ -224,6 +224,10 @@ req "recep"  403 GET  "/prescriptions/$RX_ID" "" "$RECEP" >/dev/null
 req "pharma" 200 GET  "/stock/grouped" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock?lowOnly=true" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock/alerts" "" "$PHARM" >/dev/null
+RXS=$(req "pharma" 200 GET "/prescriptions/summary?patientIds=$PATIENT_ID" "" "$PHARM")
+expect_eq "prescription summary: pending count" "$(jq -r '.[0].pendingCount' <<<"$RXS")" "1"
+req "pharma"  400 GET  "/prescriptions/summary?patientIds=not-a-uuid" "" "$PHARM" >/dev/null
+req "patient" 403 GET  "/prescriptions/summary?patientIds=$PATIENT_ID" "" "$PAT" >/dev/null
 # Same body shape as the pharmacy portal: patient, price and dispenser come from the server.
 DISP_BODY="{\"medicationRequestId\":\"$RX_ID\",\"quantityValue\":60,\"quantityUnit\":\"tablet\"}"
 D=$(req "pharma" 201 POST "/dispense" "$DISP_BODY" "$PHARM")
