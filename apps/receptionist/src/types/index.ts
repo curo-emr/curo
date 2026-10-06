@@ -180,16 +180,3 @@ export interface Doctor {
   slotDurationMinutes: number;
   workingHours: { start: string; end: string };
 }
-
-export interface Visit {
-  id: string;
-  appointmentId: string;
-  patientId: string;
-  doctorId: string;
-  date: string;
-  checkInTime: string | null;
-  checkOutTime: string | null;
-  status: 'checked_in' | 'with_doctor' | 'completed' | 'cancelled';
-  notes: string;
-  createdBy: string;
-}

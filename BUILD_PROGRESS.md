@@ -772,6 +772,8 @@ Branch `fix/portal-lint-warnings`. All 7 portals lint clean; each `lint` script 
   never filtered anything. The order page's `loadData` is a `useCallback` on `orderId`.
   QR `<img>`s keep `<img>` (data: URLs) with a reasoned disable.
 - Follow-ups seen, not done: the pharmacy prescription page shows dispense records only
-  (no `GET /prescriptions/:id`); receptionist `VisitHistoryTab` always gets `visits={[]}`.
+  (no `GET /prescriptions/:id`). The receptionist Visit History tab (always `visits={[]}`)
+  was removed in `refactor/remove-visit-history-tab`: the Appointments tab covers it, and
+  encounters stay clinical-only.
 - Verified: lint + `next build` for all 7 portals; rebuilt lab portal — worklist shows only
   the priority filter, order page loads each endpoint once (no refetch loop), QR renders.
