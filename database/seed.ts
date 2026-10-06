@@ -74,29 +74,29 @@ const HASH = (p: string) => bcrypt.hashSync(p, 12);
 // DB-backed catalogs) reaches existing databases without a volume wipe.
 // Every statement must be safe to re-run.
 
-async function ensureStaffUser(
+type IdRow = { id: string };
+
+interface StaffSeed {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: UserRole;
+  password: string;
+  organizationId: string | null;
+  specialization?: string;
+  qualification?: string;
+  licenseNumber?: string;
+}
+
+/** Inserts a practitioner and its login account, linked both ways. */
+async function insertStaff(
   db: DataSource,
-  s: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    role: UserRole;
-    password: string;
-    qualification?: string;
-  },
-): Promise<boolean> {
-  const existing = await db.query(
-    `SELECT id FROM users WHERE email = $1 LIMIT 1`,
-    [s.email],
-  );
-  if (existing.length > 0) return false;
-  const [clinic] = await db.query(
-    `SELECT id FROM organizations WHERE type = 'clinic' ORDER BY "createdAt" LIMIT 1`,
-  );
-  const [prac] = await db.query(
+  s: StaffSeed,
+): Promise<{ practitionerId: string; userId: string }> {
+  const [prac] = await db.query<IdRow[]>(
     `
-    INSERT INTO practitioners (id, "firstName", "lastName", email, gender, role, qualification, "organizationId", active)
-    VALUES (gen_random_uuid(), $1, $2, $3, 'unknown', $4, $5, $6, true)
+    INSERT INTO practitioners (id, "firstName", "lastName", email, gender, role, specialization, qualification, "licenseNumber", "organizationId", active)
+    VALUES (gen_random_uuid(), $1, $2, $3, 'unknown', $4, $5, $6, $7, $8, true)
     RETURNING id
   `,
     [
@@ -104,11 +104,13 @@ async function ensureStaffUser(
       s.lastName,
       s.email,
       s.role,
+      s.specialization ?? null,
       s.qualification ?? null,
-      clinic?.id ?? null,
+      s.licenseNumber ?? null,
+      s.organizationId,
     ],
   );
-  const [user] = await db.query(
+  const [user] = await db.query<IdRow[]>(
     `
     INSERT INTO users (id, email, "passwordHash", role, "practitionerId", "isActive")
     VALUES (gen_random_uuid(), $1, $2, $3, $4, true)
@@ -120,6 +122,23 @@ async function ensureStaffUser(
     user.id,
     prac.id,
   ]);
+  return { practitionerId: prac.id, userId: user.id };
+}
+
+/** Adds a staff member to the first clinic unless their email is taken. */
+async function ensureStaffUser(
+  db: DataSource,
+  s: Omit<StaffSeed, 'organizationId'>,
+): Promise<boolean> {
+  const existing = await db.query<IdRow[]>(
+    `SELECT id FROM users WHERE email = $1 LIMIT 1`,
+    [s.email],
+  );
+  if (existing.length > 0) return false;
+  const [clinic] = await db.query<IdRow[]>(
+    `SELECT id FROM organizations WHERE type = 'clinic' ORDER BY "createdAt" LIMIT 1`,
+  );
+  await insertStaff(db, { ...s, organizationId: clinic?.id ?? null });
   return true;
 }
 
@@ -246,7 +265,7 @@ async function seed() {
   console.log('🌱 Starting seed...');
 
   // ---- SUPER ADMIN ----
-  const existingAdmin = await db.query(
+  const existingAdmin = await db.query<IdRow[]>(
     `SELECT id FROM users WHERE email = 'admin@curo.health' LIMIT 1`,
   );
   if (existingAdmin.length > 0) {
@@ -263,7 +282,7 @@ async function seed() {
     city: string,
     phone: string,
   ): Promise<string> {
-    const [o] = await db.query(
+    const [o] = await db.query<IdRow[]>(
       `
       INSERT INTO organizations (id, name, type, city, phone, active)
       VALUES (gen_random_uuid(), $1, $2, $3, $4, true) RETURNING id
@@ -349,36 +368,14 @@ async function seed() {
   const doctorIds: string[] = [];
   const doctorUserIds: string[] = [];
   for (const d of doctors) {
-    const [prac] = await db.query(
-      `
-      INSERT INTO practitioners (id, "firstName", "lastName", email, gender, role, specialization, qualification, "licenseNumber", "organizationId", active)
-      VALUES (gen_random_uuid(), $1, $2, $3, 'unknown', 'DOCTOR', $4, $5, $6, $7, true)
-      RETURNING id
-    `,
-      [
-        d.firstName,
-        d.lastName,
-        d.email,
-        d.specialization,
-        d.qualification,
-        d.licenseNumber,
-        orgId,
-      ],
-    );
-    const [user] = await db.query(
-      `
-      INSERT INTO users (id, email, "passwordHash", role, "practitionerId", "isActive")
-      VALUES (gen_random_uuid(), $1, $2, 'DOCTOR', $3, true)
-      RETURNING id
-    `,
-      [d.email, HASH('Doctor@123'), prac.id],
-    );
-    await db.query(`UPDATE practitioners SET "userId" = $1 WHERE id = $2`, [
-      user.id,
-      prac.id,
-    ]);
-    doctorIds.push(prac.id);
-    doctorUserIds.push(user.id);
+    const { practitionerId, userId } = await insertStaff(db, {
+      ...d,
+      role: UserRole.DOCTOR,
+      password: 'Doctor@123',
+      organizationId: orgId,
+    });
+    doctorIds.push(practitionerId);
+    doctorUserIds.push(userId);
   }
   console.log('✅ 3 doctors created');
 
@@ -389,27 +386,13 @@ async function seed() {
   ];
   const receptionistIds: string[] = [];
   for (const r of receptionists) {
-    const [prac] = await db.query(
-      `
-      INSERT INTO practitioners (id, "firstName", "lastName", email, gender, role, "organizationId", active)
-      VALUES (gen_random_uuid(), $1, $2, $3, 'unknown', 'RECEPTIONIST', $4, true)
-      RETURNING id
-    `,
-      [r.firstName, r.lastName, r.email, orgId],
-    );
-    const [user] = await db.query(
-      `
-      INSERT INTO users (id, email, "passwordHash", role, "practitionerId", "isActive")
-      VALUES (gen_random_uuid(), $1, $2, 'RECEPTIONIST', $3, true)
-      RETURNING id
-    `,
-      [r.email, HASH('Recept@123'), prac.id],
-    );
-    await db.query(`UPDATE practitioners SET "userId" = $1 WHERE id = $2`, [
-      user.id,
-      prac.id,
-    ]);
-    receptionistIds.push(prac.id);
+    const { practitionerId } = await insertStaff(db, {
+      ...r,
+      role: UserRole.RECEPTIONIST,
+      password: 'Recept@123',
+      organizationId: orgId,
+    });
+    receptionistIds.push(practitionerId);
   }
   console.log('✅ 2 receptionists created');
 
@@ -428,27 +411,13 @@ async function seed() {
   ];
   const pharmacistIds: string[] = [];
   for (const p of pharmacists) {
-    const [prac] = await db.query(
-      `
-      INSERT INTO practitioners (id, "firstName", "lastName", email, gender, role, "organizationId", active)
-      VALUES (gen_random_uuid(), $1, $2, $3, 'unknown', 'PHARMACIST', $4, true)
-      RETURNING id
-    `,
-      [p.firstName, p.lastName, p.email, orgId],
-    );
-    const [user] = await db.query(
-      `
-      INSERT INTO users (id, email, "passwordHash", role, "practitionerId", "isActive")
-      VALUES (gen_random_uuid(), $1, $2, 'PHARMACIST', $3, true)
-      RETURNING id
-    `,
-      [p.email, HASH('Pharma@123'), prac.id],
-    );
-    await db.query(`UPDATE practitioners SET "userId" = $1 WHERE id = $2`, [
-      user.id,
-      prac.id,
-    ]);
-    pharmacistIds.push(prac.id);
+    const { practitionerId } = await insertStaff(db, {
+      ...p,
+      role: UserRole.PHARMACIST,
+      password: 'Pharma@123',
+      organizationId: orgId,
+    });
+    pharmacistIds.push(practitionerId);
   }
   console.log('✅ 2 pharmacists created');
 
@@ -467,27 +436,13 @@ async function seed() {
   ];
   const labStaffIds: string[] = [];
   for (const l of labStaff) {
-    const [prac] = await db.query(
-      `
-      INSERT INTO practitioners (id, "firstName", "lastName", email, gender, role, "organizationId", active)
-      VALUES (gen_random_uuid(), $1, $2, $3, 'unknown', 'LAB_STAFF', $4, true)
-      RETURNING id
-    `,
-      [l.firstName, l.lastName, l.email, orgId],
-    );
-    const [user] = await db.query(
-      `
-      INSERT INTO users (id, email, "passwordHash", role, "practitionerId", "isActive")
-      VALUES (gen_random_uuid(), $1, $2, 'LAB_STAFF', $3, true)
-      RETURNING id
-    `,
-      [l.email, HASH('LabStaff@123'), prac.id],
-    );
-    await db.query(`UPDATE practitioners SET "userId" = $1 WHERE id = $2`, [
-      user.id,
-      prac.id,
-    ]);
-    labStaffIds.push(prac.id);
+    const { practitionerId } = await insertStaff(db, {
+      ...l,
+      role: UserRole.LAB_STAFF,
+      password: 'LabStaff@123',
+      organizationId: orgId,
+    });
+    labStaffIds.push(practitionerId);
   }
   console.log('✅ 2 lab staff created');
 
@@ -612,7 +567,7 @@ async function seed() {
       ln: 'Perera',
       dob: '2018-05-04',
       gender: 'male',
-      nic: null as any,
+      nic: null,
       phone: '+94771112233',
       email: 'sehan.guardian@email.com',
       blood: 'A+',
@@ -625,7 +580,7 @@ async function seed() {
   for (const p of patientData) {
     const code = genCode();
     const phn = genPhn();
-    const [patient] = await db.query(
+    const [patient] = await db.query<IdRow[]>(
       `
       INSERT INTO patients (id, "patientCode", "personalHealthNumber", "firstName", "lastName", "birthDate", gender, nic, phone, email, "bloodType", city, country, active)
       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'Sri Lanka', true)
@@ -645,7 +600,7 @@ async function seed() {
         p.city,
       ],
     );
-    const [user] = await db.query(
+    const [user] = await db.query<IdRow[]>(
       `
       INSERT INTO users (id, email, "passwordHash", role, "patientId", "isActive")
       VALUES (gen_random_uuid(), $1, $2, 'PATIENT', $3, true)
@@ -824,7 +779,12 @@ async function seed() {
   console.log('✅ Conditions created');
 
   // ---- APPOINTMENTS ----
-  const appointmentRows: any[] = [];
+  const appointmentRows: {
+    id: string;
+    patientId: string;
+    practitionerId: string;
+    isPast: boolean;
+  }[] = [];
   for (let i = 0; i < 20; i++) {
     const patIdx = i % 10;
     const docIdx = i % 3;
@@ -840,7 +800,7 @@ async function seed() {
         ? 'fulfilled'
         : 'noshow'
       : 'booked';
-    const [appt] = await db.query(
+    const [appt] = await db.query<IdRow[]>(
       `
       INSERT INTO appointments (id, "patientId", "practitionerId", status, start, "end", description, "serviceType", "slotNumber")
       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 'General Consultation', $7)
@@ -868,7 +828,7 @@ async function seed() {
   // ---- TODAY'S PATIENT FLOW (nurse triage demo) ----
   // A spread of queue stages so the nurse station, reception queue board and the
   // doctor's schedule all have something to show on a fresh stack.
-  const [nurse] = await db.query(
+  const [nurse] = await db.query<IdRow[]>(
     `SELECT id FROM practitioners WHERE role = 'NURSE' ORDER BY "createdAt" LIMIT 1`,
   );
   const todayFlow = [
@@ -936,7 +896,7 @@ async function seed() {
     const start = new Date();
     start.setHours(f.hour, f.minute, 0, 0);
     const end = new Date(start.getTime() + 30 * 60 * 1000);
-    const [appt] = await db.query(
+    const [appt] = await db.query<IdRow[]>(
       `
       INSERT INTO appointments (id, "patientId", "practitionerId", status, "queueStage", start, "end", description, "serviceType", "reasonCode")
       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 'General Consultation', 'Review visit')
@@ -1007,7 +967,7 @@ async function seed() {
     const appt = appointmentRows.filter((a) => a.isPast)[i];
     if (!appt) continue;
     const start = daysAgo(i + 1);
-    const [enc] = await db.query(
+    const [enc] = await db.query<IdRow[]>(
       `
       INSERT INTO encounters (id, "patientId", "practitionerId", "appointmentId", status, "classCode", "serviceType", "periodStart", "periodEnd")
       VALUES (gen_random_uuid(), $1, $2, $3, 'completed', 'AMB', 'General Consultation', $4, $5)
@@ -1212,7 +1172,7 @@ async function seed() {
     const pIdx = i % 10;
     const isCompleted = i < 5;
     const authoredOn = daysAgo(i + 1);
-    const [rx] = await db.query(
+    const [rx] = await db.query<IdRow[]>(
       `
       INSERT INTO medication_requests (id, "patientId", "practitionerId", "encounterId", status, intent, "medicationCode", "medicationDisplay", "dosageText", route, frequency, "quantityValue", "quantityUnit", "durationDays", "authoredOn")
       VALUES (gen_random_uuid(), $1, $2, $3, $4, 'order', $5, $6, $7, $8, $9, $10, $11, 30, $12)
@@ -1301,7 +1261,7 @@ async function seed() {
     const authoredOn = daysAgo(i + 2);
     const gatewayUrl = `http://localhost:3000`;
 
-    const [order] = await db.query(
+    const [order] = await db.query<IdRow[]>(
       `
       INSERT INTO service_requests (id, "patientId", "requesterId", status, intent, category, code, display, "testPanel", priority, "authoredOn")
       VALUES (gen_random_uuid(), $1, $2, $3, 'order', 'laboratory', $4, $5, $6, 'routine', $7)
@@ -1321,7 +1281,7 @@ async function seed() {
     // Generate QR code
     const qrUrl = `${gatewayUrl}/lab/orders/${order.id}`;
     const imageBase64 = await QRCode.toDataURL(qrUrl);
-    const [qr] = await db.query(
+    const [qr] = await db.query<IdRow[]>(
       `
       INSERT INTO qr_codes (id, "serviceRequestId", "encodedUrl", "imageBase64")
       VALUES (gen_random_uuid(), $1, $2, $3)
@@ -1348,11 +1308,10 @@ async function seed() {
   // ---- DIAGNOSTIC REPORTS (for completed orders) ----
   for (let i = 0; i < 5; i++) {
     const test = labTests[i];
-    const order = (
-      await db.query(`SELECT * FROM service_requests WHERE id = $1`, [
-        labOrderIds[i],
-      ])
-    )[0];
+    const [order] = await db.query<{ patientId: string }[]>(
+      `SELECT "patientId" FROM service_requests WHERE id = $1`,
+      [labOrderIds[i]],
+    );
     const results = test.panel.map((t) => ({
       code: t.code,
       display: t.display,
@@ -1385,9 +1344,19 @@ async function seed() {
   // ---- DISPENSE RECORDS ----
   for (let i = 0; i < 5; i++) {
     const rxId = prescriptionIds[i];
-    const rx = (
-      await db.query(`SELECT * FROM medication_requests WHERE id = $1`, [rxId])
-    )[0];
+    const [rx] = await db.query<
+      {
+        patientId: string;
+        medicationCode: string;
+        medicationDisplay: string;
+        quantityValue: number | null;
+        quantityUnit: string | null;
+      }[]
+    >(
+      `SELECT "patientId", "medicationCode", "medicationDisplay", "quantityValue", "quantityUnit"
+       FROM medication_requests WHERE id = $1`,
+      [rxId],
+    );
     await db.query(
       `
       INSERT INTO medication_dispenses (id, "medicationRequestId", "patientId", "pharmacistId", status, "medicationCode", "medicationDisplay", "quantityValue", "quantityUnit", "dispenserName", "unitPrice", "totalPrice", "receiptNumber", "whenHandedOver")
@@ -1867,7 +1836,7 @@ async function seed() {
   ];
   const instrumentIds: string[] = [];
   for (const inst of instruments) {
-    const [createdInstrument] = await db.query(
+    const [createdInstrument] = await db.query<IdRow[]>(
       `
       INSERT INTO lab_instruments (id, name, model, manufacturer, "serialNumber", status, location, category, "lastMaintenanceDate")
       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
