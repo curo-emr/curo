@@ -16,6 +16,7 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 import { CreateAllergyDto } from './dto/create-allergy.dto';
 import { CreateConditionDto } from './dto/create-condition.dto';
 import {
+  actorId,
   JwtAuthGuard,
   RolesGuard,
   Roles,
@@ -139,7 +140,7 @@ export class PatientController {
     @Body() dto: CreateAllergyDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.patientService.addAllergy(id, dto, user.userId);
+    return this.patientService.addAllergy(id, dto, actorId(user));
   }
 
   // Conditions
@@ -158,7 +159,7 @@ export class PatientController {
     @Body() dto: CreateConditionDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.patientService.addCondition(id, dto, user.userId);
+    return this.patientService.addCondition(id, dto, actorId(user));
   }
 
   // Vitals

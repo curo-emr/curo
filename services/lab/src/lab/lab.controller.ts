@@ -14,6 +14,7 @@ import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
 import { CreateInstrumentDto } from './dto/create-instrument.dto';
 import {
+  actorId,
   JwtAuthGuard,
   RolesGuard,
   Roles,
@@ -63,14 +64,14 @@ export class LabController {
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   scanQr(@Body() dto: ScanQrDto, @CurrentUser() user: AuthUser) {
-    return this.labService.scanQr(dto, user.userId);
+    return this.labService.scanQr(dto, actorId(user));
   }
 
   @Put('orders/:id/receive')
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   receiveOrder(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.labService.receiveOrder(id, user.userId);
+    return this.labService.receiveOrder(id, actorId(user));
   }
 
   @Post('results')
