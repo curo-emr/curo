@@ -9,6 +9,7 @@ import Link from "next/link";
 import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { SectionCard } from "@curo/web/ui/section-card";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { getMyProfile, getMyPrescriptions, getPractitioners } from "@/lib/api/patient-portal";
 import type { Prescription } from "@/types";
 
@@ -62,16 +63,7 @@ export default function PrescriptionDetailPage({ params }: Props) {
             </span>
           </div>
         </div>
-        <Badge
-          variant="outline"
-          className={
-            prescription.status === "sent_to_pharmacy"
-              ? "text-status-success-text border-status-success-border bg-status-success-bg"
-              : "text-muted-foreground border bg-muted"
-          }
-        >
-          {prescription.status === "sent_to_pharmacy" ? "Sent to Pharmacy" : "Draft"}
-        </Badge>
+        <StatusBadge status={prescription.status} />
       </div>
 
       {/* Medications */}

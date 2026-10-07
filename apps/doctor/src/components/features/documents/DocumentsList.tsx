@@ -6,7 +6,8 @@ import { FileText, Eye, Loader2 } from "lucide-react";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@curo/web/ui/empty-state";
-import { formatDate, formatStatus } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { formatStatus } from "@curo/web/format";
 import { formatFileSize } from "@curo/web/ui/file-input";
 import { openDocument, type DocumentRef } from "@/lib/api/documents";
 

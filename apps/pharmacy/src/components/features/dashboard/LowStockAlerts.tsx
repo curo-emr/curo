@@ -1,7 +1,7 @@
 import type { GroupedStock } from "@/lib/api/pharmacy";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { AlertTriangle } from "lucide-react";
-import { formatStatus } from "@/lib/utils";
+import { formatStatus } from "@curo/web/format";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
