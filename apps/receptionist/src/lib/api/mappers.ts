@@ -263,6 +263,7 @@ export function mapFhirCondition(fhir: FhirCondition): Problem {
   };
 }
 
+// FHIR Appointment status → what the desk sees. Any other status (proposed) reads as scheduled.
 const FHIR_APPT_STATUS_MAP: Record<string, Appointment['status']> = {
   booked: 'scheduled',
   pending: 'scheduled',
@@ -274,6 +275,14 @@ const FHIR_APPT_STATUS_MAP: Record<string, Appointment['status']> = {
   waitlist: 'waiting',
   'checked-in': 'arrived',
 };
+const FHIR_APPT_STATUSES = ['proposed', ...Object.keys(FHIR_APPT_STATUS_MAP)];
+
+export const appointmentStatusOf = (fhirStatus: string): Appointment['status'] =>
+  FHIR_APPT_STATUS_MAP[fhirStatus] ?? 'scheduled';
+
+/** The FHIR statuses that read as `status`, for asking the API for them. */
+export const fhirAppointmentStatusesOf = (status: Appointment['status']) =>
+  FHIR_APPT_STATUSES.filter(fhirStatus => appointmentStatusOf(fhirStatus) === status);
 
 export function mapFhirAppointment(fhir: FhirAppointment): Appointment {
   const start = fhir.start ? new Date(fhir.start) : new Date();
@@ -294,7 +303,7 @@ export function mapFhirAppointment(fhir: FhirAppointment): Appointment {
     patientId,
     reason: fhir.reasonCode?.[0]?.text ?? fhir.description ?? '',
     visitType: fhir.serviceType?.[0]?.coding?.[0]?.code ?? 'consultation',
-    status: FHIR_APPT_STATUS_MAP[fhir.status] ?? 'scheduled',
+    status: appointmentStatusOf(fhir.status),
     room: '',
     notes: fhir.comment ?? '',
     queueStage: (fhir.extension?.find(e => e.url === 'urn:curo:queueStage')?.valueString as QueueStage | undefined) ?? null,

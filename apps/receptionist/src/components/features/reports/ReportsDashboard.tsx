@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import type { Appointment, Patient, Doctor } from "@/types";
+import { useEffect, useState, useMemo } from "react";
+import { getTotal } from "@curo/web/api";
+import type { Appointment, Doctor } from "@/types";
+import { getAppointments } from "@/lib/api/appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
 import { Badge } from "@curo/web/ui/badge";
@@ -18,8 +20,6 @@ import { cn, getTodayString } from "@/lib/utils";
 import { APPOINTMENT_STATUS, VISIT_TYPES } from "@/lib/constants";
 
 interface ReportsDashboardProps {
-  appointments: Appointment[];
-  patients: Patient[];
   doctors: Doctor[];
 }
 
@@ -58,22 +58,28 @@ function formatDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function isDateInRange(dateStr: string, start: string, end: string): boolean {
-  return dateStr >= start && dateStr <= end;
-}
-
-export function ReportsDashboard({
-  appointments,
-  patients,
-  doctors,
-}: ReportsDashboardProps) {
+export function ReportsDashboard({ doctors }: ReportsDashboardProps) {
   const [dateRange, setDateRange] = useState<DateRange>("today");
 
   const { start, end } = useMemo(() => getDateRangeBounds(dateRange), [dateRange]);
 
-  const filteredAppointments = useMemo(() => {
-    return appointments.filter((a) => isDateInRange(a.date, start, end));
-  }, [appointments, start, end]);
+  // The range's appointments, and how many patients registered in it.
+  const [loaded, setLoaded] = useState<{ appointments: Appointment[]; newRegistrations: number }>();
+  useEffect(() => {
+    let current = true;
+    Promise.all([
+      getAppointments({ from: start, to: end }),
+      getTotal("/patients", { registeredFrom: start, registeredTo: end }),
+    ])
+      .then(([appointments, newRegistrations]) => {
+        if (current) setLoaded({ appointments, newRegistrations });
+      })
+      .catch(console.error);
+    return () => {
+      current = false;
+    };
+  }, [start, end]);
+  const filteredAppointments = useMemo(() => loaded?.appointments ?? [], [loaded]);
 
   // Summary stats
   const stats = useMemo(() => {
@@ -94,12 +100,10 @@ export function ReportsDashboard({
     const cancelled = filteredAppointments.filter(
       (a) => a.status === APPOINTMENT_STATUS.CANCELLED
     ).length;
-    const newRegistrations = patients.filter((p) =>
-      isDateInRange(p.registeredAt.split("T")[0], start, end)
-    ).length;
+    const newRegistrations = loaded?.newRegistrations ?? 0;
 
     return { total, checkedIn, completed, noShows, cancelled, newRegistrations };
-  }, [filteredAppointments, patients, start, end]);
+  }, [filteredAppointments, loaded]);
 
   // Appointments by doctor
   const doctorStats = useMemo(() => {

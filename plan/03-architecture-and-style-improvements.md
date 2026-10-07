@@ -166,10 +166,6 @@ patient's or visit's orders, results and dispenses, a pharmacy's stock, the rece
 Name lookups ask for the rows' own patients with `getByIds` rather than a page of all
 patients. Paged queries break ties on `id`, so walking the pages never repeats or skips a row.
 Still capped, each behind a function named for it (`…FirstPage`, `getRecent…`):
-- Receptionist appointments, schedule, new appointment and reports read the *oldest*
-  100 appointments and look patients up from one page of all patients; the appointment
-  list's paid markers and My Income read the latest 100 payments.
-- Doctor schedule: the oldest 100 of the doctor's appointments.
 - Pharmacy dispensing log and reports: the latest 100 dispenses.
 - Admin overview, income and user pages: the latest 100 payments; the overview's user
   counts come from the newest 100 users.
@@ -179,9 +175,15 @@ Still capped, each behind a function named for it (`…FirstPage`, `getRecent…
 > matched (`findPatientIds`), sorts by priority or newest, and `/orders/summary` counts
 > by status and priority and lists the most-ordered tests.
 
-The rest need server paging (dropping the client-side name search, or searching across
-services on the server), `from`/`to` on `/appointments`, and server-side totals or a date
-window for the report pages (admin income can use `/payments/summary`).
+> Appointments too: `/appointments` takes `from`/`to` days, a `status` list and
+> `_sort=-start`. The receptionist's appointment list and My Income page on the server;
+> both schedules load the month the calendar shows (`CuroCalendar`'s `month`,
+> `calendarRange`); booking searches patients on the server and reads the doctor's booked
+> slots from `/appointments/schedule`; reports read their date range and count new
+> registrations with `getTotal('/patients', { registeredFrom, registeredTo })`.
+
+The rest need server paging and server-side totals. `/payments/summary` covers only the
+signed-in receptionist, so admin income needs its own.
 
 ### B5. Error boundaries and empty/loading states are uneven
 `error.tsx` exists in doctor/receptionist dashboards but not everywhere; some

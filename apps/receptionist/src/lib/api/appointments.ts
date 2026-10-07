@@ -1,26 +1,34 @@
 import { apiClient, getAllPages } from '@curo/web/api';
 import type { Appointment, QueueStage } from '@/types';
-import { mapFhirAppointment, type FhirAppointment } from './mappers';
-import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
+import { fhirAppointmentStatusesOf, mapFhirAppointment, type FhirAppointment } from './mappers';
+import { unwrapBundle, type FhirBundle, type PaginatedResult } from '@curo/web/fhir';
 
-/** A day's or a patient's appointments, so the set is bounded and read whole. */
+/** A day's, a patient's or a range of days' appointments, so the set is bounded and read whole. */
 type AppointmentFilters = {
   practitionerId?: string;
   queueStage?: string; // comma-separated QueueStage values
-} & ({ date: string; patientId?: string } | { patientId: string });
+} & ({ date: string; patientId?: string } | { patientId: string } | { from: string; to: string });
 
 export async function getAppointments(filters: AppointmentFilters): Promise<Appointment[]> {
   return (await getAllPages<FhirAppointment>('/appointments', filters)).map(mapFhirAppointment);
 }
 
-// Only the first 100 appointments, oldest first. The pages that list every
-// appointment still use this until they ask for a date range or page on the
-// server (plan/03 B2).
-export async function getAppointmentsFirstPage(): Promise<Appointment[]> {
-  const res = await apiClient.get<FhirAppointment[] | FhirBundle<FhirAppointment>>('/appointments', {
-    params: { pageSize: 100 },
+// One page of appointments, latest first.
+export async function getAppointmentsPage({ page, pageSize, date, practitionerId, status }: {
+  page: number;
+  pageSize: number;
+  date?: string;
+  practitionerId?: string;
+  status?: Appointment['status'];
+}): Promise<PaginatedResult<Appointment>> {
+  const statuses = status ? fhirAppointmentStatusesOf(status) : [];
+  // No appointment is ever in a status that nothing maps to (in progress, for now).
+  if (status && statuses.length === 0) return { items: [], total: 0, page, pageSize };
+  const res = await apiClient.get<FhirBundle<FhirAppointment>>('/appointments', {
+    params: { page, pageSize, date, practitionerId, status: statuses.join(',') || undefined, _sort: '-start' },
   });
-  return unwrapBundle(res.data).resources.map(mapFhirAppointment);
+  const { resources, total } = unwrapBundle(res.data);
+  return { items: resources.map(mapFhirAppointment), total, page, pageSize };
 }
 
 export async function getAppointmentsByDate(date: string): Promise<Appointment[]> {

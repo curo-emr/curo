@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useClientPagination } from "@curo/web/hooks";
-import type { Appointment, Patient, Doctor } from "@/types";
+import { useState, useMemo } from "react";
+import { useServerPagination } from "@curo/web/hooks";
+import type { Doctor } from "@/types";
 import { Card, CardContent } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
 import { Input } from "@curo/web/ui/input";
@@ -37,14 +37,14 @@ import { statusClassName, statusLabel } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { updateAppointmentStatus } from "@/lib/actions/appointment-actions";
 import { RecordPaymentCell } from "@/components/features/payments/RecordPaymentCell";
-import { getMyPayments, type Payment } from "@/lib/api/payments";
+import { getMyPaymentsForAppointments, type Payment } from "@/lib/api/payments";
+import { getAppointmentsPage } from "@/lib/api/appointments";
+import { getPatientsByIds } from "@/lib/api/patients";
 import { toast } from "sonner";
 
 type AppointmentStatus = 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
 
 interface AppointmentListProps {
-  appointments: Appointment[];
-  patients: Patient[];
   doctors: Doctor[];
 }
 
@@ -58,51 +58,45 @@ const STATUS_OPTIONS = [
   ...ALL_STATUSES.filter(s => s !== "not_arrived").map(value => ({ label: statusLabel(value), value })),
 ];
 
-export function AppointmentList({ appointments: initialAppointments, patients, doctors }: AppointmentListProps) {
-  const [appointments, setAppointments] = useState(initialAppointments);
+/** Appointments, latest first, paged and filtered on the server. */
+export function AppointmentList({ doctors }: AppointmentListProps) {
   const [dateFilter, setDateFilter] = useState(getTodayString());
   const [doctorFilter, setDoctorFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
-  const [paymentsByAppt, setPaymentsByAppt] = useState<Record<string, Payment>>({});
+  // Changes made here, shown before (and in place of) what the page was loaded with.
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, AppointmentStatus>>({});
+  const [recordedPayments, setRecordedPayments] = useState<Record<string, Payment>>({});
 
-  useEffect(() => {
-    getMyPayments()
-      .then((payments) => {
-        const map: Record<string, Payment> = {};
-        for (const p of payments) if (p.appointmentId) map[p.appointmentId] = p;
-        setPaymentsByAppt(map);
-      })
-      .catch(console.error);
-  }, []);
-
-  const filtered = useMemo(() => {
-    return appointments
-      .filter((a) => {
-        const matchesDate = !dateFilter || a.date === dateFilter;
-        const matchesDoctor = doctorFilter === "all" || a.doctorId === doctorFilter;
-        const matchesStatus = statusFilter === "all" || a.status === statusFilter;
-        return matchesDate && matchesDoctor && matchesStatus;
-      })
-      .sort((a, b) => {
-        const dateComp = b.date.localeCompare(a.date);
-        if (dateComp !== 0) return dateComp;
-        return b.time.localeCompare(a.time);
+  const { data, items, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
+    async (page, pageSize) => {
+      const result = await getAppointmentsPage({
+        page,
+        pageSize,
+        date: dateFilter || undefined,
+        practitionerId: doctorFilter === "all" ? undefined : doctorFilter,
+        status: statusFilter === "all" ? undefined : (statusFilter as AppointmentStatus),
       });
-  }, [appointments, dateFilter, doctorFilter, statusFilter]);
-
-  // Client-side pagination over the filtered set (date/doctor/status filters are
-  // applied client-side, so the page is sliced here).
-  const { page, setPage, pageSize, setPageSize, pageRows: paged } =
-    useClientPagination(filtered, [dateFilter, doctorFilter, statusFilter]);
+      const [patients, payments] = await Promise.all([
+        getPatientsByIds(result.items.map((a) => a.patientId)),
+        getMyPaymentsForAppointments(result.items.map((a) => a.id)),
+      ]);
+      return { ...result, patients, payments };
+    },
+    [dateFilter, doctorFilter, statusFilter],
+  );
+  const patients = data?.patients ?? [];
+  const appointments = items.map((a) => (statusOverrides[a.id] ? { ...a, status: statusOverrides[a.id] } : a));
+  const paymentsByAppt = useMemo(() => {
+    const byAppointment: Record<string, Payment> = {};
+    for (const p of data?.payments ?? []) if (p.appointmentId) byAppointment[p.appointmentId] = p;
+    return { ...byAppointment, ...recordedPayments };
+  }, [data, recordedPayments]);
 
   const handleStatusChange = async (appointmentId: string, newStatus: AppointmentStatus) => {
     setPendingIds((prev) => new Set(prev).add(appointmentId));
-
-    // Optimistic update
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === appointmentId ? { ...a, status: newStatus } : a))
-    );
+    const previous = statusOverrides[appointmentId];
+    setStatusOverrides((prev) => ({ ...prev, [appointmentId]: newStatus }));
 
     const result = await updateAppointmentStatus(appointmentId, newStatus);
 
@@ -115,8 +109,12 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
     if (result.success) {
       toast.success("Status updated");
     } else {
-      // Revert optimistic update
-      setAppointments(initialAppointments);
+      setStatusOverrides((prev) => {
+        const next = { ...prev };
+        if (previous) next[appointmentId] = previous;
+        else delete next[appointmentId];
+        return next;
+      });
       toast.error(result.error || "Failed to update status");
     }
   };
@@ -184,12 +182,18 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
 
       {/* Results count */}
       <p className="text-sm text-muted-foreground px-1">
-        {filtered.length} appointment{filtered.length !== 1 ? "s" : ""} found
+        {isLoading ? "Loading appointments…" : `${total} appointment${total !== 1 ? "s" : ""} found`}
       </p>
 
       {/* Appointments Table */}
       <div className="bg-white rounded-md border overflow-hidden shadow-sm">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center h-32">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : isError ? (
+          <p className="h-32 flex items-center justify-center text-sm text-destructive">Failed to load appointments.</p>
+        ) : appointments.length === 0 ? (
           <EmptyState
             icon={Calendar}
             title="No appointments found"
@@ -211,7 +215,7 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paged.map((apt) => {
+              {appointments.map((apt) => {
                 const isPending = pendingIds.has(apt.id);
                 const status = apt.status as AppointmentStatus;
                 return (
@@ -271,7 +275,7 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
                         patientName={getPatientName(apt.patientId, patients)}
                         existingPayment={paymentsByAppt[apt.id]}
                         onRecorded={(payment) =>
-                          setPaymentsByAppt((prev) => ({ ...prev, [apt.id]: payment }))
+                          setRecordedPayments((prev) => ({ ...prev, [apt.id]: payment }))
                         }
                       />
                     </TableCell>
@@ -283,11 +287,11 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
         )}
       </div>
 
-      {filtered.length > 0 && (
+      {total > 0 && (
         <Pagination
           page={page}
           pageSize={pageSize}
-          total={filtered.length}
+          total={total}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
         />

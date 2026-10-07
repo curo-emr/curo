@@ -4,10 +4,11 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, In } from 'typeorm';
 import { Payment } from '../entities/payment.entity';
 import { AuditLog } from '@curo/shared/database';
 import {
+  parseList,
   parsePagination,
   toSearchset,
   PaginationQuery,
@@ -93,18 +94,27 @@ export class PaymentService {
     return Between(start, end);
   }
 
-  /** A receptionist's own collected payments. `collectedBy` always comes from the JWT. */
+  /**
+   * A receptionist's own collected payments, latest first: those for
+   * `appointmentId` (a comma-separated list) when given. `collectedBy` always
+   * comes from the JWT.
+   */
   async findMine(
     user: AuthUser,
-    from?: string,
-    to?: string,
+    filters: { from?: string; to?: string; appointmentId?: string },
     pagination: PaginationQuery = {},
   ) {
+    const { from, to } = filters;
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const collectedBy = actorId(user);
     const range = this.dateRange(from, to);
+    const appointmentIds = parseList(filters.appointmentId);
     const [payments, total] = await this.paymentsRepo.findAndCount({
-      where: { collectedBy, ...(range ? { paidAt: range } : {}) },
+      where: {
+        collectedBy,
+        ...(range ? { paidAt: range } : {}),
+        ...(appointmentIds.length ? { appointmentId: In(appointmentIds) } : {}),
+      },
       order: { paidAt: 'DESC', id: 'ASC' },
       skip,
       take,
@@ -113,7 +123,7 @@ export class PaymentService {
       page,
       pageSize,
       baseUrl: '/payments/mine',
-      query: { from, to },
+      query: { ...filters },
     });
   }
 

@@ -6,17 +6,8 @@ import { PatientHeader } from "@/components/features/patients/PatientHeader";
 import { PatientChartTabs } from "@/components/features/patients/PatientChartTabs";
 import { getPatientById, getAllergies } from "@/lib/api/patients";
 import { getAppointments } from "@/lib/api/appointments";
-import { getDoctors, type Practitioner } from "@/lib/api/practitioners";
+import { getDoctors } from "@/lib/api/practitioners";
 import type { Patient, Allergy, Appointment, Doctor } from "@/types";
-
-function mapPractitionerToDoctor(p: Practitioner): Doctor {
-  return {
-    id: p.id, name: p.name, specialty: p.specialty,
-    phone: p.phone, email: p.email, roomNumber: "",
-    availableDays: [], slotDurationMinutes: 30,
-    workingHours: { start: "08:00", end: "17:00" },
-  };
-}
 
 export default function PatientDetailPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = use(params);
@@ -38,7 +29,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
         setPatient(pt);
         setAllergies(alg);
         setAppointments(appts);
-        setDoctors(practs.map(mapPractitionerToDoctor));
+        setDoctors(practs);
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));

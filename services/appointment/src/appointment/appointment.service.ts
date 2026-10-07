@@ -10,6 +10,8 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { UserRole } from '@curo/shared/enums';
 import {
+  dayBounds,
+  parseList,
   parsePagination,
   toSearchset,
   PaginationQuery,
@@ -51,6 +53,21 @@ function toFhirAppointment(a: Appointment) {
   };
 }
 
+/** Filters for `findAll`; days are YYYY-MM-DD. */
+export interface AppointmentFilters {
+  date?: string;
+  from?: string;
+  to?: string;
+  practitionerId?: string;
+  patientId?: string;
+  status?: string;
+  queueStage?: string;
+  _sort?: string;
+}
+
+const isAppointmentStatus = (value: string): value is AppointmentStatus =>
+  (Object.values(AppointmentStatus) as string[]).includes(value);
+
 @Injectable()
 export class AppointmentService {
   constructor(
@@ -68,14 +85,14 @@ export class AppointmentService {
     return toFhirAppointment(saved);
   }
 
+  /**
+   * The appointments `requestingUser` may see. `date`, or `from` and `to`, are
+   * whole days (`date` wins); `status` and `queueStage` are comma-separated
+   * lists. Earliest first, or latest first with `_sort=-start`.
+   */
   async findAll(
     requestingUser: AuthUser,
-    filters?: {
-      date?: string;
-      practitionerId?: string;
-      patientId?: string;
-      queueStage?: string;
-    },
+    filters?: AppointmentFilters,
     pagination: PaginationQuery = {},
   ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
@@ -95,12 +112,17 @@ export class AppointmentService {
       query.where('a.patientId = :pid', { pid: requestingUser.patientId });
     }
 
-    if (filters?.date) {
-      const dayStart = new Date(filters.date);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(filters.date);
-      dayEnd.setHours(23, 59, 59, 999);
-      query.andWhere('a.start BETWEEN :s AND :e', { s: dayStart, e: dayEnd });
+    const from = filters?.date ?? filters?.from;
+    const to = filters?.date ?? filters?.to;
+    if (from)
+      query.andWhere('a.start >= :from', { from: dayBounds(from).start });
+    if (to) query.andWhere('a.start <= :to', { to: dayBounds(to).end });
+    const status = parseList(filters?.status);
+    if (status.length) {
+      const known = status.filter(isAppointmentStatus);
+      query.andWhere(known.length ? 'a.status IN (:...known)' : '1 = 0', {
+        known,
+      });
     }
     if (filters?.practitionerId && requestingUser.role !== UserRole.DOCTOR) {
       query.andWhere('a.practitionerId = :pr', { pr: filters.practitionerId });
@@ -115,7 +137,7 @@ export class AppointmentService {
     }
 
     const [appointments, total] = await query
-      .orderBy('a.start', 'ASC')
+      .orderBy('a.start', filters?._sort === '-start' ? 'DESC' : 'ASC')
       .addOrderBy('a.id', 'ASC')
       .skip(skip)
       .take(take)
@@ -167,15 +189,11 @@ export class AppointmentService {
   }
 
   async getDoctorSchedule(practitionerId: string, date: string) {
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(date);
-    dayEnd.setHours(23, 59, 59, 999);
-
+    const { start, end } = dayBounds(date);
     const appointments = await this.appointmentsRepo.find({
       where: {
         practitionerId,
-        start: Between(dayStart, dayEnd),
+        start: Between(start, end),
       },
       order: { start: 'ASC' },
     });
