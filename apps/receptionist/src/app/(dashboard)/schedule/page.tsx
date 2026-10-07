@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { ScheduleClient } from "./ScheduleClient";
-import { getAppointments } from "@/lib/api/appointments";
+import { getAppointmentsFirstPage } from "@/lib/api/appointments";
 import { getPatients } from "@/lib/api/patients";
 import { getDoctors, type Practitioner } from "@/lib/api/practitioners";
 import type { Appointment, Patient, Doctor } from "@/types";
@@ -24,7 +24,7 @@ export default function SchedulePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getAppointments(), getPatients(), getDoctors()])
+    Promise.all([getAppointmentsFirstPage(), getPatients(), getDoctors()])
       .then(([appts, pts, practs]) => {
         setAppointments(appts);
         setPatients(pts);

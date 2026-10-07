@@ -1,4 +1,4 @@
-import { apiClient } from '@curo/web/api';
+import { apiClient, getAllPages } from '@curo/web/api';
 import {
   mapFhirMedicationDispense,
   mapFhirMedicationRequest,
@@ -72,7 +72,9 @@ export async function dispense(prescriptionId: string): Promise<DispenseRecord> 
 
 type DispenseApi = FhirMedicationDispense | DispenseRecord;
 
-export async function getDispensingRecords(): Promise<DispenseRecord[]> {
+// The latest 100 dispenses, newest first. The dispensing log and reports still
+// use this until they page on the server or ask for a date range (plan/03 B2).
+export async function getRecentDispensingRecords(): Promise<DispenseRecord[]> {
   const res = await apiClient.get<DispenseApi[] | FhirBundle<DispenseApi>>('/dispense', { params: { pageSize: 100 } });
   return unwrapBundle(res.data).resources.map(mapFhirMedicationDispense);
 }
@@ -84,13 +86,11 @@ export async function getDispensingRecordsPaginated(params: PaginationParams = {
 }
 
 export async function getDispensingRecordsByPatient(patientId: string): Promise<DispenseRecord[]> {
-  const res = await apiClient.get<DispenseApi[] | FhirBundle<DispenseApi>>('/dispense', { params: { patientId, pageSize: 100 } });
-  return unwrapBundle(res.data).resources.map(mapFhirMedicationDispense);
+  return (await getAllPages<DispenseApi>('/dispense', { patientId })).map(mapFhirMedicationDispense);
 }
 
 export async function getDispensingRecordsByPrescription(prescriptionId: string): Promise<DispenseRecord[]> {
-  const res = await apiClient.get<DispenseApi[] | FhirBundle<DispenseApi>>('/dispense', { params: { prescriptionId, pageSize: 100 } });
-  return unwrapBundle(res.data).resources.map(mapFhirMedicationDispense);
+  return (await getAllPages<DispenseApi>('/dispense', { prescriptionId })).map(mapFhirMedicationDispense);
 }
 
 // ─── Stock ───────────────────────────────────────────────────────────────────
@@ -113,9 +113,9 @@ export interface StockItem {
   isActive?: boolean;
 }
 
+// Every batch in the pharmacy's inventory.
 export async function getStock(): Promise<StockItem[]> {
-  const res = await apiClient.get<StockItem[] | FhirBundle<StockItem>>('/stock', { params: { pageSize: 100 } });
-  return unwrapBundle(res.data).resources;
+  return getAllPages<StockItem>('/stock');
 }
 
 export async function getStockPaginated(params: PaginationParams = {}): Promise<PaginatedResult<StockItem>> {

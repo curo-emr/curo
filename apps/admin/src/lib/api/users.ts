@@ -1,4 +1,4 @@
-import { apiClient } from "@curo/web/api";
+import { apiClient, getAllPages } from "@curo/web/api";
 import type { AdminUser } from "@/types";
 import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from "@curo/web/fhir";
 
@@ -28,10 +28,15 @@ export interface UpdateUserInput {
   organizationId?: string;
 }
 
-export async function getUsers(search?: string, role?: string): Promise<AdminUser[]> {
-  const res = await apiClient.get<AdminUser[] | FhirBundle<AdminUser>>("/auth/users", {
-    params: { search, role, pageSize: 100 },
-  });
+// Every user with a staff role, such as all the receptionists.
+export async function getUsersByRole(role: string): Promise<AdminUser[]> {
+  return getAllPages<AdminUser>("/auth/users", { role });
+}
+
+// The newest 100 users. The overview still counts users from this until the
+// server counts them (plan/03 B2).
+export async function getRecentUsers(): Promise<AdminUser[]> {
+  const res = await apiClient.get<AdminUser[] | FhirBundle<AdminUser>>("/auth/users", { params: { pageSize: 100 } });
   return unwrapBundle(res.data).resources;
 }
 

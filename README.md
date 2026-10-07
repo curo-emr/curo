@@ -173,7 +173,7 @@ The portals' counterpart to `@curo/shared`, with the same layout: one entry poin
 
 | Import | Contents |
 |---|---|
-| `@curo/web/api` | `apiClient` (axios with the session's token; refreshes it once on a 401), `apiErrorMessage()` |
+| `@curo/web/api` | `apiClient` (axios with the session's token; refreshes it once on a 401), `apiErrorMessage()`, `getAllPages()` (every page of a list a filter bounds), `getByIds()` (FHIR `_id` lookups, 100 ids a request) |
 | `@curo/web/auth` | `AuthProvider` and `useAuth()`: the signed-in user, `login`, `logout`; `ProtectedRoute`, limited to the portal's `roles` |
 | `@curo/web/fhir` | `unwrapBundle`, `paginationParams`, and the Bundle and pagination types |
 | `@curo/web/format` | `formatStatus()`: a snake_case code as sentence-case text (`not_arrived` → "Not arrived") |

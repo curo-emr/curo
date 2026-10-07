@@ -1,4 +1,4 @@
-import { apiClient } from '@curo/web/api';
+import { apiClient, getAllPages } from '@curo/web/api';
 import {
   mapFhirDiagnosticReport,
   mapFhirServiceRequest,
@@ -12,11 +12,16 @@ import { interpret, parseNumeric } from '@/lib/result-flag';
 
 // ─── Lab Orders ───────────────────────────────────────────────────────────────
 
-// Back-compat: returns up to 100 orders as a flat array (worklist computes status
-// counts across the set). Unwraps either a bare array or a FHIR searchset Bundle.
-export async function getLabOrders(params?: { status?: string; patientId?: string; encounterId?: string }): Promise<LabOrder[]> {
+// Every order from one visit or for one patient.
+export async function getLabOrders(filters: { encounterId: string } | { patientId: string }): Promise<LabOrder[]> {
+  return (await getAllPages<FhirServiceRequest>('/orders', filters)).map(mapFhirServiceRequest);
+}
+
+// Only the first 100 orders, oldest first. The pages that list every order still
+// use this until they page on the server (plan/03 B2).
+export async function getLabOrdersFirstPage(): Promise<LabOrder[]> {
   const res = await apiClient.get<FhirServiceRequest[] | FhirBundle<FhirServiceRequest>>('/orders', {
-    params: { pageSize: 100, ...params },
+    params: { pageSize: 100 },
   });
   return unwrapBundle(res.data).resources.map(mapFhirServiceRequest);
 }
@@ -164,8 +169,7 @@ export async function getLabResultsByOrder(orderId: string): Promise<LabResult[]
 }
 
 export async function getLabResultsByPatient(patientId: string): Promise<LabResult[]> {
-  const res = await apiClient.get<FhirDiagnosticReport[] | FhirBundle<FhirDiagnosticReport>>('/reports', { params: { patientId, pageSize: 100 } });
-  return unwrapBundle(res.data).resources.map(mapFhirDiagnosticReport);
+  return (await getAllPages<FhirDiagnosticReport>('/reports', { patientId })).map(mapFhirDiagnosticReport);
 }
 
 // ─── Instruments ─────────────────────────────────────────────────────────────
@@ -206,7 +210,8 @@ function mapQcLog(log: ApiQCLog): QCLog {
   };
 }
 
-export async function getQCLogs(params?: { instrumentId?: string; status?: QCStatus }): Promise<QCLog[]> {
+// The latest 100 QC logs, newest first.
+export async function getRecentQCLogs(params?: { instrumentId?: string; status?: QCStatus }): Promise<QCLog[]> {
   const res = await apiClient.get<ApiQCLog[] | FhirBundle<ApiQCLog>>('/qc-logs', {
     params: { pageSize: 100, ...params },
   });

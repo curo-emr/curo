@@ -7,8 +7,8 @@ import {
 import { Loader2 } from "lucide-react";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { getAllPayments } from "@/lib/api/payments";
-import { getUsers } from "@/lib/api/users";
+import { getRecentPayments } from "@/lib/api/payments";
+import { getUsersByRole } from "@/lib/api/users";
 import type { Payment, AdminUser } from "@/types";
 
 function money(amount: number, currency = "LKR") {
@@ -22,7 +22,7 @@ export default function IncomeOversightPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getAllPayments(), getUsers(undefined, "RECEPTIONIST")])
+    Promise.all([getRecentPayments(), getUsersByRole("RECEPTIONIST")])
       .then(([p, u]) => { setPayments(p); setReceptionists(u); })
       .catch(console.error)
       .finally(() => setIsLoading(false));

@@ -7,8 +7,8 @@ import { Badge } from "@curo/web/ui/badge";
 import { LabDashboardStats } from "@/components/features/dashboard/LabDashboardStats";
 import { UrgentOrdersList } from "@/components/features/dashboard/UrgentOrdersList";
 import { RecentActivityFeed } from "@/components/features/dashboard/RecentActivityFeed";
-import { getLabOrders, getLabInstruments, getQCLogs, type LabInstrument } from "@/lib/api/lab";
-import { getPatients } from "@/lib/api/patients";
+import { getLabOrdersFirstPage, getLabInstruments, getRecentQCLogs, type LabInstrument } from "@/lib/api/lab";
+import { getPatientsByIds } from "@/lib/api/patients";
 import type { LabOrder, Patient, QCLog } from "@/types";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 
@@ -20,8 +20,9 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getLabOrders(), getPatients(), getLabInstruments(), getQCLogs()])
-      .then(([ords, pts, insts, logs]) => {
+    Promise.all([getLabOrdersFirstPage(), getLabInstruments(), getRecentQCLogs()])
+      .then(async ([ords, insts, logs]) => {
+        const pts = await getPatientsByIds(ords.map(o => o.patientId));
         setOrders(ords);
         setPatients(pts);
         setInstruments(insts);

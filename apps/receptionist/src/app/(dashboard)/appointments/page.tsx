@@ -7,7 +7,7 @@ import { AppointmentList } from "@/components/features/appointments/AppointmentL
 import { Button } from "@curo/web/ui/button";
 import { ROUTES } from "@/lib/constants";
 import Link from "next/link";
-import { getAppointments } from "@/lib/api/appointments";
+import { getAppointmentsFirstPage } from "@/lib/api/appointments";
 import { getPatients } from "@/lib/api/patients";
 import { getDoctors, type Practitioner } from "@/lib/api/practitioners";
 import type { Appointment, Patient, Doctor } from "@/types";
@@ -28,7 +28,7 @@ export default function AppointmentsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getAppointments(), getPatients(), getDoctors()])
+    Promise.all([getAppointmentsFirstPage(), getPatients(), getDoctors()])
       .then(([appts, pts, practs]) => {
         setAppointments(appts);
         setPatients(pts);

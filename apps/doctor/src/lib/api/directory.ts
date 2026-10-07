@@ -1,4 +1,4 @@
-import { apiClient } from "@curo/web/api";
+import { apiClient, getAllPages } from "@curo/web/api";
 import { unwrapBundle, type FhirBundle } from "@curo/web/fhir";
 
 export interface Organization {
@@ -38,10 +38,7 @@ export async function getOrganizations(type?: "pharmacy" | "laboratory"): Promis
 
 // Read-only view of a chosen pharmacy's inventory (doctors check drug availability).
 export async function getPharmacyStock(organizationId: string): Promise<PharmacyStockItem[]> {
-  const res = await apiClient.get<PharmacyStockItem[] | FhirBundle<PharmacyStockItem>>("/stock", {
-    params: { organizationId, pageSize: 100 },
-  });
-  return unwrapBundle(res.data).resources;
+  return getAllPages<PharmacyStockItem>("/stock", { organizationId });
 }
 
 // Tests a chosen lab offers.

@@ -160,6 +160,26 @@ delete the other; bundled JSON + DB copies will diverge.
 > test catalog is one unpaged list per lab. Other lists still request `pageSize: 100` and
 > drop anything past it (stock, dispense logs, payments, appointments); fix them as part of B2.
 
+**Lists capped at 100 rows** *(partly fixed 2026-10-07)*. Reads that a filter bounds now
+fetch every page with `getAllPages` (`@curo/web/api`): a day's appointments and queue, a
+patient's or visit's orders, results and dispenses, a pharmacy's stock, the receptionists.
+Name lookups ask for the rows' own patients with `getByIds` rather than a page of all
+patients. Paged queries break ties on `id`, so walking the pages never repeats or skips a row.
+Still capped, each behind a function named for it (`…FirstPage`, `getRecent…`):
+- Receptionist appointments, schedule, new appointment and reports read the *oldest*
+  100 appointments and look patients up from one page of all patients; the appointment
+  list's paid markers and My Income read the latest 100 payments.
+- Doctor schedule: the oldest 100 of the doctor's appointments.
+- Lab worklist (unless narrowed to a visit), patients, reports and dashboard: the
+  *oldest* 100 orders.
+- Pharmacy dispensing log and reports: the latest 100 dispenses.
+- Admin overview, income and user pages: the latest 100 payments; the overview's user
+  counts come from the newest 100 users.
+
+These need server paging (dropping the client-side name search, or searching across
+services on the server), `from`/`to` on `/appointments`, and server-side totals or a date
+window for the report pages (admin income can use `/payments/summary`).
+
 ### B5. Error boundaries and empty/loading states are uneven
 `error.tsx` exists in doctor/receptionist dashboards but not everywhere; some
 lists render nothing while loading. `EmptyState.tsx` exists in `components/ui`
