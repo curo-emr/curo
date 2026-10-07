@@ -30,7 +30,7 @@ docker compose up -d --build      # wait until `docker compose ps` shows all hea
 
 ## Step 1 — Receptionist registers a patient  ·  Portal :3012
 
-**(A) UI** — Log in as `chamali@curo.health` / `Recept@123`. Go to **Patients → New / Register
+**(A) UI** — Log in as `chamali@curo.test` / `Recept@123`. Go to **Patients → New / Register
 Patient**. Fill first name, last name, date of birth, gender (+ phone/address). **Save**. The new
 patient appears in the list with a generated patient code (e.g. `CUR-XXXXXXXX`) and PHN.
 
@@ -67,7 +67,7 @@ patient appears in the list with a generated patient code (e.g. `CUR-XXXXXXXX`) 
 
 ## Step 3 — Doctor sees the patient (encounter, vitals, notes)  ·  Portal :3010
 
-**(A) UI** — Log in as `dr.priya@curo.health` / `Doctor@123`. Open today's **schedule / queue**,
+**(A) UI** — Log in as `dr.priya@curo.test` / `Doctor@123`. Open today's **schedule / queue**,
 click the patient. Review allergies & conditions. **Start visit** (encounter). Record **vitals**
 (e.g. temperature), write a **clinical note** (SOAP), optionally add a **diagnosis/condition**.
 
@@ -102,7 +102,7 @@ add the individual tests, **Order**. The order is created with **QR codes** (one
 
 ## Step 5 — Lab staff process the sample (scan QR, receive, enter results)  ·  Portal :3013
 
-**(A) UI** — Log in as `tharindi.lab@curo.health` / `LabStaff@123`. Open the **worklist** — the new
+**(A) UI** — Log in as `tharindi.lab@curo.test` / `LabStaff@123`. Open the **worklist** — the new
 order is there. **Scan** the per-test QR on the tube, mark the sample **Received**, then **Enter
 results** for each test (value, unit, reference range, interpretation) and **Finalize**. A PDF
 diagnostic report is generated.
@@ -137,7 +137,7 @@ diagnostic report is generated.
 
 ## Step 7 — Pharmacy dispenses (FEFO multi-batch)  ·  Portal :3014
 
-**(A) UI** — Log in as `kasun.pharma@curo.health` / `Pharma@123`. Open the **Pending prescriptions**
+**(A) UI** — Log in as `kasun.pharma@curo.test` / `Pharma@123`. Open the **Pending prescriptions**
 queue — the new prescription is there. Check **stock** (drugs are grouped, batches listed
 **earliest-expiry-first / FEFO**). **Dispense**. Stock decrements across batches automatically.
 
@@ -178,7 +178,7 @@ another patient's record is denied.
 
 - **Notifications** (any logged-in user): bell icon / `GET /notifications`, `GET /notifications/count`.
 - **Audit log** (admin only, :3015): `GET /audit?resourceType=Patient` — every create/read above is logged.
-- **Admin** (:3015, `admin@curo.health`): manage users (`GET /auth/users`), view all payments
+- **Admin** (:3015, `admin@curo.test`): manage users (`GET /auth/users`), view all payments
   (`GET /payments`), organizations (`GET /organizations`).
 - **Authorization:** try a patient hitting `POST /patients` → **403**; no token → **401**. (Expected.)
 

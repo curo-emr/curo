@@ -23,18 +23,18 @@ All logins go through the gateway: `POST http://localhost:3000/auth/login` with
 
 | Role | Email | Password | Name / detail |
 |---|---|---|---|
-| SUPER_ADMIN | `admin@curo.health` | `Admin@12345` | System administrator |
-| DOCTOR | `dr.priya@curo.health` | `Doctor@123` | Priya Rajapaksa — General Medicine (SLMC-001) |
-| DOCTOR | `dr.ashan@curo.health` | `Doctor@123` | Ashan Fernando — Cardiology (SLMC-002) |
-| DOCTOR | `dr.nimal@curo.health` | `Doctor@123` | Nimal Perera — Pediatrics (SLMC-003) |
-| RECEPTIONIST | `chamali@curo.health` | `Recept@123` | Chamali Silva |
-| RECEPTIONIST | `dinesh@curo.health` | `Recept@123` | Dinesh Wijeratne |
-| PHARMACIST | `kasun.pharma@curo.health` | `Pharma@123` | Kasun Bandara (Curo Pharmacy — Colombo) |
-| PHARMACIST | `niluka.pharma@curo.health` | `Pharma@123` | Niluka Mendis (Curo Pharmacy — Kandy) |
-| LAB_STAFF | `tharindi.lab@curo.health` | `LabStaff@123` | Tharindi Jayawardena |
-| LAB_STAFF | `rukshan.lab@curo.health` | `LabStaff@123` | Rukshan Gunasekara |
-| NURSE | `nimasha@curo.health` | `Nurse@123` | Nimasha Herath — Nursing Officer |
-| NURSE | `ruwan@curo.health` | `Nurse@123` | Ruwan Ekanayake — Nursing Officer |
+| SUPER_ADMIN | `admin@curo.test` | `Admin@12345` | System administrator |
+| DOCTOR | `dr.priya@curo.test` | `Doctor@123` | Priya Rajapaksa — General Medicine (SLMC-001) |
+| DOCTOR | `dr.ashan@curo.test` | `Doctor@123` | Ashan Fernando — Cardiology (SLMC-002) |
+| DOCTOR | `dr.nimal@curo.test` | `Doctor@123` | Nimal Perera — Pediatrics (SLMC-003) |
+| RECEPTIONIST | `chamali@curo.test` | `Recept@123` | Chamali Silva |
+| RECEPTIONIST | `dinesh@curo.test` | `Recept@123` | Dinesh Wijeratne |
+| PHARMACIST | `kasun.pharma@curo.test` | `Pharma@123` | Kasun Bandara (Curo Pharmacy — Colombo) |
+| PHARMACIST | `niluka.pharma@curo.test` | `Pharma@123` | Niluka Mendis (Curo Pharmacy — Kandy) |
+| LAB_STAFF | `tharindi.lab@curo.test` | `LabStaff@123` | Tharindi Jayawardena |
+| LAB_STAFF | `rukshan.lab@curo.test` | `LabStaff@123` | Rukshan Gunasekara |
+| NURSE | `nimasha@curo.test` | `Nurse@123` | Nimasha Herath — Nursing Officer |
+| NURSE | `ruwan@curo.test` | `Nurse@123` | Ruwan Ekanayake — Nursing Officer |
 
 ## Patient accounts
 
@@ -75,7 +75,7 @@ All patients share the password **`Patient@123`**.
 
 ## Re-seeding
 
-The seed is idempotent (aborts if `admin@curo.health` already exists). To wipe and reseed:
+The seed is idempotent (aborts if `admin@curo.test` already exists). To wipe and reseed:
 
 ```bash
 docker compose down -v && docker compose up -d --build

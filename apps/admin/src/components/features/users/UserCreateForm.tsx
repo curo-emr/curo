@@ -82,7 +82,7 @@ export function UserCreateForm() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register("email")} placeholder="user@curo.health" />
+              <Input id="email" type="email" {...register("email")} placeholder="user@curo.test" />
               {errors.email && <p className="text-xs text-status-error-text">{errors.email.message}</p>}
             </div>
             <div className="space-y-1.5 md:col-span-2">

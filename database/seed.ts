@@ -118,8 +118,8 @@ async function ensureStaffUser(
 async function topUps(db: DataSource) {
   // ---- NURSES (Nursing Officers — pre-visit triage) ----
   const nurses = [
-    { firstName: 'Nimasha', lastName: 'Herath', email: 'nimasha@curo.health' },
-    { firstName: 'Ruwan', lastName: 'Ekanayake', email: 'ruwan@curo.health' },
+    { firstName: 'Nimasha', lastName: 'Herath', email: 'nimasha@curo.test' },
+    { firstName: 'Ruwan', lastName: 'Ekanayake', email: 'ruwan@curo.test' },
   ];
   let nursesCreated = 0;
   for (const n of nurses) {
@@ -138,10 +138,10 @@ async function topUps(db: DataSource) {
   // Databases seeded before then have them at the clinic. Moves them, unless
   // an admin has already put them at the right kind of place.
   const workplaces = [
-    ['kasun.pharma@curo.health', 'Curo Pharmacy — Colombo', 'pharmacy'],
-    ['niluka.pharma@curo.health', 'Curo Pharmacy — Kandy', 'pharmacy'],
-    ['tharindi.lab@curo.health', 'Curo Diagnostics — Colombo', 'laboratory'],
-    ['rukshan.lab@curo.health', 'Curo Diagnostics — Galle', 'laboratory'],
+    ['kasun.pharma@curo.test', 'Curo Pharmacy — Colombo', 'pharmacy'],
+    ['niluka.pharma@curo.test', 'Curo Pharmacy — Kandy', 'pharmacy'],
+    ['tharindi.lab@curo.test', 'Curo Diagnostics — Colombo', 'laboratory'],
+    ['rukshan.lab@curo.test', 'Curo Diagnostics — Galle', 'laboratory'],
   ];
   for (const [email, workplace, type] of workplaces) {
     await db.query(
@@ -275,7 +275,7 @@ async function seed() {
 
   // ---- SUPER ADMIN ----
   const existingAdmin = await db.query<IdRow[]>(
-    `SELECT id FROM users WHERE email = 'admin@curo.health' LIMIT 1`,
+    `SELECT id FROM users WHERE email = 'admin@curo.test' LIMIT 1`,
   );
   if (existingAdmin.length > 0) {
     console.log('⚠️  Data already seeded — applying idempotent top-ups only.');
@@ -340,18 +340,18 @@ async function seed() {
   await db.query(
     `
     INSERT INTO users (id, email, "passwordHash", role, "isActive")
-    VALUES (gen_random_uuid(), 'admin@curo.health', $1, 'SUPER_ADMIN', true)
+    VALUES (gen_random_uuid(), 'admin@curo.test', $1, 'SUPER_ADMIN', true)
   `,
     [HASH('Admin@12345')],
   );
-  console.log('✅ Super admin created — admin@curo.health / Admin@12345');
+  console.log('✅ Super admin created — admin@curo.test / Admin@12345');
 
   // ---- DOCTORS ----
   const doctors = [
     {
       firstName: 'Priya',
       lastName: 'Rajapaksa',
-      email: 'dr.priya@curo.health',
+      email: 'dr.priya@curo.test',
       specialization: 'General Medicine',
       qualification: 'MBBS, MD',
       licenseNumber: 'SLMC-001',
@@ -359,7 +359,7 @@ async function seed() {
     {
       firstName: 'Ashan',
       lastName: 'Fernando',
-      email: 'dr.ashan@curo.health',
+      email: 'dr.ashan@curo.test',
       specialization: 'Cardiology',
       qualification: 'MBBS, MD (Cardiology)',
       licenseNumber: 'SLMC-002',
@@ -367,7 +367,7 @@ async function seed() {
     {
       firstName: 'Nimal',
       lastName: 'Perera',
-      email: 'dr.nimal@curo.health',
+      email: 'dr.nimal@curo.test',
       specialization: 'Pediatrics',
       qualification: 'MBBS, DCH',
       licenseNumber: 'SLMC-003',
@@ -390,8 +390,8 @@ async function seed() {
 
   // ---- RECEPTIONISTS ----
   const receptionists = [
-    { firstName: 'Chamali', lastName: 'Silva', email: 'chamali@curo.health' },
-    { firstName: 'Dinesh', lastName: 'Wijeratne', email: 'dinesh@curo.health' },
+    { firstName: 'Chamali', lastName: 'Silva', email: 'chamali@curo.test' },
+    { firstName: 'Dinesh', lastName: 'Wijeratne', email: 'dinesh@curo.test' },
   ];
   const receptionistIds: string[] = [];
   for (const r of receptionists) {
@@ -410,12 +410,12 @@ async function seed() {
     {
       firstName: 'Kasun',
       lastName: 'Bandara',
-      email: 'kasun.pharma@curo.health',
+      email: 'kasun.pharma@curo.test',
     },
     {
       firstName: 'Niluka',
       lastName: 'Mendis',
-      email: 'niluka.pharma@curo.health',
+      email: 'niluka.pharma@curo.test',
     },
   ];
   // Kasun works at the Colombo pharmacy, Niluka at Kandy.
@@ -436,12 +436,12 @@ async function seed() {
     {
       firstName: 'Tharindi',
       lastName: 'Jayawardena',
-      email: 'tharindi.lab@curo.health',
+      email: 'tharindi.lab@curo.test',
     },
     {
       firstName: 'Rukshan',
       lastName: 'Gunasekara',
-      email: 'rukshan.lab@curo.health',
+      email: 'rukshan.lab@curo.test',
     },
   ];
   // Tharindi works at the Colombo lab, Rukshan at Galle.
@@ -1785,18 +1785,18 @@ async function seed() {
   await AppDataSource.destroy();
 
   console.log('\n🎉 Seed complete! Login credentials:');
-  console.log('   Super Admin:  admin@curo.health        / Admin@12345');
-  console.log('   Doctors:      dr.priya@curo.health     / Doctor@123');
-  console.log('                 dr.ashan@curo.health     / Doctor@123');
-  console.log('                 dr.nimal@curo.health     / Doctor@123');
-  console.log('   Receptionists: chamali@curo.health     / Recept@123');
-  console.log('                  dinesh@curo.health      / Recept@123');
-  console.log('   Pharmacists:  kasun.pharma@curo.health / Pharma@123');
-  console.log('                 niluka.pharma@curo.health / Pharma@123');
-  console.log('   Lab Staff:    tharindi.lab@curo.health / LabStaff@123');
-  console.log('                 rukshan.lab@curo.health  / LabStaff@123');
-  console.log('   Nurses:       nimasha@curo.health      / Nurse@123');
-  console.log('                 ruwan@curo.health        / Nurse@123');
+  console.log('   Super Admin:  admin@curo.test        / Admin@12345');
+  console.log('   Doctors:      dr.priya@curo.test     / Doctor@123');
+  console.log('                 dr.ashan@curo.test     / Doctor@123');
+  console.log('                 dr.nimal@curo.test     / Doctor@123');
+  console.log('   Receptionists: chamali@curo.test     / Recept@123');
+  console.log('                  dinesh@curo.test      / Recept@123');
+  console.log('   Pharmacists:  kasun.pharma@curo.test / Pharma@123');
+  console.log('                 niluka.pharma@curo.test / Pharma@123');
+  console.log('   Lab Staff:    tharindi.lab@curo.test / LabStaff@123');
+  console.log('                 rukshan.lab@curo.test  / LabStaff@123');
+  console.log('   Nurses:       nimasha@curo.test      / Nurse@123');
+  console.log('                 ruwan@curo.test        / Nurse@123');
   console.log(
     '   Patients:     samantha@email.com       / Patient@123 (and others)',
   );
