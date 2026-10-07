@@ -1,11 +1,11 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import {
   mapFhirMedicationDispense,
   mapFhirMedicationRequest,
   type FhirMedicationDispense,
   type FhirMedicationRequest,
 } from './mappers';
-import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from './fhir';
+import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
 import type { Prescription } from '@/types';
 
 // ─── Prescriptions ───────────────────────────────────────────────────────────

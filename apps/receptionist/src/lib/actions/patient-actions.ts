@@ -1,4 +1,4 @@
-import { apiClient, apiErrorMessage } from "@/lib/api/client";
+import { apiClient, apiErrorMessage } from "@curo/web/api";
 import { mapFhirPatient, type FhirPatient } from "@/lib/api/mappers";
 import { patientRegistrationSchema, type PatientRegistrationInput } from "@/lib/validations/patient";
 

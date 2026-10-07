@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useClientPagination } from "@/hooks/use-client-pagination";
+import { useClientPagination } from "@curo/web/hooks";
 import type { Appointment, Patient, Doctor } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

@@ -17,7 +17,7 @@ import {
   dispense,
   type DispenseRecord,
 } from "@/lib/api/pharmacy";
-import { apiErrorMessage } from "@/lib/api/client";
+import { apiErrorMessage } from "@curo/web/api";
 import type { Allergy, Patient, Prescription, PrescriptionItem } from "@/types";
 
 // Only active prescriptions (mapped to "sent_to_pharmacy") can be dispensed.

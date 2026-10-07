@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider } from "@curo/web/auth";
 import { Toaster } from "sonner";
 
 const outfitSans = Outfit({

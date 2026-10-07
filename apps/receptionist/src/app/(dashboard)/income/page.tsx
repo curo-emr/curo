@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useClientPagination } from "@/hooks/use-client-pagination";
+import { useClientPagination } from "@curo/web/hooks";
 import { Loader2, Wallet, Receipt, TrendingUp } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,

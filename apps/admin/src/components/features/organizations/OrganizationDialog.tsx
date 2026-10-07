@@ -15,7 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { createOrganization, updateOrganization, type OrganizationInput } from "@/lib/api/organizations";
-import { apiErrorMessage } from "@/lib/api/client";
+import { apiErrorMessage } from "@curo/web/api";
 import { ORGANIZATION_TYPES, ORGANIZATION_TYPE_LABELS } from "@/lib/constants";
 import { organizationSchema, type OrganizationFormInput } from "@/lib/validations/organization";
 import type { Organization } from "@/types";

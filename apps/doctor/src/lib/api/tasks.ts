@@ -1,7 +1,7 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import type { Task } from '@/types';
 import { mapFhirTask, type FhirTask } from './mappers';
-import { unwrapBundle, type FhirBundle } from './fhir';
+import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 
 export async function getTasks(): Promise<Task[]> {
   const res = await apiClient.get<FhirTask[] | FhirBundle<FhirTask>>('/tasks');

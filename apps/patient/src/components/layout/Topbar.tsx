@@ -2,7 +2,7 @@
 
 import { Bell, LogOut, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@curo/web/auth";
 import { useSidebar } from "@/contexts/SidebarContext";
 
 export function Topbar() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useClientPagination } from "@/hooks/use-client-pagination";
+import { useClientPagination } from "@curo/web/hooks";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";

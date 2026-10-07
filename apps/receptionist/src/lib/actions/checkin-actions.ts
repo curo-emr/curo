@@ -1,6 +1,6 @@
 import { updateAppointmentStatus } from "./appointment-actions";
 import { updateQueueStage } from "@/lib/api/appointments";
-import { apiErrorMessage } from "@/lib/api/client";
+import { apiErrorMessage } from "@curo/web/api";
 
 // Check-in: the backend automatically queues the patient for nurse triage.
 export async function checkInPatient(appointmentId: string) {

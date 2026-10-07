@@ -1,5 +1,5 @@
-import { apiClient } from './client';
-import { unwrapBundle, paginationParams, type FhirBundle, type PaginationParams } from './fhir';
+import { apiClient } from '@curo/web/api';
+import { unwrapBundle, paginationParams, type FhirBundle, type PaginationParams } from '@curo/web/fhir';
 import type { Medication } from '@/types';
 
 // Backend medication_catalog rows already match the frontend Medication shape.

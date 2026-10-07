@@ -173,6 +173,13 @@ The portals' counterpart to `@curo/shared`, with the same layout: one entry poin
 
 | Import | Contents |
 |---|---|
-| `@curo/web/hooks` | `useServerPagination` (a server-paged list that refetches when its filters change), `useDebouncedValue` |
+| `@curo/web/api` | `apiClient` (axios with the session's token; refreshes it once on a 401), `apiErrorMessage()` |
+| `@curo/web/auth` | `AuthProvider` and `useAuth()`: the signed-in user, `login`, `logout` |
+| `@curo/web/fhir` | `unwrapBundle`, `paginationParams`, and the Bundle and pagination types |
+| `@curo/web/hooks` | `useServerPagination` (a server-paged list that refetches when its filters change), `useClientPagination`, `useDebouncedValue` |
+
+A portal that needs more than the login response about its user passes `enrichUser`
+to `AuthProvider` (the doctor portal looks up the doctor's specialty), and `onLogout`
+for anything to drop on sign-out.
 
 The same rule of thumb applies: code moves in once a second portal needs it.
