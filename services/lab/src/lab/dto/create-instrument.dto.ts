@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
 } from 'class-validator';
 import { InstrumentStatus } from '../../enums';
 
@@ -11,6 +12,11 @@ export class CreateInstrumentDto {
   @IsNotEmpty()
   @IsString()
   name: string;
+
+  // The lab it is in: required from the admin; lab staff add only to their own.
+  @IsOptional()
+  @IsUUID()
+  organizationId?: string;
 
   @IsOptional()
   @IsString()

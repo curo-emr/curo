@@ -93,7 +93,7 @@ real IDs captured from prior steps.
 | PUT | `/orders/:id/receive` | LAB_STAFF | ✅ 200 |
 | POST | `/results` | LAB_STAFF | ✅ 201 |
 | GET | `/reports?patientId=` · `/reports/:id` | LAB_STAFF / DOCTOR / PATIENT | ✅ 200 |
-| GET/POST/PUT | `/instruments` · `/instruments/:id/status` | LAB_STAFF | ✅ 200 / 201 |
+| GET/POST/PUT | `/instruments` · `/instruments/:id/status` · GET `/qc-logs` (lab staff: their lab's only; the admin names an active lab on POST) | LAB_STAFF | ✅ 200 / 201 |
 
 ### Pharmacy service (`:3005` — `/dispense` `/stock`)
 | Method | Path | Role | Status |
