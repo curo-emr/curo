@@ -1311,6 +1311,7 @@ Branch `feat/manage-organizations` (stacked on `fix/low-stock-per-drug`). First 
   - Workplace picker on New User (required for pharmacists) and a Workplace card on the user page.
   - The two sidebars share `nav-items.ts`.
 - **Not changed:** `POST /auth/staff` (no portal calls it) still creates staff without a workplace.
+  Removed later on `feat/pharmacy-scoping`.
 
 ## Stock, dispensing and alerts per pharmacy ✅ DONE — 2026-10-07
 
@@ -1336,3 +1337,62 @@ pharmacists to them.
   volumes unless they are already at a pharmacy.
 - **Not backfilled:** the 76 batches with no organization are smoke/e2e leftovers ("Smoke Tablet",
   `B-A`/`B-B`). No pharmacy sees them now.
+- **Later on this branch:**
+  - `POST /auth/staff` removed: `POST /auth/users` does the same, checks the workplace and audits.
+  - `GET /organizations/mine`: the organization in the caller's token, or an empty body.
+  - The pharmacy portal's top bar shows it (`WorkplaceBadge`), or "No pharmacy assigned".
+
+## Each test sent to a lab, and each lab kept to its own ✅ DONE — 2026-10-07
+
+Branch `feat/lab-scoping` (stacked on `feat/pharmacy-scoping`).
+
+- **Ordering:**
+  - `service_requests.performerOrganizationId` is the lab a test was sent to.
+    Migration `LabOrderPerformer`: where exactly one laboratory exists, earlier orders go to it.
+  - `CreateLabOrderDto`/visit lab orders require it. Clinical refuses anything but an active laboratory.
+  - Doctor portal: each test in the visit's lab orders gets a lab.
+    - The default is the first lab whose catalog offers the test (every lab for a test none lists).
+    - The picker is hidden when only one lab exists.
+    - Signing is blocked while a test has no lab (only old drafts can have none).
+- **Scoping (lab service, `lab-scope.ts`):**
+  - Lab staff must have a lab (`workplace.ts`, admin portal too). They see, receive and report on
+    only their lab's orders and reports. Another lab's order is a 404.
+  - TAT stats and `/lab-staff` are scoped the same way.
+  - Doctors and the admin see every lab's.
+  - Clinical's `GET /lab-orders` is no longer open to lab staff.
+  - `workplaceOf(user, kind)` in `@curo/shared/auth` serves both pharmacy and lab scoping.
+- **QR codes (`@curo/shared/lab`, one place for the formats):**
+  - Sample label: `/lab/orders/:id[?test=&i=]`, on the specimen tube.
+    - Scanning receives the sample, but only at the lab its test was sent to.
+    - Anyone else gets a 403 that names the right lab ("This sample is for Curo Diagnostics — Galle, not your lab.").
+    - Single-test orders (every visit order) now have a label to print.
+  - Visit slip: `/lab/visits/:encounterId` (`GET /encounters/:id/lab-slip`), printed by the doctor
+    on the visit summary and carried by the patient.
+    - Scanning returns the visit's tests for the scanner's lab (a Bundle) and changes nothing.
+  - Flows supported:
+    - Patient goes to each lab: the lab scans the slip, collects, prints labels and receives.
+    - Central collection point: labels go on tubes, and each lab scans its tubes on arrival.
+    - A tube that reaches the wrong lab is refused with the right lab's name.
+- **Results:**
+  - `POST /results` takes typed values, an uploaded report file (`lab-report` document linked to
+    the order), or both. With neither it is a 400.
+  - The PDF is made only from typed values, and is headed with the lab's name.
+  - `/reports` filters by `encounterId` and `serviceRequestId`.
+- **Doctor portal visit summary:**
+  - Lab orders move to the main column. Each test shows its lab, status (sent / sample received /
+    results ready), values with abnormal flags, the conclusion, the PDF and uploaded files.
+  - "Print lab slip" (`printOnly()` in `lib/print.ts` replaces the print rule for prescriptions only).
+- **Lab portal:**
+  - Lab name in the top bar.
+  - Scan box on the worklist (`?visit=` narrows it to a slip's tests).
+  - Results form submits typed values or an uploaded report.
+  - Order page shows "Sample Received" and the report files.
+- **Single `toFhirServiceRequest`** (`@curo/shared/fhir`) for clinical and lab. It now carries
+  `encounter`, `note` and the lab (`performer`). The lab portal's `encounterId` and notes were empty before.
+- **Seed:** Tharindi → Colombo lab, Rukshan → Galle. Seeded orders alternate between labs.
+  `topUps()` moves lab staff and sends orders with no lab to Colombo.
+- **Follow-ups:**
+  - A collection-centre role, to draw samples and print labels for every lab's tests.
+  - Instruments and QC logs are not per lab yet.
+  - The document service lets lab staff list any patient's documents.
+

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Check, CloudCheck, FileSignature, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import type { Allergy, LabTestCatalogItem, Medication, Patient, Problem } from "@/types";
+import type { Allergy, Lab, LabTestCatalogItem, Medication, Patient, Problem } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
@@ -38,12 +38,13 @@ interface Props {
   appointmentId?: string;
   medicationsCatalog: Medication[];
   labTestsCatalog: LabTestCatalogItem[];
+  labs: Lab[];
 }
 
 type StoredDraft = VisitDraft & { savedAt?: string };
 
 export function EncounterEditor({
-  patient, allergies, problems, recentMedications, appointmentId, medicationsCatalog, labTestsCatalog,
+  patient, allergies, problems, recentMedications, appointmentId, medicationsCatalog, labTestsCatalog, labs,
 }: Props) {
   const router = useRouter();
   const { user } = useAuth();
@@ -129,6 +130,11 @@ export function EncounterEditor({
       ccRef.current?.focus({ preventScroll: true });
       ccRef.current?.scrollIntoView({ block: "start" });
       toast.error("Add the chief complaint before signing");
+      return;
+    }
+    if (visit.labTests.some(t => !t.labId)) {
+      document.getElementById("labs")?.scrollIntoView({ block: "start" });
+      toast.error("Choose a lab for every test before signing");
       return;
     }
     setConfirmOpen(true);
@@ -229,6 +235,7 @@ export function EncounterEditor({
             notes={visit.labNotes}
             onNotesChange={v => update("labNotes", v)}
             catalog={labTestsCatalog}
+            labs={labs}
           />
         </div>
         <aside className="space-y-6">
@@ -252,7 +259,7 @@ export function EncounterEditor({
             <SummaryLine ok label="To pharmacy"
               value={visit.prescriptions.length ? visit.prescriptions.map(p => p.displayName).join(", ") : "No prescriptions"} />
             <SummaryLine ok label="To lab"
-              value={visit.labTests.length ? `${visit.labTests.map(t => t.name).join(", ")} (${visit.labPriority})` : "No lab tests"} />
+              value={visit.labTests.length ? `${visit.labTests.map(t => labs.length > 1 ? `${t.name} → ${labs.find(l => l.id === t.labId)?.name}` : t.name).join(", ")} (${visit.labPriority})` : "No lab tests"} />
             {appointmentId && <SummaryLine ok label="Appointment" value="Marked as completed" />}
           </ul>
           <AlertDialogFooter>

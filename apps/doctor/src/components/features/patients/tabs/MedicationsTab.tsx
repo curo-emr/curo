@@ -8,8 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";
+import { RX_PRINT_ID, RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";
 import { useAuth } from "@/contexts/AuthContext";
+import { printOnly } from "@/lib/print";
 import { formatDate } from "@/lib/utils";
 
 export function MedicationsTab({ prescriptions, patient }: { prescriptions: Prescription[]; patient: Patient }) {
@@ -37,7 +38,7 @@ export function MedicationsTab({ prescriptions, patient }: { prescriptions: Pres
     <>
       <SectionCard icon={Pill} iconClassName="text-clinical-rx" title="Prescriptions" count={rows.length} noPadding className="no-print"
         headerRight={rows.length > 0 && (
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
+          <Button variant="outline" size="sm" onClick={() => printOnly(RX_PRINT_ID)}>
             <Printer /> {selected.size > 0 ? `Print ${selected.size} selected` : "Print all"}
           </Button>
         )}>

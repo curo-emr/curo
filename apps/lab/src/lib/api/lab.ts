@@ -14,7 +14,7 @@ import { interpret, parseNumeric } from '@/lib/result-flag';
 
 // Back-compat: returns up to 100 orders as a flat array (worklist computes status
 // counts across the set). Unwraps either a bare array or a FHIR searchset Bundle.
-export async function getLabOrders(params?: { status?: string; patientId?: string }): Promise<LabOrder[]> {
+export async function getLabOrders(params?: { status?: string; patientId?: string; encounterId?: string }): Promise<LabOrder[]> {
   const res = await apiClient.get<FhirServiceRequest[] | FhirBundle<FhirServiceRequest>>('/orders', {
     params: { pageSize: 100, ...params },
   });
@@ -76,10 +76,25 @@ export async function receiveOrder(id: string): Promise<void> {
   await apiClient.put(`/orders/${id}/receive`);
 }
 
-export async function scanQR(qrData: string): Promise<LabOrder> {
-  const res = await apiClient.post<FhirServiceRequest>('/orders/scan', { qrData });
-  return mapFhirServiceRequest(res.data);
+/** What a scanned code turned out to be. */
+export type ScanResult =
+  /** A visit slip: the visit's tests sent to this lab (none when it sent us nothing). */
+  | { kind: 'visit'; orders: LabOrder[] }
+  /** A sample label: the sample is now received. */
+  | { kind: 'sample'; order: LabOrder; testName: string };
+
+/** Reads a scanned visit slip or sample label (the server tells which). */
+export async function scanCode(qrData: string): Promise<ScanResult> {
+  type Scanned = FhirServiceRequest & { scannedTest?: { display: string } | null };
+  const res = await apiClient.post<Scanned | FhirBundle<FhirServiceRequest>>('/orders/scan', { qrData });
+  if (res.data.resourceType === 'Bundle')
+    return { kind: 'visit', orders: unwrapBundle(res.data).resources.map(mapFhirServiceRequest) };
+  const order = mapFhirServiceRequest(res.data);
+  return { kind: 'sample', order, testName: res.data.scannedTest?.display ?? order.tests.map(t => t.name).join(', ') };
 }
+
+/** The document type of a report file uploaded for an order; one completes the order without typed values. */
+export const LAB_REPORT_DOCUMENT = 'lab-report';
 
 // ─── Results ─────────────────────────────────────────────────────────────────
 
@@ -127,7 +142,7 @@ function toResultItem(entry: ResultEntry) {
   };
 }
 
-/** Files the order's results and completes it; the ordering doctor is notified. */
+/** Files the order's results (typed, or none when a report file was uploaded) and completes it; the ordering doctor is notified. */
 export async function enterResults(data: {
   orderId: string;
   results: ResultEntry[];
@@ -141,11 +156,11 @@ export async function enterResults(data: {
   return mapFhirDiagnosticReport(res.data);
 }
 
-export async function getLabResultsByOrder(orderId: string, patientId?: string): Promise<LabResult[]> {
-  const res = await apiClient.get<FhirDiagnosticReport[] | FhirBundle<FhirDiagnosticReport>>('/reports', { params: { patientId, orderId, pageSize: 100 } });
-  return unwrapBundle(res.data).resources
-    .map(mapFhirDiagnosticReport)
-    .filter(report => report.orderId === orderId);
+export async function getLabResultsByOrder(orderId: string): Promise<LabResult[]> {
+  const res = await apiClient.get<FhirDiagnosticReport[] | FhirBundle<FhirDiagnosticReport>>('/reports', {
+    params: { serviceRequestId: orderId },
+  });
+  return unwrapBundle(res.data).resources.map(mapFhirDiagnosticReport);
 }
 
 export async function getLabResultsByPatient(patientId: string): Promise<LabResult[]> {

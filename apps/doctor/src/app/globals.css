@@ -360,16 +360,16 @@
   }
 }
 
-/* Print: show only the e-prescription printable area */
+/* Print: show only the area printOnly() (lib/print.ts) marked */
 @media print {
   body * {
     visibility: hidden;
   }
-  #rx-print,
-  #rx-print * {
+  .printing,
+  .printing * {
     visibility: visible;
   }
-  #rx-print {
+  .printing {
     display: block !important;
     position: absolute;
     left: 0;
