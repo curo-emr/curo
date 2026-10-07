@@ -16,6 +16,7 @@ import {
 import { Search, Eye } from "lucide-react";
 import { LabOrder, Patient } from "@/types";
 import { formatDate } from "@/lib/utils";
+import { orderStatus } from "@/lib/order-status";
 import { StatusBadge, statusLabel } from "@curo/web/ui/status-badge";
 import { WorklistFilters } from "./WorklistFilters";
 import Link from "next/link";
@@ -171,7 +172,7 @@ export function WorklistTable({ orders, patients }: WorklistTableProps) {
                       <span className="text-sm text-muted-foreground capitalize">{order.priority}</span>
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={order.status} />
+                      <StatusBadge status={orderStatus(order)} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDate(order.createdAt)}
