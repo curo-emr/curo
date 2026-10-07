@@ -57,3 +57,12 @@ export enum MedicationRequestStatus {
   STOPPED = 'stopped',
   DRAFT = 'draft',
 }
+
+export enum ConditionClinicalStatus {
+  ACTIVE = 'active',
+  RECURRENCE = 'recurrence',
+  RELAPSE = 'relapse',
+  INACTIVE = 'inactive',
+  REMISSION = 'remission',
+  RESOLVED = 'resolved',
+}
