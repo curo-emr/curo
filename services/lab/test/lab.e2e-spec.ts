@@ -91,10 +91,10 @@ describe('Lab specimens and results', () => {
       });
       await expect(savedOrder(order.id)).resolves.toMatchObject({
         receivedAt: expect.any(Date) as unknown,
-        performerId: labStaff.sub,
+        performerId: labStaff.practitionerId,
       });
       await expect(savedLabel(hba1c.id)).resolves.toMatchObject({
-        scannedBy: labStaff.sub,
+        scannedBy: labStaff.practitionerId,
       });
       await expect(savedLabel(labels[0].id)).resolves.toMatchObject({
         scannedAt: null,
