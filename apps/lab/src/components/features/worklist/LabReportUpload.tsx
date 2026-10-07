@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FileInput, formatFileSize } from "@/components/ui/FileInput";
 import { formatDate } from "@/lib/utils";
 import {
-  getDocumentsByPatient, uploadDocument, openDocument, type DocumentRef,
+  getOrderReports, uploadDocument, openDocument, type DocumentRef,
 } from "@/lib/api/documents";
 import { LAB_REPORT_DOCUMENT } from "@/lib/api/lab";
 
@@ -31,14 +31,14 @@ export function LabReportUpload({ orderId, patientId, encounterId, onReportsChan
   const [openingId, setOpeningId] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    getDocumentsByPatient(patientId)
+    getOrderReports(orderId)
       .then((docs) => {
-        const forOrder = docs.filter((d) => d.type === LAB_REPORT_DOCUMENT && d.relatedResourceId === orderId);
-        setReports(forOrder);
-        onReportsChange?.(forOrder.length);
+        const reports = docs.filter((d) => d.type === LAB_REPORT_DOCUMENT);
+        setReports(reports);
+        onReportsChange?.(reports.length);
       })
       .catch(console.error);
-  }, [patientId, orderId, onReportsChange]);
+  }, [orderId, onReportsChange]);
 
   useEffect(() => {
     load();

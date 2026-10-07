@@ -28,6 +28,7 @@ export class DocumentReference {
   @Column({ nullable: true })
   encounterId: string;
 
+  @Index()
   @Column({ nullable: true })
   relatedResourceId: string;
 
