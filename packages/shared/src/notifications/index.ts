@@ -1,1 +1,1 @@
-export { notifyPractitioner, type Notice } from './notify-practitioner';
+export { notifyPractitioner, notifyRole, type Notice } from './notify';
