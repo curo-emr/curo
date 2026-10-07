@@ -1,50 +1,75 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { isAxiosError } from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { LabOrder, Patient, LabTestCatalogItem } from "@/types";
+import { LabOrder, Patient } from "@/types";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { FlaskConical, Save, CheckCircle } from "lucide-react";
+import { enterResults, type ResultEntry } from "@/lib/api/lab";
+import { interpret, type Interpretation } from "@/lib/result-flag";
+import { ROUTES } from "@/lib/constants";
+import { FlaskConical, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface ResultsEntryFormProps {
   order: LabOrder;
   patient: Patient;
-  testCatalog: LabTestCatalogItem[];
 }
 
-export function ResultsEntryForm({ order, patient, testCatalog }: ResultsEntryFormProps) {
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [notes, setNotes] = useState<Record<string, string>>({});
+const FLAG_BADGE: Record<Interpretation, { label: string; className: string }> = {
+  L: { label: "LOW", className: "text-primary border-primary/20 bg-primary/10" },
+  H: { label: "HIGH", className: "text-status-warning-text border-status-warning-border bg-status-warning-bg" },
+  N: { label: "Normal", className: "text-status-success-text border-status-success-border bg-status-success-bg" },
+};
 
-  const updateValue = (componentId: string, value: string) => {
-    setValues(prev => ({ ...prev, [componentId]: value }));
+/**
+ * One row per ordered test. Submitting files every result at once and completes
+ * the order, so each test needs a value first.
+ */
+export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
+  const router = useRouter();
+  const [entries, setEntries] = useState<ResultEntry[]>(() =>
+    order.tests.map(test => ({
+      code: test.testId,
+      display: test.name,
+      value: "",
+      unit: "",
+      referenceRangeLow: "",
+      referenceRangeHigh: "",
+    })),
+  );
+  const [conclusion, setConclusion] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const update = (index: number, field: keyof ResultEntry, value: string) => {
+    setEntries(prev => prev.map((entry, i) => (i === index ? { ...entry, [field]: value } : entry)));
   };
 
-  const updateNote = (componentId: string, note: string) => {
-    setNotes(prev => ({ ...prev, [componentId]: note }));
-  };
+  const isComplete = entries.length > 0 && entries.every(entry => entry.value.trim());
 
-  const getAutoFlag = (value: string, low: number, high: number) => {
-    if (!value || isNaN(Number(value))) return null;
-    const num = Number(value);
-    if (low === 0 && high === 0) return null;
-    if (num < low) return 'low';
-    if (num > high) return 'high';
-    return 'normal';
-  };
-
-  const handleSave = () => {
-    toast.success("Results saved successfully (demo mode)");
-  };
-
-  const handleSubmit = () => {
-    toast.success("Results submitted for verification (demo mode)");
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      await enterResults({ orderId: order.id, results: entries, conclusion });
+      toast.success("Results submitted. The ordering doctor has been notified.");
+      router.push(ROUTES.ORDER(order.id));
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 409) {
+        toast.error("Results for this order have already been entered.");
+        router.push(ROUTES.ORDER(order.id));
+        return;
+      }
+      console.error(err);
+      toast.error("Could not submit the results. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -70,94 +95,103 @@ export function ResultsEntryForm({ order, patient, testCatalog }: ResultsEntryFo
       </Card>
 
       {/* Test Results Entry */}
-      {order.tests.map(orderTest => {
-        const test = testCatalog.find(t => t.id === orderTest.testId);
-        if (!test) return null;
-        const components = test.components ?? [];
-
-        return (
-          <Card key={orderTest.testId} className="shadow-sm border">
-            <CardHeader className="bg-muted/50 border-b pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FlaskConical className="h-4 w-4 text-primary" />
-                {test.name}
-                <span className="text-xs font-normal text-muted-foreground">({test.code})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {components.map(component => {
-                  const autoFlag = getAutoFlag(
-                    values[component.id] || '',
-                    component.referenceRange.low,
-                    component.referenceRange.high
-                  );
-                  const hasRefRange = component.referenceRange.low !== 0 || component.referenceRange.high !== 0;
-
-                  return (
-                    <div key={component.id} className="px-4 py-3">
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                        <div className="md:col-span-3">
-                          <Label className="text-sm font-medium text-foreground">{component.name}</Label>
-                        </div>
-                        <div className="md:col-span-3">
-                          <Input
-                            type="text"
-                            placeholder="Enter value"
-                            value={values[component.id] || ''}
-                            onChange={e => updateValue(component.id, e.target.value)}
-                            className="h-9 text-sm"
-                          />
-                        </div>
-                        <div className="md:col-span-2 text-sm text-muted-foreground">
-                          {component.unit || '-'}
-                        </div>
-                        <div className="md:col-span-2 text-sm text-muted-foreground">
-                          {hasRefRange ? `${component.referenceRange.low} - ${component.referenceRange.high}` : '-'}
-                        </div>
-                        <div className="md:col-span-2">
-                          {autoFlag && autoFlag !== 'normal' && (
-                            <Badge variant="outline" className={
-                              autoFlag === 'low' ? 'text-primary border-primary/20 bg-primary/10' :
-                              'text-status-warning-text border-status-warning-border bg-status-warning-bg'
-                            }>
-                              {autoFlag === 'low' ? 'LOW' : 'HIGH'}
-                            </Badge>
-                          )}
-                          {autoFlag === 'normal' && (
-                            <Badge variant="outline" className="text-status-success-text border-status-success-border bg-status-success-bg">
-                              Normal
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="mt-2 md:ml-0">
-                        <Textarea
-                          placeholder="Notes (optional)"
-                          value={notes[component.id] || ''}
-                          onChange={e => updateNote(component.id, e.target.value)}
-                          className="h-8 min-h-[32px] text-xs resize-none"
-                          rows={1}
-                        />
-                      </div>
+      <Card className="shadow-sm border">
+        <CardHeader className="bg-muted/50 border-b pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FlaskConical className="h-4 w-4 text-primary" />
+            Results ({entries.length} test{entries.length !== 1 ? "s" : ""})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="hidden md:grid grid-cols-12 gap-3 px-4 pt-3 text-xs text-muted-foreground">
+            <span className="col-span-3">Test</span>
+            <span className="col-span-3">Result</span>
+            <span className="col-span-2">Unit</span>
+            <span className="col-span-3">Reference range</span>
+            <span className="col-span-1">Flag</span>
+          </div>
+          <div className="divide-y">
+            {entries.map((entry, i) => {
+              const flag = interpret(entry.value, entry.referenceRangeLow, entry.referenceRangeHigh);
+              return (
+                <div key={`${entry.code}:${i}`} className="px-4 py-3">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                    <div className="md:col-span-3">
+                      <Label htmlFor={`value-${i}`} className="text-sm font-medium text-foreground">{entry.display}</Label>
+                      <p className="text-xs text-muted-foreground">{entry.code}</p>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+                    <div className="md:col-span-3">
+                      <Input
+                        id={`value-${i}`}
+                        placeholder="Value"
+                        value={entry.value}
+                        onChange={e => update(i, "value", e.target.value)}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Input
+                        aria-label={`${entry.display} unit`}
+                        placeholder="Unit"
+                        value={entry.unit}
+                        onChange={e => update(i, "unit", e.target.value)}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="md:col-span-3 flex items-center gap-2">
+                      <Input
+                        aria-label={`${entry.display} reference range low`}
+                        placeholder="Low"
+                        inputMode="decimal"
+                        value={entry.referenceRangeLow}
+                        onChange={e => update(i, "referenceRangeLow", e.target.value)}
+                        className="h-9 text-sm"
+                      />
+                      <span className="text-muted-foreground">–</span>
+                      <Input
+                        aria-label={`${entry.display} reference range high`}
+                        placeholder="High"
+                        inputMode="decimal"
+                        value={entry.referenceRangeHigh}
+                        onChange={e => update(i, "referenceRangeHigh", e.target.value)}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      {flag && (
+                        <Badge variant="outline" className={FLAG_BADGE[flag].className}>
+                          {FLAG_BADGE[flag].label}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Conclusion */}
+      <Card className="shadow-sm border">
+        <CardContent className="p-4 space-y-2">
+          <Label htmlFor="conclusion" className="text-sm font-medium text-foreground">Conclusion (optional)</Label>
+          <Textarea
+            id="conclusion"
+            placeholder="Interpretation or comments for the ordering doctor; printed on the report"
+            value={conclusion}
+            onChange={e => setConclusion(e.target.value)}
+            rows={3}
+          />
+        </CardContent>
+      </Card>
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-4">
-        <Button variant="outline" onClick={handleSave}>
-          <Save className="h-4 w-4 mr-2" />
-          Save Draft
-        </Button>
-        <Button className="bg-primary hover:bg-primary/90" onClick={handleSubmit}>
-          <CheckCircle className="h-4 w-4 mr-2" />
-          Submit for Verification
+        {!isComplete && <p className="text-xs text-muted-foreground">Enter a result for every test to submit.</p>}
+        <Button className="bg-primary hover:bg-primary/90" onClick={handleSubmit} disabled={!isComplete || isSubmitting}>
+          {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+          Submit results
         </Button>
       </div>
     </div>

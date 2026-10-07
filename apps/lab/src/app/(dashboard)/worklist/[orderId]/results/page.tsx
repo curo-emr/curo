@@ -4,24 +4,23 @@ import { useState, useEffect, use } from "react";
 import { Loader2 } from "lucide-react";
 import { ResultsEntryForm } from "@/components/features/worklist/ResultsEntryForm";
 import { LabReportUpload } from "@/components/features/worklist/LabReportUpload";
-import { getLabOrderById, getLabTestCatalog } from "@/lib/api/lab";
+import { getLabOrderById } from "@/lib/api/lab";
 import { getPatientById } from "@/lib/api/patients";
-import type { LabOrder, Patient, LabTestCatalogItem } from "@/types";
+import type { LabOrder, Patient } from "@/types";
+import { ROUTES } from "@/lib/constants";
+import Link from "next/link";
 
 export default function ResultsEntryPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params);
   const [order, setOrder] = useState<LabOrder | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     getLabOrderById(orderId).then(async ord => {
       if (!ord) { setIsLoading(false); return; }
       setOrder(ord);
-      const [pt, catalog] = await Promise.all([getPatientById(ord.patientId), getLabTestCatalog()]);
-      setPatient(pt);
-      setTestCatalog(catalog);
+      setPatient(await getPatientById(ord.patientId));
     }).catch(console.error).finally(() => setIsLoading(false));
   }, [orderId]);
 
@@ -35,7 +34,14 @@ export default function ResultsEntryPage({ params }: { params: Promise<{ orderId
         <p className="text-sm text-muted-foreground">{order.id.slice(0, 8).toUpperCase()} - {patient.name.full} ({patient.mrn})</p>
       </div>
 
-      <ResultsEntryForm order={order} patient={patient} testCatalog={testCatalog} />
+      {order.status === 'completed' ? (
+        <div className="rounded-lg border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+          Results for this order have already been entered.{" "}
+          <Link href={ROUTES.ORDER(order.id)} className="font-medium text-primary hover:underline">View the order</Link>
+        </div>
+      ) : (
+        <ResultsEntryForm order={order} patient={patient} />
+      )}
 
       <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId} />
     </div>

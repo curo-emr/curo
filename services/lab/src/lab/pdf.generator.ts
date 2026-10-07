@@ -111,7 +111,8 @@ export async function generateLabReportPdf(data: ReportData): Promise<string> {
       y += rowHeight;
     }
 
-    doc.moveDown(2);
+    // Back to the left margin: the rows left the cursor in the last column.
+    doc.x = doc.page.margins.left;
     doc.y = y + 10;
 
     if (data.conclusion) {
