@@ -1,7 +1,7 @@
 {
   "name": "@curo/shared",
   "version": "1.0.0",
-  "description": "Shared kernel for Curo EMR backends: auth guards, cross-service entities, enums and DTOs, FHIR helpers, patient identifiers, env secrets, health check and service bootstrap",
+  "description": "Shared kernel for Curo EMR backends: auth guards, cross-service entities, enums and DTOs, FHIR helpers, patient identifiers, system notifications, env secrets, health check and service bootstrap",
   "private": true,
   "license": "UNLICENSED",
   "exports": {
@@ -40,6 +40,10 @@
     "./identifiers": {
       "types": "./dist/identifiers/index.d.ts",
       "default": "./dist/identifiers/index.js"
+    },
+    "./notifications": {
+      "types": "./dist/notifications/index.d.ts",
+      "default": "./dist/notifications/index.js"
     }
   },
   "files": [
