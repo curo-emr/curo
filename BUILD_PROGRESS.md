@@ -1227,3 +1227,19 @@ level.
     shows once per empty batch).
   - Stock is one pool across organisations: dispensing draws from any of them, and every
     pharmacist is alerted. Scoping both by organisation is a change of its own.
+
+## Low stock per drug everywhere ✅ DONE — 2026-10-07
+
+Branch `fix/low-stock-per-drug` (stacked on `feat/low-stock-alerts`).
+
+- **One definition of "low"** (`services/pharmacy/src/pharmacy/reorder-level.ts`): a drug is low when
+  its usable units (unexpired batches) are at or below its reorder level (the highest any batch sets).
+  `stockLevel()` and `isLow()` serve the views; `lowStockAfterDraw()` builds on them for the alerts.
+- **`GET /stock/grouped`** now returns `usableQuantity`, `reorderLevel` and `low` per drug, in place of
+  `totalQuantity` (counted expired batches) and `reorderThreshold` (whichever batch came first).
+- **`GET /stock/alerts`** returns one entry per low drug, the same shape as `/stock/grouped`.
+  Nothing called it before, so the change of shape was safe.
+- **`/stock?lowOnly=true` removed**: it was the last per-batch rule, and no portal used it.
+- **Pharmacy portal:** the dashboard's Low Stock card and "Low Stock Items" tile read `/stock/alerts`
+  rather than filtering the first 100 batches in the browser; inventory shows `usableQuantity` and the
+  server's `low`. Removed the unused `MedicationList` and `isLowStock`, which held the per-batch rule.

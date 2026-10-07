@@ -51,7 +51,6 @@ export function GroupedInventory({ groups }: { groups: GroupedStock[] }) {
       <div className="space-y-2">
         {filtered.map((g) => {
           const isOpen = open.has(g.medicationCode);
-          const low = g.totalQuantity <= g.reorderThreshold;
           const anyExpiringSoon = g.batches.some((b) => expiryStatus(b.expiryDate) !== "ok");
           return (
             <Card key={g.medicationCode} className="shadow-sm border">
@@ -69,8 +68,8 @@ export function GroupedInventory({ groups }: { groups: GroupedStock[] }) {
                   </div>
                   <div className="flex items-center gap-2">
                     {anyExpiringSoon && <AlertTriangle className="h-4 w-4 text-status-warning-text" />}
-                    {low && <Badge variant="outline" className="bg-status-error-bg text-status-error-text border-status-error-border">Low</Badge>}
-                    <span className="text-sm font-semibold text-slate-700">{g.totalQuantity} {g.unit}</span>
+                    {g.low && <Badge variant="outline" className="bg-status-error-bg text-status-error-text border-status-error-border">Low</Badge>}
+                    <span className="text-sm font-semibold text-slate-700">{g.usableQuantity} {g.unit}</span>
                   </div>
                 </button>
 
