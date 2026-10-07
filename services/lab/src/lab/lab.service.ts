@@ -26,7 +26,7 @@ import {
   toFhirServiceRequest,
   PaginationQuery,
 } from '@curo/shared/fhir';
-import { parseLabQr } from '@curo/shared/lab';
+import { LAB_REPORT_DOCUMENT, labScope, parseLabQr } from '@curo/shared/lab';
 import { DiagnosticReport } from '../entities/diagnostic-report.entity';
 import { LabInstrument } from '../entities/lab-instrument.entity';
 import { LabTestCatalog } from '../entities/lab-test-catalog.entity';
@@ -36,10 +36,6 @@ import { ScanQrDto } from './dto/scan-qr.dto';
 import { CreateInstrumentDto } from './dto/create-instrument.dto';
 import { DiagnosticReportStatus, InstrumentStatus } from '../enums';
 import { generateLabReportPdf } from './pdf.generator';
-import { labScope } from './lab-scope';
-
-// The document type of a report file a lab uploads for an order.
-const LAB_REPORT_DOCUMENT = 'lab-report';
 
 interface LabStaffRow {
   id: string;

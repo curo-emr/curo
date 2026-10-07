@@ -110,8 +110,8 @@ real IDs captured from prior steps.
 | PUT | `/notifications/:id/read` · `/notifications/read-all` | any authed | ✅ 200 |
 | POST | `/audit` | any authed | ✅ 201 |
 | GET | `/audit?resourceType=` | SUPER_ADMIN | ✅ 200 |
-| POST | `/documents` (multipart, png/jpeg/pdf only) | DOCTOR / LAB_STAFF | ✅ 201 |
-| GET | `/documents?patientId=` · `/documents/me` · `/documents/:id/content` | staff / PATIENT | ✅ 200 |
+| POST | `/documents` (multipart, png/jpeg/pdf only; lab staff: a lab-report for their lab's order) | DOCTOR / LAB_STAFF | ✅ 201 |
+| GET | `/documents?patientId=\|encounterId=\|serviceRequestId=` (one required; lab staff see their lab's report files) · `/documents/me` · `/documents/:id/content` | staff / PATIENT | ✅ 200 |
 
 ### Authorization spot-checks (expected to be denied)
 | Call | Expected | Got |
