@@ -16,6 +16,7 @@ import {
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { actorId, type AuthUser } from '@curo/shared/auth';
+import { PaymentStatus } from '../enums';
 
 const CURRENCY = process.env.CURRENCY || 'LKR';
 
@@ -27,6 +28,13 @@ export class PaymentService {
     @InjectRepository(AuditLog)
     private auditRepo: Repository<AuditLog>,
   ) {}
+
+  /** Query over the payments that count as income, aliased `p`. */
+  private income() {
+    return this.paymentsRepo
+      .createQueryBuilder('p')
+      .where('p.status = :paid', { paid: PaymentStatus.PAID });
+  }
 
   private genReceipt(): string {
     return `RCP-${Date.now()}-${Math.floor(Math.random() * 9000 + 1000)}`;
@@ -57,7 +65,7 @@ export class PaymentService {
       amount: dto.amount,
       currency: CURRENCY,
       paymentMethod: dto.paymentMethod || 'cash',
-      status: 'paid',
+      status: PaymentStatus.PAID,
       receiptNumber: this.genReceipt(),
       notes: dto.notes,
       paidAt: new Date(),
@@ -137,13 +145,11 @@ export class PaymentService {
     const collectedBy = actorId(user);
     const unit = ['day', 'week', 'month'].includes(period) ? period : 'day';
 
-    const qb = this.paymentsRepo
-      .createQueryBuilder('p')
+    const qb = this.income()
       .select(`date_trunc('${unit}', p."paidAt")`, 'bucket')
       .addSelect('SUM(p.amount)', 'total')
       .addSelect('COUNT(*)', 'count')
-      .where('p.collectedBy = :collectedBy', { collectedBy })
-      .andWhere(`p.status = 'paid'`);
+      .andWhere('p.collectedBy = :collectedBy', { collectedBy });
 
     if (from) qb.andWhere('p."paidAt" >= :from', { from: new Date(from) });
     if (to)
@@ -204,18 +210,19 @@ export class PaymentService {
   }
 
   /**
-   * What payments of every status add up to, overall and per receptionist
-   * (largest first); only `collectedBy`'s, when given.
+   * What paid payments add up to, overall and per receptionist (largest
+   * first); only `collectedBy`'s, when given. Same rule as a receptionist's
+   * own summary, so the two agree.
    */
   async totalsForAdmin(collectedBy?: string) {
-    const qb = this.paymentsRepo
-      .createQueryBuilder('p')
+    const qb = this.income()
       .select('p.collectedBy', 'collectedBy')
       .addSelect('COALESCE(SUM(p.amount), 0)::float', 'total')
       .addSelect('COUNT(*)::int', 'count')
       .groupBy('p.collectedBy')
       .orderBy('total', 'DESC');
-    if (collectedBy) qb.where('p.collectedBy = :collectedBy', { collectedBy });
+    if (collectedBy)
+      qb.andWhere('p.collectedBy = :collectedBy', { collectedBy });
     const byCollector = await qb.getRawMany<{
       collectedBy: string | null;
       total: number;
