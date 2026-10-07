@@ -14,22 +14,8 @@ import { getAppointments } from "@/lib/api/appointments";
 import { isAwaitingDoctor, QUEUE_POLL_MS } from "@/lib/queue";
 import { getPatientsByIds } from "@/lib/api/patients";
 import { usePolling } from "@/lib/hooks/usePolling";
-import { getDoctors, type Practitioner } from "@/lib/api/practitioners";
+import { getDoctors } from "@/lib/api/practitioners";
 import type { Appointment, Patient, Doctor } from "@/types";
-
-function mapPractitionerToDoctor(p: Practitioner): Doctor {
-  return {
-    id: p.id,
-    name: p.name,
-    specialty: p.specialty,
-    phone: p.phone,
-    email: p.email,
-    roomNumber: "",
-    availableDays: [],
-    slotDurationMinutes: 30,
-    workingHours: { start: "08:00", end: "17:00" },
-  };
-}
 
 export default function DashboardPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -40,7 +26,7 @@ export default function DashboardPage() {
   const todayStr = getTodayString();
 
   useEffect(() => {
-    getDoctors().then(practs => setDoctors(practs.map(mapPractitionerToDoctor))).catch(console.error);
+    getDoctors().then(setDoctors).catch(console.error);
   }, []);
 
   // Today's appointments + their patients, kept fresh while the dashboard is open.

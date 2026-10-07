@@ -9,7 +9,10 @@ import {
   UseGuards,
   Header,
 } from '@nestjs/common';
-import { AppointmentService } from './appointment.service';
+import {
+  AppointmentService,
+  type AppointmentFilters,
+} from './appointment.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { UpdateQueueStageDto } from './dto/update-queue-stage.dto';
@@ -39,15 +42,22 @@ export class AppointmentController {
   @Header('Content-Type', 'application/fhir+json')
   findAll(
     @CurrentUser() user: AuthUser,
-    @Query('date') date?: string,
-    @Query('practitionerId') practitionerId?: string,
-    @Query('patientId') patientId?: string,
-    @Query('queueStage') queueStage?: string,
-    @Query() query?: PaginationQuery,
+    @Query() query: AppointmentFilters & PaginationQuery,
   ) {
+    const { date, from, to, practitionerId, patientId, status, queueStage } =
+      query;
     return this.appointmentService.findAll(
       user,
-      { date, practitionerId, patientId, queueStage },
+      {
+        date,
+        from,
+        to,
+        practitionerId,
+        patientId,
+        status,
+        queueStage,
+        _sort: query._sort,
+      },
       query,
     );
   }

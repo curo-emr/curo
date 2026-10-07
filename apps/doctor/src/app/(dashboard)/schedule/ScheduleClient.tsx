@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import type { Appointment, Patient } from "@/types";
 import { Card } from "@curo/web/ui/card";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { AppointmentRow } from "@/components/features/visits/AppointmentRow";
-import { CuroCalendar, formatDateStr, getRelativeDayLabel, type CalendarEvent, type CalendarEventColor } from "@curo/web/ui/curo-calendar";
+import { CuroCalendar, calendarRange, formatDateStr, getRelativeDayLabel, type CalendarEvent, type CalendarEventColor } from "@curo/web/ui/curo-calendar";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { getAppointments } from "@/lib/api/appointments";
+import { getPatientsByIds } from "@/lib/api/patients";
 import { getQueueGroup, type QueueGroup } from "@/lib/visit";
 
 const GROUP_COLOR: Record<QueueGroup, CalendarEventColor> = {
@@ -18,13 +21,23 @@ const GROUP_COLOR: Record<QueueGroup, CalendarEventColor> = {
   done: "green",
 };
 
-interface Props {
-  appointments: Appointment[];
-  patients: Record<string, Patient>;
-}
-
-export function ScheduleClient({ appointments, patients }: Props) {
+export function ScheduleClient() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [month, setMonth] = useState<Date>(() => new Date());
+
+  // The doctor's appointments on the month's grid, and their patients, loaded per month.
+  const { from, to } = calendarRange(month);
+  const [loaded, setLoaded] = useState<{ appointments: Appointment[]; patients: Record<string, Patient> }>();
+  useEffect(() => {
+    let current = true;
+    getAppointments({ from, to })
+      .then(async appointments => ({ appointments, patients: await getPatientsByIds(appointments.map(a => a.patientId)) }))
+      .catch(() => ({ appointments: [], patients: {} }))
+      .then(data => { if (current) setLoaded(data); });
+    return () => { current = false; };
+  }, [from, to]);
+  const appointments = useMemo(() => loaded?.appointments ?? [], [loaded]);
+  const patients = useMemo(() => loaded?.patients ?? {}, [loaded]);
 
   const events: CalendarEvent[] = useMemo(
     () => appointments.map(a => ({
@@ -37,6 +50,8 @@ export function ScheduleClient({ appointments, patients }: Props) {
     [appointments, patients],
   );
 
+  if (!loaded) return <PageSkeleton side={false} />;
+
   const dateStr = formatDateStr(selectedDate);
   const daily = appointments.filter(a => a.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
   const relative = getRelativeDayLabel(selectedDate);
@@ -45,7 +60,7 @@ export function ScheduleClient({ appointments, patients }: Props) {
     <div className="space-y-6">
       <PageHeader title="Schedule" description="Pick a day to see its appointments." />
 
-      <CuroCalendar events={events} selectedDate={selectedDate} onDateSelect={setSelectedDate} maxEventsPerDay={3} />
+      <CuroCalendar events={events} selectedDate={selectedDate} onDateSelect={setSelectedDate} month={month} onMonthChange={setMonth} maxEventsPerDay={3} />
 
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">

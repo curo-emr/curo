@@ -4,33 +4,16 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { ReportsDashboard } from "@/components/features/reports/ReportsDashboard";
-import { getAppointmentsFirstPage } from "@/lib/api/appointments";
-import { getPatients } from "@/lib/api/patients";
-import { getDoctors, type Practitioner } from "@/lib/api/practitioners";
-import type { Appointment, Patient, Doctor } from "@/types";
-
-function mapPractitionerToDoctor(p: Practitioner): Doctor {
-  return {
-    id: p.id, name: p.name, specialty: p.specialty,
-    phone: p.phone, email: p.email, roomNumber: "",
-    availableDays: [], slotDurationMinutes: 30,
-    workingHours: { start: "08:00", end: "17:00" },
-  };
-}
+import { getDoctors } from "@/lib/api/practitioners";
+import type { Doctor } from "@/types";
 
 export default function ReportsPage() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getAppointmentsFirstPage(), getPatients(), getDoctors()])
-      .then(([appts, pts, practs]) => {
-        setAppointments(appts);
-        setPatients(pts);
-        setDoctors(practs.map(mapPractitionerToDoctor));
-      })
+    getDoctors()
+      .then(setDoctors)
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
@@ -43,7 +26,7 @@ export default function ReportsPage() {
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
       ) : (
-        <ReportsDashboard appointments={appointments} patients={patients} doctors={doctors} />
+        <ReportsDashboard doctors={doctors} />
       )}
     </div>
   );

@@ -35,6 +35,12 @@ export async function getByIds<T>(url: string, ids: string[]): Promise<T[]> {
   return pages.flatMap((page) => page.resources);
 }
 
+/** How many rows a list has for `params`, without reading them. */
+export async function getTotal(url: string, params: Record<string, unknown> = {}): Promise<number> {
+  const res = await apiClient.get<unknown[] | FhirBundle<unknown>>(url, { params: { ...params, pageSize: 1 } });
+  return unwrapBundle(res.data).total;
+}
+
 /**
  * The ids of the patients whose name, MRN, PHN, NIC or phone matches `search`,
  * for list endpoints that take `searchPatientIds`. `complete` is false when more

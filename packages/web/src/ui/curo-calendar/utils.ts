@@ -42,6 +42,12 @@ export function getCalendarDays(year: number, month: number): Date[] {
   return days;
 }
 
+/** The first and last days (YYYY-MM-DD) of the grid for `month`'s month, padding included. */
+export function calendarRange(month: Date): { from: string; to: string } {
+  const days = getCalendarDays(month.getFullYear(), month.getMonth());
+  return { from: formatDateStr(days[0]), to: formatDateStr(days[days.length - 1]) };
+}
+
 /** Returns true if the given date is today (local time). */
 export function isToday(date: Date): boolean {
   const now = new Date();

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useEffect, useState, useMemo, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Patient, Doctor, Appointment } from "@/types";
+import { useDebouncedValue } from "@curo/web/hooks";
+import type { Patient, Doctor } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
 import { Input } from "@curo/web/ui/input";
@@ -31,12 +32,15 @@ import { cn, formatTime } from "@/lib/utils";
 import { ROUTES, VISIT_TYPES } from "@/lib/constants";
 import { bookNewAppointment } from "@/lib/actions/appointment-actions";
 import { toast } from "sonner";
+import { getPatientById, searchPatients } from "@/lib/api/patients";
+import { getSchedule } from "@/lib/api/appointments";
 
 interface BookAppointmentFormProps {
-  patients: Patient[];
   doctors: Doctor[];
-  appointments: Appointment[];
 }
+
+/** How many patients the search shows. */
+const PATIENT_MATCHES = 8;
 
 function generateTimeSlots(start: string, end: string, durationMinutes: number): string[] {
   const slots: string[] = [];
@@ -60,13 +64,14 @@ function getDayName(dateStr: string): string {
   return date.toLocaleDateString("en-US", { weekday: "long" });
 }
 
-export function BookAppointmentForm({ patients, doctors, appointments }: BookAppointmentFormProps) {
+export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedPatientId = searchParams.get("patientId") || "";
 
   const [patientSearch, setPatientSearch] = useState("");
-  const [selectedPatientId, setSelectedPatientId] = useState(preselectedPatientId);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const selectedPatientId = selectedPatient?.id ?? "";
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
@@ -76,22 +81,31 @@ export function BookAppointmentForm({ patients, doctors, appointments }: BookApp
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const selectedPatient = patients.find((p) => p.id === selectedPatientId);
   const selectedDoctor = doctors.find((d) => d.id === selectedDoctorId);
 
-  // Filter patients based on search
-  const filteredPatients = useMemo(() => {
-    if (!patientSearch.trim()) return [];
-    const q = patientSearch.toLowerCase().trim();
-    return patients
-      .filter(
-        (p) =>
-          p.name.full.toLowerCase().includes(q) ||
-          p.mrn.toLowerCase().includes(q) ||
-          p.nic.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
-  }, [patientSearch, patients]);
+  // A patient named in the link (from their record) starts selected.
+  useEffect(() => {
+    if (!preselectedPatientId) return;
+    let current = true;
+    getPatientById(preselectedPatientId)
+      .then((patient) => { if (current && patient) setSelectedPatient(patient); })
+      .catch(console.error);
+    return () => { current = false; };
+  }, [preselectedPatientId]);
+
+  // Patients matching the search, found on the server.
+  const search = useDebouncedValue(patientSearch).trim();
+  const [found, setFound] = useState<{ search: string; patients: Patient[] }>();
+  useEffect(() => {
+    if (!search) return;
+    let current = true;
+    searchPatients(search, PATIENT_MATCHES)
+      .then((patients) => { if (current) setFound({ search, patients }); })
+      .catch(console.error);
+    return () => { current = false; };
+  }, [search]);
+  const searchDone = !!search && found?.search === search;
+  const filteredPatients = searchDone ? found.patients : [];
 
   // Generate time slots for selected doctor
   const timeSlots = useMemo(() => {
@@ -103,20 +117,21 @@ export function BookAppointmentForm({ patients, doctors, appointments }: BookApp
     );
   }, [selectedDoctor]);
 
-  // Check which slots are booked
-  const bookedSlots = useMemo(() => {
-    if (!selectedDoctorId || !selectedDate) return new Set<string>();
-    return new Set(
-      appointments
-        .filter(
-          (a) =>
-            a.doctorId === selectedDoctorId &&
-            a.date === selectedDate &&
-            a.status !== "cancelled"
-        )
-        .map((a) => a.time)
-    );
-  }, [appointments, selectedDoctorId, selectedDate]);
+  // The doctor's booked slots that day, from their schedule.
+  const slotsKey = selectedDoctorId && selectedDate ? `${selectedDoctorId}/${selectedDate}` : "";
+  const [booked, setBooked] = useState<{ key: string; times: Set<string> }>();
+  useEffect(() => {
+    if (!slotsKey) return;
+    let current = true;
+    getSchedule(selectedDoctorId, selectedDate)
+      .then((schedule) => {
+        const times = new Set(schedule.filter((a) => a.status !== "cancelled").map((a) => a.time));
+        if (current) setBooked({ key: slotsKey, times });
+      })
+      .catch(console.error);
+    return () => { current = false; };
+  }, [slotsKey, selectedDoctorId, selectedDate]);
+  const bookedSlots = booked?.key === slotsKey ? booked.times : new Set<string>();
 
   // Check if selected date is a valid day for the doctor
   const isValidDay = useMemo(() => {
@@ -185,7 +200,7 @@ export function BookAppointmentForm({ patients, doctors, appointments }: BookApp
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setSelectedPatientId("");
+                  setSelectedPatient(null);
                   setPatientSearch("");
                 }}
               >
@@ -211,7 +226,7 @@ export function BookAppointmentForm({ patients, doctors, appointments }: BookApp
                       type="button"
                       className="w-full text-left px-4 py-3 hover:bg-muted border-b border last:border-b-0 transition-colors"
                       onClick={() => {
-                        setSelectedPatientId(p.id);
+                        setSelectedPatient(p);
                         setPatientSearch("");
                         setShowPatientDropdown(false);
                       }}
@@ -224,7 +239,7 @@ export function BookAppointmentForm({ patients, doctors, appointments }: BookApp
                   ))}
                 </div>
               )}
-              {showPatientDropdown && patientSearch.trim() && filteredPatients.length === 0 && (
+              {showPatientDropdown && searchDone && filteredPatients.length === 0 && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border rounded-lg shadow-lg p-4 text-center">
                   <p className="text-sm text-muted-foreground">No patients found.</p>
                   <Link href={ROUTES.NEW_PATIENT} className="text-sm text-primary hover:underline mt-1 inline-block">

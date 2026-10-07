@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useClientPagination } from "@curo/web/hooks";
+import { useServerPagination } from "@curo/web/hooks";
 import { Loader2, Wallet, Receipt, TrendingUp } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -16,7 +16,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@curo/web/ui/table";
-import { getIncomeSummary, getMyPayments, type IncomeSummary, type Payment } from "@/lib/api/payments";
+import { getIncomeSummary, getMyPaymentsPage, type IncomeSummary } from "@/lib/api/payments";
 
 type Period = "day" | "week" | "month";
 
@@ -39,18 +39,15 @@ function bucketLabel(iso: string, period: Period) {
 export default function IncomePage() {
   const [period, setPeriod] = useState<Period>("day");
   const [summary, setSummary] = useState<IncomeSummary | null>(null);
-  const [payments, setPayments] = useState<Payment[]>([]);
   // The period whose data is on screen; any other value means a fetch is in flight.
   const [loadedPeriod, setLoadedPeriod] = useState<Period | null>(null);
   const isLoading = loadedPeriod !== period;
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getIncomeSummary(period), getMyPayments()])
-      .then(([s, p]) => {
-        if (cancelled) return;
-        setSummary(s);
-        setPayments(p);
+    getIncomeSummary(period)
+      .then((s) => {
+        if (!cancelled) setSummary(s);
       })
       .catch(console.error)
       .finally(() => {
@@ -66,9 +63,9 @@ export default function IncomePage() {
     [summary, period],
   );
 
-  // Client-side pagination of the recent-payments table.
-  const { page, setPage, pageSize, setPageSize, pageRows: pagedPayments } =
-    useClientPagination(payments, [period]);
+  // Every payment you collected, latest first, a page at a time.
+  const { items: payments, total: paymentCount, page, setPage, pageSize, setPageSize } =
+    useServerPagination(getMyPaymentsPage);
 
   const currency = summary?.currency ?? "LKR";
   const avg = summary && summary.count > 0 ? summary.total / summary.count : 0;
@@ -164,7 +161,7 @@ export default function IncomePage() {
                   {payments.length === 0 ? (
                     <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No payments yet.</TableCell></TableRow>
                   ) : (
-                    pagedPayments.map((p) => (
+                    payments.map((p) => (
                       <TableRow key={p.id} className="hover:bg-muted/50">
                         <TableCell className="font-mono text-xs">{p.receiptNumber}</TableCell>
                         <TableCell className="text-muted-foreground">{p.paidAt ? format(parseISO(p.paidAt), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
@@ -179,7 +176,7 @@ export default function IncomePage() {
                 <Pagination
                   page={page}
                   pageSize={pageSize}
-                  total={payments.length}
+                  total={paymentCount}
                   onPageChange={setPage}
                   onPageSizeChange={setPageSize}
                 />
