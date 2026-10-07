@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { PatientRegistrationForm } from "@/components/features/patients/PatientRegistrationForm";
 import { ROUTES } from "@/lib/constants";
 

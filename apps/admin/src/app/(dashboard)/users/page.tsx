@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { UserPlus } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { Button } from "@curo/web/ui/button";
 import { UserList } from "@/components/features/users/UserList";
 import { ROUTES } from "@/lib/constants";

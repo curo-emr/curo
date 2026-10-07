@@ -5,8 +5,8 @@ import { Loader2, HeartPulse, AlertTriangle, Pill, ShieldAlert } from "lucide-re
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { formatDate, formatStatus } from "@/lib/utils";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { getMyProfile, getMyAllergies, getMyConditions, getMyPrescriptions } from "@/lib/api/patient-portal";
 import type { Allergy, Problem, Prescription } from "@/types";
 
@@ -121,7 +121,7 @@ export default function HealthRecordsPage() {
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             {activeProblems.length === 0 ? (
-              <EmptyState message="No active conditions." />
+              <EmptyState title="No active conditions." />
             ) : (
               activeProblems.map(problem => (
                 <div key={problem.id} className="p-4">
@@ -192,7 +192,7 @@ export default function HealthRecordsPage() {
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             {currentMedications.length === 0 ? (
-              <EmptyState message="No current medications." />
+              <EmptyState title="No current medications." />
             ) : (
               currentMedications.map(med => (
                 <div key={med.id} className="p-4">

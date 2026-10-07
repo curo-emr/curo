@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, CalendarPlus } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { AppointmentList } from "@/components/features/appointments/AppointmentList";
 import { Button } from "@curo/web/ui/button";
 import { ROUTES } from "@/lib/constants";

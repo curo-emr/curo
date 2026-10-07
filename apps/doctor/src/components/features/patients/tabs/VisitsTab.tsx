@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ChevronRight, History } from "lucide-react";
 import type { Encounter, Problem } from "@/types";
-import { SectionCard } from "@/components/ui/SectionCard";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { SectionCard } from "@curo/web/ui/section-card";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { encounterDiagnoses } from "@/lib/clinical";

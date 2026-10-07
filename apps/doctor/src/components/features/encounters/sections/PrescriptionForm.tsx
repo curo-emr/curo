@@ -6,7 +6,7 @@ import type { Allergy, Medication, PrescriptionItem } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { SectionCard } from "@curo/web/ui/section-card";
 import { SearchCombobox } from "@/components/ui/SearchCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
 import { FREQUENCIES, routeForForm, suggestQuantity } from "../visit";

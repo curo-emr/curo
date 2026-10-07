@@ -5,7 +5,7 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "src/app/globals.css",
+    "css": "../../packages/web/src/styles.css",
     "baseColor": "mist",
     "cssVariables": true,
     "prefix": ""
@@ -14,8 +14,8 @@
   "rtl": false,
   "aliases": {
     "components": "@/components",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui",
+    "utils": "@curo/web/ui/utils",
+    "ui": "@curo/web/ui",
     "lib": "@/lib",
     "hooks": "@/hooks"
   },

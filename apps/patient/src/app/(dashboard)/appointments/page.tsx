@@ -5,9 +5,9 @@ import { Loader2, Calendar, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { formatDate, formatTime, getTodayString, getDoctorName } from "@/lib/utils";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { StatusBadge } from "@curo/web/ui/status-badge";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { getMyAppointments, getPractitioners } from "@/lib/api/patient-portal";
 import type { Appointment } from "@/types";
 
@@ -62,7 +62,7 @@ export default function AppointmentsPage() {
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             {upcoming.length === 0 ? (
-              <EmptyState message="No upcoming appointments scheduled." />
+              <EmptyState title="No upcoming appointments scheduled." />
             ) : (
               upcoming
                 .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
@@ -118,7 +118,7 @@ export default function AppointmentsPage() {
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             {past.length === 0 ? (
-              <EmptyState message="No past appointments." />
+              <EmptyState title="No past appointments." />
             ) : (
               past.map(apt => (
                 <div key={apt.id} className="p-4 hover:bg-muted transition-colors">

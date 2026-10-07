@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { ReportsDashboard } from "@/components/features/reports/ReportsDashboard";
 import { getAppointments } from "@/lib/api/appointments";
 import { getPatients } from "@/lib/api/patients";

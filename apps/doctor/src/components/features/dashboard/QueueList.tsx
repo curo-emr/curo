@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Users } from "lucide-react";
 import type { Appointment, Patient } from "@/types";
 import { Card } from "@curo/web/ui/card";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { AppointmentRow } from "@/components/features/visits/AppointmentRow";
 import { cn } from "@/lib/utils";
 import { QUEUE_GROUPS, getQueueGroup, type QueueGroup } from "@/lib/visit";

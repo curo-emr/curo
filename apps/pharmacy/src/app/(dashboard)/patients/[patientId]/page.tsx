@@ -9,7 +9,7 @@ import type { Allergy, Patient, Prescription } from "@/types";
 import { Card, CardContent } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { Pill, FileText } from "lucide-react";
 import { PatientSummaryCard } from "@/components/features/patients/PatientSummaryCard";
 import { DispenseRecordCard } from "@/components/features/dispensing/DispenseRecordCard";

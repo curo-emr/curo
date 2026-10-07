@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { FileText } from "lucide-react";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { SectionCard } from "@curo/web/ui/section-card";
 import { Skeleton } from "@curo/web/ui/skeleton";
 import { DocumentUpload } from "./DocumentUpload";
 import { DocumentsList } from "./DocumentsList";

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { UpNextCard } from "@/components/features/dashboard/UpNextCard";
 import { QueueList } from "@/components/features/dashboard/QueueList";

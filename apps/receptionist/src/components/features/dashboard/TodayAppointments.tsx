@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
 import { checkInPatient, sendToDoctor, completeVisit } from "@/lib/actions/checkin-actions";
 import { getPatientName, getPatientMeta, getDoctorName, formatTime } from "@/lib/utils";

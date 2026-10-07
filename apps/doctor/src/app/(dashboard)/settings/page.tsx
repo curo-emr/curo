@@ -5,9 +5,9 @@ import { Info, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@curo/web/ui/button";
 import { Skeleton } from "@curo/web/ui/skeleton";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { SectionCard } from "@curo/web/ui/section-card";
 import { getPractitioners, type Practitioner } from "@/lib/api/practitioners";
 
 export default function AccountPage() {

@@ -4,7 +4,7 @@ import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { getPatientName } from "@/lib/utils";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
