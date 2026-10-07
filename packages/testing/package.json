@@ -1,0 +1,20 @@
+{
+  "name": "@curo/testing",
+  "version": "1.0.0",
+  "description": "Harness for the Curo backends' API tests: a Jest preset that runs each service against a freshly migrated test database, plus a helper that boots a service in-process and signs users in",
+  "private": true,
+  "license": "UNLICENSED",
+  "exports": {
+    ".": "./src/index.ts",
+    "./jest-preset": "./jest-preset.js"
+  },
+  "devDependencies": {
+    "@curo/shared": "*",
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/testing": "^11.0.1",
+    "supertest": "^7.0.0",
+    "typeorm": "^1.0.0"
+  }
+}
