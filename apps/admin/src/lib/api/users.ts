@@ -13,6 +13,7 @@ export interface CreateUserInput {
   specialization?: string;
   qualification?: string;
   licenseNumber?: string;
+  organizationId?: string;
   patientId?: string;
 }
 
@@ -24,6 +25,7 @@ export interface UpdateUserInput {
   specialization?: string;
   qualification?: string;
   licenseNumber?: string;
+  organizationId?: string;
 }
 
 export async function getUsers(search?: string, role?: string): Promise<AdminUser[]> {

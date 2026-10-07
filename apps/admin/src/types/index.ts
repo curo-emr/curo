@@ -1,3 +1,17 @@
+import type { OrganizationType } from "@/lib/constants";
+
+export interface Organization {
+  id: string;
+  name: string;
+  type: OrganizationType;
+  phone?: string | null;
+  email?: string | null;
+  addressLine1?: string | null;
+  city?: string | null;
+  licenseNumber?: string | null;
+  active: boolean;
+}
+
 export interface AdminUser {
   id: string;
   email: string;

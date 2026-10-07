@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { getUser, updateUser, resetUserPassword } from "@/lib/api/users";
 import { getAllPayments, correctPayment } from "@/lib/api/payments";
-import { ROUTES, ROLE_LABELS } from "@/lib/constants";
+import { ROUTES, ROLE_LABELS, WORKPLACE_TYPES, type UserRole } from "@/lib/constants";
+import { WorkplaceSelect } from "@/components/features/organizations/WorkplaceSelect";
 import { format, parseISO } from "date-fns";
 import type { AdminUser, Payment } from "@/types";
 import { apiErrorMessage } from "@/lib/api/client";
@@ -53,6 +54,16 @@ export default function UserDetailPage({ params }: { params: Promise<{ userId: s
       toast.success(updated.isActive ? "Account activated" : "Account suspended");
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to update"));
+    }
+  };
+
+  const changeWorkplace = async (organizationId: string) => {
+    if (!user) return;
+    try {
+      setUser(await updateUser(user.id, { organizationId }));
+      toast.success("Workplace changed", { description: "Takes effect at their next sign-in, or within 15 minutes." });
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to change workplace"));
     }
   };
 
@@ -95,6 +106,15 @@ export default function UserDetailPage({ params }: { params: Promise<{ userId: s
           </div>
         </CardContent>
       </Card>
+
+      {WORKPLACE_TYPES[user.role as UserRole] && (
+        <Card className="shadow-sm border">
+          <CardHeader className="bg-muted/50 border-b pb-3"><CardTitle className="text-base">Workplace</CardTitle></CardHeader>
+          <CardContent className="p-5 max-w-sm">
+            <WorkplaceSelect role={user.role as UserRole} value={user.organizationId} onChange={changeWorkplace} />
+          </CardContent>
+        </Card>
+      )}
 
       {user.role === "RECEPTIONIST" && (
         <Card className="shadow-sm border">

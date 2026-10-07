@@ -17,6 +17,7 @@ import { createUserSchema, type CreateUserInput } from "@/lib/validations/user";
 import { createUser } from "@/lib/api/users";
 import { ROUTES, USER_ROLES, ROLE_LABELS, GENDERS } from "@/lib/constants";
 import { apiErrorMessage } from "@/lib/api/client";
+import { WorkplaceSelect } from "@/components/features/organizations/WorkplaceSelect";
 
 // Patients are created via receptionist registration (which generates the PHN),
 // so the admin form only creates staff accounts — avoids orphan patient logins.
@@ -50,6 +51,7 @@ export function UserCreateForm() {
         specialization: data.specialization || undefined,
         qualification: data.qualification || undefined,
         licenseNumber: data.licenseNumber || undefined,
+        organizationId: data.organizationId || undefined,
       });
       toast.success("User created", { description: `${data.firstName} ${data.lastName} (${ROLE_LABELS[data.role]})` });
       router.push(ROUTES.USER(created.id));
@@ -68,7 +70,10 @@ export function UserCreateForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Role</Label>
-              <Select value={role} onValueChange={(v) => setValue("role", v as CreateUserInput["role"])}>
+              <Select value={role} onValueChange={(v) => {
+                setValue("role", v as CreateUserInput["role"]);
+                setValue("organizationId", undefined);
+              }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {CREATABLE_ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
@@ -132,6 +137,12 @@ export function UserCreateForm() {
                 <Label htmlFor="licenseNumber">License number</Label>
                 <Input id="licenseNumber" {...register("licenseNumber")} />
               </div>
+              <WorkplaceSelect
+                role={role}
+                value={watch("organizationId")}
+                onChange={(id) => setValue("organizationId", id, { shouldValidate: true })}
+                error={errors.organizationId?.message}
+              />
             </div>
           )}
         </CardContent>
