@@ -13,6 +13,7 @@ services/            NestJS backends (npm workspaces, @curo/<name>-service)
   api-gateway auth patient appointment clinical pharmacy lab document notification audit
   Dockerfile         shared by every backend (--build-arg SERVICE=<name>)
 packages/shared/     @curo/shared — code used by more than one backend
+packages/testing/    @curo/testing — harness for the backends' API tests (dev only)
 database/            migrations, seed, and the image that runs them
 scripts/             smoke tests, docker helpers
 docs/  plan/         API docs, test credentials, design plans
@@ -50,6 +51,39 @@ cd services/patient && npm run start:dev
 
 `npm run build` and `npm test` at the root run across every backend.
 
+## Tests
+
+| Script | Runs | Needs |
+|---|---|---|
+| `npm test` | unit tests (`src/**/*.spec.ts`): pure logic such as queue moves, PHN check digits, FEFO dispensing | nothing |
+| `npm run test:e2e` | API tests (`test/*.e2e-spec.ts`): each service's HTTP endpoints, in-process, on a real database | Postgres (`docker compose up -d postgres`) and a built `@curo/shared` |
+
+The API tests never touch `curo_db`. Before each service's run, the
+[@curo/testing](packages/testing) preset drops and recreates `curo_test` (or `TEST_DB_NAME`,
+which must end in `_test`) and applies the migrations to it. To write one:
+
+```ts
+import { MedicationRequest } from '@curo/shared/database';
+import { UserRole } from '@curo/shared/enums';
+import { startService, type ServiceUnderTest } from '@curo/testing';
+import { AppModule } from '../src/app.module';
+
+let svc: ServiceUnderTest;
+beforeAll(async () => (svc = await startService(AppModule)));
+afterAll(() => svc.close());
+
+it('dispenses', async () => {
+  const rx = await svc.db.getRepository(MedicationRequest).save({ ... }); // fixtures go straight in
+  await svc.api
+    .post('/dispense')
+    .set(svc.as(UserRole.PHARMACIST).headers) // a signed token for any role
+    .send({ medicationRequestId: rx.id })
+    .expect(201);
+});
+```
+
+Tests share the database, so each one creates its own rows (fresh ids) and checks only those.
+
 ## Database schema
 
 Services never change the schema (`synchronize` is off). TypeORM migrations in
@@ -82,7 +116,7 @@ Release branches are `dev-release/<x.y.z>`, `qa-release/<x.y.z>` and `stg-releas
 
 | Job | Checks | Run it locally |
 |---|---|---|
-| Backends | build `@curo/shared` + every service, lint, unit tests, type-check `database/`, then on an empty Postgres: migrate, check for entity drift, seed | `npm ci && npm run build && npm run lint && npm test && npm run typecheck:db`, then `npm run db:migrate && npm run db:check` |
+| Backends | build `@curo/shared` + every service, lint, unit tests, API tests, type-check `database/`, then on an empty Postgres: migrate, check for entity drift, seed | `npm ci && npm run build && npm run lint && npm test && npm run test:e2e && npm run typecheck:db`, then `npm run db:migrate && npm run db:check` |
 | Portals | lint, then `next build` (includes type-check) for each of the 7 portals | `cd apps/<app> && npm ci && npm run lint && npm run build` |
 | Secret scan | gitleaks over the full git history ([allowlist](.gitleaks.toml)) | `docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo` |
 

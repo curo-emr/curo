@@ -1010,3 +1010,64 @@ Branch `feat/save-visit-atomic` (plan/03 A10).
     `POST /encounters/visit` (201) and the appointment `PUT` (200). The summary showed the note,
     the vital, the primary diagnosis, the Rx and the lab order. The pharmacy pending list and the
     lab's active queue both had the orders.
+
+## Tests for the critical paths ✅ DONE (first pass) — 2026-10-07
+
+Branch `test/critical-paths` (plan/03 A11).
+
+- **Harness:** `packages/testing` (`@curo/testing`, a dev-only workspace, source only) is a Jest
+  preset for each service's `test/*.e2e-spec.ts`:
+  - `globalSetup` drops and recreates `curo_test` (`TEST_DB_NAME`), then runs
+    `npm run db:migrate` on it, the same path deploys use.
+  - A setup file sets `DB_NAME` before the `AppModule` is imported, since its decorators read
+    it. Both it and `startService()` refuse any database whose name doesn't end in `_test`.
+  - `startService(AppModule)` boots the module with production's request handling
+    (`configureApp()`, now shared with `bootstrapService`). It listens on an ephemeral
+    127.0.0.1 port, so supertest can send concurrent requests. It returns `api` (supertest),
+    `db` (the service's DataSource, for fixtures and checks) and `as(role, claims?)`, which
+    signs a token with fresh ids.
+  - Spec files run one at a time (`maxWorkers: 1`). Each test makes its own rows and checks
+    only those, so nothing is truncated.
+  - `npm run test:e2e` runs every service's API tests (~20 s); CI runs it after `npm test`.
+- **API tests (37):**
+  - pharmacy `POST /dispense`: FEFO across batches (expired skipped, undated last), pricing from
+    the batches used, a short-stock 409 that changes nothing, two simultaneous dispenses of one
+    Rx dispensing once, the role guard.
+  - clinical `POST /encounters/visit`: every record lands on the encounter with its lab QR
+    label, triage vitals are pulled in, a replay writes nothing more, a failure mid-save leaves
+    nothing (the QR encoder is made to throw), and 409 for another patient's id. Malformed
+    visits and other roles write nothing.
+  - patient: registration (patient code plus a check-digit-valid PHN for the current year),
+    keeping a supplied PHN, 400/403 writing nothing, allergies.
+  - appointment: booking, check-in into the nurse queue, the full queue path, illegal moves,
+    the wrong role or another doctor's patient (403), cancelling.
+  - lab: per-test label scans, a rescan keeping the first receipt time, results with a PDF
+    report completing the order, unknown orders.
+  - auth: sign-in, the same 401 for a wrong password and an unknown email, deactivated
+    accounts, refresh (an access token is refused), staff onboarding. The auth service's own
+    guard checks the account behind every token, so its tests sign in as real `users` rows.
+- **Pure logic pulled out and unit-tested:**
+  - `patient/phn.ts` (Luhn check digit and PHN layout), checked against standard Luhn vectors.
+  - `pharmacy/fefo.ts`: which batches are usable, FEFO order, the draw plan. `drawStockFEFO`
+    now locks the drug's batches in id order and plans with it. `getGroupedStock` uses the same
+    comparator.
+  - `lab/lab-qr.ts`: which order and test a scanned label points at.
+  - Queue moves were already covered (`queue-stage.spec.ts`).
+- **Removed:** the Nest starter `AppController`/`AppService`/specs (never registered) and the
+  "Hello World" e2e files. Services with no unit tests run `jest --passWithNoTests`.
+- **Mutation-checked:** each of these breaks a test: dropping the FEFO sort, dropping the
+  prescription claim (the concurrency test), and running the visit without a transaction.
+- **Verified:** root build, lint, `npm test`, `npm run test:e2e`. The pharmacy, lab and
+  patient images rebuild with the new workspace in the lockfile. Smoke PASS=146, FAIL=0.
+- **Not covered yet:** document (needs MinIO), notification, audit, the gateway proxying itself,
+  and the FHIR mappers.
+- **Found while writing these (not fixed here):**
+  - `POST /auth/register` is public at the gateway and takes any `role`, so anyone can create a
+    SUPER_ADMIN account. No portal calls it.
+  - `POST /results` (lab) saves observations, then the report, then completes the order without
+    a transaction. A failure partway leaves partial results, like the old visit sign.
+  - `EnterResultsDto.results` has no `@ValidateNested`, so result items aren't validated.
+  - Lab scans and results and patient allergies record `user.userId` as the performer or
+    practitioner, where clinical uses `actorId()` (practitionerId for staff).
+  - `database/seed.ts` still has its own copy of the PHN generator. The seed image is built
+    without the workspaces, so it can't import `phn.ts` yet.
