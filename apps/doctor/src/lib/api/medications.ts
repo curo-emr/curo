@@ -1,16 +1,15 @@
 import { apiClient } from '@curo/web/api';
-import { unwrapBundle, paginationParams, type FhirBundle, type PaginationParams } from '@curo/web/fhir';
+import { unwrapBundle, paginationParams, type FhirBundle } from '@curo/web/fhir';
 import type { Medication } from '@/types';
 
 // Backend medication_catalog rows already match the frontend Medication shape.
 type ApiMedication = Medication;
 
-// Medication prescribing catalog (DB-backed) — replaces bundled medications.json.
-// Requests a large page so existing dropdown consumers still receive the full set.
-export async function getMedicationCatalog(params?: PaginationParams): Promise<Medication[]> {
+// The prescribing catalog is searched on the server: a formulary is far bigger
+// than the 100 rows one page can hold. An empty search returns the first `limit`.
+export async function searchMedications(search: string, limit = 8): Promise<Medication[]> {
   const res = await apiClient.get<ApiMedication[] | FhirBundle<ApiMedication>>('/medication-catalog', {
-    params: { pageSize: 100, ...paginationParams(params) },
+    params: paginationParams({ search: search.trim(), pageSize: limit }),
   });
-  const { resources } = unwrapBundle(res.data);
-  return resources;
+  return unwrapBundle(res.data).resources;
 }

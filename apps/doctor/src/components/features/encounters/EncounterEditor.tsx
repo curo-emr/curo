@@ -36,7 +36,8 @@ interface Props {
   problems: Problem[];
   recentMedications: string[];
   appointmentId?: string;
-  medicationsCatalog: Medication[];
+  /** Shown in the prescription search before the doctor types. */
+  medicationSuggestions: Medication[];
   labTestsCatalog: LabTestCatalogItem[];
   labs: Lab[];
 }
@@ -44,7 +45,7 @@ interface Props {
 type StoredDraft = VisitDraft & { savedAt?: string };
 
 export function EncounterEditor({
-  patient, allergies, problems, recentMedications, appointmentId, medicationsCatalog, labTestsCatalog, labs,
+  patient, allergies, problems, recentMedications, appointmentId, medicationSuggestions, labTestsCatalog, labs,
 }: Props) {
   const router = useRouter();
   const { user } = useAuth();
@@ -224,7 +225,7 @@ export function EncounterEditor({
           <PrescriptionForm
             prescriptions={visit.prescriptions}
             onChange={v => update("prescriptions", v)}
-            catalog={medicationsCatalog}
+            suggestions={medicationSuggestions}
             allergies={allergies}
           />
           <LabOrderForm
