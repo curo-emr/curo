@@ -6,8 +6,13 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { MedicationRequest } from '@curo/shared/database';
-import { MedicationRequestStatus } from '@curo/shared/enums';
+import {
+  MedicationRequestStatus,
+  NotificationEventType,
+  UserRole,
+} from '@curo/shared/enums';
 import type { AuthUser } from '@curo/shared/auth';
+import { notifyRole } from '@curo/shared/notifications';
 import {
   parsePagination,
   toSearchset,
@@ -21,12 +26,19 @@ import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
 import { MedicationDispenseStatus } from '../enums';
 import { byExpiry, planFefoDraws } from './fefo';
+import { lowStockAfterDraw, type LowStock } from './reorder-level';
 
 /** What one stock batch supplied to a dispense. */
 interface BatchDraw {
   batchNumber: string | null;
   quantity: number;
   unitPrice: number;
+}
+
+/** What a dispense took from stock, and whether that left the drug low. */
+interface StockDraw {
+  draws: BatchDraw[];
+  lowStock: (LowStock & { unit: string | null }) | null;
 }
 
 const roundMoney = (amount: number) => Math.round(amount * 100) / 100;
@@ -131,14 +143,15 @@ export class PharmacyService {
   /**
    * Draw `qty` units of a drug from stock, FEFO (see fefo.ts), across several
    * batches if needed. The drug's batches are row-locked, so concurrent
-   * dispenses of it can't lose updates. Throws 409 when stock can't cover
-   * `qty`, so nothing is dispensed unpriced or left out of the stock count.
+   * dispenses of it can't lose updates, and only one of them can be the draw
+   * that takes the drug to its reorder level. Throws 409 when stock can't
+   * cover `qty`, so nothing is dispensed unpriced or left out of the count.
    */
   private async drawStockFEFO(
     em: EntityManager,
     rx: Pick<MedicationRequest, 'medicationCode' | 'medicationDisplay'>,
     qty: number,
-  ): Promise<BatchDraw[]> {
+  ): Promise<StockDraw> {
     const batches = await em
       .getRepository(Stock)
       .createQueryBuilder('s')
@@ -159,13 +172,19 @@ export class PharmacyService {
       );
     }
 
+    // Read before the batches are drawn down below.
+    const lowStock = lowStockAfterDraw(batches, qty, today);
+
     for (const { batch, quantity } of draws) batch.quantity -= quantity;
     await em.save(draws.map((d) => d.batch));
-    return draws.map(({ batch, quantity }) => ({
-      batchNumber: batch.batchNumber,
-      quantity,
-      unitPrice: Number(batch.unitPrice ?? 0), // decimal columns arrive as strings
-    }));
+    return {
+      draws: draws.map(({ batch, quantity }) => ({
+        batchNumber: batch.batchNumber,
+        quantity,
+        unitPrice: Number(batch.unitPrice ?? 0), // decimal columns arrive as strings
+      })),
+      lowStock: lowStock && { ...lowStock, unit: batches[0].unit ?? null },
+    };
   }
 
   async dispense(dto: DispenseMedicationDto, pharmacist: AuthUser) {
@@ -191,7 +210,21 @@ export class PharmacyService {
           `Prescription ${prescription.id} is no longer active`,
         );
 
-      const draws = await this.drawStockFEFO(em, prescription, qty);
+      const { draws, lowStock } = await this.drawStockFEFO(
+        em,
+        prescription,
+        qty,
+      );
+      if (lowStock)
+        await notifyRole(em, UserRole.PHARMACIST, {
+          eventType: NotificationEventType.LOW_STOCK_ALERT,
+          title: 'Low stock',
+          message:
+            `${prescription.medicationDisplay} is low: ${lowStock.remaining} ` +
+            `${lowStock.unit ?? 'units'} left (reorder at ${lowStock.reorderLevel}).`,
+          relatedResourceType: 'Medication',
+          relatedResourceId: prescription.medicationCode,
+        });
       const totalPrice = roundMoney(
         draws.reduce((sum, d) => sum + d.quantity * d.unitPrice, 0),
       );
