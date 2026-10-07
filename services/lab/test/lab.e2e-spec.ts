@@ -18,6 +18,9 @@ import {
 } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { DiagnosticReport } from '../src/entities/diagnostic-report.entity';
+import { LabInstrument } from '../src/entities/lab-instrument.entity';
+import { QCLog, QCStatus } from '../src/entities/qc-log.entity';
+import { InstrumentStatus } from '../src/enums';
 
 describe('Lab specimens and results', () => {
   let svc: ServiceUnderTest;
@@ -534,6 +537,105 @@ describe('Lab specimens and results', () => {
       expect(res.body).toMatchObject({
         message: expect.stringContaining('assigned to a laboratory') as unknown,
       });
+    });
+  });
+
+  describe("one lab's instruments and QC, kept from another", () => {
+    /** An instrument in `labId`, with one passing QC run on it. */
+    async function instrumentAt(labId: string) {
+      const instrument = await svc.db.getRepository(LabInstrument).save({
+        organizationId: labId,
+        name: `Sysmex XN-550 ${randomUUID()}`,
+      });
+      const qcLog = await svc.db.getRepository(QCLog).save({
+        instrumentId: instrument.id,
+        testCode: '58410-2',
+        controlLevel: 'normal',
+        expectedValue: 13.5,
+        observedValue: 13.4,
+        status: QCStatus.PASS,
+        performedBy: randomUUID(),
+        performedAt: new Date(),
+      });
+      return { instrument, qcLog };
+    }
+
+    const instrumentIds = async (actor: TestActor) => {
+      const res = await svc.api
+        .get('/instruments')
+        .set(actor.headers)
+        .expect(200);
+      return (res.body as { id: string }[]).map((i) => i.id);
+    };
+
+    const qcLogIds = async (actor: TestActor, query = {}) => {
+      const res = await svc.api
+        .get('/qc-logs')
+        .query(query)
+        .set(actor.headers)
+        .expect(200);
+      return (res.body as { entry: { resource: { id: string } }[] }).entry.map(
+        (e) => e.resource.id,
+      );
+    };
+
+    const addInstrument = (body: object, actor: TestActor) =>
+      svc.api.post('/instruments').set(actor.headers).send(body);
+
+    it("shows a technician only their own lab's instruments and QC logs", async () => {
+      const ours = await instrumentAt(lab);
+      const theirs = await instrumentAt(await laboratory());
+
+      const instruments = await instrumentIds(labStaff);
+      expect(instruments).toContain(ours.instrument.id);
+      expect(instruments).not.toContain(theirs.instrument.id);
+      const logs = await qcLogIds(labStaff);
+      expect(logs).toContain(ours.qcLog.id);
+      expect(logs).not.toContain(theirs.qcLog.id);
+      await expect(
+        qcLogIds(labStaff, { instrumentId: theirs.instrument.id }),
+      ).resolves.toEqual([]);
+      // The admin sees every lab's.
+      expect(await instrumentIds(svc.as(UserRole.SUPER_ADMIN))).toEqual(
+        expect.arrayContaining([ours.instrument.id, theirs.instrument.id]),
+      );
+    });
+
+    it("refuses to change another lab's instrument", async () => {
+      const { instrument } = await instrumentAt(await laboratory());
+
+      await svc.api
+        .put(`/instruments/${instrument.id}/status`)
+        .set(labStaff.headers)
+        .send({ status: InstrumentStatus.OFFLINE })
+        .expect(404);
+
+      await expect(
+        svc.db
+          .getRepository(LabInstrument)
+          .findOneByOrFail({ id: instrument.id }),
+      ).resolves.toMatchObject({ status: InstrumentStatus.OPERATIONAL });
+    });
+
+    it("adds a technician's instrument to their own lab, whichever lab is named", async () => {
+      const res = await addInstrument(
+        { name: 'Beckman AU480', organizationId: await laboratory() },
+        labStaff,
+      ).expect(201);
+
+      expect(res.body).toMatchObject({ organizationId: lab });
+    });
+
+    it('has the admin name the active laboratory an instrument is in', async () => {
+      const admin = svc.as(UserRole.SUPER_ADMIN);
+
+      await addInstrument({ name: 'Beckman AU480' }, admin).expect(400);
+      const res = await addInstrument(
+        { name: 'Beckman AU480', organizationId: lab },
+        admin,
+      ).expect(201);
+
+      expect(res.body).toMatchObject({ organizationId: lab });
     });
   });
 

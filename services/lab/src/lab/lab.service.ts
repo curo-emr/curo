@@ -26,7 +26,12 @@ import {
   toFhirServiceRequest,
   PaginationQuery,
 } from '@curo/shared/fhir';
-import { LAB_REPORT_DOCUMENT, labScope, parseLabQr } from '@curo/shared/lab';
+import {
+  LAB_REPORT_DOCUMENT,
+  assertActiveLab,
+  labScope,
+  parseLabQr,
+} from '@curo/shared/lab';
 import { DiagnosticReport } from '../entities/diagnostic-report.entity';
 import { LabInstrument } from '../entities/lab-instrument.entity';
 import { LabTestCatalog } from '../entities/lab-test-catalog.entity';
@@ -374,6 +379,12 @@ export class LabService {
     return lab ? { performerOrganizationId: lab } : {};
   }
 
+  /** `user`'s view of the instruments: lab staff see only their own lab's. */
+  private instrumentScopeOf(user: AuthUser): FindOptionsWhere<LabInstrument> {
+    const lab = labScope(user);
+    return lab ? { organizationId: lab } : {};
+  }
+
   /** An order `user` may see; another lab's is as good as missing. */
   private async findOrder(id: string, user: AuthUser) {
     const order = await this.ordersRepo.findOne({
@@ -414,26 +425,37 @@ export class LabService {
     return rows.length > 0;
   }
 
-  // Instruments
-  async getInstruments(): Promise<LabInstrument[]> {
-    return this.instrumentsRepo.find();
+  // Instruments, like orders, belong to a lab: lab staff see and look after
+  // only their own lab's, and only their QC logs.
+  async getInstruments(user: AuthUser): Promise<LabInstrument[]> {
+    return this.instrumentsRepo.find({ where: this.instrumentScopeOf(user) });
   }
 
   async getQcLogs(
+    user: AuthUser,
     filters?: { instrumentId?: string; status?: QCStatus },
     pagination: PaginationQuery = {},
   ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
-    const where: FindOptionsWhere<QCLog> = {
-      ...(filters?.instrumentId && { instrumentId: filters.instrumentId }),
-      ...(filters?.status && { status: filters.status }),
-    };
-    const [logs, total] = await this.qcLogRepo.findAndCount({
-      where,
-      order: { performedAt: 'DESC' },
-      skip,
-      take,
-    });
+    // A log's instrumentId is text; an instrument's id is a uuid.
+    const query = this.qcLogRepo.createQueryBuilder('q');
+    const lab = labScope(user);
+    if (lab)
+      query.where(
+        `q.instrumentId IN (SELECT id::text FROM lab_instruments WHERE "organizationId" = :lab)`,
+        { lab },
+      );
+    if (filters?.instrumentId)
+      query.andWhere('q.instrumentId = :instrumentId', {
+        instrumentId: filters.instrumentId,
+      });
+    if (filters?.status)
+      query.andWhere('q.status = :status', { status: filters.status });
+    const [logs, total] = await query
+      .orderBy('q.performedAt', 'DESC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
     return toSearchset(logs, total, {
       page,
       pageSize,
@@ -474,10 +496,13 @@ export class LabService {
 
   async updateInstrumentStatus(
     id: string,
+    user: AuthUser,
     status: InstrumentStatus,
     notes?: string,
   ): Promise<LabInstrument> {
-    const instrument = await this.instrumentsRepo.findOne({ where: { id } });
+    const instrument = await this.instrumentsRepo.findOne({
+      where: { id, ...this.instrumentScopeOf(user) },
+    });
     if (!instrument) throw new NotFoundException(`Instrument ${id} not found`);
     instrument.status = status;
     if (notes) instrument.notes = notes;
@@ -486,8 +511,17 @@ export class LabService {
     return this.instrumentsRepo.save(instrument);
   }
 
-  async createInstrument(dto: CreateInstrumentDto): Promise<LabInstrument> {
-    const instrument = this.instrumentsRepo.create(dto);
+  /** Lab staff add instruments to their own lab; the admin names an active one. */
+  async createInstrument(
+    dto: CreateInstrumentDto,
+    user: AuthUser,
+  ): Promise<LabInstrument> {
+    const lab = labScope(user);
+    if (!lab) await assertActiveLab(this.dataSource, dto.organizationId);
+    const instrument = this.instrumentsRepo.create({
+      ...dto,
+      organizationId: lab ?? dto.organizationId,
+    });
     return this.instrumentsRepo.save(instrument);
   }
 
