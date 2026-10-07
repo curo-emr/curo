@@ -174,4 +174,48 @@ describe('Sign-in', () => {
       ).resolves.toBe(0);
     });
   });
+
+  describe('GET /auth/users/summary', () => {
+    const summary = async () =>
+      (
+        await svc.api
+          .get('/auth/users/summary')
+          .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
+          .expect(200)
+      ).body as {
+        total: number;
+        active: number;
+        byRole: Record<string, number>;
+      };
+
+    it('counts the users, the active ones, and each role', async () => {
+      const before = await summary();
+      await onboard();
+      const suspended = await onboard();
+      await svc.db
+        .getRepository(User)
+        .update({ email: suspended.email }, { isActive: false });
+
+      const after = await summary();
+      // Signing in as the super admin creates one each time: leave them out.
+      const admins = (counts: typeof before) =>
+        counts.byRole[UserRole.SUPER_ADMIN] ?? 0;
+      expect(after.total - admins(after)).toBe(
+        before.total - admins(before) + 2,
+      );
+      expect(after.active - admins(after)).toBe(
+        before.active - admins(before) + 1,
+      );
+      expect(after.byRole[UserRole.DOCTOR]).toBe(
+        (before.byRole[UserRole.DOCTOR] ?? 0) + 2,
+      );
+    });
+
+    it('is refused to everyone but the super admin', async () => {
+      await svc.api
+        .get('/auth/users/summary')
+        .set((await signedIn(svc, UserRole.DOCTOR)).headers)
+        .expect(403);
+    });
+  });
 });

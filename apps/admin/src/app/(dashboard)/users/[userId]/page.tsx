@@ -13,12 +13,14 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@curo/web/ui/dialog";
 import { getUser, updateUser, resetUserPassword } from "@/lib/api/users";
-import { getRecentPayments, correctPayment } from "@/lib/api/payments";
+import { correctPayment, getPaymentTotals, getPaymentsPage } from "@/lib/api/payments";
 import { ROUTES, ROLE_LABELS, WORKPLACE_TYPES, type UserRole } from "@/lib/constants";
 import { WorkplaceSelect } from "@/components/features/organizations/WorkplaceSelect";
 import { format, parseISO } from "date-fns";
 import type { AdminUser, Payment } from "@/types";
 import { apiErrorMessage } from "@curo/web/api";
+import { useServerPagination } from "@curo/web/hooks";
+import { Pagination } from "@curo/web/ui/pagination";
 
 function money(amount: number, currency = "LKR") {
   const f = Number(amount).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -28,18 +30,11 @@ function money(amount: number, currency = "LKR") {
 export default function UserDetailPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params);
   const [user, setUser] = useState<AdminUser | null>(null);
-  const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const load = () => {
     getUser(userId)
-      .then(async (u) => {
-        setUser(u);
-        if (u.role === "RECEPTIONIST" && u.practitionerId) {
-          const pays = await getRecentPayments({ collectedBy: u.practitionerId }).catch(() => []);
-          setPayments(pays);
-        }
-      })
+      .then(setUser)
       .catch(console.error)
       .finally(() => setIsLoading(false));
   };
@@ -73,8 +68,6 @@ export default function UserDetailPage({ params }: { params: Promise<{ userId: s
   if (!user) {
     return <p className="text-muted-foreground">User not found.</p>;
   }
-
-  const totalIncome = payments.reduce((s, p) => s + Number(p.amount), 0);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -116,33 +109,61 @@ export default function UserDetailPage({ params }: { params: Promise<{ userId: s
         </Card>
       )}
 
-      {user.role === "RECEPTIONIST" && (
-        <Card className="shadow-sm border">
-          <CardHeader className="bg-muted/50 border-b pb-3 flex-row items-center justify-between">
-            <CardTitle className="text-base">Collected income</CardTitle>
-            <span className="text-sm font-semibold text-foreground">{money(totalIncome)}</span>
-          </CardHeader>
-          <CardContent className="p-5 space-y-3">
-            {payments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No payments collected yet.</p>
-            ) : (
-              payments.map((p) => (
-                <div key={p.id} className="flex items-center justify-between border-b last:border-0 pb-2">
-                  <div>
-                    <p className="text-sm font-medium font-mono">{p.receiptNumber}</p>
-                    <p className="text-xs text-muted-foreground">{p.paidAt ? format(parseISO(p.paidAt), "dd MMM yyyy, HH:mm") : "—"} · {p.paymentMethod}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium">{money(Number(p.amount), p.currency)}</span>
-                    <EditPaymentDialog payment={p} onSaved={(np) => setPayments((prev) => prev.map((x) => x.id === np.id ? np : x))} />
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {user.role === "RECEPTIONIST" && user.practitionerId && <CollectedIncome practitionerId={user.practitionerId} />}
     </div>
+  );
+}
+
+/** A receptionist's collected payments, latest first, a page at a time, under their total. */
+function CollectedIncome({ practitionerId }: { practitionerId: string }) {
+  // Payments corrected here, shown in place of what the page was loaded with.
+  const [corrected, setCorrected] = useState<Record<string, Payment>>({});
+  const { items, total: paymentCount, isLoading, page, setPage, pageSize, setPageSize } = useServerPagination(
+    (page, pageSize) => getPaymentsPage({ page, pageSize, collectedBy: practitionerId }),
+    [practitionerId],
+  );
+  const payments = items.map((p) => corrected[p.id] ?? p);
+
+  // The total over every payment they took, read again after each correction.
+  const [totalIncome, setTotalIncome] = useState<number | null>(null);
+  useEffect(() => {
+    let current = true;
+    getPaymentTotals(practitionerId)
+      .then((totals) => { if (current) setTotalIncome(totals.total); })
+      .catch(console.error);
+    return () => { current = false; };
+  }, [practitionerId, corrected]);
+
+  return (
+    <Card className="shadow-sm border">
+      <CardHeader className="bg-muted/50 border-b pb-3 flex-row items-center justify-between">
+        <CardTitle className="text-base">Collected income</CardTitle>
+        <span className="text-sm font-semibold text-foreground">{totalIncome === null ? "—" : money(totalIncome)}</span>
+      </CardHeader>
+      <CardContent className="p-5 space-y-3">
+        {isLoading ? (
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+        ) : payments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No payments collected yet.</p>
+        ) : (
+          payments.map((p) => (
+            <div key={p.id} className="flex items-center justify-between border-b last:border-0 pb-2">
+              <div>
+                <p className="text-sm font-medium font-mono">{p.receiptNumber}</p>
+                <p className="text-xs text-muted-foreground">{p.paidAt ? format(parseISO(p.paidAt), "dd MMM yyyy, HH:mm") : "—"} · {p.paymentMethod}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-medium">{money(Number(p.amount), p.currency)}</span>
+                <EditPaymentDialog payment={p} onSaved={(np) => setCorrected((prev) => ({ ...prev, [np.id]: np }))} />
+              </div>
+            </div>
+          ))
+        )}
+        {paymentCount > 0 && (
+          <Pagination page={page} pageSize={pageSize} total={paymentCount} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

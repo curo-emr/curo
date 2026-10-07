@@ -203,6 +203,32 @@ export class PaymentService {
     });
   }
 
+  /**
+   * What payments of every status add up to, overall and per receptionist
+   * (largest first); only `collectedBy`'s, when given.
+   */
+  async totalsForAdmin(collectedBy?: string) {
+    const qb = this.paymentsRepo
+      .createQueryBuilder('p')
+      .select('p.collectedBy', 'collectedBy')
+      .addSelect('COALESCE(SUM(p.amount), 0)::float', 'total')
+      .addSelect('COUNT(*)::int', 'count')
+      .groupBy('p.collectedBy')
+      .orderBy('total', 'DESC');
+    if (collectedBy) qb.where('p.collectedBy = :collectedBy', { collectedBy });
+    const byCollector = await qb.getRawMany<{
+      collectedBy: string | null;
+      total: number;
+      count: number;
+    }>();
+    return {
+      currency: CURRENCY,
+      total: byCollector.reduce((sum, c) => sum + c.total, 0),
+      count: byCollector.reduce((sum, c) => sum + c.count, 0),
+      byCollector,
+    };
+  }
+
   async findOne(id: string): Promise<Payment> {
     const payment = await this.paymentsRepo.findOne({ where: { id } });
     if (!payment) throw new NotFoundException(`Payment ${id} not found`);

@@ -7,10 +7,9 @@ import {
 import { Loader2, Users as UsersIcon, UserCheck, Wallet } from "lucide-react";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { getRecentUsers } from "@/lib/api/users";
-import { getRecentPayments } from "@/lib/api/payments";
+import { getUserSummary, type UserSummary } from "@/lib/api/users";
+import { getPaymentTotals } from "@/lib/api/payments";
 import { ROLE_LABELS } from "@/lib/constants";
-import type { AdminUser, Payment } from "@/types";
 
 function money(amount: number, currency = "LKR") {
   const f = Number(amount).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -18,25 +17,22 @@ function money(amount: number, currency = "LKR") {
 }
 
 export default function DashboardPage() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [users, setUsers] = useState<UserSummary>({ total: 0, active: 0, byRole: {} });
+  const [totalIncome, setTotalIncome] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getRecentUsers(), getRecentPayments().catch(() => [])])
-      .then(([u, p]) => { setUsers(u); setPayments(p); })
+    Promise.all([getUserSummary(), getPaymentTotals().then((t) => t.total).catch(() => 0)])
+      .then(([u, income]) => { setUsers(u); setTotalIncome(income); })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
 
-  const byRole = useMemo(() => {
-    const acc = new Map<string, number>();
-    for (const u of users) acc.set(u.role, (acc.get(u.role) ?? 0) + 1);
-    return Array.from(acc.entries()).map(([role, count]) => ({ role: ROLE_LABELS[role] ?? role, count }));
-  }, [users]);
-
-  const activeCount = users.filter((u) => u.isActive).length;
-  const totalIncome = payments.reduce((s, p) => s + Number(p.amount), 0);
+  const byRole = useMemo(
+    () => Object.entries(users.byRole).map(([role, count]) => ({ role: ROLE_LABELS[role] ?? role, count })),
+    [users],
+  );
+  const activeCount = users.active;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -49,7 +45,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card className="shadow-sm border"><CardContent className="p-5 flex items-center gap-4">
               <div className="h-11 w-11 rounded-full bg-status-info-bg text-status-info-text flex items-center justify-center"><UsersIcon className="h-5 w-5" /></div>
-              <div><p className="text-xs text-muted-foreground">Total users</p><p className="text-xl font-bold">{users.length}</p></div>
+              <div><p className="text-xs text-muted-foreground">Total users</p><p className="text-xl font-bold">{users.total}</p></div>
             </CardContent></Card>
             <Card className="shadow-sm border"><CardContent className="p-5 flex items-center gap-4">
               <div className="h-11 w-11 rounded-full bg-status-success-bg text-status-success-text flex items-center justify-center"><UserCheck className="h-5 w-5" /></div>

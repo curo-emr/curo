@@ -247,4 +247,47 @@ describe('Appointments and the patient queue', () => {
       expect(ids).toEqual([a.id, b.id].sort());
     });
   });
+
+  describe('GET /payments/totals', () => {
+    const totals = async (query: object = {}) =>
+      (
+        await svc.api
+          .get('/payments/totals')
+          .query(query)
+          .set(svc.as(UserRole.SUPER_ADMIN).headers)
+          .expect(200)
+      ).body as {
+        total: number;
+        count: number;
+        byCollector: { collectedBy: string; total: number; count: number }[];
+      };
+
+    it('adds up the payments overall and per receptionist', async () => {
+      const desk = svc.as(UserRole.RECEPTIONIST);
+      const before = await totals();
+      for (const amount of [1000, 250.5])
+        await svc.api
+          .post('/payments')
+          .set(desk.headers)
+          .send({ patientId: randomUUID(), amount })
+          .expect(201);
+
+      const after = await totals();
+      expect(after.count).toBe(before.count + 2);
+      expect(after.total).toBeCloseTo(before.total + 1250.5);
+
+      const mine = await totals({ collectedBy: desk.practitionerId });
+      expect(mine).toMatchObject({ total: 1250.5, count: 2 });
+      expect(mine.byCollector).toEqual([
+        { collectedBy: desk.practitionerId, total: 1250.5, count: 2 },
+      ]);
+    });
+
+    it('is refused to receptionists', async () => {
+      await svc.api
+        .get('/payments/totals')
+        .set(receptionist.headers)
+        .expect(403);
+    });
+  });
 });

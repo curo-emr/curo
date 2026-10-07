@@ -160,34 +160,22 @@ delete the other; bundled JSON + DB copies will diverge.
 > test catalog is one unpaged list per lab. Other lists still request `pageSize: 100` and
 > drop anything past it (stock, dispense logs, payments, appointments); fix them as part of B2.
 
-**Lists capped at 100 rows** *(partly fixed 2026-10-07)*. Reads that a filter bounds now
-fetch every page with `getAllPages` (`@curo/web/api`): a day's appointments and queue, a
-patient's or visit's orders, results and dispenses, a pharmacy's stock, the receptionists.
-Name lookups ask for the rows' own patients with `getByIds` rather than a page of all
-patients. Paged queries break ties on `id`, so walking the pages never repeats or skips a row.
-Still capped, each behind a function named for it (`…FirstPage`, `getRecent…`):
-- Admin overview, income and user pages: the latest 100 payments; the overview's user
-  counts come from the newest 100 users.
-
-> The lab portal pages on the server since 2026-10-07: `/orders` filters by status,
-> priority, patient and visit, searches by order id or by the patients a name search
-> matched (`findPatientIds`), sorts by priority or newest, and `/orders/summary` counts
-> by status and priority and lists the most-ordered tests.
-
-> Appointments too: `/appointments` takes `from`/`to` days, a `status` list and
-> `_sort=-start`. The receptionist's appointment list and My Income page on the server;
-> both schedules load the month the calendar shows (`CuroCalendar`'s `month`,
-> `calendarRange`); booking searches patients on the server and reads the doctor's booked
-> slots from `/appointments/schedule`; reports read their date range and count new
-> registrations with `getTotal('/patients', { registeredFrom, registeredTo })`.
-
-> And pharmacy: `/dispense` searches by the start of a prescription id, part of a
-> medication name, or `searchPatientIds`, and `/dispense/summary` counts every dispense,
-> its revenue and the most-dispensed medications. Dispenses carry no pharmacy, so the log
-> and summary span every pharmacy; scoping them needs the pharmacy on each dispense.
-
-The rest need server paging and server-side totals. `/payments/summary` covers only the
-signed-in receptionist, so admin income needs its own.
+**Lists capped at 100 rows** ✅ *(fixed 2026-10-07)*.
+- Reads that a filter bounds fetch every page with `getAllPages` (`@curo/web/api`): a day's
+  or a month's appointments and queue, a patient's or visit's orders, results and
+  dispenses, a pharmacy's stock, the receptionists. Name lookups ask for the rows' own
+  patients with `getByIds`. Paged queries break ties on `id`.
+- History pages on the server (`useServerPagination`): the lab worklist and patient
+  directory, the receptionist's appointments and My Income, the pharmacy's dispensing log,
+  and a receptionist's payments in admin. Searches by patient name find the matching
+  patients first (`findPatientIds`) and say when more than 100 match.
+- Dashboards and reports read totals the server counts: `/orders/summary`,
+  `/dispense/summary`, `/payments/totals`, `/auth/users/summary`, and
+  `getTotal('/patients', { registeredFrom, registeredTo })`. Schedules and reports read
+  their date window (`/appointments?from&to`).
+- Still open: dispenses carry no pharmacy, so the dispensing log and its summary span
+  every pharmacy; scoping them needs the pharmacy on each dispense. The lab dashboard's QC
+  alerts come from the latest 100 QC logs.
 
 ### B5. Error boundaries and empty/loading states are uneven
 `error.tsx` exists in doctor/receptionist dashboards but not everywhere; some
