@@ -1220,3 +1220,54 @@ and notifies the ordering doctor.
     - the doctor portal's bell shows "CBC panel results for Samantha Wijesekara (CUR-FJJ9AZTX)
       are ready to review.";
     - the PDF, checked with `pdftotext`, has the patient's details.
+
+  (Low stock is done, below. Patient notifications wait for a patient-portal inbox and an event
+  the patient doesn't already know about.)
+
+## Low-stock alerts ✅ DONE — 2026-10-07
+
+Branch `feat/low-stock-alerts`. Pharmacists are told when a dispense takes a drug to its reorder
+level.
+
+- **Per drug, on the crossing:** a `stock` row is a batch, but a drug is reordered as a whole.
+  `lowStockAfterDraw` (`pharmacy/reorder-level.ts`) compares the drug's usable units before and
+  after the draw:
+  - Usable means non-expired, the same rule FEFO uses.
+  - The reorder level is the highest any batch sets, since batches can disagree.
+  - It alerts only on the dispense that takes the drug from above the level to at or below
+    it. A drug already low doesn't alert on every dispense.
+- **In the dispense transaction:** the drug's batches are already row-locked, so of two
+  concurrent dispenses only one sees the crossing. A refused (409) dispense sends nothing.
+  `notifyRole(em, PHARMACIST, …)` writes one row per active pharmacist, since read state is per
+  person: "Cetirizine 10mg is low: 17 tablets left (reorder at 20)."
+- **Shared helpers** (`@curo/shared/notifications`): one internal insert, with two thin lookups,
+  `notifyPractitioner` and `notifyRole`.
+- **Pharmacy portal:** the bell only showed a count. It now has the doctor portal's menu (list,
+  mark read, mark all read), copied in as `NotificationsMenu`, because the portals share no UI
+  package.
+- **Dashboard crash fixed:** the Low Stock card called `formatStatus(med.form)`, but `form` is
+  optional when stock is received. A low batch without one crashed the whole dashboard.
+  `StockItem.form` is now `string | null` and both callers guard it.
+- **Verified:**
+  - Unit tests for the crossing rule (7):
+    - stays above;
+    - already low;
+    - the total crosses although no single batch does;
+    - expired stock is left out;
+    - batches with different levels;
+    - a drug with no batches.
+  - API tests (4):
+    - every active pharmacist gets one alert, and an inactive pharmacist and a doctor get none;
+    - nothing while the drug stays above its level, and nothing once it's already low;
+    - two concurrent crossing dispenses alert once;
+    - a 409 sends nothing.
+  - Mutation-checked: dropping the "was above" condition fails 3 of them.
+  - Lint, `npm run typecheck`, `db:check`, `npm test` (89), `npm run test:e2e` (70), the
+    pharmacy portal's `next build`. Smoke PASS=147, FAIL=0.
+  - Live: two Cetirizine batches (12 + 10, level 20). Dispensing 5 in the pharmacy portal put
+    the alert in kasun's bell, and clicking it marked it read.
+- **Follow-ups:**
+  - `/stock/alerts` and the dashboard's Low Stock card still list batches, not drugs (Metformin
+    shows once per empty batch).
+  - Stock is one pool across organisations: dispensing draws from any of them, and every
+    pharmacist is alerted. Scoping both by organisation is a change of its own.

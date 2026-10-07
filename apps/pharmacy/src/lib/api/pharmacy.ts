@@ -100,7 +100,8 @@ export interface StockItem {
   medicationName: string;
   genericName: string;
   brandName?: string;
-  form: string;
+  /** Optional when stock is received, so null for some batches. */
+  form: string | null;
   strength: string;
   quantity: number;
   reorderThreshold: number;
