@@ -54,9 +54,10 @@ function mapFhirDocument(d: FhirDocumentReference): DocumentRef {
   };
 }
 
-export async function getDocumentsByPatient(patientId: string, encounterId?: string): Promise<DocumentRef[]> {
+/** The report files uploaded for a lab order. */
+export async function getOrderReports(serviceRequestId: string): Promise<DocumentRef[]> {
   const res = await apiClient.get<FhirDocumentReference[]>('/documents', {
-    params: { patientId, ...(encounterId ? { encounterId } : {}) },
+    params: { serviceRequestId },
   });
   return res.data.map(mapFhirDocument);
 }

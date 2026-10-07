@@ -43,15 +43,22 @@ export class DocumentController {
     return this.documentService.upload(file, dto, user);
   }
 
-  // Staff list documents (metadata only) for a patient / encounter.
+  // Staff list documents (metadata only) for a patient, visit or lab order;
+  // lab staff see only their lab's report files.
   @Get()
   @Roles('DOCTOR', 'LAB_STAFF', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   list(
+    @CurrentUser() user: AuthUser,
     @Query('patientId') patientId?: string,
     @Query('encounterId') encounterId?: string,
+    @Query('serviceRequestId') serviceRequestId?: string,
   ) {
-    return this.documentService.listForStaff(patientId, encounterId);
+    return this.documentService.listForStaff(user, {
+      patientId,
+      encounterId,
+      serviceRequestId,
+    });
   }
 
   // Patient lists only their own documents; identity comes from the JWT.
@@ -59,7 +66,7 @@ export class DocumentController {
   @Roles('PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   listMine(@CurrentUser() user: AuthUser) {
-    return this.documentService.listForPatient(user.patientId);
+    return this.documentService.listForPatient(user);
   }
 
   // Stream the binary content (access-checked inside the service).
