@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { ConditionClinicalStatus } from '../../enums';
+import { ConditionClinicalStatus } from '@curo/shared/enums';
 
 export class CreateConditionDto {
   @IsEnum(ConditionClinicalStatus)
