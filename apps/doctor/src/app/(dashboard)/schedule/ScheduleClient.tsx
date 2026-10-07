@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import type { Appointment, Patient } from "@/types";
-import { Card } from "@/components/ui/card";
+import { Card } from "@curo/web/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AppointmentRow } from "@/components/features/visits/AppointmentRow";
-import { CuroCalendar, formatDateStr, getRelativeDayLabel, type CalendarEvent, type CalendarEventColor } from "@/components/ui/CuroCalendar";
+import { CuroCalendar, formatDateStr, getRelativeDayLabel, type CalendarEvent, type CalendarEventColor } from "@curo/web/ui/curo-calendar";
 import { getQueueGroup, type QueueGroup } from "@/lib/visit";
 
 const GROUP_COLOR: Record<QueueGroup, CalendarEventColor> = {

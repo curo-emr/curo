@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { FileText, Eye, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate, formatStatus } from "@/lib/utils";
-import { formatFileSize } from "@/components/ui/FileInput";
+import { formatFileSize } from "@curo/web/ui/file-input";
 import { openDocument, type DocumentRef } from "@/lib/api/documents";
 
 interface Props {

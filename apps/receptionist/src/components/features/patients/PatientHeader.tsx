@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Patient, Allergy } from "@/types";
 import { ROUTES } from "@/lib/constants";
 import { calculateAge } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
 import { AlertTriangle, Phone, Edit, CalendarPlus, Shield, ChevronDown, ChevronUp } from "lucide-react";
 
 interface PatientHeaderProps {

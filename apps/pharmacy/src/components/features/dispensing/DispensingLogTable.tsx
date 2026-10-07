@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { useClientPagination } from "@curo/web/hooks";
-import { Input } from "@/components/ui/input";
-import { Pagination } from "@/components/ui/pagination";
-import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@curo/web/ui/input";
+import { Pagination } from "@curo/web/ui/pagination";
+import { Card, CardContent } from "@curo/web/ui/card";
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@curo/web/ui/table";
 import { Search } from "lucide-react";
 import type { DispenseRecord } from "@/lib/api/pharmacy";
 import { Patient, PharmacyStaff } from "@/types";

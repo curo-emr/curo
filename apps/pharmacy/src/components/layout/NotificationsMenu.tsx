@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Bell, CheckCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@curo/web/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@curo/web/ui/popover";
 import { cn, formatRelative } from "@/lib/utils";
 import {
   getNotificationCount, getNotifications, markAllNotificationsRead, markNotificationRead,

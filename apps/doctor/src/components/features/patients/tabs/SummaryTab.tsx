@@ -2,7 +2,7 @@ import { AlertTriangle, ChevronRight, ClipboardList, HeartPulse, History, Pill }
 import type { Allergy, Encounter, Patient, Prescription, Problem, Vitals } from "@/types";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { ROUTES } from "@/lib/constants";
 import { calculateBMI, formatDate, formatRelative } from "@/lib/utils";
 import { recentPrescriptionItems, uniqueActiveProblems } from "@/lib/clinical";

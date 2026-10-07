@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from "react";
 import type { Appointment, Patient, Doctor } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Button } from "@curo/web/ui/button";
+import { Badge } from "@curo/web/ui/badge";
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@curo/web/ui/table";
 import { CalendarCheck, UserCheck, CheckCircle2, XCircle, Ban, UserPlus, Clock } from "lucide-react";
 import { cn, getTodayString } from "@/lib/utils";
 import { APPOINTMENT_STATUS, VISIT_TYPES } from "@/lib/constants";

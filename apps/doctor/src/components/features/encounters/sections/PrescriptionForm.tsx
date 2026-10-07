@@ -3,12 +3,12 @@
 import { useCallback } from "react";
 import { AlertTriangle, Pill, X } from "lucide-react";
 import type { Allergy, Medication, PrescriptionItem } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@curo/web/ui/button";
+import { Input } from "@curo/web/ui/input";
+import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { SearchCombobox } from "@/components/ui/SearchCombobox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
 import { FREQUENCIES, routeForForm, suggestQuantity } from "../visit";
 
 interface PrescriptionFormProps {

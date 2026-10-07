@@ -1,8 +1,8 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@curo/web/ui/card";
+import { Input } from "@curo/web/ui/input";
+import { Label } from "@curo/web/ui/label";
+import { Button } from "@curo/web/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
 import { User, Bell, Key, Mail, Phone } from "lucide-react";
 
 export default function SettingsPage() {

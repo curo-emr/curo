@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { FileX, HeartPulse, NotebookPen, Pill, Printer, Star, Stethoscope, UserCheck } from "lucide-react";
 import type { Encounter, Lab, LabOrder, LabReport, Patient, Prescription, Problem } from "@/types";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";

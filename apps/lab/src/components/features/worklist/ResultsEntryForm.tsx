@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Input } from "@curo/web/ui/input";
+import { Button } from "@curo/web/ui/button";
+import { Badge } from "@curo/web/ui/badge";
+import { Label } from "@curo/web/ui/label";
+import { Textarea } from "@curo/web/ui/textarea";
 import { LabOrder, Patient } from "@/types";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { enterResults, type ResultEntry } from "@/lib/api/lab";

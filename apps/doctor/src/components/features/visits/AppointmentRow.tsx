@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronRight, Play, RotateCcw } from "lucide-react";
 import type { Appointment, Patient } from "@/types";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
 import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
 import { StatusBadge } from "@/components/ui/StatusBadge";

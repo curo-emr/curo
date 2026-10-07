@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, Clock, FlaskConical, XCircle, TrendingUp } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { getLabOrders } from "@/lib/api/lab";
 import type { LabOrder } from "@/types";
 

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { ArrowRight, HeartPulse, Hourglass, Loader2, Timer, UserRoundCheck } from "lucide-react";
 import type { QueueStage } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FlowStrip } from "@/components/features/dashboard/FlowStrip";
 import { QueueRow, patientName } from "@/components/features/queue/QueueRow";

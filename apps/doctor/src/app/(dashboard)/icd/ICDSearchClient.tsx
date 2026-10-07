@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { Search, Stethoscope } from "lucide-react";
 import type { ICD10 } from "@/types";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@curo/web/ui/card";
+import { Input } from "@curo/web/ui/input";
+import { Skeleton } from "@curo/web/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Pagination } from "@/components/ui/pagination";
+import { Pagination } from "@curo/web/ui/pagination";
 import { getICD10Paginated } from "@/lib/api/icd";
 
 export function ICDSearchClient() {

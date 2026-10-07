@@ -1,8 +1,8 @@
 "use client";
 
 import { Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useSidebar } from "@/contexts/SidebarContext";
+import { Button } from "@curo/web/ui/button";
+import { useSidebar } from "@curo/web/ui/sidebar-context";
 import { PatientSearch } from "./PatientSearch";
 import { NotificationsMenu } from "./NotificationsMenu";
 

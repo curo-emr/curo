@@ -6,8 +6,8 @@ import { PharmacyDashboardStats } from "@/components/features/dashboard/Pharmacy
 import { PendingPrescriptionsList } from "@/components/features/dashboard/PendingPrescriptionsList";
 import { RecentDispensingFeed } from "@/components/features/dashboard/RecentDispensingFeed";
 import { LowStockAlerts } from "@/components/features/dashboard/LowStockAlerts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
 import {
   getPendingPrescriptions, getDispensingRecords, getStock, getLowStockAlerts,
   type StockItem, type DispenseRecord, type GroupedStock,

@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useServerPagination } from "@curo/web/hooks";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@curo/web/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import {
   Table,
   TableBody,
@@ -17,8 +17,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Pagination } from "@/components/ui/pagination";
+} from "@curo/web/ui/table";
+import { Pagination } from "@curo/web/ui/pagination";
 import { Loader2 } from "lucide-react";
 import { LabInstrument, LabStaff, QCStatus } from "@/types";
 import { formatDate, getStaffName } from "@/lib/utils";

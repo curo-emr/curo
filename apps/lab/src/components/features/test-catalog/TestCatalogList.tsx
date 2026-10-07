@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@curo/web/ui/input";
+import { Card, CardContent } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import { Search, ChevronDown, ChevronRight, FlaskConical } from "lucide-react";
 import { LabTestCatalogItem } from "@/types";
 import { formatTAT, formatStatus } from "@/lib/utils";

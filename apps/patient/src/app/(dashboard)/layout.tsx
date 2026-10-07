@@ -2,9 +2,9 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileSidebar } from "@/components/layout/MobileSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
-import { SidebarProvider } from "@/contexts/SidebarContext";
+import { TooltipProvider } from "@curo/web/ui/tooltip";
+import { ProtectedRoute } from "@curo/web/auth";
+import { SidebarProvider } from "@curo/web/ui/sidebar-context";
 
 export default function DashboardLayout({
   children,

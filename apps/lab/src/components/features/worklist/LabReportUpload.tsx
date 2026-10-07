@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FileText, Upload, Eye, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { FileInput, formatFileSize } from "@/components/ui/FileInput";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Button } from "@curo/web/ui/button";
+import { Label } from "@curo/web/ui/label";
+import { Textarea } from "@curo/web/ui/textarea";
+import { FileInput, formatFileSize } from "@curo/web/ui/file-input";
 import { formatDate } from "@/lib/utils";
 import {
   getOrderReports, uploadDocument, openDocument, type DocumentRef,

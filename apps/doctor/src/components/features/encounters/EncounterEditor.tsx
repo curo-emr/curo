@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Check, CloudCheck, FileSignature, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import type { Allergy, Lab, LabTestCatalogItem, Medication, Patient, Problem } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button } from "@curo/web/ui/button";
+import { Card } from "@curo/web/ui/card";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@curo/web/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/lib/constants";
 import { formatAgeSex, formatRelative } from "@/lib/utils";

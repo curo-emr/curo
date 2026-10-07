@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { Vitals } from "@/types";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@curo/web/ui/badge";
 import { cn } from "@/lib/utils";
 import { LEVEL_STYLES, assessVital, worstLevel, type VitalAssessment, type VitalField, type VitalsDraft } from "@/lib/vitals";
 import { VitalGauge } from "./VitalGauge";

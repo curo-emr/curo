@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { Pill, Printer } from "lucide-react";
 import type { Patient, Prescription } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@curo/web/ui/button";
+import { Checkbox } from "@curo/web/ui/checkbox";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";

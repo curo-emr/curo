@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@curo/web/ui/badge";
 import { cn } from "@/lib/utils";
 import type { QueueStage } from "@/types";
 import { HeartPulse, Hourglass, Stethoscope, UserCheck } from "lucide-react";

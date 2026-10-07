@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Check, CheckCircle2, ClipboardList, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import type { LabOrder, Task, Patient } from "@/types";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { updateTask } from "@/lib/api/tasks";
