@@ -32,6 +32,7 @@ import {
   stockLevel,
   type StockLevel,
 } from './reorder-level';
+import { pharmacyOf, stockScope } from './pharmacy-scope';
 
 /** What one stock batch supplied to a dispense. */
 interface BatchDraw {
@@ -73,6 +74,7 @@ export interface StockGroup
   extends
     Pick<
       Stock,
+      | 'organizationId'
       | 'medicationCode'
       | 'medicationName'
       | 'genericName'
@@ -153,23 +155,25 @@ export class PharmacyService {
   }
 
   /**
-   * Draw `qty` units of a drug from stock, FEFO (see fefo.ts), across several
-   * batches if needed. The drug's batches are row-locked, so concurrent
+   * Draw `qty` units of a drug from one pharmacy's stock, FEFO (see fefo.ts),
+   * across several batches if needed. The drug's batches are row-locked, so concurrent
    * dispenses of it can't lose updates, and only one of them can be the draw
    * that takes the drug to its reorder level. Throws 409 when stock can't
    * cover `qty`, so nothing is dispensed unpriced or left out of the count.
    */
   private async drawStockFEFO(
     em: EntityManager,
+    organizationId: string,
     rx: Pick<MedicationRequest, 'medicationCode' | 'medicationDisplay'>,
     qty: number,
   ): Promise<StockDraw> {
     const batches = await em
       .getRepository(Stock)
       .createQueryBuilder('s')
-      .where('s.medicationCode = :code AND s.active = true', {
-        code: rx.medicationCode,
-      })
+      .where(
+        's.organizationId = :org AND s.medicationCode = :code AND s.active = true',
+        { org: organizationId, code: rx.medicationCode },
+      )
       .orderBy('s.id') // one lock order, so two dispenses can't deadlock
       .setLock('pessimistic_write')
       .getMany();
@@ -199,7 +203,9 @@ export class PharmacyService {
     };
   }
 
+  /** Dispenses a prescription from the pharmacist's own pharmacy's stock. */
   async dispense(dto: DispenseMedicationDto, pharmacist: AuthUser) {
+    const pharmacy = pharmacyOf(pharmacist);
     const prescription = await this.medsRepo.findOne({
       where: { id: dto.medicationRequestId },
     });
@@ -224,19 +230,25 @@ export class PharmacyService {
 
       const { draws, lowStock } = await this.drawStockFEFO(
         em,
+        pharmacy,
         prescription,
         qty,
       );
       if (lowStock)
-        await notifyRole(em, UserRole.PHARMACIST, {
-          eventType: NotificationEventType.LOW_STOCK_ALERT,
-          title: 'Low stock',
-          message:
-            `${prescription.medicationDisplay} is low: ${lowStock.usableQuantity} ` +
-            `${lowStock.unit ?? 'units'} left (reorder at ${lowStock.reorderLevel}).`,
-          relatedResourceType: 'Medication',
-          relatedResourceId: prescription.medicationCode,
-        });
+        await notifyRole(
+          em,
+          UserRole.PHARMACIST,
+          {
+            eventType: NotificationEventType.LOW_STOCK_ALERT,
+            title: 'Low stock',
+            message:
+              `${prescription.medicationDisplay} is low: ${lowStock.usableQuantity} ` +
+              `${lowStock.unit ?? 'units'} left (reorder at ${lowStock.reorderLevel}).`,
+            relatedResourceType: 'Medication',
+            relatedResourceId: prescription.medicationCode,
+          },
+          { organizationId: pharmacy },
+        );
       const totalPrice = roundMoney(
         draws.reduce((sum, d) => sum + d.quantity * d.unitPrice, 0),
       );
@@ -301,7 +313,12 @@ export class PharmacyService {
   }
 
   // Stock management → FHIR searchset Bundle (paginated).
-  async getStock(organizationId?: string, pagination: PaginationQuery = {}) {
+  async getStock(
+    user: AuthUser,
+    requestedOrganizationId?: string,
+    pagination: PaginationQuery = {},
+  ) {
+    const organizationId = stockScope(user, requestedOrganizationId);
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const qb = this.stockRepo.createQueryBuilder('s').where('s.active = true');
     if (organizationId)
@@ -319,17 +336,26 @@ export class PharmacyService {
     });
   }
 
-  /** Active stock grouped by drug, each drug's batches in FEFO order. */
-  async getGroupedStock(): Promise<StockGroup[]> {
+  /**
+   * Active stock grouped by drug, each drug's batches in FEFO order. A view
+   * across pharmacies has one group per drug per pharmacy: each reorders its
+   * own.
+   */
+  async getGroupedStock(
+    user: AuthUser,
+    requestedOrganizationId?: string,
+  ): Promise<StockGroup[]> {
+    const organizationId = stockScope(user, requestedOrganizationId);
     const rows = await this.stockRepo.find({
-      where: { active: true },
+      where: { active: true, ...(organizationId && { organizationId }) },
       order: { medicationName: 'ASC' },
     });
     const byDrug = new Map<string, Stock[]>();
     for (const s of rows) {
-      const batches = byDrug.get(s.medicationCode);
+      const key = `${s.organizationId}|${s.medicationCode}`;
+      const batches = byDrug.get(key);
       if (batches) batches.push(s);
-      else byDrug.set(s.medicationCode, [s]);
+      else byDrug.set(key, [s]);
     }
 
     const today = isoToday();
@@ -337,6 +363,7 @@ export class PharmacyService {
       const [first] = batches;
       const level = stockLevel(batches, today);
       return {
+        organizationId: first.organizationId,
         medicationCode: first.medicationCode,
         medicationName: first.medicationName,
         genericName: first.genericName,
@@ -358,20 +385,35 @@ export class PharmacyService {
     });
   }
 
-  async addStock(dto: CreateStockDto): Promise<Stock> {
-    const item = this.stockRepo.create(dto);
+  /** Receives a batch into the pharmacist's own pharmacy. */
+  async addStock(dto: CreateStockDto, pharmacist: AuthUser): Promise<Stock> {
+    const item = this.stockRepo.create({
+      ...dto,
+      organizationId: pharmacyOf(pharmacist),
+    });
     return this.stockRepo.save(item);
   }
 
-  async updateStock(id: string, dto: UpdateStockDto): Promise<Stock> {
-    const item = await this.stockRepo.findOne({ where: { id } });
+  /** Corrects a batch of the pharmacist's own pharmacy; another's is a 404. */
+  async updateStock(
+    id: string,
+    dto: UpdateStockDto,
+    pharmacist: AuthUser,
+  ): Promise<Stock> {
+    const item = await this.stockRepo.findOne({
+      where: { id, organizationId: pharmacyOf(pharmacist) },
+    });
     if (!item) throw new NotFoundException(`Stock item ${id} not found`);
     Object.assign(item, dto);
     return this.stockRepo.save(item);
   }
 
   /** The drugs that are low, one entry each, as in getGroupedStock. */
-  async getLowStockAlerts(): Promise<StockGroup[]> {
-    return (await this.getGroupedStock()).filter((g) => g.low);
+  async getLowStockAlerts(
+    user: AuthUser,
+    requestedOrganizationId?: string,
+  ): Promise<StockGroup[]> {
+    const groups = await this.getGroupedStock(user, requestedOrganizationId);
+    return groups.filter((g) => g.low);
   }
 }

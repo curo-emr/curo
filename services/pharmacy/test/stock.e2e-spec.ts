@@ -9,8 +9,12 @@ import type { StockGroup } from '../src/pharmacy/pharmacy.service';
 const daysFromToday = (days: number) =>
   new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
-describe('stock views', () => {
+describe('stock', () => {
   let svc: ServiceUnderTest;
+  const pharmacy = randomUUID();
+  const otherPharmacy = randomUUID();
+  const pharmacist = (organizationId: string | null = pharmacy) =>
+    svc.as(UserRole.PHARMACIST, { organizationId });
 
   beforeAll(async () => {
     svc = await startService(AppModule);
@@ -18,7 +22,10 @@ describe('stock views', () => {
 
   afterAll(() => svc.close());
 
-  /** A drug of its own, stocked with `batches`; returns its code. */
+  /**
+   * A drug of its own, stocked with `batches` (at the tests' pharmacy unless a
+   * batch says otherwise); returns its code.
+   */
   async function stock(batches: Partial<Stock>[]) {
     const medicationCode = `TEST-${randomUUID()}`;
     await svc.db.getRepository(Stock).save(
@@ -26,18 +33,16 @@ describe('stock views', () => {
         medicationCode,
         medicationName: 'Amoxicillin 500mg',
         reorderThreshold: 10,
+        organizationId: pharmacy,
         ...b,
       })),
     );
     return medicationCode;
   }
 
-  /** The entries `path` returns for `codes`, keyed by drug. */
+  /** The entries `path` returns for `codes`, keyed by drug, as the pharmacist. */
   async function entriesFor(path: string, ...codes: string[]) {
-    const res = await svc.api
-      .get(path)
-      .set(svc.as(UserRole.PHARMACIST).headers)
-      .expect(200);
+    const res = await svc.api.get(path).set(pharmacist().headers).expect(200);
     const groups = res.body as StockGroup[];
     return Object.fromEntries(
       groups
@@ -115,5 +120,120 @@ describe('stock views', () => {
       'SOON',
       'LATER',
     ]);
+  });
+
+  describe("a pharmacy's own stock", () => {
+    it('shows a pharmacist only their pharmacy, whatever they ask for', async () => {
+      const drug = await stock([
+        { batchNumber: 'HERE', quantity: 3 },
+        {
+          batchNumber: 'ELSEWHERE',
+          quantity: 500,
+          organizationId: otherPharmacy,
+        },
+      ]);
+
+      const res = await svc.api
+        .get('/stock/grouped')
+        .query({ organizationId: otherPharmacy })
+        .set(pharmacist().headers)
+        .expect(200);
+
+      const groups = (res.body as StockGroup[]).filter(
+        (g) => g.medicationCode === drug,
+      );
+      expect(groups).toEqual([
+        expect.objectContaining({
+          organizationId: pharmacy,
+          usableQuantity: 3,
+          low: true,
+        }),
+      ]);
+    });
+
+    it('shows a doctor the pharmacy they pick, or each pharmacy apart', async () => {
+      const drug = await stock([
+        { quantity: 3 },
+        { quantity: 500, organizationId: otherPharmacy },
+      ]);
+      const grouped = async (query: object) => {
+        const res = await svc.api
+          .get('/stock/grouped')
+          .query(query)
+          .set(svc.as(UserRole.DOCTOR).headers)
+          .expect(200);
+        return (res.body as StockGroup[])
+          .filter((g) => g.medicationCode === drug)
+          .map((g) => [g.organizationId, g.usableQuantity]);
+      };
+
+      expect(await grouped({ organizationId: otherPharmacy })).toEqual([
+        [otherPharmacy, 500],
+      ]);
+      expect(await grouped({})).toEqual(
+        expect.arrayContaining([
+          [pharmacy, 3],
+          [otherPharmacy, 500],
+        ]),
+      );
+    });
+
+    it("receives stock into the pharmacist's pharmacy, not the one the body names", async () => {
+      const res = await svc.api
+        .post('/stock')
+        .set(pharmacist().headers)
+        .send({
+          medicationCode: `TEST-${randomUUID()}`,
+          medicationName: 'Amoxicillin 500mg',
+          quantity: 50,
+          organizationId: otherPharmacy,
+        })
+        .expect(201);
+
+      await expect(
+        svc.db
+          .getRepository(Stock)
+          .findOneByOrFail({ id: (res.body as Stock).id }),
+      ).resolves.toMatchObject({ organizationId: pharmacy, quantity: 50 });
+    });
+
+    it("can't correct another pharmacy's batch", async () => {
+      const drug = await stock([
+        { quantity: 40, organizationId: otherPharmacy },
+      ]);
+      const batch = await svc.db
+        .getRepository(Stock)
+        .findOneByOrFail({ medicationCode: drug });
+
+      await svc.api
+        .put(`/stock/${batch.id}`)
+        .set(pharmacist().headers)
+        .send({ quantity: 0 })
+        .expect(404);
+
+      await expect(
+        svc.db.getRepository(Stock).findOneByOrFail({ id: batch.id }),
+      ).resolves.toMatchObject({ quantity: 40 });
+    });
+
+    it('turns away a pharmacist not yet assigned to a pharmacy', async () => {
+      await svc.api
+        .get('/stock/grouped')
+        .set(pharmacist(null).headers)
+        .expect(403);
+      await svc.api
+        .post('/stock')
+        .set(pharmacist(null).headers)
+        .send({ medicationCode: 'X', medicationName: 'X', quantity: 1 })
+        .expect(403);
+    });
+
+    it('leaves receiving stock to pharmacists', async () => {
+      await svc.api
+        .post('/stock')
+        .set(svc.as(UserRole.SUPER_ADMIN).headers)
+        .send({ medicationCode: 'X', medicationName: 'X', quantity: 1 })
+        .expect(403);
+    });
   });
 });

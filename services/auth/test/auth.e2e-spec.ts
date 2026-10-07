@@ -1,14 +1,22 @@
 import { randomUUID } from 'node:crypto';
+import type { JwtPayload } from '@curo/shared/auth';
 import { UserRole } from '@curo/shared/enums';
 import { startService, type ServiceUnderTest } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { User } from '../src/entities/user.entity';
+import { Practitioner } from '../src/entities/practitioner.entity';
 import { signedIn } from './signed-in';
 
 interface Tokens {
   accessToken: string;
   refreshToken: string;
-  user: { id: string; role: UserRole; practitionerId: string; name: string };
+  user: {
+    id: string;
+    role: UserRole;
+    practitionerId: string;
+    name: string;
+    organizationId: string | null;
+  };
 }
 
 const PASSWORD = 'Correct-Horse-9';
@@ -98,6 +106,34 @@ describe('Sign-in', () => {
       .post('/auth/refresh')
       .send({ refreshToken: accessToken })
       .expect(401);
+  });
+
+  it("carries the staff member's workplace, and picks up a reassignment on refresh", async () => {
+    const staff = await onboard();
+    const [colombo, kandy] = [randomUUID(), randomUUID()];
+    const assign = (organizationId: string) =>
+      svc.db
+        .getRepository(Practitioner)
+        .update({ email: staff.email }, { organizationId });
+    const claims = (token: string) =>
+      JSON.parse(
+        Buffer.from(token.split('.')[1], 'base64url').toString(),
+      ) as JwtPayload;
+
+    await assign(colombo);
+    const signIn = (await login(staff.email, PASSWORD).expect(200))
+      .body as Tokens;
+    await assign(kandy);
+    const renewed = (
+      await svc.api
+        .post('/auth/refresh')
+        .send({ refreshToken: signIn.refreshToken })
+        .expect(200)
+    ).body as Tokens;
+
+    expect(signIn.user.organizationId).toBe(colombo);
+    expect(claims(signIn.accessToken).organizationId).toBe(colombo);
+    expect(claims(renewed.accessToken).organizationId).toBe(kandy);
   });
 
   it('has no self-registration: accounts are created by the super admin', async () => {

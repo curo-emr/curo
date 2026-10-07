@@ -29,8 +29,8 @@ All logins go through the gateway: `POST http://localhost:3000/auth/login` with
 | DOCTOR | `dr.nimal@curo.health` | `Doctor@123` | Nimal Perera — Pediatrics (SLMC-003) |
 | RECEPTIONIST | `chamali@curo.health` | `Recept@123` | Chamali Silva |
 | RECEPTIONIST | `dinesh@curo.health` | `Recept@123` | Dinesh Wijeratne |
-| PHARMACIST | `kasun.pharma@curo.health` | `Pharma@123` | Kasun Bandara |
-| PHARMACIST | `niluka.pharma@curo.health` | `Pharma@123` | Niluka Mendis |
+| PHARMACIST | `kasun.pharma@curo.health` | `Pharma@123` | Kasun Bandara (Curo Pharmacy — Colombo) |
+| PHARMACIST | `niluka.pharma@curo.health` | `Pharma@123` | Niluka Mendis (Curo Pharmacy — Kandy) |
 | LAB_STAFF | `tharindi.lab@curo.health` | `LabStaff@123` | Tharindi Jayawardena |
 | LAB_STAFF | `rukshan.lab@curo.health` | `LabStaff@123` | Rukshan Gunasekara |
 | NURSE | `nimasha@curo.health` | `Nurse@123` | Nimasha Herath — Nursing Officer |
