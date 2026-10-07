@@ -6,13 +6,16 @@ import { TooltipProvider } from "@curo/web/ui/tooltip";
 import { ProtectedRoute } from "@curo/web/auth";
 import { SidebarProvider } from "@curo/web/ui/sidebar-context";
 
+// The patient portal shows the signed-in patient's own record, so only patients.
+const PORTAL_ROLES = ["PATIENT"];
+
 export default function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute roles={PORTAL_ROLES} audience="patients">
       <SidebarProvider>
         <TooltipProvider>
           <Sidebar />

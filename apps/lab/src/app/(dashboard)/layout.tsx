@@ -6,13 +6,16 @@ import { TooltipProvider } from "@curo/web/ui/tooltip";
 import { ProtectedRoute } from "@curo/web/auth";
 import { SidebarProvider } from "@curo/web/ui/sidebar-context";
 
+// The lab portal is for laboratory staff (super admins may look in for support).
+const PORTAL_ROLES = ["LAB_STAFF", "SUPER_ADMIN"];
+
 export default function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute roles={PORTAL_ROLES} audience="laboratory staff">
       <SidebarProvider>
         <TooltipProvider>
           <Sidebar />

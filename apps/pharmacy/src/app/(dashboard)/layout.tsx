@@ -6,13 +6,17 @@ import { TooltipProvider } from "@curo/web/ui/tooltip";
 import { ProtectedRoute } from "@curo/web/auth";
 import { SidebarProvider } from "@curo/web/ui/sidebar-context";
 
+// Only pharmacists: dispensing and stock belong to the pharmacist's own pharmacy,
+// so the API refuses them to everyone else, super admins included.
+const PORTAL_ROLES = ["PHARMACIST"];
+
 export default function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute roles={PORTAL_ROLES} audience="pharmacists">
       <SidebarProvider>
         <TooltipProvider>
           <Sidebar />
