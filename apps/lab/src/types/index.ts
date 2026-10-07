@@ -184,7 +184,9 @@ export type SpecimenType = 'whole_blood' | 'serum' | 'urine' | 'csf' | 'swab' | 
 export type ResultFlag = 'normal' | 'low' | 'high' | 'critical' | 'abnormal';
 
 export interface LabOrderTest {
+  /** The test's code (LOINC). */
   testId: string;
+  name: string;
   status: 'ordered' | 'collected' | 'completed' | 'results_available';
   result: string | null;
 }

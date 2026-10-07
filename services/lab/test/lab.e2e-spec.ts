@@ -167,6 +167,15 @@ describe('Lab specimens and results', () => {
         resourceType: 'DiagnosticReport',
         status: 'final',
         basedOn: [{ reference: `ServiceRequest/${order.id}` }],
+        result: [
+          expect.objectContaining({
+            code: '58410-2',
+            value: 13.5,
+            unit: 'g/dL',
+            referenceRangeLow: '12',
+            referenceRangeHigh: '16',
+          }),
+        ],
         presentedForm: [{ contentType: 'application/pdf' }],
       });
       const report = await svc.db
