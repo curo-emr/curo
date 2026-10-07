@@ -40,7 +40,7 @@ real IDs captured from prior steps.
 | POST | `/auth/refresh` | public (refresh token) | ✅ 200 |
 | GET | `/auth/profile` | any authed | ✅ 200 |
 | GET | `/auth/practitioners?role=DOCTOR` | any authed | ✅ 200 |
-| POST | `/auth/staff` | SUPER_ADMIN | ✅ 201 |
+| POST | `/auth/users` | SUPER_ADMIN | ✅ 201 |
 | GET | `/auth/users?role=` | SUPER_ADMIN | ✅ 200 |
 | GET | `/organizations?type=` | any authed | ✅ 200 |
 | GET | `/organizations/:id` · `?includeInactive=true` | any authed | ✅ 200 |
@@ -147,6 +147,6 @@ one corrects an outdated note in the build history.
 
 83 checks cover the full clinical journey end-to-end plus all secondary read/update/cross-cutting
 routes. Endpoints **not** directly exercised by the script (low-risk, equivalent paths covered):
-the admin user-management variants `POST/GET/PATCH /auth/users/:id` and `/auth/users/:id/reset-password`
-(the create path is covered via `/auth/staff`; the list path via `GET /auth/users`). Add these to the script if full admin-CRUD
+the admin user-management variants `GET/PATCH /auth/users/:id` and `/auth/users/:id/reset-password`
+(the create path is covered via `POST /auth/users`; the list path via `GET /auth/users`). Add these to the script if full admin-CRUD
 verification is needed.

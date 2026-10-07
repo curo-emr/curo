@@ -10,15 +10,9 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { CreateStaffDto } from './dto/create-staff.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import {
-  RolesGuard,
-  Roles,
-  CurrentUser,
-  type AuthUser,
-} from '@curo/shared/auth';
+import { CurrentUser, type AuthUser } from '@curo/shared/auth';
 
 @Controller('auth')
 export class AuthController {
@@ -28,13 +22,6 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
-  }
-
-  @Post('staff')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN')
-  createStaff(@Body() dto: CreateStaffDto, @CurrentUser() user: AuthUser) {
-    return this.authService.createStaff(dto, user);
   }
 
   @Post('refresh')
