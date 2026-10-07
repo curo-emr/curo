@@ -1,5 +1,5 @@
-import { apiClient } from './client';
-import { unwrapBundle, type FhirBundle } from './fhir';
+import { apiClient } from '@curo/web/api';
+import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 import type { Lab, LabReport, LabResultValue } from '@/types';
 
 interface ApiOrganization {

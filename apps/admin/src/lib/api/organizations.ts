@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from "@curo/web/api";
 import type { Organization } from "@/types";
 import type { OrganizationType } from "@/lib/constants";
 

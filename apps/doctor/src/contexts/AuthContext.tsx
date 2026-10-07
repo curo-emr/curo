@@ -1,76 +1,19 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
-import { apiClient } from "@/lib/api/client";
+import type { ReactNode } from "react";
+import { AuthProvider as SessionProvider, useAuth as useSession, type AuthUser } from "@curo/web/auth";
 import { getPractitioners } from "@/lib/api/practitioners";
 import { clearAllDrafts } from "@/lib/visit";
 
-interface AuthUser {
-  id: string;
-  email: string;
-  role: string;
-  patientId?: string | null;
-  practitionerId?: string | null;
-  name?: string;
+/** The signed-in doctor, with the profile fields the portal greets and labels them by. */
+export interface DoctorUser extends AuthUser {
   firstName?: string;
   specialty?: string;
 }
 
-interface AuthContextType {
-  user: AuthUser | null;
-  isLoading: boolean;
-  error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const TOKEN_KEY = "curo_access_token";
-const REFRESH_KEY = "curo_refresh_token";
-const USER_KEY = "curo_user";
-
-// The session lives in localStorage, which React reads as an external store: the
-// server render and hydration see `undefined` ("loading"), then the stored user.
-// Writes go through `notifySession`; other tabs arrive as `storage` events.
-const sessionListeners = new Set<() => void>();
-
-function subscribeToSession(listener: () => void) {
-  sessionListeners.add(listener);
-  window.addEventListener("storage", listener);
-  return () => {
-    sessionListeners.delete(listener);
-    window.removeEventListener("storage", listener);
-  };
-}
-
-function notifySession() {
-  sessionListeners.forEach((listener) => listener());
-}
-
-let storedRaw: string | null = null;
-let storedUser: AuthUser | null = null;
-
-// Must return the same object until storage changes, so parse only on change.
-function readStoredUser(): AuthUser | null {
-  const raw = localStorage.getItem(TOKEN_KEY) ? localStorage.getItem(USER_KEY) : null;
-  if (raw !== storedRaw) {
-    storedRaw = raw;
-    try {
-      storedUser = raw ? JSON.parse(raw) : null;
-    } catch {
-      storedUser = null;
-    }
-  }
-  return storedUser;
-}
-
-const readServerUser = () => undefined;
-
 // The login payload carries the name but not first name or specialty — look the
 // doctor up once and cache them.
-async function withProfile(user: AuthUser): Promise<AuthUser> {
+async function withProfile(user: DoctorUser): Promise<DoctorUser> {
   if (user.firstName || !user.practitionerId) return user;
   try {
     const me = (await getPractitioners("DOCTOR")).find(p => p.id === user.practitionerId);
@@ -80,57 +23,12 @@ async function withProfile(user: AuthUser): Promise<AuthUser> {
   }
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const user = useSyncExternalStore(subscribeToSession, readStoredUser, readServerUser);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-
-  // Sessions stored before the profile lookup existed lack it; fill it in once.
-  useEffect(() => {
-    if (!user || user.firstName) return;
-    void withProfile(user).then((enriched) => {
-      if (enriched === user) return;
-      localStorage.setItem(USER_KEY, JSON.stringify(enriched));
-      notifySession();
-    });
-  }, [user]);
-
-  const login = async (email: string, password: string) => {
-    setError(null);
-    const res = await apiClient.post<{
-      accessToken: string;
-      refreshToken: string;
-      user: AuthUser;
-    }>("/auth/login", { email, password });
-
-    const { accessToken, refreshToken } = res.data;
-    localStorage.setItem(TOKEN_KEY, accessToken);
-    localStorage.setItem(REFRESH_KEY, refreshToken);
-    const authUser = await withProfile(res.data.user);
-    localStorage.setItem(USER_KEY, JSON.stringify(authUser));
-    notifySession();
-  };
-
-  const logout = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_KEY);
-    localStorage.removeItem(USER_KEY);
-    clearAllDrafts();
-    notifySession();
-    router.push("/login");
-  };
-
+export function AuthProvider({ children }: { children: ReactNode }) {
   return (
-    <AuthContext.Provider
-      value={{ user: user ?? null, isLoading: user === undefined, error, login, logout }}
-    >
+    <SessionProvider enrichUser={withProfile} onLogout={clearAllDrafts}>
       {children}
-    </AuthContext.Provider>
+    </SessionProvider>
   );
 }
 
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
-  return ctx;
-}
+export const useAuth = () => useSession<DoctorUser>();

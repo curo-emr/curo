@@ -1,6 +1,6 @@
-import { apiClient } from "./client";
+import { apiClient } from "@curo/web/api";
 import type { Payment } from "@/types";
-import { unwrapBundle, type FhirBundle } from "./fhir";
+import { unwrapBundle, type FhirBundle } from "@curo/web/fhir";
 
 // Admin oversight of receptionist-collected income.
 export async function getAllPayments(filters?: {

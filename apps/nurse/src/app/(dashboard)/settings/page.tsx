@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { PatientAvatar } from "@/components/features/queue/PatientAvatar";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@curo/web/auth";
 import { useCurrentPractitioner } from "@/lib/hooks/useCurrentPractitioner";
 
 const ROLE_LABELS: Record<string, string> = { NURSE: "Nursing Officer", SUPER_ADMIN: "Super Admin" };
