@@ -1,4 +1,13 @@
-import { IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import type { LabResultItem } from '../../entities/diagnostic-report.entity';
 
 export class ResultItemDto implements LabResultItem {
@@ -11,6 +20,7 @@ export class ResultItemDto implements LabResultItem {
   display: string;
 
   @IsOptional()
+  @IsNumber()
   value?: number;
 
   @IsOptional()
@@ -44,6 +54,9 @@ export class EnterResultsDto {
   serviceRequestId: string;
 
   @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => ResultItemDto)
   results: ResultItemDto[];
 
   @IsOptional()

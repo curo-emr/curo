@@ -77,7 +77,7 @@ export class LabController {
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   enterResults(@Body() dto: EnterResultsDto, @CurrentUser() user: AuthUser) {
-    return this.labService.enterResults(dto, user.userId);
+    return this.labService.enterResults(dto, user);
   }
 
   @Get('reports')
