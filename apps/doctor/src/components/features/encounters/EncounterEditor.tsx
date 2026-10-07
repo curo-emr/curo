@@ -27,7 +27,7 @@ import { PrescriptionForm } from "./sections/PrescriptionForm";
 import { LabOrderForm } from "./sections/LabOrderForm";
 import { VitalsPanel, type RecordedVitals } from "./sections/VitalsPanel";
 import { PatientContext } from "./PatientContext";
-import { emptyVisit, signVisit, type SignProgress, type VisitDraft } from "./visit";
+import { emptyVisit, signVisit, type VisitDraft } from "./visit";
 import { apiErrorMessage } from "@/lib/api/client";
 
 interface Props {
@@ -137,18 +137,11 @@ export function EncounterEditor({
   const sign = async () => {
     setConfirmOpen(false);
     setSigning(true);
-    const onProgress = (progress: SignProgress) => {
-      const next = { ...visitRef.current, progress };
-      visitRef.current = next;
-      writeDraft(draftKey, { ...next, savedAt: new Date().toISOString() });
-      setVisit(next);
-    };
     try {
       const { encounterId, appointmentClosed } = await signVisit(visitRef.current, {
         patientId: patient.id,
         appointmentId,
         triageVitals: triage?.vitals,
-        onProgress,
       });
       signed.current = true;
       removeDraft(draftKey);

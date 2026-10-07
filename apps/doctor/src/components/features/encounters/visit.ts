@@ -1,9 +1,7 @@
 import type { Diagnosis, PrescriptionItem, SOAP, Vitals } from "@/types";
-import { createEncounter, updateEncounterStatus } from "@/lib/api/encounters";
-import { createLabOrder, createNote, createPrescription, createVitals, VITALS_MAP } from "@/lib/api/clinical";
-import { createCondition } from "@/lib/api/patients";
+import { completeVisit } from "@/lib/api/encounters";
+import { VITALS_MAP } from "@/lib/api/clinical";
 import { updateAppointment } from "@/lib/api/appointments";
-import { ENCOUNTER_DIAGNOSIS, PRIMARY_DIAGNOSIS_NOTE } from "@/lib/api/mappers";
 import { changedVitalKeys } from "@/lib/utils";
 
 export type LabPriority = "routine" | "urgent" | "stat";
@@ -13,19 +11,9 @@ export interface LabTestDraft {
   name: string;
 }
 
-// Which sign steps already reached the server — lets a failed sign be retried without
-// creating a second encounter or duplicate orders.
-export interface SignProgress {
-  encounterId?: string;
-  note?: boolean;
-  vitals?: boolean;
-  diagnoses: string[]; // ICD codes posted
-  prescriptions: string[]; // item ids posted
-  labs: string[]; // test codes posted
-  completed?: boolean;
-}
-
 export interface VisitDraft {
+  /** The encounter id, fixed when the draft starts, so signing again after a failure can't record the visit twice. */
+  id: string;
   chiefComplaint: string;
   soap: SOAP;
   vitals: Partial<Vitals>;
@@ -34,10 +22,10 @@ export interface VisitDraft {
   labTests: LabTestDraft[];
   labPriority: LabPriority;
   labNotes: string;
-  progress: SignProgress;
 }
 
 export const emptyVisit = (): VisitDraft => ({
+  id: crypto.randomUUID(),
   chiefComplaint: "",
   soap: { subjective: "", objective: "", assessment: "", plan: "" },
   vitals: {},
@@ -46,89 +34,45 @@ export const emptyVisit = (): VisitDraft => ({
   labTests: [],
   labPriority: "routine",
   labNotes: "",
-  progress: { diagnoses: [], prescriptions: [], labs: [] },
 });
 
 interface SignContext {
   patientId: string;
   appointmentId?: string;
   triageVitals?: Partial<Vitals>;
-  /** Called after every step so progress survives a reload. */
-  onProgress: (progress: SignProgress) => void;
 }
 
 /**
- * Writes the visit to the backend step by step. Every step is skipped when `progress`
- * says it already happened, so calling this again after a failure resumes where it stopped.
+ * Saves the whole visit in one request, which the backend records all or nothing. Signing
+ * again after a failure is safe: the backend returns the visit if it already has it.
  * Returns the encounter id and whether the linked appointment was closed.
  */
 export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ encounterId: string; appointmentClosed: boolean }> {
-  const progress: SignProgress = { ...visit.progress };
-  const save = () => ctx.onProgress({ ...progress });
   const { patientId, appointmentId } = ctx;
+  const { subjective, objective, assessment, plan } = visit.soap;
+  // Only values the doctor added or changed — triage vitals are already linked to the encounter.
+  const changedVitals = changedVitalKeys(visit.vitals, ctx.triageVitals);
 
-  if (!progress.encounterId) {
-    const encounter = await createEncounter({
-      patientId,
-      appointmentId,
-      reasonCode: visit.chiefComplaint,
-      periodStart: new Date().toISOString(),
-    });
-    progress.encounterId = encounter.id;
-    save();
-  }
-  const encounterId = progress.encounterId;
-
-  if (!progress.note) {
-    const { subjective, objective, assessment, plan } = visit.soap;
-    await createNote({
-      patientId, encounterId,
+  const encounter = await completeVisit({
+    id: visit.id,
+    patientId,
+    appointmentId,
+    reasonCode: visit.chiefComplaint,
+    note: {
       subjective: subjective || undefined,
       objective: objective || undefined,
       assessment: assessment || undefined,
       plan: plan || undefined,
       additionalNotes: visit.chiefComplaint,
-    });
-    progress.note = true;
-    save();
-  }
-
-  if (!progress.vitals) {
-    // Only values the doctor added or changed — triage vitals are already linked to the encounter.
-    const changed = changedVitalKeys(visit.vitals, ctx.triageVitals);
-    await Promise.all(VITALS_MAP.filter(v => changed.includes(v.key)).map(v => createVitals({
-      patientId, encounterId,
+    },
+    vitals: VITALS_MAP.filter(v => changedVitals.includes(v.key)).map(v => ({
       code: v.code,
       display: v.display,
       valueQuantity: visit.vitals[v.key] as number,
       valueUnit: v.unit,
-      effectiveDateTime: new Date().toISOString(),
-    })));
-    progress.vitals = true;
-    save();
-  }
-
-  // Sequential so the primary diagnosis is recorded first.
-  const diagnoses = [...visit.diagnoses].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
-  for (const d of diagnoses) {
-    if (progress.diagnoses.includes(d.icdCode)) continue;
-    await createCondition(patientId, {
-      clinicalStatus: "active",
-      code: d.icdCode,
-      display: d.name,
-      category: ENCOUNTER_DIAGNOSIS,
-      encounterId,
-      onsetDate: new Date().toISOString().slice(0, 10),
-      note: d.isPrimary ? PRIMARY_DIAGNOSIS_NOTE : undefined,
-    });
-    progress.diagnoses = [...progress.diagnoses, d.icdCode];
-    save();
-  }
-
-  for (const rx of visit.prescriptions) {
-    if (progress.prescriptions.includes(rx.id)) continue;
-    await createPrescription({
-      patientId, encounterId,
+    })),
+    diagnoses: visit.diagnoses.map(d => ({ code: d.icdCode, display: d.name, isPrimary: d.isPrimary })),
+    prescriptions: visit.prescriptions.map(rx => ({
       medicationCode: rx.medicationId,
       medicationDisplay: rx.displayName,
       dosageText: rx.dose,
@@ -137,29 +81,14 @@ export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ 
       durationDays: rx.durationDays,
       quantityValue: rx.quantity,
       note: rx.instructions || undefined,
-    });
-    progress.prescriptions = [...progress.prescriptions, rx.id];
-    save();
-  }
-
-  for (const test of visit.labTests) {
-    if (progress.labs.includes(test.code)) continue;
-    await createLabOrder({
-      patientId, encounterId,
+    })),
+    labOrders: visit.labTests.map(test => ({
       code: test.code,
       display: test.name,
       priority: visit.labPriority,
       note: visit.labNotes || undefined,
-    });
-    progress.labs = [...progress.labs, test.code];
-    save();
-  }
-
-  if (!progress.completed) {
-    await updateEncounterStatus(encounterId, "completed");
-    progress.completed = true;
-    save();
-  }
+    })),
+  });
 
   // Closing the appointment moves the patient's queue stage to done. The visit itself is already
   // signed at this point, so a failure here is reported but doesn't undo the sign.
@@ -168,7 +97,7 @@ export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ 
     appointmentClosed = await updateAppointment(appointmentId, { status: "fulfilled" }).then(() => true, () => false);
   }
 
-  return { encounterId, appointmentClosed };
+  return { encounterId: encounter.id, appointmentClosed };
 }
 
 // ─── Prescribing helpers ─────────────────────────────────────────────────────
