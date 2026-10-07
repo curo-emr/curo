@@ -1,0 +1,29 @@
+/**
+ * Helpers for list filters read from the query string.
+ *
+ * `parseList` splits a comma-separated param (`status=draft,active`);
+ * `parseUuidList` does the same for a uuid column, where any other value would
+ * be a query error; `escapeLike` makes free text literal inside an ILIKE pattern.
+ */
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A comma-separated param as its trimmed, non-empty values: `"a, b,,c"` → `['a', 'b', 'c']`. */
+export function parseList(param?: string | string[]): string[] {
+  const joined = Array.isArray(param) ? param.join(',') : (param ?? '');
+  return joined
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+/** Like `parseList`, keeping only the values that are UUIDs. */
+export function parseUuidList(param?: string | string[]): string[] {
+  return parseList(param).filter((value) => UUID_RE.test(value));
+}
+
+/** `text` as a literal inside an ILIKE pattern: `50%_off` matches only itself. */
+export function escapeLike(text: string): string {
+  return text.replace(/[\\%_]/g, (char) => `\\${char}`);
+}

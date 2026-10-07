@@ -10,11 +10,14 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
 interface UrgentOrdersListProps {
+  /** The most urgent of them. */
   orders: LabOrder[];
+  /** How many urgent orders are pending in all. */
+  total: number;
   patients: Patient[];
 }
 
-export function UrgentOrdersList({ orders, patients }: UrgentOrdersListProps) {
+export function UrgentOrdersList({ orders, total, patients }: UrgentOrdersListProps) {
   return (
     <Card className="shadow-sm border">
       <CardHeader className="bg-muted/50 border-b">
@@ -24,7 +27,7 @@ export function UrgentOrdersList({ orders, patients }: UrgentOrdersListProps) {
             Urgent Orders
           </CardTitle>
           <Badge variant="secondary" className="bg-status-warning-bg text-status-warning-text hover:bg-status-warning-bg">
-            {orders.length} pending
+            {total} pending
           </Badge>
         </div>
       </CardHeader>

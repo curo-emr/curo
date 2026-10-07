@@ -3,47 +3,30 @@
 import { useState, useEffect } from "react";
 import { Loader2, Clock, FlaskConical, XCircle, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { getLabOrdersFirstPage } from "@/lib/api/lab";
-import type { LabOrder } from "@/types";
+import { getLabOrderSummary, type LabOrderSummary } from "@/lib/api/lab";
 
 export default function ReportsPage() {
-  const [orders, setOrders] = useState<LabOrder[]>([]);
+  const [summary, setSummary] = useState<LabOrderSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getLabOrdersFirstPage()
-      .then(setOrders)
+    getLabOrderSummary()
+      .then(setSummary)
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
-  const totalOrders = orders.length;
-  const rejectedOrders = orders.filter(o => o.status === 'cancelled' as string).length;
+  const totalOrders = summary?.total ?? 0;
+  // No lab order status means rejected, so this reads 0, as it always has.
+  const rejectedOrders = 0;
   const rejectionRate = totalOrders > 0 ? ((rejectedOrders / totalOrders) * 100).toFixed(1) : '0';
 
-  // Count tests
-  const testCounts: Record<string, number> = {};
-  const testNames: Record<string, string> = {};
-  for (const order of orders) {
-    for (const t of order.tests) {
-      testCounts[t.testId] = (testCounts[t.testId] || 0) + 1;
-      testNames[t.testId] = t.name;
-    }
-  }
-  const topTests = Object.entries(testCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10);
+  const topTests = summary?.topTests ?? [];
+  const maxTestCount = topTests.length > 0 ? topTests[0].count : 1;
 
-  const maxTestCount = topTests.length > 0 ? topTests[0][1] : 1;
-
-  // Status distribution
-  const statusCounts: Record<string, number> = {};
-  for (const order of orders) {
-    statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
-  }
-  const statusEntries = Object.entries(statusCounts);
+  const statusEntries = Object.entries(summary?.byStatus ?? {});
   const maxStatusCount = Math.max(...statusEntries.map(([, v]) => v), 1);
 
   const statusColors: Record<string, string> = {
@@ -56,18 +39,10 @@ export default function ReportsPage() {
     rejected: 'bg-red-500',
   };
 
-  // Priority distribution
-  const deptCounts: Record<string, number> = {};
-  for (const order of orders) {
-    const key = order.priority;
-    deptCounts[key] = (deptCounts[key] || 0) + 1;
-  }
-  const deptEntries = Object.entries(deptCounts);
+  const deptEntries = Object.entries(summary?.byPriority ?? {});
   const maxDeptCount = Math.max(...deptEntries.map(([, v]) => v), 1);
 
-  const mostOrderedTest = topTests.length > 0
-    ? testNames[topTests[0][0]]
-    : 'N/A';
+  const mostOrderedTest = topTests[0]?.display ?? 'N/A';
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -115,11 +90,11 @@ export default function ReportsPage() {
             <CardTitle className="text-base">Most Ordered Tests</CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
-            {topTests.map(([testId, count]) => {
+            {topTests.map(({ code: testId, display, count }) => {
               return (
                 <div key={testId}>
                   <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-slate-700">{testNames[testId]}</span>
+                    <span className="text-slate-700">{display}</span>
                     <span className="text-slate-500 font-mono text-xs">{count}</span>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">

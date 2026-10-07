@@ -34,3 +34,14 @@ export async function getByIds<T>(url: string, ids: string[]): Promise<T[]> {
   const pages = await Promise.all(chunks.map((chunk) => getPage<T>(url, { _id: chunk.join(",") })));
   return pages.flatMap((page) => page.resources);
 }
+
+/**
+ * The ids of the patients whose name, MRN, PHN, NIC or phone matches `search`,
+ * for list endpoints that take `searchPatientIds`. `complete` is false when more
+ * patients match than one request returns: the page should ask for a narrower
+ * search rather than quietly search only some of them.
+ */
+export async function findPatientIds(search: string): Promise<{ ids: string[]; complete: boolean }> {
+  const { resources, total } = await getPage<{ id: string }>("/patients", { search });
+  return { ids: resources.map((patient) => patient.id), complete: total <= resources.length };
+}
