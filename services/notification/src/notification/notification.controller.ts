@@ -1,27 +1,16 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Put, Param, Query, UseGuards } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { JwtAuthGuard, CurrentUser, type AuthUser } from '@curo/shared/auth';
 import type { PaginationQuery } from '@curo/shared/fhir';
-import { CreateNotificationDto } from './dto/create-notification.dto';
 
+/**
+ * A user's own inbox. There is no route to create a notification: the services
+ * raise them as events happen (see notifyPractitioner in @curo/shared).
+ */
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
 export class NotificationController {
   constructor(private notificationService: NotificationService) {}
-
-  @Post()
-  create(@Body() dto: CreateNotificationDto) {
-    return this.notificationService.create(dto);
-  }
 
   @Get()
   getForUser(
