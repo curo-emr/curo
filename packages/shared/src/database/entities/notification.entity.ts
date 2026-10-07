@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   Index,
 } from 'typeorm';
-import { NotificationEventType } from '../enums';
+import { NotificationEventType } from '../../enums';
 
 @Entity('notifications')
 export class Notification {
@@ -14,7 +14,7 @@ export class Notification {
 
   @Index()
   @Column()
-  recipientId: string; // userId
+  recipientId: string; // the recipient's user (account) id
 
   @Column({ nullable: true })
   recipientRole: string;

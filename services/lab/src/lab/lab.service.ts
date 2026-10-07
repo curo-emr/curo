@@ -5,9 +5,19 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
-import { ServiceRequest, Observation, QrCode } from '@curo/shared/database';
-import { ServiceRequestStatus, ObservationStatus } from '@curo/shared/enums';
+import {
+  ServiceRequest,
+  Observation,
+  Patient,
+  QrCode,
+} from '@curo/shared/database';
+import {
+  ServiceRequestStatus,
+  ObservationStatus,
+  NotificationEventType,
+} from '@curo/shared/enums';
 import { actorId, type AuthUser } from '@curo/shared/auth';
+import { notifyPractitioner } from '@curo/shared/notifications';
 import {
   parsePagination,
   toSearchset,
@@ -78,6 +88,8 @@ export class LabService {
     private reportsRepo: Repository<DiagnosticReport>,
     @InjectRepository(QrCode)
     private qrRepo: Repository<QrCode>,
+    @InjectRepository(Patient)
+    private patientsRepo: Repository<Patient>,
     @InjectRepository(LabInstrument)
     private instrumentsRepo: Repository<LabInstrument>,
     @InjectRepository(LabTestCatalog)
@@ -198,6 +210,7 @@ export class LabService {
    * in one transaction, so they are saved whole or not at all. The order is
    * claimed first: results for an order that is no longer active (already
    * reported, or revoked) get a 409, so a double submit can't file two reports.
+   * The ordering practitioner is notified in the same transaction.
    */
   async enterResults(dto: EnterResultsDto, performer: AuthUser) {
     const order = await this.ordersRepo.findOne({
@@ -209,6 +222,15 @@ export class LabService {
       );
     const performerId = actorId(performer);
     const now = new Date();
+    // Compared as text: an order's patientId is not validated as a uuid.
+    const patient = await this.patientsRepo
+      .createQueryBuilder('p')
+      .select(['p.firstName', 'p.lastName', 'p.patientCode'])
+      .where('p.id::text = :id', { id: order.patientId })
+      .getOne();
+    const patientName = patient
+      ? `${patient.firstName} ${patient.lastName} (${patient.patientCode})`
+      : `patient ${order.patientId}`;
 
     // Rendered before the transaction opens, so no rows stay locked meanwhile.
     const pdfBase64 = await generateLabReportPdf({
@@ -252,7 +274,7 @@ export class LabService {
           effectiveDateTime: now,
         })),
       );
-      return em.save(DiagnosticReport, {
+      const report = await em.save(DiagnosticReport, {
         patientId: order.patientId,
         serviceRequestId: order.id,
         performerId,
@@ -265,6 +287,15 @@ export class LabService {
         effectiveDateTime: now,
         issued: now,
       });
+
+      await notifyPractitioner(em, order.requesterId, {
+        eventType: NotificationEventType.LAB_RESULTS_READY,
+        title: 'Lab results ready',
+        message: `${order.display} results for ${patientName} are ready to review.`,
+        relatedResourceType: 'DiagnosticReport',
+        relatedResourceId: report.id,
+      });
+      return report;
     });
 
     return toFhirReport(report);

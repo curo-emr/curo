@@ -141,7 +141,7 @@ All 22 entities created in `packages/shared/src/entities/`:
 - [x] GET /orders (filterable by status)
 - [x] POST /orders/scan (QR scan → pull up order, mark received)
 - [x] PUT /orders/:id/receive
-- [x] POST /results → enters results per test panel
+- [x] POST /results → enters results per test panel, and notifies the ordering doctor
 - [x] PDF report generation via pdfkit (lab report with patient info, results, flags, ref ranges)
 - [x] DiagnosticReport FHIR response
 - [x] GET /reports, GET /reports/:id
@@ -150,7 +150,7 @@ All 22 entities created in `packages/shared/src/entities/`:
 - Entities: ServiceRequest, DiagnosticReport, Observation, QrCode, LabInstrument
 
 ### curo-notification-service (port 3007) ✅
-- [x] POST /notifications (any service can create)
+- No create route: the services raise notifications themselves (`notifyPractitioner` in `@curo/shared/notifications`)
 - [x] GET /notifications (user's own, optionally unread only)
 - [x] GET /notifications/count (unread count)
 - [x] PUT /notifications/:id/read
@@ -1124,8 +1124,7 @@ Branch `fix/critical-path-followups`, stacked on `test/critical-paths` (PR #14).
   - Live `GET /notifications/count` returns `{"count":1}` after a new notification.
 - **Still open:**
   - ~~`POST /auth/register` is public and accepts any role~~: removed, see below.
-  - Who may `POST /notifications`: any signed-in user, for any recipient. Nothing but the seed
-    and smoke sends them (decision pending).
+  - ~~Who may `POST /notifications`~~: no one; see System notifications below.
   - The lab portal's result-entry form is a demo stub: Save and Submit only show a toast and
     never call `POST /results`.
   - The patient's name in the lab PDF is still a placeholder (`Patient <id>`).
@@ -1133,7 +1132,8 @@ Branch `fix/critical-path-followups`, stacked on `test/critical-paths` (PR #14).
 
 ## Public self-registration removed ✅ DONE — 2026-10-07
 
-Branch `fix/remove-public-register`, stacked on `fix/critical-path-followups` (PR #15).
+Branch `fix/remove-public-register`, stacked on `fix/critical-path-followups` (PR #15); landed
+on `main` as PR #17.
 
 - `POST /auth/register` was public at the gateway and saved whatever `role`, `patientId` and
   `practitionerId` it was sent, then returned tokens. Anyone who could reach the API could make
@@ -1149,3 +1149,31 @@ Branch `fix/remove-public-register`, stacked on `fix/critical-path-followups` (P
   - The gateway route test checks that `/auth/register` needs a token.
 - Verified: live through the gateway, 401 without a token and 404 with one. Smoke PASS=146,
   FAIL=0.
+
+## System notifications ✅ DONE — 2026-10-07
+
+Branch `feat/system-notifications`. Notifications are raised by the services when something
+happens. No user can create one, so an inbox entry is proof that the system sent it.
+
+- **No create route:** `POST /notifications` and its DTO are gone (404 for every role). The
+  notification service only lists, counts and marks a user's own inbox. The gateway needs no
+  change.
+- **Raised in the same transaction:** `Notification` and `NotificationEventType` moved to the
+  shared kernel (no schema change; `db:check` is clean). A service calls
+  `notifyPractitioner(em, practitionerId, notice)` with its transaction's `EntityManager`.
+  - It maps the practitioner to their account through `practitioners.userId`.
+  - It saves nothing when they have no account.
+  - Like audit logs, the row is written directly: no HTTP hop between services, no service
+    token. The notification commits or rolls back with the event it reports.
+- **First event, lab results ready:** `POST /results` notifies the doctor who ordered the
+  tests: "<test> results for <patient name> (<code>) are ready to review", linked to the
+  `DiagnosticReport`.
+- **Verified:**
+  - Lab API tests: the doctor's account is notified, and no row is saved when the orderer has
+    no account. A failed save leaves no notification, and a double submit leaves exactly one.
+    Mutation-checked: notifying the wrong id fails them.
+  - Notification API tests seed the inbox directly and pin the 404.
+  - Smoke PASS=147, FAIL=0: it expects 404 on POST and finds the doctor's notification from the
+    lab results it entered.
+- **Next events** reuse the helper. Prescription ready, appointment confirmed and low stock
+  need a patient or role recipient, so add a sibling helper when the first one is built.

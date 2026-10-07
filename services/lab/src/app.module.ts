@@ -5,6 +5,8 @@ import { LabModule } from './lab/lab.module';
 import {
   ServiceRequest,
   Observation,
+  Notification,
+  Patient,
   QrCode,
   databaseOptions,
 } from '@curo/shared/database';
@@ -23,6 +25,8 @@ import { JwtAuthModule } from '@curo/shared/auth';
         ServiceRequest,
         DiagnosticReport,
         Observation,
+        Notification,
+        Patient,
         QrCode,
         LabInstrument,
         LabTestCatalog,

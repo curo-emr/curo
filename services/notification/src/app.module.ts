@@ -2,8 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationModule } from './notification/notification.module';
-import { Notification } from './entities/notification.entity';
-import { databaseOptions } from '@curo/shared/database';
+import { Notification, databaseOptions } from '@curo/shared/database';
 import { JwtAuthModule } from '@curo/shared/auth';
 
 @Module({
