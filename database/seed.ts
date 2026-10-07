@@ -1,14 +1,13 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import * as QRCode from 'qrcode';
 import { connectionOptions } from './data-source';
 // Imported from source: this image is built without the workspaces.
 import {
   generatePatientCode,
   generatePhn,
 } from '../packages/shared/src/identifiers';
-import { labSampleUrl } from '../packages/shared/src/lab/lab-qr';
+import { seedLabCatalog, seedLabOrders, type SeededLabs } from './seed-labs';
 
 // The seed writes raw SQL against the schema created by `npm run db:migrate`.
 // These enums are just the column values it inserts.
@@ -1209,151 +1208,16 @@ async function seed() {
   }
   console.log('✅ 8 prescriptions created');
 
-  // ---- LAB ORDERS + QR CODES ----
-  const labTests = [
-    {
-      code: '58410-2',
-      display: 'CBC (Complete Blood Count)',
-      panel: [
-        { code: '30521-6', display: 'RBC' },
-        { code: '26515-7', display: 'Platelets' },
-        { code: '718-7', display: 'Hemoglobin' },
-      ],
-    },
-    {
-      code: '24323-8',
-      display: 'Comprehensive Metabolic Panel',
-      panel: [
-        { code: '2345-7', display: 'Glucose' },
-        { code: '6299-2', display: 'BUN' },
-        { code: '2160-0', display: 'Creatinine' },
-      ],
-    },
-    {
-      code: '55080-1',
-      display: 'Lipid Panel',
-      panel: [
-        { code: '2093-3', display: 'Total Cholesterol' },
-        { code: '2085-9', display: 'HDL' },
-        { code: '13457-7', display: 'LDL' },
-      ],
-    },
-    {
-      code: '17856-6',
-      display: 'HbA1c',
-      panel: [{ code: '4548-4', display: 'Hemoglobin A1c/Hemoglobin' }],
-    },
-    {
-      code: '5902-2',
-      display: 'Prothrombin Time (PT)',
-      panel: [{ code: '5902-2', display: 'PT' }],
-    },
-    {
-      code: '14749-6',
-      display: 'Glucose Fasting',
-      panel: [{ code: '14749-6', display: 'Fasting Glucose' }],
-    },
-    {
-      code: '2532-0',
-      display: 'Lactate Dehydrogenase (LDH)',
-      panel: [{ code: '2532-0', display: 'LDH' }],
-    },
-    {
-      code: '10334-1',
-      display: 'Thyroid Stimulating Hormone (TSH)',
-      panel: [{ code: '3016-3', display: 'TSH' }],
-    },
-  ];
-
-  const labOrderIds: string[] = [];
-  for (let i = 0; i < 8; i++) {
-    const test = labTests[i];
-    const pIdx = i % 10;
-    const isCompleted = i < 5;
-    const authoredOn = daysAgo(i + 2);
-    // Alternately sent to each lab, and worked on by that lab's technician.
-    const labIdx = i % labOrgIds.length;
-
-    const [order] = await db.query<IdRow[]>(
-      `
-      INSERT INTO service_requests (id, "patientId", "requesterId", "performerOrganizationId", status, intent, category, code, display, "testPanel", priority, "authoredOn")
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, 'order', 'laboratory', $5, $6, $7, 'routine', $8)
-      RETURNING id
-    `,
-      [
-        patientIds[pIdx],
-        rnd(doctorIds),
-        labOrgIds[labIdx],
-        isCompleted ? 'completed' : 'active',
-        test.code,
-        test.display,
-        JSON.stringify(test.panel),
-        authoredOn,
-      ],
-    );
-
-    // Generate QR code
-    const qrUrl = labSampleUrl(order.id);
-    const imageBase64 = await QRCode.toDataURL(qrUrl);
-    const [qr] = await db.query<IdRow[]>(
-      `
-      INSERT INTO qr_codes (id, "serviceRequestId", "encodedUrl", "imageBase64")
-      VALUES (gen_random_uuid(), $1, $2, $3)
-      RETURNING id
-    `,
-      [order.id, qrUrl, imageBase64],
-    );
-    await db.query(
-      `UPDATE service_requests SET "qrCodeId" = $1 WHERE id = $2`,
-      [qr.id, order.id],
-    );
-
-    if (isCompleted) {
-      await db.query(
-        `UPDATE service_requests SET "receivedAt" = $1, "completedAt" = $2, "performerId" = $3 WHERE id = $4`,
-        [daysAgo(i + 1), daysAgo(i), labStaffIds[labIdx], order.id],
-      );
-    }
-
-    labOrderIds.push(order.id);
-  }
-  console.log('✅ 8 lab orders with QR codes created');
-
-  // ---- DIAGNOSTIC REPORTS (for completed orders) ----
-  for (let i = 0; i < 5; i++) {
-    const test = labTests[i];
-    const [order] = await db.query<{ patientId: string }[]>(
-      `SELECT "patientId" FROM service_requests WHERE id = $1`,
-      [labOrderIds[i]],
-    );
-    const results = test.panel.map((t) => ({
-      code: t.code,
-      display: t.display,
-      value: Math.round(Math.random() * 100 + 50) / 10,
-      unit: 'units',
-      interpretation: Math.random() > 0.7 ? 'H' : 'N',
-      referenceRangeLow: '5.0',
-      referenceRangeHigh: '15.0',
-    }));
-    await db.query(
-      `
-      INSERT INTO diagnostic_reports (id, "patientId", "serviceRequestId", "performerId", status, code, display, results, conclusion, "effectiveDateTime", issued)
-      VALUES (gen_random_uuid(), $1, $2, $3, 'final', $4, $5, $6, $7, $8, $9)
-    `,
-      [
-        order.patientId,
-        labOrderIds[i],
-        rnd(labStaffIds),
-        test.code,
-        test.display,
-        JSON.stringify(results),
-        'Results within acceptable range. No immediate action required.',
-        daysAgo(i),
-        daysAgo(i),
-      ],
-    );
-  }
-  console.log('✅ 5 diagnostic reports created');
+  // ---- LAB CATALOG, AND AN ORDER FOR EACH VISIT (see seed-labs.ts) ----
+  const labs: SeededLabs = {
+    colombo: labOrgIds[0],
+    galle: labOrgIds[1],
+    technicianAt: Object.fromEntries(
+      labOrgIds.map((labId, i) => [labId, labStaffIds[i]]),
+    ),
+  };
+  await seedLabCatalog(db, labs);
+  await seedLabOrders(db, labs, encounterIds);
 
   // ---- DISPENSE RECORDS ----
   for (let i = 0; i < 5; i++) {
@@ -1750,82 +1614,6 @@ async function seed() {
   console.log(
     `✅ ${stockData.length + secondBatches.length + 8} pharmacy stock items created (incl. multi-batch, 2 pharmacies)`,
   );
-
-  // ---- LAB TEST CATALOG (per lab) ----
-  const catalogTests = [
-    {
-      code: '718-7',
-      name: 'Hemoglobin',
-      category: 'Hematology',
-      specimen: 'Whole Blood',
-      price: 350,
-    },
-    {
-      code: '30521-6',
-      name: 'RBC Count',
-      category: 'Hematology',
-      specimen: 'Whole Blood',
-      price: 350,
-    },
-    {
-      code: '26515-7',
-      name: 'Platelet Count',
-      category: 'Hematology',
-      specimen: 'Whole Blood',
-      price: 400,
-    },
-    {
-      code: '2345-7',
-      name: 'Glucose (Fasting)',
-      category: 'Biochemistry',
-      specimen: 'Serum',
-      price: 250,
-    },
-    {
-      code: '2093-3',
-      name: 'Total Cholesterol',
-      category: 'Biochemistry',
-      specimen: 'Serum',
-      price: 600,
-    },
-    {
-      code: '2085-9',
-      name: 'HDL Cholesterol',
-      category: 'Biochemistry',
-      specimen: 'Serum',
-      price: 650,
-    },
-    {
-      code: '17856-6',
-      name: 'HbA1c',
-      category: 'Biochemistry',
-      specimen: 'Whole Blood',
-      price: 1200,
-    },
-    {
-      code: '14749-6',
-      name: 'Liver Function Panel',
-      category: 'Biochemistry',
-      specimen: 'Serum',
-      price: 1800,
-    },
-  ];
-  let catalogCount = 0;
-  for (let li = 0; li < labOrgIds.length; li++) {
-    // lab 0 offers all tests, lab 1 offers a subset
-    const offered = li === 0 ? catalogTests : catalogTests.slice(0, 5);
-    for (const t of offered) {
-      await db.query(
-        `
-        INSERT INTO lab_test_catalog (id, "organizationId", code, name, category, specimen, price, active)
-        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, true)
-      `,
-        [labOrgIds[li], t.code, t.name, t.category, t.specimen, t.price],
-      );
-      catalogCount++;
-    }
-  }
-  console.log(`✅ ${catalogCount} lab catalog tests created`);
 
   // ---- LAB INSTRUMENTS ----
   const instruments = [
