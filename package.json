@@ -11,6 +11,7 @@
     "build": "npm run build --workspaces --if-present",
     "build:shared": "npm run build -w @curo/shared",
     "test": "npm test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspaces --if-present",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "db:migrate": "cd database && typeorm-ts-node-commonjs migration:run -d data-source.ts",
