@@ -1,4 +1,4 @@
-import type { StockItem } from "@/lib/api/pharmacy";
+import type { GroupedStock } from "@/lib/api/pharmacy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 import { formatStatus } from "@/lib/utils";
@@ -6,13 +6,15 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
 interface LowStockAlertsProps {
-  medications: StockItem[];
+  /** Drugs at or below their reorder level, as GET /stock/alerts returns them. */
+  drugs: GroupedStock[];
 }
 
-export function LowStockAlerts({ medications }: LowStockAlertsProps) {
-  const lowStock = medications
-    .filter(m => m.quantity <= m.reorderThreshold && m.isActive !== false)
-    .sort((a, b) => (a.quantity / a.reorderThreshold) - (b.quantity / b.reorderThreshold));
+/** How much of its reorder level a drug has left; lowest first is most urgent. */
+const share = (d: GroupedStock) => (d.reorderLevel ? d.usableQuantity / d.reorderLevel : 0);
+
+export function LowStockAlerts({ drugs }: LowStockAlertsProps) {
+  const byUrgency = [...drugs].sort((a, b) => share(a) - share(b));
 
   return (
     <Card className="shadow-sm border">
@@ -23,27 +25,26 @@ export function LowStockAlerts({ medications }: LowStockAlertsProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        {lowStock.length === 0 ? (
+        {byUrgency.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted-foreground">All stock levels are adequate.</div>
         ) : (
           <div className="divide-y">
-            {lowStock.map(med => {
-              const ratio = med.quantity / med.reorderThreshold;
-              const isOutOfStock = med.quantity === 0;
+            {byUrgency.map(drug => {
+              const isOutOfStock = drug.usableQuantity <= 0;
               return (
-                <div key={med.id} className="px-4 py-3">
+                <div key={drug.medicationCode} className="px-4 py-3">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-foreground">{med.genericName || med.medicationName}</span>
+                    <span className="text-sm font-medium text-foreground">{drug.genericName || drug.medicationName}</span>
                     <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                      isOutOfStock ? 'bg-status-error-bg text-status-error-text' :
-                      ratio <= 0.5 ? 'bg-status-error-bg text-status-error-text' :
-                      'bg-status-warning-bg text-status-warning-text'
+                      isOutOfStock || share(drug) <= 0.5
+                        ? 'bg-status-error-bg text-status-error-text'
+                        : 'bg-status-warning-bg text-status-warning-text'
                     }`}>
-                      {isOutOfStock ? 'Out of Stock' : `${med.quantity} left`}
+                      {isOutOfStock ? 'Out of Stock' : `${drug.usableQuantity} left`}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {[med.brandName, med.strength, med.form && formatStatus(med.form), `Reorder at ${med.reorderThreshold}`]
+                    {[drug.strength, drug.form && formatStatus(drug.form), `Reorder at ${drug.reorderLevel}`]
                       .filter(Boolean)
                       .join(" · ")}
                   </p>

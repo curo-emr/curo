@@ -138,11 +138,15 @@ export interface GroupedStock {
   medicationCode: string;
   medicationName: string;
   genericName: string;
-  form: string;
+  /** Optional when stock is received, so null for some drugs. */
+  form: string | null;
   strength: string;
   unit: string;
-  reorderThreshold: number;
-  totalQuantity: number;
+  /** Units in batches that haven't expired. */
+  usableQuantity: number;
+  /** The drug is low at or below this many usable units. */
+  reorderLevel: number;
+  low: boolean;
   batches: StockBatch[];
 }
 
@@ -152,8 +156,9 @@ export async function getGroupedStock(): Promise<GroupedStock[]> {
   return res.data;
 }
 
-export async function getLowStockAlerts(): Promise<StockItem[]> {
-  const res = await apiClient.get<StockItem[]>('/stock/alerts');
+// The drugs at or below their reorder level, one entry per drug (same shape as getGroupedStock).
+export async function getLowStockAlerts(): Promise<GroupedStock[]> {
+  const res = await apiClient.get<GroupedStock[]>('/stock/alerts');
   return res.data;
 }
 
