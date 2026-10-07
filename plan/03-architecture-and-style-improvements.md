@@ -117,7 +117,7 @@ BUILD_PROGRESS but not enforced anywhere.
 
 ## B. Frontend architecture
 
-### B1. Six copies of the same infrastructure
+### B1. Six copies of the same infrastructure ✅ *(fixed 2026-10-07: `@curo/web`)*
 `client.ts` (JWT refresh interceptor), `mappers.ts`, `AuthContext.tsx`, and
 `components/ui/*` are duplicated per frontend, and they drift (receptionist's
 mapper still had `visitId`; statuses diverged — A1). The nested-git-repos
@@ -128,6 +128,12 @@ of A3/A4.
 > 2026-10-06 (lint baseline): `AuthContext` and `apiErrorMessage()` were brought in line
 > across the portals, but they are still copies. `AuthContext.tsx`, the API client and
 > `hooks/use-client-pagination.ts` are the first things to move into the shared package.
+> 2026-10-07: the portals are npm workspaces, and `packages/web` (`@curo/web`) holds the
+> API client, session and `AuthProvider`/`ProtectedRoute`, the FHIR helpers, the hooks,
+> every shadcn primitive, Curo's shared components and the one theme stylesheet (PRs
+> #30–#33). Still per portal: `mappers.ts`, `types/` and the `lib/utils` helpers, which
+> differ because each portal shows different data. Move a piece once a second portal
+> needs it in the same shape (C4's BMI helpers are the next candidate).
 
 ### B2. All data fetching is `useEffect` + axios with no cache
 Every page refetches everything on mount; polling is hand-rolled
@@ -144,17 +150,22 @@ being used as a pure SPA shell).
 the button or implement drafts (localStorage keyed by appointmentId would be a
 90% solution; encounter `status: 'planned'` + PUT is the real one).
 
-### B4. Static catalogs are drifting into the DB inconsistently
+### B4. Static catalogs are drifting into the DB inconsistently ✅ *(fixed 2026-10-07)*
 ICD-10 moved to a DB-backed `/icd10` endpoint and pharmacy got
 `medication-catalog`, but the doctor FE still bundles JSON catalogs
 (`icd10Catalog` prop, medications, lab tests). Pick one source per catalog and
 delete the other; bundled JSON + DB copies will diverge.
+> All three catalogs now come only from the database. ICD-10 and medications are searched
+> on the server, since the medication picker used to load one capped page of 100. The lab
+> test catalog is one unpaged list per lab. Other lists still request `pageSize: 100` and
+> drop anything past it (stock, dispense logs, payments, appointments); fix them as part of B2.
 
 ### B5. Error boundaries and empty/loading states are uneven
 `error.tsx` exists in doctor/receptionist dashboards but not everywhere; some
 lists render nothing while loading. `EmptyState.tsx` exists in `components/ui`
 — mandate it for all list pages (nurse frontend in Doc 02 should use it from
 day one).
+> 2026-10-07: one `EmptyState` (`@curo/web/ui/empty-state`) for every portal.
 
 ---
 
@@ -176,6 +187,9 @@ wait-time thresholds, VitalsPanel BMI variants, StatusBadge variants differing
 per frontend). Consolidate into each frontend's `StatusBadge`/`lib/utils`
 (`getStatusBadgeClass(status)`) and reuse — Doc 02's new badges should go
 through the existing `StatusBadge` component, not new ad-hoc class strings.
+> 2026-10-07: one `StatusBadge` (`@curo/web/ui/status-badge`) with one status list for
+> every portal, typed so an unknown status fails the build. QueueBoard and VitalsPanel
+> class strings are still per component.
 
 ### C3. Manual refresh patterns differ per screen
 QueueBoard has a manual "Refresh" button doing `window.location.reload()` (full
@@ -195,6 +209,8 @@ Doctor e-prescription and lab labels each ship their own `@media print`
 stylesheet approach. If more print surfaces come (Doc 03 future: lab report
 print, income report), extract a shared print-layout convention (hide-app
 shell class + printable region component) per frontend.
+> ✅ 2026-10-07: `printOnly(id)` (`@curo/web/print`) plus the `.printing`/`.no-print`
+> rules in `@curo/web/styles.css`; lab labels and doctor prescriptions both use it.
 
 ---
 
