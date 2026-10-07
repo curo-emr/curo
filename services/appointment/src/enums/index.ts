@@ -18,3 +18,12 @@ export enum QueueStage {
   WITH_DOCTOR = 'with_doctor',
   DONE = 'done',
 }
+
+// What became of a recorded payment. Only `paid` counts as income; an
+// administrator's correction may mark it refunded or waived.
+export enum PaymentStatus {
+  PENDING = 'pending',
+  PAID = 'paid',
+  REFUNDED = 'refunded',
+  WAIVED = 'waived',
+}

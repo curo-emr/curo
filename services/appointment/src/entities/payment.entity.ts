@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+import { PaymentStatus } from '../enums';
 
 @Entity('payments')
 export class Payment {
@@ -45,8 +46,8 @@ export class Payment {
   @Column({ nullable: true })
   paymentMethod: string; // cash | card | insurance
 
-  @Column({ nullable: true })
-  status: string; // pending | paid | refunded | waived
+  @Column({ type: 'varchar', nullable: true })
+  status: PaymentStatus;
 
   @Column({ nullable: true })
   receiptNumber: string;
