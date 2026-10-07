@@ -43,6 +43,11 @@ export class AdminController {
     return this.adminService.listUsers({ search, role }, query);
   }
 
+  @Get('summary')
+  getUserSummary() {
+    return this.adminService.getUserSummary();
+  }
+
   @Get(':id')
   getUser(@Param('id') id: string) {
     return this.adminService.getUser(id);

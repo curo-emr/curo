@@ -60,6 +60,13 @@ export class PaymentController {
     return this.paymentService.summary(user, period, from, to);
   }
 
+  // Admin oversight: totals across all receptionists, or one.
+  @Get('totals')
+  @Roles('SUPER_ADMIN')
+  totals(@Query('collectedBy') collectedBy?: string) {
+    return this.paymentService.totalsForAdmin(collectedBy);
+  }
+
   // Admin oversight across all receptionists.
   @Get()
   @Roles('SUPER_ADMIN')
