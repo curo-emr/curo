@@ -10,6 +10,8 @@ import {
   Header,
 } from '@nestjs/common';
 import { ClinicalService } from './clinical.service';
+import { VisitService } from './visit.service';
+import { CompleteVisitDto } from './dto/complete-visit.dto';
 import { CreateEncounterDto } from './dto/create-encounter.dto';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
@@ -31,7 +33,10 @@ import { EncounterStatus } from '../enums';
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ClinicalController {
-  constructor(private clinicalService: ClinicalService) {}
+  constructor(
+    private clinicalService: ClinicalService,
+    private visitService: VisitService,
+  ) {}
 
   // ICD-10 diagnosis catalog (DB-backed) — searchable + paginated.
   @Get('icd10')
@@ -50,6 +55,14 @@ export class ClinicalController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.clinicalService.createEncounter(dto, actorId(user));
+  }
+
+  // A whole signed visit in one transaction; replaying the same id is a no-op.
+  @Post('encounters/visit')
+  @Roles('DOCTOR', 'SUPER_ADMIN')
+  @Header('Content-Type', 'application/fhir+json')
+  completeVisit(@Body() dto: CompleteVisitDto, @CurrentUser() user: AuthUser) {
+    return this.visitService.complete(dto, user);
   }
 
   @Get('encounters')

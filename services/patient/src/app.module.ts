@@ -2,9 +2,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PatientModule } from './patient/patient.module';
-import { Patient, Observation, databaseOptions } from '@curo/shared/database';
+import {
+  Patient,
+  Condition,
+  Observation,
+  databaseOptions,
+} from '@curo/shared/database';
 import { AllergyIntolerance } from './entities/allergy-intolerance.entity';
-import { Condition } from './entities/condition.entity';
 import { JwtAuthModule } from '@curo/shared/auth';
 
 @Module({

@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository, In, Not, IsNull } from 'typeorm';
+import { DataSource, FindOptionsWhere, Repository, In, Not } from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Encounter } from '../entities/encounter.entity';
 import { ClinicalNote } from '../entities/clinical-note.entity';
@@ -17,11 +17,7 @@ import {
   QrCode,
   type LabPanelTest,
 } from '@curo/shared/database';
-import {
-  MedicationRequestStatus,
-  ServiceRequestStatus,
-  ObservationStatus,
-} from '@curo/shared/enums';
+import { MedicationRequestStatus } from '@curo/shared/enums';
 import { parsePagination, toSearchset, SearchQuery } from '@curo/shared/fhir';
 import { Task } from '../entities/task.entity';
 import { CreateEncounterDto } from './dto/create-encounter.dto';
@@ -32,6 +28,20 @@ import { CreateVitalsDto } from './dto/create-vitals.dto';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
 import { EncounterStatus, TaskStatus } from '../enums';
 import { Icd10Code } from '../entities/icd10-code.entity';
+import {
+  toFhirEncounter,
+  toFhirMedRequest,
+  toFhirObservation,
+  toFhirServiceRequest,
+} from './fhir.mapper';
+import {
+  labOrderUrl,
+  linkTriageVitals,
+  newEncounter,
+  newPrescription,
+  newVital,
+  saveLabOrder,
+} from './clinical-records';
 
 const CLOSED_TASK_STATUSES = [
   TaskStatus.COMPLETED,
@@ -59,118 +69,6 @@ export interface PrescriptionSummary {
   lastPrescribedAt: Date | null;
 }
 
-function toFhirEncounter(e: Encounter) {
-  return {
-    resourceType: 'Encounter',
-    id: e.id,
-    status: e.status,
-    class: {
-      code: e.classCode || 'AMB',
-      system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
-    },
-    subject: { reference: `Patient/${e.patientId}` },
-    participant: [
-      { individual: { reference: `Practitioner/${e.practitionerId}` } },
-    ],
-    appointment: e.appointmentId
-      ? [{ reference: `Appointment/${e.appointmentId}` }]
-      : undefined,
-    period: { start: e.periodStart, end: e.periodEnd },
-    reasonCode: e.reasonCode ? [{ text: e.reasonCode }] : undefined,
-    meta: { lastUpdated: e.updatedAt },
-  };
-}
-
-function toFhirMedRequest(m: MedicationRequest) {
-  return {
-    resourceType: 'MedicationRequest',
-    id: m.id,
-    status: m.status,
-    intent: m.intent || 'order',
-    medicationCodeableConcept: {
-      coding: [{ code: m.medicationCode, display: m.medicationDisplay }],
-    },
-    subject: { reference: `Patient/${m.patientId}` },
-    requester: { reference: `Practitioner/${m.practitionerId}` },
-    encounter: m.encounterId
-      ? { reference: `Encounter/${m.encounterId}` }
-      : undefined,
-    authoredOn: m.authoredOn,
-    dosageInstruction: [
-      {
-        text: m.dosageText,
-        route: m.route ? { text: m.route } : undefined,
-        timing: m.frequency ? { code: { text: m.frequency } } : undefined,
-        doseAndRate: m.quantityValue
-          ? [{ doseQuantity: { value: m.quantityValue, unit: m.quantityUnit } }]
-          : undefined,
-      },
-    ],
-    dispenseRequest: {
-      quantity: { value: m.quantityValue, unit: m.quantityUnit },
-      expectedSupplyDuration: m.durationDays
-        ? { value: m.durationDays, unit: 'days' }
-        : undefined,
-    },
-    note: m.note ? [{ text: m.note }] : undefined,
-  };
-}
-
-function toFhirServiceRequest(s: ServiceRequest) {
-  return {
-    resourceType: 'ServiceRequest',
-    id: s.id,
-    status: s.status,
-    intent: s.intent || 'order',
-    category: s.category ? [{ coding: [{ code: s.category }] }] : undefined,
-    code: { coding: [{ code: s.code, display: s.display }] },
-    subject: { reference: `Patient/${s.patientId}` },
-    requester: { reference: `Practitioner/${s.requesterId}` },
-    encounter: s.encounterId
-      ? { reference: `Encounter/${s.encounterId}` }
-      : undefined,
-    authoredOn: s.authoredOn,
-    priority: s.priority,
-    note: s.note ? [{ text: s.note }] : undefined,
-    extension: [
-      s.qrCodeId && { url: 'urn:curo:qrCodeId', valueString: s.qrCodeId },
-    ].filter(Boolean),
-    testPanel: s.testPanel,
-  };
-}
-
-function toFhirObservation(o: Observation) {
-  return {
-    resourceType: 'Observation',
-    id: o.id,
-    status: o.status,
-    category: o.category ? [{ coding: [{ code: o.category }] }] : undefined,
-    code: { coding: [{ code: o.code, display: o.display }] },
-    subject: { reference: `Patient/${o.patientId}` },
-    performer: [{ reference: `Practitioner/${o.practitionerId}` }],
-    encounter: o.encounterId
-      ? { reference: `Encounter/${o.encounterId}` }
-      : undefined,
-    effectiveDateTime: o.effectiveDateTime,
-    valueQuantity:
-      o.valueQuantity != null
-        ? { value: Number(o.valueQuantity), unit: o.valueUnit }
-        : undefined,
-    valueString: o.valueString,
-    component: o.components,
-    extension: [
-      o.appointmentId && {
-        url: 'urn:curo:appointmentId',
-        valueString: o.appointmentId,
-      },
-      o.performerRole && {
-        url: 'urn:curo:performerRole',
-        valueString: o.performerRole,
-      },
-    ].filter(Boolean),
-  };
-}
-
 @Injectable()
 export class ClinicalService implements OnModuleInit {
   private readonly logger = new Logger(ClinicalService.name);
@@ -192,6 +90,7 @@ export class ClinicalService implements OnModuleInit {
     private tasksRepo: Repository<Task>,
     @InjectRepository(Icd10Code)
     private icd10Repo: Repository<Icd10Code>,
+    private dataSource: DataSource,
   ) {}
 
   // ICD-10 diagnosis catalog (DB-backed) — searchable + paginated FHIR searchset.
@@ -247,20 +146,15 @@ export class ClinicalService implements OnModuleInit {
 
   // Encounters
   async createEncounter(dto: CreateEncounterDto, practitionerId: string) {
-    const encounter = this.encountersRepo.create({
-      ...dto,
-      practitionerId,
-      status: EncounterStatus.IN_PROGRESS,
-      periodStart: dto.periodStart ? new Date(dto.periodStart) : new Date(),
-    });
-    const saved = await this.encountersRepo.save(encounter);
-    if (dto.appointmentId) {
-      // Pull the visit's triage vitals (recorded before the encounter existed) into it.
-      await this.observationsRepo.update(
-        { appointmentId: dto.appointmentId, encounterId: IsNull() },
-        { encounterId: saved.id },
+    const saved = await this.dataSource.transaction(async (em) => {
+      const encounter = await em.save(
+        Encounter,
+        newEncounter(dto, practitionerId),
       );
-    }
+      if (dto.appointmentId)
+        await linkTriageVitals(em, dto.appointmentId, encounter.id);
+      return encounter;
+    });
     return toFhirEncounter(saved);
   }
 
@@ -319,17 +213,9 @@ export class ClinicalService implements OnModuleInit {
     practitionerId: string,
     performerRole: string,
   ) {
-    const obs = this.observationsRepo.create({
-      ...dto,
-      practitionerId,
-      performerRole,
-      category: 'vital-signs',
-      status: ObservationStatus.FINAL,
-      effectiveDateTime: dto.effectiveDateTime
-        ? new Date(dto.effectiveDateTime)
-        : new Date(),
-    });
-    const saved = await this.observationsRepo.save(obs);
+    const saved = await this.observationsRepo.save(
+      newVital(dto, practitionerId, performerRole),
+    );
     return toFhirObservation(saved);
   }
 
@@ -376,14 +262,9 @@ export class ClinicalService implements OnModuleInit {
 
   // Prescriptions
   async createPrescription(dto: CreatePrescriptionDto, practitionerId: string) {
-    const med = this.medsRepo.create({
-      ...dto,
-      practitionerId,
-      status: MedicationRequestStatus.ACTIVE,
-      intent: 'order',
-      authoredOn: new Date(),
-    });
-    const saved = await this.medsRepo.save(med);
+    const saved = await this.medsRepo.save(
+      newPrescription(dto, practitionerId),
+    );
     return toFhirMedRequest(saved);
   }
 
@@ -440,33 +321,13 @@ export class ClinicalService implements OnModuleInit {
 
   // Lab Orders
   async createLabOrder(dto: CreateLabOrderDto, practitionerId: string) {
-    const order = this.labOrdersRepo.create({
-      ...dto,
-      requesterId: practitionerId,
-      status: ServiceRequestStatus.ACTIVE,
-      category: 'laboratory',
-      authoredOn: new Date(),
-    });
-    const savedOrder = await this.labOrdersRepo.save(order);
-
-    // Generate QR code
-    const qrUrl = `${process.env.GATEWAY_URL || 'http://localhost:3000'}/lab/orders/${savedOrder.id}`;
-    const imageBase64 = await QRCode.toDataURL(qrUrl);
-    const qrCode = this.qrCodesRepo.create({
-      serviceRequestId: savedOrder.id,
-      encodedUrl: qrUrl,
-      imageBase64,
-    });
-    const savedQr = await this.qrCodesRepo.save(qrCode);
-    await this.labOrdersRepo.update(savedOrder.id, { qrCodeId: savedQr.id });
-
-    const finalOrder = await this.labOrdersRepo.findOne({
-      where: { id: savedOrder.id },
-    });
+    const { order, qr } = await this.dataSource.transaction((em) =>
+      saveLabOrder(em, dto, practitionerId),
+    );
     return {
-      ...toFhirServiceRequest(finalOrder!),
-      qrCode: { id: savedQr.id, imageBase64 },
-      tests: await this.getTestQrs(savedOrder.id, savedOrder.testPanel ?? []),
+      ...toFhirServiceRequest(order),
+      qrCode: { id: qr.id, imageBase64: qr.imageBase64 },
+      tests: await this.getTestQrs(order.id, order.testPanel ?? []),
     };
   }
 
@@ -492,7 +353,7 @@ export class ClinicalService implements OnModuleInit {
       const t = testPanel[i];
       let qr = byCode.get(`${t.code}:${i}`);
       if (!qr) {
-        const testUrl = `${process.env.GATEWAY_URL || 'http://localhost:3000'}/lab/orders/${orderId}?test=${encodeURIComponent(t.code)}&i=${i}`;
+        const testUrl = `${labOrderUrl(orderId)}?test=${encodeURIComponent(t.code)}&i=${i}`;
         qr = await this.qrCodesRepo.save(
           this.qrCodesRepo.create({
             serviceRequestId: orderId,

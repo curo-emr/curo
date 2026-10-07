@@ -42,11 +42,6 @@ export async function getEncounterSoap(encounterId: string): Promise<SOAP | null
   };
 }
 
-export async function createNote(data: Record<string, unknown>) {
-  const res = await apiClient.post('/notes', data);
-  return res.data;
-}
-
 // ─── Vitals ──────────────────────────────────────────────────────────────────
 
 export async function getVitalsByPatient(patientId: string) {
@@ -152,11 +147,6 @@ export async function getObservationTrends(patientId: string, codes: string[]): 
   });
 }
 
-export async function createVitals(data: Record<string, unknown>) {
-  const res = await apiClient.post('/vitals', data);
-  return res.data;
-}
-
 // ─── Prescriptions ───────────────────────────────────────────────────────────
 
 export async function getPrescriptionsByPatient(patientId: string): Promise<Prescription[]> {
@@ -167,11 +157,6 @@ export async function getPrescriptionsByPatient(patientId: string): Promise<Pres
 export async function getPendingPrescriptions(): Promise<Prescription[]> {
   const res = await apiClient.get<FhirMedicationRequest[] | FhirBundle<FhirMedicationRequest>>('/prescriptions/pending');
   return unwrapBundle(res.data).resources.map(mapFhirMedicationRequest);
-}
-
-export async function createPrescription(data: Record<string, unknown>): Promise<Prescription> {
-  const res = await apiClient.post<FhirMedicationRequest>('/prescriptions', data);
-  return mapFhirMedicationRequest(res.data);
 }
 
 // ─── Lab Orders ──────────────────────────────────────────────────────────────
@@ -190,9 +175,4 @@ export async function getRecentLabResults(practitionerId: string, days = 7): Pro
     .map(mapFhirServiceRequest)
     .filter(o => o.doctorId === practitionerId && o.status === 'completed' && new Date(o.createdAt).getTime() >= since)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-export async function createLabOrder(data: Record<string, unknown>): Promise<LabOrder> {
-  const res = await apiClient.post<FhirServiceRequest>('/lab-orders', data);
-  return mapFhirServiceRequest(res.data);
 }

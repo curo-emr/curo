@@ -5,6 +5,7 @@ import { ClinicalModule } from './clinical/clinical.module';
 import { Encounter } from './entities/encounter.entity';
 import { ClinicalNote } from './entities/clinical-note.entity';
 import {
+  Condition,
   MedicationRequest,
   ServiceRequest,
   Observation,
@@ -29,6 +30,7 @@ import { JwtAuthModule } from '@curo/shared/auth';
         QrCode,
         Task,
         Icd10Code,
+        Condition,
       ]),
     ),
     ClinicalModule,
