@@ -11,6 +11,16 @@ export function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+export function formatRelative(iso: string | number | Date): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.round(diff / 60_000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min} min ago`;
+  const hours = Math.round(min / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return formatDate(new Date(iso).toISOString());
+}
+
 export function formatDateTime(dateStr: string): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);

@@ -121,7 +121,7 @@ export function MedicationList({ medications }: MedicationListProps) {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {formatStatus(med.form)} &middot; {med.strength}
+                      {[med.form && formatStatus(med.form), med.strength].filter(Boolean).join(" · ")}
                     </TableCell>
                     <TableCell>
                       <span className={`font-medium ${
