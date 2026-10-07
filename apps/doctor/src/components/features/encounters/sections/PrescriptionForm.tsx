@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
 import { AlertTriangle, Pill, X } from "lucide-react";
 import type { Allergy, Medication, PrescriptionItem } from "@/types";
 import { Button } from "@curo/web/ui/button";
@@ -9,12 +8,14 @@ import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { SearchCombobox } from "@/components/ui/SearchCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
+import { searchMedications } from "@/lib/api/medications";
 import { FREQUENCIES, routeForForm, suggestQuantity } from "../visit";
 
 interface PrescriptionFormProps {
   prescriptions: PrescriptionItem[];
   onChange: (items: PrescriptionItem[]) => void;
-  catalog: Medication[];
+  /** Shown before the doctor types; typing searches the whole catalog. */
+  suggestions: Medication[];
   allergies: Allergy[];
 }
 
@@ -35,15 +36,7 @@ const newItem = (displayName: string, med?: Medication): PrescriptionItem => ({
 const allergyConflict = (name: string, allergies: Allergy[]) =>
   allergies.find(a => a.substance && name.toLowerCase().includes(a.substance.toLowerCase()));
 
-export function PrescriptionForm({ prescriptions, onChange, catalog, allergies }: PrescriptionFormProps) {
-  const search = useCallback(
-    (q: string) => {
-      const needle = q.toLowerCase();
-      return catalog.filter(m => `${m.name} ${m.genericName}`.toLowerCase().includes(needle)).slice(0, 8);
-    },
-    [catalog],
-  );
-
+export function PrescriptionForm({ prescriptions, onChange, suggestions, allergies }: PrescriptionFormProps) {
   const update = (id: string, patch: Partial<PrescriptionItem>) =>
     onChange(prescriptions.map(p => {
       if (p.id !== id) return p;
@@ -61,8 +54,8 @@ export function PrescriptionForm({ prescriptions, onChange, catalog, allergies }
       <div className="space-y-3">
         <SearchCombobox<Medication>
           placeholder="Add a medication…"
-          search={search}
-          suggestions={catalog.slice(0, 6)}
+          search={searchMedications}
+          suggestions={suggestions}
           getKey={m => m.id}
           onSelect={m => onChange([...prescriptions, newItem(m.name, m)])}
           onCustom={name => onChange([...prescriptions, newItem(name)])}
