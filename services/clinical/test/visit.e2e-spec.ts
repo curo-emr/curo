@@ -9,6 +9,7 @@ import {
   ServiceRequest,
 } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
+import { parseLabQr } from '@curo/shared/lab';
 import {
   startService,
   type ServiceUnderTest,
@@ -40,10 +41,22 @@ const VISIT_RECORDS: EntityTarget<ObjectLiteral>[] = [
 describe('POST /encounters/visit', () => {
   let svc: ServiceUnderTest;
   let doctor: TestActor;
+  let lab: string;
+
+  /** An organization, as the auth service keeps them; returns its id. */
+  async function organization(type: string, active = true) {
+    const id = randomUUID();
+    await svc.db.query(
+      `INSERT INTO organizations (id, name, type, active) VALUES ($1, $2, $3, $4)`,
+      [id, `Curo ${type} ${id}`, type, active],
+    );
+    return id;
+  }
 
   beforeAll(async () => {
     svc = await startService(AppModule);
     doctor = svc.as(UserRole.DOCTOR);
+    lab = await organization('laboratory');
   });
 
   afterAll(() => svc.close());
@@ -64,7 +77,13 @@ describe('POST /encounters/visit', () => {
     prescriptions: [
       { medicationCode: 'AMOX500', medicationDisplay: 'Amoxicillin 500mg' },
     ],
-    labOrders: [{ code: '58410-2', display: 'Full blood count' }],
+    labOrders: [
+      {
+        code: '58410-2',
+        display: 'Full blood count',
+        performerOrganizationId: lab,
+      },
+    ],
     ...overrides,
   });
 
@@ -129,7 +148,49 @@ describe('POST /encounters/visit', () => {
       .getRepository(QrCode)
       .findOneByOrFail({ serviceRequestId: order.id });
     expect(order.qrCodeId).toBe(qr.id);
-    expect(qr.encodedUrl).toMatch(new RegExp(`/lab/orders/${order.id}$`));
+    expect(parseLabQr(qr.encodedUrl)).toEqual({
+      kind: 'sample',
+      orderId: order.id,
+    });
+  });
+
+  it('sends each lab order to the lab the doctor chose', async () => {
+    const otherLab = await organization('laboratory');
+    const body = visit({
+      labOrders: [
+        { code: '58410-2', display: 'FBC', performerOrganizationId: lab },
+        { code: '4548-4', display: 'HbA1c', performerOrganizationId: otherLab },
+      ],
+    });
+
+    await sign(body).expect(201);
+
+    const orders = await svc.db
+      .getRepository(ServiceRequest)
+      .findBy({ encounterId: body.id });
+    expect(
+      Object.fromEntries(
+        orders.map((o) => [o.code, o.performerOrganizationId]),
+      ),
+    ).toEqual({ '58410-2': lab, '4548-4': otherLab });
+  });
+
+  it('saves nothing when a test is sent to no lab, or somewhere that is not an active lab', async () => {
+    const order = { code: '58410-2', display: 'FBC' };
+    const elsewhere = [
+      undefined,
+      randomUUID(),
+      await organization('pharmacy'),
+      await organization('laboratory', false),
+    ];
+
+    for (const performerOrganizationId of elsewhere) {
+      const body = visit({
+        labOrders: [{ ...order, performerOrganizationId }],
+      });
+      await sign(body).expect(400);
+      expect(await recordsOf(body.id)).toEqual(NOTHING);
+    }
   });
 
   it("pulls the appointment's triage vitals into the encounter", async () => {
@@ -196,5 +257,28 @@ describe('POST /encounters/visit', () => {
     await sign(body, svc.as(UserRole.NURSE)).expect(403);
 
     expect(await recordsOf(body.id)).toEqual(NOTHING);
+  });
+});
+
+describe('GET /encounters/:id/lab-slip', () => {
+  let svc: ServiceUnderTest;
+
+  beforeAll(async () => {
+    svc = await startService(AppModule);
+  });
+
+  afterAll(() => svc.close());
+
+  it("encodes the visit, so a lab scanning it finds the visit's tests", async () => {
+    const encounterId = randomUUID();
+
+    const res = await svc.api
+      .get(`/encounters/${encounterId}/lab-slip`)
+      .set(svc.as(UserRole.DOCTOR).headers)
+      .expect(200);
+
+    const slip = res.body as { encodedUrl: string; qrBase64: string };
+    expect(parseLabQr(slip.encodedUrl)).toEqual({ kind: 'visit', encounterId });
+    expect(slip.qrBase64).toMatch(/^data:image\/png;base64,/);
   });
 });

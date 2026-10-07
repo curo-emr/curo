@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import type { LabPanelTest } from '@curo/shared/database';
 
 export class CreateLabOrderDto {
@@ -9,6 +15,10 @@ export class CreateLabOrderDto {
   @IsOptional()
   @IsString()
   encounterId?: string;
+
+  /** The lab the test is sent to; only its staff will see it. */
+  @IsUUID()
+  performerOrganizationId: string;
 
   @IsNotEmpty()
   @IsString()

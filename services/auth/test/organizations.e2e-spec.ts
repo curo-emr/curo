@@ -167,12 +167,23 @@ describe('Organizations', () => {
 
     it('lets other staff go without one, at the kind of place their role works', async () => {
       const clinic = await create(OrganizationType.CLINIC);
-      const lab = await create(OrganizationType.LABORATORY);
 
       await newStaff(UserRole.DOCTOR).expect(201);
       await newStaff(UserRole.DOCTOR, clinic.id).expect(201);
+      await newStaff(UserRole.DOCTOR, randomUUID()).expect(400);
+    });
+
+    it('assigns lab staff to a laboratory, which they must have', async () => {
+      const clinic = await create(OrganizationType.CLINIC);
+      const lab = await create(OrganizationType.LABORATORY);
+
       await newStaff(UserRole.LAB_STAFF, lab.id).expect(201);
+      const missing = await newStaff(UserRole.LAB_STAFF).expect(400);
       await newStaff(UserRole.LAB_STAFF, clinic.id).expect(400);
+
+      expect(missing.body).toMatchObject({
+        message: 'A lab staff must be assigned to a laboratory',
+      });
     });
 
     it('moves a pharmacist to another pharmacy, but not to a laboratory', async () => {

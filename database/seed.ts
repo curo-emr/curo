@@ -8,6 +8,7 @@ import {
   generatePatientCode,
   generatePhn,
 } from '../packages/shared/src/identifiers';
+import { labSampleUrl } from '../packages/shared/src/lab/lab-qr';
 
 // The seed writes raw SQL against the schema created by `npm run db:migrate`.
 // These enums are just the column values it inserts.
@@ -133,25 +134,41 @@ async function topUps(db: DataSource) {
   }
   console.log(`✅ nurses ensured (${nursesCreated} new)`);
 
-  // ---- PHARMACISTS' PHARMACIES (each dispenses from its own stock) ----
-  // Databases seeded before pharmacies were scoped have the pharmacists at
-  // the clinic. Moves them, unless an admin has already put them somewhere.
-  const pharmacistPharmacies = [
-    ['kasun.pharma@curo.health', 'Curo Pharmacy — Colombo'],
-    ['niluka.pharma@curo.health', 'Curo Pharmacy — Kandy'],
+  // ---- PHARMACISTS' PHARMACIES AND LAB STAFF'S LABS ----
+  // Each works only with their own pharmacy's stock or their own lab's tests.
+  // Databases seeded before then have them at the clinic. Moves them, unless
+  // an admin has already put them at the right kind of place.
+  const workplaces = [
+    ['kasun.pharma@curo.health', 'Curo Pharmacy — Colombo', 'pharmacy'],
+    ['niluka.pharma@curo.health', 'Curo Pharmacy — Kandy', 'pharmacy'],
+    ['tharindi.lab@curo.health', 'Curo Diagnostics — Colombo', 'laboratory'],
+    ['rukshan.lab@curo.health', 'Curo Diagnostics — Galle', 'laboratory'],
   ];
-  for (const [email, pharmacy] of pharmacistPharmacies) {
+  for (const [email, workplace, type] of workplaces) {
     await db.query(
       `UPDATE practitioners p SET "organizationId" = o.id::text
        FROM organizations o
-       WHERE p.email = $1 AND o.name = $2 AND o.type = 'pharmacy'
+       WHERE p.email = $1 AND o.name = $2 AND o.type = $3
          AND NOT EXISTS (
            SELECT 1 FROM organizations cur
-           WHERE cur.id::text = p."organizationId" AND cur.type = 'pharmacy')`,
-      [email, pharmacy],
+           WHERE cur.id::text = p."organizationId" AND cur.type = $3)`,
+      [email, workplace, type],
     );
   }
-  console.log('✅ seeded pharmacists assigned to their pharmacies');
+  console.log(
+    '✅ seeded pharmacists and lab staff assigned to their workplaces',
+  );
+
+  // ---- LAB ORDERS' LABS (only the lab a test was sent to works on it) ----
+  // Orders placed before tests were sent to a lab go to the Colombo lab, which
+  // offers every test.
+  await db.query(
+    `UPDATE service_requests SET "performerOrganizationId" = o.id::text
+     FROM organizations o
+     WHERE "performerOrganizationId" IS NULL
+       AND o.name = 'Curo Diagnostics — Colombo' AND o.type = 'laboratory'`,
+  );
+  console.log('✅ lab orders without a lab sent to the Colombo lab');
 
   // ---- MEDICATION CATALOG (prescribing reference, DB-backed) ----
   const medicationCatalog = [
@@ -428,17 +445,18 @@ async function seed() {
       email: 'rukshan.lab@curo.health',
     },
   ];
+  // Tharindi works at the Colombo lab, Rukshan at Galle.
   const labStaffIds: string[] = [];
-  for (const l of labStaff) {
+  for (const [i, l] of labStaff.entries()) {
     const { practitionerId } = await insertStaff(db, {
       ...l,
       role: UserRole.LAB_STAFF,
       password: 'LabStaff@123',
-      organizationId: orgId,
+      organizationId: labOrgIds[i],
     });
     labStaffIds.push(practitionerId);
   }
-  console.log('✅ 2 lab staff created');
+  console.log('✅ 2 lab staff created (one per lab)');
 
   // Nurses + DB-backed catalogs (same idempotent step that runs on existing volumes)
   await topUps(db);
@@ -1253,17 +1271,19 @@ async function seed() {
     const pIdx = i % 10;
     const isCompleted = i < 5;
     const authoredOn = daysAgo(i + 2);
-    const gatewayUrl = `http://localhost:3000`;
+    // Alternately sent to each lab, and worked on by that lab's technician.
+    const labIdx = i % labOrgIds.length;
 
     const [order] = await db.query<IdRow[]>(
       `
-      INSERT INTO service_requests (id, "patientId", "requesterId", status, intent, category, code, display, "testPanel", priority, "authoredOn")
-      VALUES (gen_random_uuid(), $1, $2, $3, 'order', 'laboratory', $4, $5, $6, 'routine', $7)
+      INSERT INTO service_requests (id, "patientId", "requesterId", "performerOrganizationId", status, intent, category, code, display, "testPanel", priority, "authoredOn")
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, 'order', 'laboratory', $5, $6, $7, 'routine', $8)
       RETURNING id
     `,
       [
         patientIds[pIdx],
         rnd(doctorIds),
+        labOrgIds[labIdx],
         isCompleted ? 'completed' : 'active',
         test.code,
         test.display,
@@ -1273,7 +1293,7 @@ async function seed() {
     );
 
     // Generate QR code
-    const qrUrl = `${gatewayUrl}/lab/orders/${order.id}`;
+    const qrUrl = labSampleUrl(order.id);
     const imageBase64 = await QRCode.toDataURL(qrUrl);
     const [qr] = await db.query<IdRow[]>(
       `
@@ -1291,7 +1311,7 @@ async function seed() {
     if (isCompleted) {
       await db.query(
         `UPDATE service_requests SET "receivedAt" = $1, "completedAt" = $2, "performerId" = $3 WHERE id = $4`,
-        [daysAgo(i + 1), daysAgo(i), rnd(labStaffIds), order.id],
+        [daysAgo(i + 1), daysAgo(i), labStaffIds[labIdx], order.id],
       );
     }
 
