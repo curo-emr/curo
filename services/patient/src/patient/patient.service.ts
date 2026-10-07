@@ -25,6 +25,7 @@ import {
   toFhirCondition,
   toFhirObservation,
 } from './fhir.mapper';
+import { generatePhn } from './phn';
 import type { AuthUser } from '@curo/shared/auth';
 
 const UUID_RE =
@@ -54,37 +55,11 @@ export class PatientService implements OnModuleInit {
     return code;
   }
 
-  /** Luhn (mod-10) check digit for a numeric string payload. */
-  private luhnCheckDigit(payload: string): number {
-    let sum = 0;
-    let double = true; // rightmost payload digit is doubled (check digit will be appended)
-    for (let i = payload.length - 1; i >= 0; i--) {
-      let d = payload.charCodeAt(i) - 48;
-      if (double) {
-        d *= 2;
-        if (d > 9) d -= 9;
-      }
-      sum += d;
-      double = !double;
-    }
-    return (10 - (sum % 10)) % 10;
-  }
-
-  /** Personal Health Number: YYYY(4) + random sequence(7) + Luhn check digit(1) = 12 digits. */
-  private generatePhn(): string {
-    const year = new Date().getFullYear().toString();
-    let seq = '';
-    for (let i = 0; i < 7; i++)
-      seq += Math.floor(Math.random() * 10).toString();
-    const payload = year + seq; // 11 digits
-    return payload + this.luhnCheckDigit(payload).toString();
-  }
-
   private async generateUniquePhn(): Promise<string> {
     let phn: string;
     let exists: boolean;
     do {
-      phn = this.generatePhn();
+      phn = generatePhn();
       exists = !!(await this.patientsRepo.findOne({
         where: { personalHealthNumber: phn },
       }));
