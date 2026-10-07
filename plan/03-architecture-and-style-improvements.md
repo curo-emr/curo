@@ -170,13 +170,16 @@ Still capped, each behind a function named for it (`…FirstPage`, `getRecent…
   100 appointments and look patients up from one page of all patients; the appointment
   list's paid markers and My Income read the latest 100 payments.
 - Doctor schedule: the oldest 100 of the doctor's appointments.
-- Lab worklist (unless narrowed to a visit), patients, reports and dashboard: the
-  *oldest* 100 orders.
 - Pharmacy dispensing log and reports: the latest 100 dispenses.
 - Admin overview, income and user pages: the latest 100 payments; the overview's user
   counts come from the newest 100 users.
 
-These need server paging (dropping the client-side name search, or searching across
+> The lab portal pages on the server since 2026-10-07: `/orders` filters by status,
+> priority, patient and visit, searches by order id or by the patients a name search
+> matched (`findPatientIds`), sorts by priority or newest, and `/orders/summary` counts
+> by status and priority and lists the most-ordered tests.
+
+The rest need server paging (dropping the client-side name search, or searching across
 services on the server), `from`/`to` on `/appointments`, and server-side totals or a date
 window for the report pages (admin income can use `/payments/summary`).
 

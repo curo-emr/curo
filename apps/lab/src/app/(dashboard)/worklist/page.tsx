@@ -1,15 +1,12 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { WorklistTable } from "@/components/features/worklist/WorklistTable";
 import { ScanBox } from "@/components/features/worklist/ScanBox";
-import { getLabOrders, getLabOrdersFirstPage } from "@/lib/api/lab";
-import { getPatientsByIds } from "@/lib/api/patients";
 import { ROUTES } from "@/lib/constants";
-import type { LabOrder, Patient } from "@/types";
 
 // useSearchParams needs a Suspense boundary for the page to prerender.
 export default function WorklistPage() {
@@ -23,20 +20,6 @@ export default function WorklistPage() {
 function Worklist() {
   // Set when a scanned visit slip narrowed the list to that visit's tests.
   const visit = useSearchParams().get("visit") ?? undefined;
-  const [orders, setOrders] = useState<LabOrder[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    (visit ? getLabOrders({ encounterId: visit }) : getLabOrdersFirstPage())
-      .then(async (ords) => {
-        const pts = await getPatientsByIds(ords.map(o => o.patientId));
-        setOrders(ords);
-        setPatients(pts);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [visit]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -56,11 +39,7 @@ function Worklist() {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
-      ) : (
-        <WorklistTable orders={orders} patients={patients} />
-      )}
+      <WorklistTable visit={visit} />
     </div>
   );
 }

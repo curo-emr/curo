@@ -9,7 +9,7 @@ import {
   UseGuards,
   Header,
 } from '@nestjs/common';
-import { LabService } from './lab.service';
+import { LabService, type OrderFilter } from './lab.service';
 import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
 import { CreateInstrumentDto } from './dto/create-instrument.dto';
@@ -34,16 +34,18 @@ export class LabController {
   @Header('Content-Type', 'application/fhir+json')
   getOrders(
     @CurrentUser() user: AuthUser,
-    @Query('status') status?: string,
-    @Query('encounterId') encounterId?: string,
-    @Query('patientId') patientId?: string,
-    @Query() query?: PaginationQuery,
+    @Query() query: OrderFilter & PaginationQuery,
   ) {
-    return this.labService.getOrders(
-      user,
-      { status, encounterId, patientId },
-      query,
-    );
+    return this.labService.getOrders(user, query, query);
+  }
+
+  @Get('orders/summary')
+  @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
+  getOrderSummary(
+    @CurrentUser() user: AuthUser,
+    @Query('encounterId') encounterId?: string,
+  ) {
+    return this.labService.getOrderSummary(user, { encounterId });
   }
 
   // Test catalog a lab offers — doctors browse before ordering.

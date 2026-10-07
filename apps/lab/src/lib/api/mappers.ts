@@ -406,25 +406,43 @@ function orderedTests(fhir: FhirServiceRequest): Array<{ code: string; display: 
   return (fhir.code?.coding ?? []).map(c => ({ code: c.code ?? '', display: c.display ?? c.code ?? '' }));
 }
 
+// FHIR ServiceRequest status → what the lab sees. Any other status (on-hold) reads as draft.
+const ORDER_STATUSES: Record<string, LabOrder['status']> = {
+  draft: 'draft', active: 'sent_to_lab', completed: 'completed',
+  revoked: 'draft', 'entered-in-error': 'draft', unknown: 'draft',
+};
+const FHIR_ORDER_STATUSES = ['draft', 'active', 'on-hold', 'revoked', 'completed', 'entered-in-error', 'unknown'];
+
+// FHIR request priority → the lab's three. An order given none is routine.
+const ORDER_PRIORITIES: Record<string, LabOrder['priority']> = {
+  routine: 'routine', urgent: 'urgent', stat: 'stat', asap: 'stat',
+};
+
+export const labOrderStatusOf = (fhirStatus: string): LabOrder['status'] => ORDER_STATUSES[fhirStatus] ?? 'draft';
+
+export const labOrderPriorityOf = (fhirPriority?: string | null): LabOrder['priority'] =>
+  ORDER_PRIORITIES[fhirPriority ?? 'routine'] ?? 'routine';
+
+/** The FHIR statuses that read as `status`, for asking the API for them. */
+export const fhirStatusesOf = (status: LabOrder['status']) =>
+  FHIR_ORDER_STATUSES.filter(fhirStatus => labOrderStatusOf(fhirStatus) === status);
+
+/** The FHIR priorities that read as `priority`, for asking the API for them. */
+export const fhirPrioritiesOf = (priority: LabOrder['priority']) =>
+  Object.keys(ORDER_PRIORITIES).filter(fhirPriority => labOrderPriorityOf(fhirPriority) === priority);
+
 export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
   const patientId = fhir.subject?.reference?.replace('Patient/', '') ?? '';
   const encounterId = fhir.encounter?.reference?.replace('Encounter/', '') ?? '';
   const doctorId = fhir.requester?.reference?.replace('Practitioner/', '') ?? '';
-  const statusMap: Record<string, LabOrder['status']> = {
-    draft: 'draft', active: 'sent_to_lab', completed: 'completed',
-    revoked: 'draft', 'entered-in-error': 'draft', unknown: 'draft',
-  };
-  const priorityMap: Record<string, LabOrder['priority']> = {
-    routine: 'routine', urgent: 'urgent', stat: 'stat', asap: 'stat',
-  };
 
   return {
     id: fhir.id,
     patientId,
     encounterId,
     doctorId,
-    priority: priorityMap[fhir.priority ?? 'routine'] ?? 'routine',
-    status: statusMap[fhir.status] ?? 'draft',
+    priority: labOrderPriorityOf(fhir.priority),
+    status: labOrderStatusOf(fhir.status),
     createdAt: fhir.authoredOn ?? fhir.meta?.lastUpdated ?? '',
     sentToLabAt: fhir.status !== 'draft' ? (fhir.authoredOn ?? fhir.meta?.lastUpdated ?? null) : null,
     receivedAt: fhir.receivedAt ?? null,

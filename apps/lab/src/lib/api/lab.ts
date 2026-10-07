@@ -1,5 +1,9 @@
 import { apiClient, getAllPages } from '@curo/web/api';
 import {
+  fhirPrioritiesOf,
+  fhirStatusesOf,
+  labOrderPriorityOf,
+  labOrderStatusOf,
   mapFhirDiagnosticReport,
   mapFhirServiceRequest,
   type FhirDiagnosticReport,
@@ -12,18 +16,78 @@ import { interpret, parseNumeric } from '@/lib/result-flag';
 
 // ─── Lab Orders ───────────────────────────────────────────────────────────────
 
-// Every order from one visit or for one patient.
-export async function getLabOrders(filters: { encounterId: string } | { patientId: string }): Promise<LabOrder[]> {
-  return (await getAllPages<FhirServiceRequest>('/orders', filters)).map(mapFhirServiceRequest);
+// Every order from one visit, or for some patients.
+export async function getLabOrders(filters: { encounterId: string } | { patientIds: string[] }): Promise<LabOrder[]> {
+  if ('patientIds' in filters && filters.patientIds.length === 0) return [];
+  const params = 'patientIds' in filters ? { patientId: filters.patientIds.join(',') } : filters;
+  return (await getAllPages<FhirServiceRequest>('/orders', params)).map(mapFhirServiceRequest);
 }
 
-// Only the first 100 orders, oldest first. The pages that list every order still
-// use this until they page on the server (plan/03 B2).
-export async function getLabOrdersFirstPage(): Promise<LabOrder[]> {
-  const res = await apiClient.get<FhirServiceRequest[] | FhirBundle<FhirServiceRequest>>('/orders', {
-    params: { pageSize: 100 },
+export interface LabOrderQuery {
+  status?: LabOrder['status'];
+  priorities?: LabOrder['priority'][];
+  encounterId?: string;
+  /** Matches the start of an order id, or any order for `searchPatientIds`. */
+  search?: string;
+  searchPatientIds?: string[];
+  /** `priority`: stat, then urgent, then routine, newest first within each. */
+  sort?: 'priority' | 'newest';
+}
+
+const ORDER_SORTS = { priority: 'priority', newest: '-authored' } as const;
+
+// One page of the orders the lab can see.
+export async function getLabOrdersPage(
+  { page, pageSize, ...query }: LabOrderQuery & { page: number; pageSize: number },
+): Promise<PaginatedResult<LabOrder>> {
+  const statuses = query.status ? fhirStatusesOf(query.status) : [];
+  // No order is ever in a status that nothing maps to (results_pending, for now).
+  if (query.status && statuses.length === 0) return { items: [], total: 0, page, pageSize };
+  const res = await apiClient.get<FhirBundle<FhirServiceRequest>>('/orders', {
+    params: {
+      page,
+      pageSize,
+      status: statuses.join(',') || undefined,
+      priority: query.priorities?.flatMap(fhirPrioritiesOf).join(',') || undefined,
+      encounterId: query.encounterId,
+      search: query.search || undefined,
+      searchPatientIds: query.searchPatientIds?.join(',') || undefined,
+      _sort: query.sort && ORDER_SORTS[query.sort],
+    },
   });
-  return unwrapBundle(res.data).resources.map(mapFhirServiceRequest);
+  const { resources, total } = unwrapBundle(res.data);
+  return { items: resources.map(mapFhirServiceRequest), total, page, pageSize };
+}
+
+export interface LabOrderSummary {
+  total: number;
+  byStatus: Partial<Record<LabOrder['status'], number>>;
+  byPriority: Partial<Record<LabOrder['priority'], number>>;
+  /** The ten most-ordered tests, each test in a panel counted. */
+  topTests: { code: string; display: string; count: number }[];
+}
+
+/** `counts` keyed by FHIR code, regrouped by what the lab sees each code as. */
+function regroup<K extends string>(counts: Record<string, number>, keyOf: (code: string) => K) {
+  const out: Partial<Record<K, number>> = {};
+  for (const [code, count] of Object.entries(counts)) out[keyOf(code)] = (out[keyOf(code)] ?? 0) + count;
+  return out;
+}
+
+// Counts across the lab's orders (one visit's, given `encounterId`).
+export async function getLabOrderSummary(encounterId?: string): Promise<LabOrderSummary> {
+  const res = await apiClient.get<{
+    byStatus: Record<string, number>;
+    byPriority: Record<string, number>;
+    topTests: LabOrderSummary['topTests'];
+  }>('/orders/summary', { params: { encounterId } });
+  const { byStatus, byPriority, topTests } = res.data;
+  return {
+    total: Object.values(byStatus).reduce((sum, count) => sum + count, 0),
+    byStatus: regroup(byStatus, labOrderStatusOf),
+    byPriority: regroup(byPriority, labOrderPriorityOf),
+    topTests,
+  };
 }
 
 export async function getLabOrderById(id: string): Promise<LabOrder | null> {
@@ -36,7 +100,7 @@ export async function getLabOrderById(id: string): Promise<LabOrder | null> {
 }
 
 export async function getLabOrdersByPatient(patientId: string): Promise<LabOrder[]> {
-  return getLabOrders({ patientId });
+  return getLabOrders({ patientIds: [patientId] });
 }
 
 // ─── Catalog ────────────────────────────────────────────────────────────────

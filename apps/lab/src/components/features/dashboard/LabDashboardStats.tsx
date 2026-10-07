@@ -1,14 +1,15 @@
-import { LabOrder } from "@/types";
+import type { LabOrder } from "@/types";
 
 interface LabDashboardStatsProps {
-  orders: LabOrder[];
+  /** How many of the lab's orders are in each status. */
+  counts: Partial<Record<LabOrder["status"], number>>;
 }
 
-export function LabDashboardStats({ orders }: LabDashboardStatsProps) {
-  const pendingCount = orders.filter(o => o.status === 'sent_to_lab').length;
-  const inProgressCount = orders.filter(o => o.status === 'results_pending').length;
-  const awaitingVerification = orders.filter(o => o.status === 'draft').length;
-  const completedToday = orders.filter(o => o.status === 'completed').length;
+export function LabDashboardStats({ counts }: LabDashboardStatsProps) {
+  const pendingCount = counts.sent_to_lab ?? 0;
+  const inProgressCount = counts.results_pending ?? 0;
+  const awaitingVerification = counts.draft ?? 0;
+  const completedToday = counts.completed ?? 0;
 
   const statCards = [
     { label: "Pending Orders", value: pendingCount, color: "text-status-warning-text bg-status-warning-bg border-status-warning-border" },
