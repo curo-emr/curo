@@ -96,7 +96,7 @@ real IDs captured from prior steps.
 ### Pharmacy service (`:3005` — `/dispense` `/stock`)
 | Method | Path | Role | Status |
 |---|---|---|---|
-| GET | `/stock` · `/stock/grouped` (FEFO) · `/stock?lowOnly=true` · `/stock/alerts` | PHARMACIST | ✅ 200 |
+| GET | `/stock` · `/stock/grouped` (FEFO) · `/stock/alerts` (per drug) | PHARMACIST | ✅ 200 |
 | POST/PUT | `/stock` · `/stock/:id` | PHARMACIST | ✅ 201 / 200 |
 | POST | `/dispense` (FEFO multi-batch decrement) | PHARMACIST | ✅ 201 |
 | GET | `/dispense?patientId=` · `/dispense/:id` | PHARMACIST | ✅ 200 |

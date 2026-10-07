@@ -8,7 +8,10 @@ import { RecentDispensingFeed } from "@/components/features/dashboard/RecentDisp
 import { LowStockAlerts } from "@/components/features/dashboard/LowStockAlerts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getPendingPrescriptions, getDispensingRecords, getStock, type StockItem, type DispenseRecord } from "@/lib/api/pharmacy";
+import {
+  getPendingPrescriptions, getDispensingRecords, getStock, getLowStockAlerts,
+  type StockItem, type DispenseRecord, type GroupedStock,
+} from "@/lib/api/pharmacy";
 import { getPatients } from "@/lib/api/patients";
 import type { Prescription, Patient } from "@/types";
 
@@ -16,15 +19,17 @@ export default function DashboardPage() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [medications, setMedications] = useState<StockItem[]>([]);
+  const [lowStock, setLowStock] = useState<GroupedStock[]>([]);
   const [dispensingRecords, setDispensingRecords] = useState<DispenseRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getPendingPrescriptions(), getPatients(), getStock(), getDispensingRecords()])
-      .then(([rxs, pts, meds, records]) => {
+    Promise.all([getPendingPrescriptions(), getPatients(), getStock(), getLowStockAlerts(), getDispensingRecords()])
+      .then(([rxs, pts, meds, low, records]) => {
         setPrescriptions(rxs);
         setPatients(pts);
         setMedications(meds);
+        setLowStock(low);
         setDispensingRecords(records);
       })
       .catch(console.error)
@@ -53,7 +58,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <PharmacyDashboardStats prescriptions={prescriptions} medications={medications} />
+      <PharmacyDashboardStats prescriptions={prescriptions} lowStockCount={lowStock.length} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -62,7 +67,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-6">
-          <LowStockAlerts medications={medications} />
+          <LowStockAlerts drugs={lowStock} />
 
           {/* Expiring Soon */}
           <Card className="shadow-sm border">

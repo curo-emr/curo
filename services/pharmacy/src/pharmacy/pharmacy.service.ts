@@ -26,7 +26,12 @@ import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
 import { MedicationDispenseStatus } from '../enums';
 import { byExpiry, planFefoDraws } from './fefo';
-import { lowStockAfterDraw, type LowStock } from './reorder-level';
+import {
+  isLow,
+  lowStockAfterDraw,
+  stockLevel,
+  type StockLevel,
+} from './reorder-level';
 
 /** What one stock batch supplied to a dispense. */
 interface BatchDraw {
@@ -38,10 +43,13 @@ interface BatchDraw {
 /** What a dispense took from stock, and whether that left the drug low. */
 interface StockDraw {
   draws: BatchDraw[];
-  lowStock: (LowStock & { unit: string | null }) | null;
+  lowStock: (StockLevel & { unit: string | null }) | null;
 }
 
 const roundMoney = (amount: number) => Math.round(amount * 100) / 100;
+
+/** Today as an ISO date (YYYY-MM-DD), the form `expiryDate` is stored in. */
+const isoToday = () => new Date().toISOString().slice(0, 10);
 
 /** Optional filters for GET /dispense. */
 export interface DispenseHistoryFilter {
@@ -61,17 +69,21 @@ export type StockBatch = Pick<
 >;
 
 /** One drug's stock across all of its batches. */
-export interface StockGroup extends Pick<
-  Stock,
-  | 'medicationCode'
-  | 'medicationName'
-  | 'genericName'
-  | 'form'
-  | 'strength'
-  | 'unit'
-  | 'reorderThreshold'
-> {
-  totalQuantity: number;
+export interface StockGroup
+  extends
+    Pick<
+      Stock,
+      | 'medicationCode'
+      | 'medicationName'
+      | 'genericName'
+      | 'form'
+      | 'strength'
+      | 'unit'
+    >,
+    StockLevel {
+  /** At or below its reorder level (see reorder-level.ts). */
+  low: boolean;
+  /** FEFO order: the batch dispensed from next comes first. */
   batches: StockBatch[];
 }
 
@@ -162,7 +174,7 @@ export class PharmacyService {
       .setLock('pessimistic_write')
       .getMany();
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = isoToday();
     const draws = planFefoDraws(batches, qty, today);
     const available = draws.reduce((sum, d) => sum + d.quantity, 0);
     if (available < qty) {
@@ -220,7 +232,7 @@ export class PharmacyService {
           eventType: NotificationEventType.LOW_STOCK_ALERT,
           title: 'Low stock',
           message:
-            `${prescription.medicationDisplay} is low: ${lowStock.remaining} ` +
+            `${prescription.medicationDisplay} is low: ${lowStock.usableQuantity} ` +
             `${lowStock.unit ?? 'units'} left (reorder at ${lowStock.reorderLevel}).`,
           relatedResourceType: 'Medication',
           relatedResourceId: prescription.medicationCode,
@@ -289,14 +301,9 @@ export class PharmacyService {
   }
 
   // Stock management → FHIR searchset Bundle (paginated).
-  async getStock(
-    lowOnly?: boolean,
-    organizationId?: string,
-    pagination: PaginationQuery = {},
-  ) {
+  async getStock(organizationId?: string, pagination: PaginationQuery = {}) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const qb = this.stockRepo.createQueryBuilder('s').where('s.active = true');
-    if (lowOnly) qb.andWhere('s.quantity <= s.reorderThreshold');
     if (organizationId)
       qb.andWhere('s.organizationId = :org', { org: organizationId });
     const [stock, total] = await qb
@@ -308,47 +315,47 @@ export class PharmacyService {
       page,
       pageSize,
       baseUrl: '/stock',
-      query: { lowOnly: lowOnly ? 'true' : undefined, organizationId },
+      query: { organizationId },
     });
   }
 
-  /**
-   * Stock grouped by drug, with each drug's batches listed by expiry (FEFO order).
-   * Multiple batches of the same drug with different expiry dates are separate rows.
-   */
+  /** Active stock grouped by drug, each drug's batches in FEFO order. */
   async getGroupedStock(): Promise<StockGroup[]> {
     const rows = await this.stockRepo.find({
       where: { active: true },
       order: { medicationName: 'ASC' },
     });
-    const groups = new Map<string, StockGroup>();
+    const byDrug = new Map<string, Stock[]>();
     for (const s of rows) {
-      const g = groups.get(s.medicationCode) ?? {
-        medicationCode: s.medicationCode,
-        medicationName: s.medicationName,
-        genericName: s.genericName,
-        form: s.form,
-        strength: s.strength,
-        unit: s.unit,
-        reorderThreshold: s.reorderThreshold,
-        totalQuantity: 0,
-        batches: [],
-      };
-      g.totalQuantity += s.quantity;
-      g.batches.push({
-        id: s.id,
-        batchNumber: s.batchNumber,
-        quantity: s.quantity,
-        expiryDate: s.expiryDate,
-        unitPrice: s.unitPrice,
-        supplier: s.supplier,
-        storageLocation: s.storageLocation,
-      });
-      groups.set(s.medicationCode, g);
+      const batches = byDrug.get(s.medicationCode);
+      if (batches) batches.push(s);
+      else byDrug.set(s.medicationCode, [s]);
     }
-    const result = Array.from(groups.values());
-    for (const g of result) g.batches.sort(byExpiry);
-    return result;
+
+    const today = isoToday();
+    return Array.from(byDrug.values(), (batches) => {
+      const [first] = batches;
+      const level = stockLevel(batches, today);
+      return {
+        medicationCode: first.medicationCode,
+        medicationName: first.medicationName,
+        genericName: first.genericName,
+        form: first.form,
+        strength: first.strength,
+        unit: first.unit,
+        ...level,
+        low: isLow(level),
+        batches: batches.sort(byExpiry).map((b) => ({
+          id: b.id,
+          batchNumber: b.batchNumber,
+          quantity: b.quantity,
+          expiryDate: b.expiryDate,
+          unitPrice: b.unitPrice,
+          supplier: b.supplier,
+          storageLocation: b.storageLocation,
+        })),
+      };
+    });
   }
 
   async addStock(dto: CreateStockDto): Promise<Stock> {
@@ -363,10 +370,8 @@ export class PharmacyService {
     return this.stockRepo.save(item);
   }
 
-  async getLowStockAlerts(): Promise<Stock[]> {
-    return this.stockRepo
-      .createQueryBuilder('s')
-      .where('s.quantity <= s."reorderThreshold" AND s.active = true')
-      .getMany();
+  /** The drugs that are low, one entry each, as in getGroupedStock. */
+  async getLowStockAlerts(): Promise<StockGroup[]> {
+    return (await this.getGroupedStock()).filter((g) => g.low);
   }
 }
