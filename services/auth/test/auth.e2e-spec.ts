@@ -1,12 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { UserRole } from '@curo/shared/enums';
-import {
-  startService,
-  type ServiceUnderTest,
-  type TestActor,
-} from '@curo/testing';
+import { startService, type ServiceUnderTest } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { User } from '../src/entities/user.entity';
+import { signedIn } from './signed-in';
 
 interface Tokens {
   accessToken: string;
@@ -25,16 +22,6 @@ describe('Sign-in', () => {
 
   afterAll(() => svc.close());
 
-  /** Unlike other services, this one checks the account behind a token on every request. */
-  async function signedIn(role: UserRole): Promise<TestActor> {
-    const user = await svc.db.getRepository(User).save({
-      email: `${role.toLowerCase()}.${randomUUID()}@curo.test`,
-      passwordHash: 'not used: the token is signed directly',
-      role,
-    });
-    return svc.as(role, { sub: user.id, email: user.email });
-  }
-
   const newStaff = () => ({
     email: `priya.${randomUUID()}@curo.test`,
     password: PASSWORD,
@@ -48,7 +35,7 @@ describe('Sign-in', () => {
     const staff = newStaff();
     await svc.api
       .post('/auth/staff')
-      .set((await signedIn(UserRole.SUPER_ADMIN)).headers)
+      .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
       .send(staff)
       .expect(201);
     return staff;
@@ -132,7 +119,7 @@ describe('Sign-in', () => {
 
       await svc.api
         .post('/auth/staff')
-        .set((await signedIn(UserRole.SUPER_ADMIN)).headers)
+        .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
         .send({ ...staff, firstName: 'Someone', lastName: 'Else' })
         .expect(409);
     });
@@ -142,7 +129,7 @@ describe('Sign-in', () => {
 
       await svc.api
         .post('/auth/staff')
-        .set((await signedIn(UserRole.DOCTOR)).headers)
+        .set((await signedIn(svc, UserRole.DOCTOR)).headers)
         .send(staff)
         .expect(403);
 

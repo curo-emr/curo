@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MinLength,
 } from 'class-validator';
 import { Gender, UserRole } from '@curo/shared/enums';
@@ -48,8 +49,9 @@ export class CreateUserDto {
   @IsString()
   licenseNumber?: string;
 
+  /** Where they work; which kinds of organization depend on the role. */
   @IsOptional()
-  @IsString()
+  @IsUUID()
   organizationId?: string;
 
   // For PATIENT role: optionally link the login to an existing patient record.

@@ -1,42 +1,19 @@
-import { Controller, Get, Query, Injectable, UseGuards } from '@nestjs/common';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule, InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
-import { Organization } from '../entities/organization.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-
-@Injectable()
-export class OrganizationService {
-  constructor(
-    @InjectRepository(Organization)
-    private orgRepo: Repository<Organization>,
-  ) {}
-
-  list(type?: string): Promise<Organization[]> {
-    const where: FindOptionsWhere<Organization> = {
-      active: true,
-      ...(type && { type }),
-    };
-    return this.orgRepo.find({ where, order: { name: 'ASC' } });
-  }
-}
-
-// Any authenticated user can read the directory (doctors pick a pharmacy/lab).
-@Controller('organizations')
-@UseGuards(JwtAuthGuard)
-export class OrganizationController {
-  constructor(private orgService: OrganizationService) {}
-
-  @Get()
-  list(@Query('type') type?: string) {
-    return this.orgService.list(type);
-  }
-}
+import { AuditTrailModule } from '../audit/audit-trail';
+import { Organization } from '../entities/organization.entity';
+import { OrganizationController } from './organization.controller';
+import { OrganizationService } from './organization.service';
 
 @Module({
-  imports: [AuthModule, TypeOrmModule.forFeature([Organization])],
+  imports: [
+    AuthModule, // provides JwtModule + JwtStrategy used by the guards
+    AuditTrailModule,
+    TypeOrmModule.forFeature([Organization]),
+  ],
   controllers: [OrganizationController],
   providers: [OrganizationService],
+  exports: [OrganizationService],
 })
 export class OrganizationModule {}
