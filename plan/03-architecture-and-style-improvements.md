@@ -176,7 +176,8 @@ delete the other; bundled JSON + DB copies will diverge.
 - Each dispense records its pharmacy (`organizationId`), so a pharmacist's dispensing log
   and summary are their own pharmacy's; one patient's or prescription's dispenses still
   come from every pharmacy. Earlier dispenses got their pharmacy where it could be worked out.
-- Still open: the lab dashboard's QC alerts come from the latest 100 QC logs.
+- The lab dashboard's QC alerts are the controls whose latest run failed or warned
+  (`/qc-logs/alerts`), however many runs came after on other controls.
 
 ### B5. Error boundaries and empty/loading states are uneven
 `error.tsx` exists in doctor/receptionist dashboards but not everywhere; some

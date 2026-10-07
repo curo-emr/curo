@@ -274,12 +274,12 @@ function mapQcLog(log: ApiQCLog): QCLog {
   };
 }
 
-// The latest 100 QC logs, newest first.
-export async function getRecentQCLogs(params?: { instrumentId?: string; status?: QCStatus }): Promise<QCLog[]> {
-  const res = await apiClient.get<ApiQCLog[] | FhirBundle<ApiQCLog>>('/qc-logs', {
-    params: { pageSize: 100, ...params },
-  });
-  return unwrapBundle(res.data).resources.map(mapQcLog);
+// The first `limit` open QC alerts, newest first: controls whose latest run failed or
+// warned. `total` counts them all.
+export async function getQCAlerts(limit: number): Promise<{ items: QCLog[]; total: number }> {
+  const res = await apiClient.get<FhirBundle<ApiQCLog>>('/qc-logs/alerts', { params: { pageSize: limit } });
+  const { resources, total } = unwrapBundle(res.data);
+  return { items: resources.map(mapQcLog), total };
 }
 
 // Server-driven pagination for the QC log table.

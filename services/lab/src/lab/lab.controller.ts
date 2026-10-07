@@ -121,6 +121,14 @@ export class LabController {
     return this.labService.getInstruments(user);
   }
 
+  // Controls whose latest QC run failed or warned.
+  @Get('qc-logs/alerts')
+  @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
+  @Header('Content-Type', 'application/fhir+json')
+  getQcAlerts(@CurrentUser() user: AuthUser, @Query() query?: PaginationQuery) {
+    return this.labService.getQcAlerts(user, query);
+  }
+
   @Get('qc-logs')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
