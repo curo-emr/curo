@@ -101,6 +101,32 @@ describe('Patient records', () => {
     return (await savedPatient(body.lastName))!.id;
   }
 
+  describe('reading a patient as pharmacy or lab staff', () => {
+    it.each([UserRole.PHARMACIST, UserRole.LAB_STAFF])(
+      'every route %s can use leaves out NIC, contact and address',
+      async (role) => {
+        const body = newPatient({ nic: '199012345678', phone: '+94771234567' });
+        await register(body).expect(201);
+        const { id, patientCode } = (await savedPatient(body.lastName))!;
+        const actor = svc.as(role);
+
+        const reads = await Promise.all(
+          [
+            `/patients/${id}`,
+            `/patients/code/${patientCode}`,
+            `/patients?search=${body.lastName}`,
+          ].map((path) => svc.api.get(path).set(actor.headers).expect(200)),
+        );
+
+        for (const { text } of reads) {
+          expect(text).toContain(id);
+          expect(text).not.toContain('199012345678');
+          expect(text).not.toContain('+94771234567');
+        }
+      },
+    );
+  });
+
   describe('POST /patients/:id/allergies', () => {
     const penicillin = {
       type: AllergyIntoleranceType.ALLERGY,
