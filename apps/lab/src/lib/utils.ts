@@ -45,11 +45,6 @@ export function getPatientMeta(id: string, patients: { id: string; dob: string; 
   return { age: calculateAge(p.dob), sex: p.sex };
 }
 
-export function getTestName(testId: string, catalog: { id: string; name: string; code: string }[]): string {
-  const test = catalog.find(t => t.id === testId);
-  return test ? `${test.name} (${test.code})` : testId;
-}
-
 export function getStaffName(id: string, staff: { id: string; name: { full: string } }[]): string {
   return staff.find(s => s.id === id)?.name.full || "Unknown Staff";
 }
