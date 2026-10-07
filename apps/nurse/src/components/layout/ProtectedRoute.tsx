@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@curo/web/auth";
 import { Button } from "@/components/ui/button";
 
 // The nurse station is for nursing officers (super admins may look in for support).

@@ -1,7 +1,7 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, mapFhirMedicationRequest, mapFhirServiceRequest, mapFhirAppointment, mapFhirEncounter, type FhirPatient, type FhirAllergy, type FhirCondition, type FhirMedicationRequest, type FhirServiceRequest, type FhirAppointment, type FhirEncounter } from './mappers';
 import type { Patient, Allergy, Problem, Appointment, Encounter, Prescription, LabOrder } from '@/types';
-import { unwrapBundle, type FhirBundle } from './fhir';
+import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 
 export async function getMyProfile(): Promise<Patient | null> {
   try {

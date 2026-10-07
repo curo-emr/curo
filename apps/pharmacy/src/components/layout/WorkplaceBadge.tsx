@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Store } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@curo/web/auth";
 import { getMyWorkplace, type Organization } from "@/lib/api/organizations";
 
 /** The pharmacy the signed-in pharmacist is working at, which all stock and dispensing is for. */

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@curo/web/auth";
 import { getMyWorkplace, type Organization } from "@/lib/api/organizations";
 
 /** The lab the signed-in technician works at: they see only the tests sent to it. */

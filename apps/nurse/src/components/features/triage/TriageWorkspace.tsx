@@ -11,7 +11,7 @@ import { getAppointmentById, updateQueueStage } from "@/lib/api/appointments";
 import { getAllergies, getConditions, getPatientById } from "@/lib/api/patients";
 import { getPractitioners, type Practitioner } from "@/lib/api/practitioners";
 import { getLatestVitals, getVisitVitals, recordVitals } from "@/lib/api/vitals";
-import { apiErrorMessage } from "@/lib/api/client";
+import { apiErrorMessage } from "@curo/web/api";
 import { ROUTES } from "@/lib/constants";
 import { TRIAGE_STAGES } from "@/lib/queue";
 import {

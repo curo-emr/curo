@@ -1,5 +1,5 @@
-import { apiClient } from './client';
-import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from './fhir';
+import { apiClient } from '@curo/web/api';
+import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
 import type { ICD10 } from '@/types';
 
 // Backend icd10_codes rows already match the frontend ICD10 shape.

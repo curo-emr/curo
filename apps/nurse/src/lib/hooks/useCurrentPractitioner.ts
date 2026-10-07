@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@curo/web/auth";
 import { getPractitioners, type Practitioner } from "@/lib/api/practitioners";
 
 // The signed-in nurse's practitioner record (name, qualification) — null until loaded.

@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 
 export interface DocumentRef {
   id: string;

@@ -1,7 +1,7 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import type { Appointment, QueueStage } from '@/types';
 import { mapFhirAppointment, type FhirAppointment } from './mappers';
-import { unwrapBundle, type FhirBundle } from './fhir';
+import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 
 export async function getAppointments(filters?: {
   date?: string;

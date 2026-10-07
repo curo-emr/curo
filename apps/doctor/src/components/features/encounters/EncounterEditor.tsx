@@ -28,7 +28,7 @@ import { LabOrderForm } from "./sections/LabOrderForm";
 import { VitalsPanel, type RecordedVitals } from "./sections/VitalsPanel";
 import { PatientContext } from "./PatientContext";
 import { emptyVisit, signVisit, type VisitDraft } from "./visit";
-import { apiErrorMessage } from "@/lib/api/client";
+import { apiErrorMessage } from "@curo/web/api";
 
 interface Props {
   patient: Patient;

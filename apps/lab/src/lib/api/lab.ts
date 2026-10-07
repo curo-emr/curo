@@ -1,11 +1,11 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import {
   mapFhirDiagnosticReport,
   mapFhirServiceRequest,
   type FhirDiagnosticReport,
   type FhirServiceRequest,
 } from './mappers';
-import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from './fhir';
+import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
 import type { LabOrder } from '@/types';
 import type { LabStaff, LabTestCatalogItem, QCLog, QCStatus, SpecimenType } from '@/types';
 import { interpret, parseNumeric } from '@/lib/result-flag';

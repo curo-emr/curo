@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import type { Vitals } from '@/types';
 import { VITAL_FIELDS } from '@/lib/vitals';
 

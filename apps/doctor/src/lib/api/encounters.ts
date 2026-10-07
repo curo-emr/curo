@@ -1,7 +1,7 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import type { Encounter } from '@/types';
 import { mapFhirEncounter, type FhirEncounter } from './mappers';
-import { unwrapBundle, type FhirBundle } from './fhir';
+import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 
 export async function getEncountersByPatient(patientId: string): Promise<Encounter[]> {
   const res = await apiClient.get<FhirEncounter[] | FhirBundle<FhirEncounter>>('/encounters', { params: { patientId } });

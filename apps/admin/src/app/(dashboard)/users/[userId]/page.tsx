@@ -18,7 +18,7 @@ import { ROUTES, ROLE_LABELS, WORKPLACE_TYPES, type UserRole } from "@/lib/const
 import { WorkplaceSelect } from "@/components/features/organizations/WorkplaceSelect";
 import { format, parseISO } from "date-fns";
 import type { AdminUser, Payment } from "@/types";
-import { apiErrorMessage } from "@/lib/api/client";
+import { apiErrorMessage } from "@curo/web/api";
 
 function money(amount: number, currency = "LKR") {
   const f = Number(amount).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -16,7 +16,7 @@ import {
 import { createUserSchema, type CreateUserInput } from "@/lib/validations/user";
 import { createUser } from "@/lib/api/users";
 import { ROUTES, USER_ROLES, ROLE_LABELS, GENDERS } from "@/lib/constants";
-import { apiErrorMessage } from "@/lib/api/client";
+import { apiErrorMessage } from "@curo/web/api";
 import { WorkplaceSelect } from "@/components/features/organizations/WorkplaceSelect";
 
 // Patients are created via receptionist registration (which generates the PHN),
