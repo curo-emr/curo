@@ -140,6 +140,8 @@ export interface FhirServiceRequest {
   code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
   note?: Array<{ text?: string }>;
   extension?: Array<{ url: string; valueString?: string }>;
+  /** The individual tests ordered; empty on older single-test orders. */
+  testPanel?: Array<{ code: string; display: string }> | null;
   tests?: Array<{ testCode: string; display: string; qrBase64: string | null }>;
 }
 
@@ -396,6 +398,12 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
   };
 }
 
+/** The order's tests: its panel, or the order's own code when it has none. */
+function orderedTests(fhir: FhirServiceRequest): Array<{ code: string; display: string }> {
+  if (fhir.testPanel?.length) return fhir.testPanel;
+  return (fhir.code?.coding ?? []).map(c => ({ code: c.code ?? '', display: c.display ?? c.code ?? '' }));
+}
+
 export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
   const patientId = fhir.subject?.reference?.replace('Patient/', '') ?? '';
   const encounterId = fhir.encounter?.reference?.replace('Encounter/', '') ?? '';
@@ -418,8 +426,9 @@ export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
     createdAt: fhir.meta?.lastUpdated ?? '',
     sentToLabAt: fhir.status !== 'draft' ? (fhir.meta?.lastUpdated ?? null) : null,
     notesToLab: fhir.note?.[0]?.text ?? '',
-    tests: (fhir.code?.coding ?? []).map(c => ({
-      testId: c.code ?? '',
+    tests: orderedTests(fhir).map(t => ({
+      testId: t.code,
+      name: t.display,
       status: 'ordered' as const,
       result: null,
     })),

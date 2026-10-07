@@ -8,6 +8,7 @@ import {
 import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from './fhir';
 import type { LabOrder } from '@/types';
 import type { LabStaff, LabTestCatalogItem, QCLog, QCStatus, SpecimenType } from '@/types';
+import { interpret, parseNumeric } from '@/lib/result-flag';
 
 // ─── Lab Orders ───────────────────────────────────────────────────────────────
 
@@ -102,22 +103,40 @@ export interface LabResult {
   status: string;
 }
 
+/** One test's result as the technician typed it. */
+export interface ResultEntry {
+  code: string;
+  display: string;
+  value: string;
+  unit: string;
+  referenceRangeLow: string;
+  referenceRangeHigh: string;
+}
+
+/** The API's result item: a number goes in `value`, anything else in `valueString`. */
+function toResultItem(entry: ResultEntry) {
+  const numeric = parseNumeric(entry.value);
+  return {
+    code: entry.code,
+    display: entry.display,
+    ...(numeric === null ? { valueString: entry.value.trim() } : { value: numeric }),
+    unit: entry.unit.trim() || undefined,
+    referenceRangeLow: entry.referenceRangeLow.trim() || undefined,
+    referenceRangeHigh: entry.referenceRangeHigh.trim() || undefined,
+    interpretation: interpret(entry.value, entry.referenceRangeLow, entry.referenceRangeHigh) ?? undefined,
+  };
+}
+
+/** Files the order's results and completes it; the ordering doctor is notified. */
 export async function enterResults(data: {
   orderId: string;
-  results: LabResultItem[];
+  results: ResultEntry[];
   conclusion?: string;
 }): Promise<LabResult> {
   const res = await apiClient.post<FhirDiagnosticReport>('/results', {
     serviceRequestId: data.orderId,
-    results: data.results.map(result => ({
-      code: result.testCode,
-      display: result.testName,
-      valueString: result.value,
-      unit: result.unit,
-      referenceRangeText: result.referenceRange,
-      interpretation: result.flag,
-    })),
-    conclusion: data.conclusion,
+    results: data.results.map(toResultItem),
+    conclusion: data.conclusion?.trim() || undefined,
   });
   return mapFhirDiagnosticReport(res.data);
 }
