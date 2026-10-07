@@ -16,6 +16,9 @@ const daysFromToday = (days: number) =>
 
 describe('POST /dispense', () => {
   let svc: ServiceUnderTest;
+  /** The pharmacy the tests dispense at; another is a branch elsewhere. */
+  const pharmacy = randomUUID();
+  const otherPharmacy = randomUUID();
 
   beforeAll(async () => {
     svc = await startService(AppModule);
@@ -23,13 +26,17 @@ describe('POST /dispense', () => {
 
   afterAll(() => svc.close());
 
-  /** An active prescription for a drug of its own, stocked with `batches`. */
+  /**
+   * An active prescription for a drug of its own, stocked with `batches` (at
+   * the tests' pharmacy unless a batch says otherwise).
+   */
   async function prescribe(quantityValue: number, batches: Partial<Stock>[]) {
     const drug = { medicationCode: `TEST-${randomUUID()}` };
     await svc.db.getRepository(Stock).save(
       batches.map((b) => ({
         ...drug,
         medicationName: 'Amoxicillin 500mg',
+        organizationId: pharmacy,
         ...b,
       })),
     );
@@ -71,10 +78,10 @@ describe('POST /dispense', () => {
       .getRepository(MedicationDispense)
       .countBy({ medicationRequestId: rx.id });
 
-  const dispense = (rx: MedicationRequest) =>
+  const dispense = (rx: MedicationRequest, at: string | null = pharmacy) =>
     svc.api
       .post('/dispense')
-      .set(svc.as(UserRole.PHARMACIST).headers)
+      .set(svc.as(UserRole.PHARMACIST, { organizationId: at }).headers)
       .send({ medicationRequestId: rx.id });
 
   it('draws the earliest-expiring stock first, skips expired batches and prices from the batches used', async () => {
@@ -147,14 +154,41 @@ describe('POST /dispense', () => {
     expect(await dispensesOf(rx)).toBe(1);
   });
 
-  it('is refused to roles other than pharmacist and admin', async () => {
+  it('draws only from stock at the dispensing pharmacy', async () => {
+    const rx = await prescribe(10, [
+      {
+        batchNumber: 'ELSEWHERE',
+        quantity: 100,
+        organizationId: otherPharmacy,
+      },
+      { batchNumber: 'HERE', quantity: 4 },
+    ]);
+
+    const res = await dispense(rx).expect(409);
+
+    expect(res.body).toMatchObject({
+      message: expect.stringContaining('4 available, 10 needed') as unknown,
+    });
+    expect(await stockLeft(rx)).toEqual({ ELSEWHERE: 100, HERE: 4 });
+  });
+
+  it('is refused to a pharmacist not yet assigned to a pharmacy', async () => {
     const rx = await prescribe(1, [{ batchNumber: 'B1', quantity: 5 }]);
 
-    await svc.api
-      .post('/dispense')
-      .set(svc.as(UserRole.DOCTOR).headers)
-      .send({ medicationRequestId: rx.id })
-      .expect(403);
+    await dispense(rx, null).expect(403);
+
+    expect(await statusOf(rx)).toBe(MedicationRequestStatus.ACTIVE);
+  });
+
+  it('is refused to roles other than pharmacist', async () => {
+    const rx = await prescribe(1, [{ batchNumber: 'B1', quantity: 5 }]);
+
+    for (const role of [UserRole.DOCTOR, UserRole.SUPER_ADMIN])
+      await svc.api
+        .post('/dispense')
+        .set(svc.as(role).headers)
+        .send({ medicationRequestId: rx.id })
+        .expect(403);
     await svc.api
       .post('/dispense')
       .send({ medicationRequestId: rx.id })
@@ -163,14 +197,25 @@ describe('POST /dispense', () => {
   });
 
   describe('low stock', () => {
-    /** A login, as the auth service stores it; returns its user id. */
-    async function account(role: UserRole, isActive = true) {
-      const [{ id }] = await svc.db.query<{ id: string }[]>(
-        `INSERT INTO users (email, "passwordHash", role, "isActive")
-         VALUES ($1, 'x', $2, $3) RETURNING id`,
-        [`${randomUUID()}@curo.test`, role, isActive],
+    /**
+     * Staff working at `organizationId`, as the auth service stores them (a
+     * practitioner and its login); returns the login's user id.
+     */
+    async function account(
+      role: UserRole,
+      { isActive = true, organizationId = pharmacy } = {},
+    ) {
+      const [practitioner] = await svc.db.query<{ id: string }[]>(
+        `INSERT INTO practitioners ("firstName", "lastName", role, "organizationId")
+         VALUES ('Test', 'Staff', $1, $2) RETURNING id`,
+        [role, organizationId],
       );
-      return id;
+      const [user] = await svc.db.query<{ id: string }[]>(
+        `INSERT INTO users (email, "passwordHash", role, "isActive", "practitionerId")
+         VALUES ($1, 'x', $2, $3, $4) RETURNING id`,
+        [`${randomUUID()}@curo.test`, role, isActive, practitioner.id],
+      );
+      return user.id;
     }
 
     /** Low-stock alerts about the prescribed drug in `userId`'s inbox. */
@@ -181,12 +226,15 @@ describe('POST /dispense', () => {
         relatedResourceId: rx.medicationCode,
       });
 
-    it('alerts every active pharmacist when a dispense takes the drug to its reorder level', async () => {
+    it('alerts every active pharmacist at the pharmacy when a dispense takes the drug to its reorder level', async () => {
       const pharmacists = [
         await account(UserRole.PHARMACIST),
         await account(UserRole.PHARMACIST),
       ];
-      const inactive = await account(UserRole.PHARMACIST, false);
+      const inactive = await account(UserRole.PHARMACIST, { isActive: false });
+      const elsewhere = await account(UserRole.PHARMACIST, {
+        organizationId: otherPharmacy,
+      });
       const doctor = await account(UserRole.DOCTOR);
       const rx = await prescribe(6, [
         {
@@ -210,6 +258,7 @@ describe('POST /dispense', () => {
           }),
         ]);
       await expect(alertsFor(inactive, rx)).resolves.toEqual([]);
+      await expect(alertsFor(elsewhere, rx)).resolves.toEqual([]);
       await expect(alertsFor(doctor, rx)).resolves.toEqual([]);
     });
 

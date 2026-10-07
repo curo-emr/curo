@@ -53,16 +53,23 @@ export async function notifyPractitioner(
   return (await notifyAccounts(em, accounts, notice)) > 0;
 }
 
-/** Notifies every active account with `role`; returns how many it reached. */
+/**
+ * Notifies every active account with `role`, or with `role` at one
+ * organization (staff are assigned through their practitioner record);
+ * returns how many it reached.
+ */
 export async function notifyRole(
   em: EntityManager,
   role: UserRole,
   notice: Notice,
+  { organizationId }: { organizationId?: string } = {},
 ): Promise<number> {
   const accounts = await em.query<Account[]>(
-    `SELECT id AS "userId", role FROM users
-     WHERE role::text = $1 AND "isActive"`,
-    [role],
+    `SELECT u.id AS "userId", u.role FROM users u
+     LEFT JOIN practitioners p ON p.id::text = u."practitionerId"
+     WHERE u.role::text = $1 AND u."isActive"
+       AND ($2::text IS NULL OR p."organizationId" = $2)`,
+    [role, organizationId ?? null],
   );
   return notifyAccounts(em, accounts, notice);
 }

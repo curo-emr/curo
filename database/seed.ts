@@ -133,6 +133,26 @@ async function topUps(db: DataSource) {
   }
   console.log(`✅ nurses ensured (${nursesCreated} new)`);
 
+  // ---- PHARMACISTS' PHARMACIES (each dispenses from its own stock) ----
+  // Databases seeded before pharmacies were scoped have the pharmacists at
+  // the clinic. Moves them, unless an admin has already put them somewhere.
+  const pharmacistPharmacies = [
+    ['kasun.pharma@curo.health', 'Curo Pharmacy — Colombo'],
+    ['niluka.pharma@curo.health', 'Curo Pharmacy — Kandy'],
+  ];
+  for (const [email, pharmacy] of pharmacistPharmacies) {
+    await db.query(
+      `UPDATE practitioners p SET "organizationId" = o.id::text
+       FROM organizations o
+       WHERE p.email = $1 AND o.name = $2 AND o.type = 'pharmacy'
+         AND NOT EXISTS (
+           SELECT 1 FROM organizations cur
+           WHERE cur.id::text = p."organizationId" AND cur.type = 'pharmacy')`,
+      [email, pharmacy],
+    );
+  }
+  console.log('✅ seeded pharmacists assigned to their pharmacies');
+
   // ---- MEDICATION CATALOG (prescribing reference, DB-backed) ----
   const medicationCatalog = [
     {
@@ -382,17 +402,18 @@ async function seed() {
       email: 'niluka.pharma@curo.health',
     },
   ];
+  // Kasun works at the Colombo pharmacy, Niluka at Kandy.
   const pharmacistIds: string[] = [];
-  for (const p of pharmacists) {
+  for (const [i, p] of pharmacists.entries()) {
     const { practitionerId } = await insertStaff(db, {
       ...p,
       role: UserRole.PHARMACIST,
       password: 'Pharma@123',
-      organizationId: orgId,
+      organizationId: pharmacyOrgIds[i],
     });
     pharmacistIds.push(practitionerId);
   }
-  console.log('✅ 2 pharmacists created');
+  console.log('✅ 2 pharmacists created (one per pharmacy)');
 
   // ---- LAB STAFF ----
   const labStaff = [
