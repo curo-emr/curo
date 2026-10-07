@@ -33,11 +33,16 @@ export async function getUsersByRole(role: string): Promise<AdminUser[]> {
   return getAllPages<AdminUser>("/auth/users", { role });
 }
 
-// The newest 100 users. The overview still counts users from this until the
-// server counts them (plan/03 B2).
-export async function getRecentUsers(): Promise<AdminUser[]> {
-  const res = await apiClient.get<AdminUser[] | FhirBundle<AdminUser>>("/auth/users", { params: { pageSize: 100 } });
-  return unwrapBundle(res.data).resources;
+export interface UserSummary {
+  total: number;
+  active: number;
+  byRole: Record<string, number>;
+}
+
+// How many users there are, how many are active, and how many have each role.
+export async function getUserSummary(): Promise<UserSummary> {
+  const res = await apiClient.get<UserSummary>("/auth/users/summary");
+  return res.data;
 }
 
 export async function getUsersPaginated(
