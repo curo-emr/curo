@@ -29,13 +29,21 @@ export interface ServiceUnderTest {
   close(): Promise<void>;
 }
 
+/** A provider to swap for a test double, e.g. object storage for an in-memory store. */
+export interface ProviderOverride {
+  provide: string | symbol | Type<unknown>;
+  useValue: unknown;
+}
+
 /** Boots a service's AppModule with production's request handling, on the test database. */
 export async function startService(
   appModule: Type<unknown>,
+  overrides: ProviderOverride[] = [],
 ): Promise<ServiceUnderTest> {
-  const moduleRef = await Test.createTestingModule({
-    imports: [appModule],
-  }).compile();
+  const builder = Test.createTestingModule({ imports: [appModule] });
+  for (const { provide, useValue } of overrides)
+    builder.overrideProvider(provide).useValue(useValue);
+  const moduleRef = await builder.compile();
   const db = moduleRef.get(DataSource);
   assertTestDatabase(db.options.database);
 
