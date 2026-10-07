@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { MedicationRequest } from '@curo/shared/database';
-import { MedicationRequestStatus, UserRole } from '@curo/shared/enums';
+import { MedicationRequest, Notification } from '@curo/shared/database';
+import {
+  MedicationRequestStatus,
+  NotificationEventType,
+  UserRole,
+} from '@curo/shared/enums';
 import { startService, type ServiceUnderTest } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { MedicationDispense } from '../src/entities/medication-dispense.entity';
@@ -38,6 +42,14 @@ describe('POST /dispense', () => {
       quantityValue,
     });
   }
+
+  /** Another active prescription for the same drug as `rx`. */
+  const prescribeAgain = (rx: MedicationRequest) =>
+    svc.db.getRepository(MedicationRequest).save({
+      ...rx,
+      id: undefined,
+      status: MedicationRequestStatus.ACTIVE,
+    });
 
   /** Units left in each of the prescribed drug's batches, by batch number. */
   async function stockLeft(rx: MedicationRequest) {
@@ -148,5 +160,98 @@ describe('POST /dispense', () => {
       .send({ medicationRequestId: rx.id })
       .expect(401);
     expect(await stockLeft(rx)).toEqual({ B1: 5 });
+  });
+
+  describe('low stock', () => {
+    /** A login, as the auth service stores it; returns its user id. */
+    async function account(role: UserRole, isActive = true) {
+      const [{ id }] = await svc.db.query<{ id: string }[]>(
+        `INSERT INTO users (email, "passwordHash", role, "isActive")
+         VALUES ($1, 'x', $2, $3) RETURNING id`,
+        [`${randomUUID()}@curo.test`, role, isActive],
+      );
+      return id;
+    }
+
+    /** Low-stock alerts about the prescribed drug in `userId`'s inbox. */
+    const alertsFor = (userId: string, rx: MedicationRequest) =>
+      svc.db.getRepository(Notification).findBy({
+        recipientId: userId,
+        eventType: NotificationEventType.LOW_STOCK_ALERT,
+        relatedResourceId: rx.medicationCode,
+      });
+
+    it('alerts every active pharmacist when a dispense takes the drug to its reorder level', async () => {
+      const pharmacists = [
+        await account(UserRole.PHARMACIST),
+        await account(UserRole.PHARMACIST),
+      ];
+      const inactive = await account(UserRole.PHARMACIST, false);
+      const doctor = await account(UserRole.DOCTOR);
+      const rx = await prescribe(6, [
+        {
+          batchNumber: 'B1',
+          quantity: 15,
+          reorderThreshold: 10,
+          unit: 'tablets',
+        },
+      ]);
+
+      await dispense(rx).expect(201);
+
+      for (const pharmacist of pharmacists)
+        await expect(alertsFor(pharmacist, rx)).resolves.toEqual([
+          expect.objectContaining({
+            recipientRole: UserRole.PHARMACIST,
+            message:
+              'Amoxicillin 500mg is low: 9 tablets left (reorder at 10).',
+            relatedResourceType: 'Medication',
+            isRead: false,
+          }),
+        ]);
+      await expect(alertsFor(inactive, rx)).resolves.toEqual([]);
+      await expect(alertsFor(doctor, rx)).resolves.toEqual([]);
+    });
+
+    it('stays quiet while the drug is above its level, and once it is already low', async () => {
+      const pharmacist = await account(UserRole.PHARMACIST);
+      const rx = await prescribe(5, [
+        { batchNumber: 'B1', quantity: 20, reorderThreshold: 10 },
+      ]);
+
+      await dispense(rx).expect(201); // 20 → 15: above the level
+      await expect(alertsFor(pharmacist, rx)).resolves.toEqual([]);
+
+      await dispense(await prescribeAgain(rx)).expect(201); // 15 → 10: crosses
+      await dispense(await prescribeAgain(rx)).expect(201); // 10 → 5: already low
+      await expect(alertsFor(pharmacist, rx)).resolves.toHaveLength(1);
+    });
+
+    it('alerts once when two dispenses that would each cross run at the same time', async () => {
+      const pharmacist = await account(UserRole.PHARMACIST);
+      const rx = await prescribe(3, [
+        { batchNumber: 'B1', quantity: 12, reorderThreshold: 10 },
+      ]);
+
+      const results = await Promise.all([
+        dispense(rx),
+        dispense(await prescribeAgain(rx)),
+      ]);
+
+      expect(results.map((r) => r.status)).toEqual([201, 201]);
+      expect(await stockLeft(rx)).toEqual({ B1: 6 });
+      await expect(alertsFor(pharmacist, rx)).resolves.toHaveLength(1);
+    });
+
+    it('sends nothing when the dispense is refused for want of stock', async () => {
+      const pharmacist = await account(UserRole.PHARMACIST);
+      const rx = await prescribe(20, [
+        { batchNumber: 'B1', quantity: 15, reorderThreshold: 10 },
+      ]);
+
+      await dispense(rx).expect(409);
+
+      await expect(alertsFor(pharmacist, rx)).resolves.toEqual([]);
+    });
   });
 });

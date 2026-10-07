@@ -22,7 +22,7 @@ export function byExpiry(
 }
 
 /** A batch can be dispensed from until the end of its expiry date. */
-function isUsable(batch: Batch, today: string): boolean {
+export function isUsable(batch: Batch, today: string): boolean {
   return batch.quantity > 0 && (!batch.expiryDate || batch.expiryDate >= today);
 }
 

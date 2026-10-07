@@ -2,7 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PharmacyModule } from './pharmacy/pharmacy.module';
-import { MedicationRequest, databaseOptions } from '@curo/shared/database';
+import {
+  MedicationRequest,
+  Notification,
+  databaseOptions,
+} from '@curo/shared/database';
 import { MedicationDispense } from './entities/medication-dispense.entity';
 import { Stock } from './entities/stock.entity';
 import { MedicationCatalog } from './entities/medication-catalog.entity';
@@ -16,6 +20,7 @@ import { JwtAuthModule } from '@curo/shared/auth';
       databaseOptions([
         MedicationRequest,
         MedicationDispense,
+        Notification,
         Stock,
         MedicationCatalog,
       ]),
