@@ -145,7 +145,6 @@ one corrects an outdated note in the build history.
 
 83 checks cover the full clinical journey end-to-end plus all secondary read/update/cross-cutting
 routes. Endpoints **not** directly exercised by the script (low-risk, equivalent paths covered):
-`POST /auth/register` (public self-register — staff creation covered via `/auth/staff`), the admin
-user-management variants `POST/GET/PATCH /auth/users/:id` and `/auth/users/:id/reset-password`
+the admin user-management variants `POST/GET/PATCH /auth/users/:id` and `/auth/users/:id/reset-password`
 (the create path is covered via `/auth/staff`; the list path via `GET /auth/users`). Add these to the script if full admin-CRUD
 verification is needed.

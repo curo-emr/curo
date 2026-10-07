@@ -75,6 +75,7 @@ describe('isPublicPath', () => {
 
   it('needs a token for everything else in the auth service', () => {
     for (const path of [
+      '/auth/register', // removed: it let anyone create an account of any role
       '/auth/profile',
       '/auth/staff',
       '/auth/users',

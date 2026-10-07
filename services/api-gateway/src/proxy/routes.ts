@@ -34,7 +34,7 @@ export const SERVICE_ROUTES: Record<string, string> = {
 };
 
 // `/health` is answered before the proxy middleware runs (see main.ts).
-const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/refresh'];
+const PUBLIC_PATHS = ['/auth/login', '/auth/refresh'];
 
 /** Each backend once, in route order. */
 export const SERVICE_TARGETS = [...new Set(Object.values(SERVICE_ROUTES))];
