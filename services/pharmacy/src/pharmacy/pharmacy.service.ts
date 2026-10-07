@@ -34,7 +34,7 @@ import {
   stockLevel,
   type StockLevel,
 } from './reorder-level';
-import { pharmacyOf, stockScope } from './pharmacy-scope';
+import { dispenseScope, pharmacyOf, stockScope } from './pharmacy-scope';
 
 /** What one stock batch supplied to a dispense. */
 interface BatchDraw {
@@ -56,6 +56,8 @@ const isoToday = () => new Date().toISOString().slice(0, 10);
 
 /** Optional filters for GET /dispense. */
 export interface DispenseHistoryFilter {
+  /** The pharmacy dispensed at; a pharmacist always gets their own. */
+  organizationId?: string;
   patientId?: string;
   prescriptionId?: string;
   /** The start of a prescription id, or part of a medication's name. */
@@ -265,6 +267,7 @@ export class PharmacyService {
           medicationRequestId: prescription.id,
           patientId: prescription.patientId,
           pharmacistId: pharmacist.userId,
+          organizationId: pharmacy,
           dispenserName: pharmacist.name ?? pharmacist.email,
           status: MedicationDispenseStatus.COMPLETED,
           medicationCode: prescription.medicationCode,
@@ -289,14 +292,24 @@ export class PharmacyService {
     return toFhirDispense(saved);
   }
 
-  /** Dispenses, latest first → FHIR searchset Bundle (paginated). */
+  /** Query over the dispenses made at `organizationId`, or at every pharmacy; aliased `d`. */
+  private dispensesAt(organizationId?: string) {
+    const qb = this.dispenseRepo.createQueryBuilder('d');
+    if (organizationId)
+      qb.where('d.organizationId = :organizationId', { organizationId });
+    return qb;
+  }
+
+  /** Dispenses `user` may list, latest first → FHIR searchset Bundle (paginated). */
   async getDispenseHistory(
+    user: AuthUser,
     filter: DispenseHistoryFilter,
     pagination: PaginationQuery = {},
   ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const { patientId, prescriptionId } = filter;
-    const qb = this.dispenseRepo.createQueryBuilder('d');
+    const organizationId = dispenseScope(user, filter);
+    const qb = this.dispensesAt(organizationId);
     if (patientId) qb.andWhere('d.patientId = :patientId', { patientId });
     if (prescriptionId)
       qb.andWhere('d.medicationRequestId = :prescriptionId', {
@@ -332,6 +345,7 @@ export class PharmacyService {
       pageSize,
       baseUrl: '/dispense',
       query: {
+        organizationId,
         patientId,
         prescriptionId,
         search: filter.search,
@@ -340,15 +354,17 @@ export class PharmacyService {
     });
   }
 
-  /** Every dispense counted: how many, what they took in, and the ten medications dispensed most. */
-  async getDispenseSummary() {
-    const totals = await this.dispenseRepo
-      .createQueryBuilder('d')
+  /**
+   * The dispenses `user` may see counted: how many, what they took in, and the
+   * ten medications dispensed most.
+   */
+  async getDispenseSummary(user: AuthUser, requestedOrganizationId?: string) {
+    const organizationId = stockScope(user, requestedOrganizationId);
+    const totals = await this.dispensesAt(organizationId)
       .select('COUNT(*)::int', 'count')
       .addSelect('COALESCE(SUM(d.totalPrice), 0)::float', 'revenue')
       .getRawOne<{ count: number; revenue: number }>();
-    const topMedications = await this.dispenseRepo
-      .createQueryBuilder('d')
+    const topMedications = await this.dispensesAt(organizationId)
       .select('d.medicationDisplay', 'name')
       .addSelect('COALESCE(SUM(d.quantityValue), 0)::int', 'quantity')
       .groupBy('d.medicationDisplay')
