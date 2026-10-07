@@ -18,6 +18,7 @@
   },
   "scripts": {
     "lint": "eslint --max-warnings 0",
+    "ui:add": "node scripts/ui-add.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -25,6 +26,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "cn": "^0.2.6",
     "lucide-react": "^0.575.0",
     "radix-ui": "^1.4.3",
     "react-day-picker": "^9.14.0",

@@ -195,7 +195,7 @@ shadcn/ui primitives are the exception: they all live here, so the portals look 
   everywhere. Its `status` prop accepts only those statuses, so a new one fails the
   type-check until it is added there. Filters, tabs and pickers that name a status use
   its `statusLabel()` (and `statusClassName()` to look like the badge), not their own text.
-- `npx shadcn add <component>`, run in a portal or in `packages/web`, writes the component
-  to `packages/web/src/ui`. The CLI currently writes `import { cn } from "cn"`; change it to
-  `"./utils"`.
+- `npm run ui:add -w @curo/web -- <component>` adds a shadcn/ui component to
+  `packages/web/src/ui`. It runs `shadcn add`, then fixes the `import { cn } from "cn"`
+  that the radix-vega registry ships, pointing it at `"./utils"`.
 
