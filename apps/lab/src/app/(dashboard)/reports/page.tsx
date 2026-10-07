@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, Clock, FlaskConical, XCircle, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { getLabOrders } from "@/lib/api/lab";
+import { getLabOrdersFirstPage } from "@/lib/api/lab";
 import type { LabOrder } from "@/types";
 
 export default function ReportsPage() {
@@ -11,7 +11,7 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getLabOrders()
+    getLabOrdersFirstPage()
       .then(setOrders)
       .catch(console.error)
       .finally(() => setIsLoading(false));

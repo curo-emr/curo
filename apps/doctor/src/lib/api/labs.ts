@@ -1,5 +1,4 @@
-import { apiClient } from '@curo/web/api';
-import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
+import { apiClient, getAllPages } from '@curo/web/api';
 import type { Lab, LabReport, LabResultValue } from '@/types';
 
 interface ApiOrganization {
@@ -62,10 +61,7 @@ function mapReport(r: FhirDiagnosticReport): LabReport {
 
 /** The lab reports for a visit's orders, from every lab. */
 export async function getVisitLabReports(encounterId: string): Promise<LabReport[]> {
-  const res = await apiClient.get<FhirBundle<FhirDiagnosticReport>>('/reports', {
-    params: { encounterId, pageSize: 100 },
-  });
-  return unwrapBundle(res.data).resources.map(mapReport);
+  return (await getAllPages<FhirDiagnosticReport>('/reports', { encounterId })).map(mapReport);
 }
 
 /** The QR for the patient's lab slip: any lab scanning it finds the visit's tests sent to it. */

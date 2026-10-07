@@ -133,6 +133,7 @@ export class PatientService implements OnModuleInit {
     }
     const [patients, total] = await query
       .orderBy('p.createdAt', 'DESC')
+      .addOrderBy('p.id', 'ASC')
       .skip(skip)
       .take(take)
       .getManyAndCount();

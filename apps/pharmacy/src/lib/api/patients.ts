@@ -1,15 +1,11 @@
-import { apiClient } from '@curo/web/api';
+import { apiClient, getByIds } from '@curo/web/api';
 import type { Patient, Allergy, Problem } from '@/types';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, type FhirPatient, type FhirAllergy, type FhirCondition } from './mappers';
 import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
 
-// Backward-compatible: returns up to 100 patients as a flat array (used by
-// dropdowns / lookups). Unwraps either a bare array or a FHIR searchset Bundle.
-export async function getPatients(search?: string): Promise<Patient[]> {
-  const res = await apiClient.get<FhirPatient[] | FhirBundle<FhirPatient>>('/patients', {
-    params: { pageSize: 100, ...(search ? { search } : {}) },
-  });
-  return unwrapBundle(res.data).resources.map(mapFhirPatient);
+// Resolve the patients a list shows (FHIR `_id` search).
+export async function getPatientsByIds(ids: string[]): Promise<Patient[]> {
+  return (await getByIds<FhirPatient>('/patients', ids)).map(mapFhirPatient);
 }
 
 // Server-driven pagination for the patient table.

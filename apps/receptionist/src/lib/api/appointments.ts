@@ -1,16 +1,24 @@
-import { apiClient } from '@curo/web/api';
+import { apiClient, getAllPages } from '@curo/web/api';
 import type { Appointment, QueueStage } from '@/types';
 import { mapFhirAppointment, type FhirAppointment } from './mappers';
 import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 
-export async function getAppointments(filters?: {
-  date?: string;
+/** A day's or a patient's appointments, so the set is bounded and read whole. */
+type AppointmentFilters = {
   practitionerId?: string;
-  patientId?: string;
   queueStage?: string; // comma-separated QueueStage values
-}): Promise<Appointment[]> {
+} & ({ date: string; patientId?: string } | { patientId: string });
+
+export async function getAppointments(filters: AppointmentFilters): Promise<Appointment[]> {
+  return (await getAllPages<FhirAppointment>('/appointments', filters)).map(mapFhirAppointment);
+}
+
+// Only the first 100 appointments, oldest first. The pages that list every
+// appointment still use this until they ask for a date range or page on the
+// server (plan/03 B2).
+export async function getAppointmentsFirstPage(): Promise<Appointment[]> {
   const res = await apiClient.get<FhirAppointment[] | FhirBundle<FhirAppointment>>('/appointments', {
-    params: { pageSize: 100, ...filters },
+    params: { pageSize: 100 },
   });
   return unwrapBundle(res.data).resources.map(mapFhirAppointment);
 }

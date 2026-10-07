@@ -55,6 +55,7 @@ export class AuditService {
 
     const [logs, total] = await query
       .orderBy('a.createdAt', 'DESC')
+      .addOrderBy('a.id', 'ASC')
       .skip(skip)
       .take(take)
       .getManyAndCount();

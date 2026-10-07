@@ -57,9 +57,3 @@ export async function getIncomeSummary(
   });
   return res.data;
 }
-
-// A payment already recorded for an appointment cannot be edited — used to lock the UI.
-export async function getPaymentForAppointment(appointmentId: string): Promise<Payment | null> {
-  const res = await apiClient.get<Payment[] | FhirBundle<Payment>>("/payments/mine", { params: { pageSize: 100 } });
-  return unwrapBundle(res.data).resources.find((p) => p.appointmentId === appointmentId) ?? null;
-}

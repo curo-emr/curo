@@ -2,8 +2,10 @@ import { apiClient } from "@curo/web/api";
 import type { Payment } from "@/types";
 import { unwrapBundle, type FhirBundle } from "@curo/web/fhir";
 
-// Admin oversight of receptionist-collected income.
-export async function getAllPayments(filters?: {
+// Admin oversight of receptionist-collected income: the latest 100 payments,
+// newest first. The overview, income and user pages still total these until they
+// ask for a date range or the server sums them (plan/03 B2).
+export async function getRecentPayments(filters?: {
   collectedBy?: string;
   patientId?: string;
   from?: string;
