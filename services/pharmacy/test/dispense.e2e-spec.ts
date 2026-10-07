@@ -172,6 +172,18 @@ describe('POST /dispense', () => {
     expect(await stockLeft(rx)).toEqual({ ELSEWHERE: 100, HERE: 4 });
   });
 
+  it('records the pharmacy it was dispensed at', async () => {
+    const rx = await prescribe(1, [{ batchNumber: 'B1', quantity: 5 }]);
+
+    await dispense(rx).expect(201);
+
+    await expect(
+      svc.db
+        .getRepository(MedicationDispense)
+        .findOneByOrFail({ medicationRequestId: rx.id }),
+    ).resolves.toMatchObject({ organizationId: pharmacy });
+  });
+
   it('is refused to a pharmacist not yet assigned to a pharmacy', async () => {
     const rx = await prescribe(1, [{ batchNumber: 'B1', quantity: 5 }]);
 
