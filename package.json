@@ -19,6 +19,7 @@
     "db:generate": "cd database && typeorm-ts-node-commonjs migration:generate -d data-source.ts",
     "db:check": "cd database && typeorm-ts-node-commonjs migration:generate --check -d data-source.ts migrations/check",
     "seed": "cd database && ts-node seed.ts",
+    "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:db",
     "typecheck:db": "tsc -p database",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",

@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Patient, Condition, Observation } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
+import { generatePatientCode, generatePhn } from '@curo/shared/identifiers';
 import {
   parsePagination,
   toSearchset,
@@ -25,7 +26,6 @@ import {
   toFhirCondition,
   toFhirObservation,
 } from './fhir.mapper';
-import { generatePhn } from './phn';
 import type { AuthUser } from '@curo/shared/auth';
 
 const UUID_RE =
@@ -45,15 +45,6 @@ export class PatientService implements OnModuleInit {
     @InjectRepository(Observation)
     private observationsRepo: Repository<Observation>,
   ) {}
-
-  private generatePatientCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = 'CUR-';
-    for (let i = 0; i < 8; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
-  }
 
   private async generateUniquePhn(): Promise<string> {
     let phn: string;
@@ -93,7 +84,7 @@ export class PatientService implements OnModuleInit {
     let patientCode: string;
     let exists: boolean;
     do {
-      patientCode = this.generatePatientCode();
+      patientCode = generatePatientCode();
       exists = !!(await this.patientsRepo.findOne({ where: { patientCode } }));
     } while (exists);
 

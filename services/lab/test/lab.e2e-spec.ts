@@ -53,6 +53,16 @@ describe('Lab specimens and results', () => {
   const savedLabel = (id: string) =>
     svc.db.getRepository(QrCode).findOneByOrFail({ id });
 
+  /** How many observations and reports an order has. */
+  const recordsOf = async (serviceRequestId: string) => ({
+    observations: await svc.db
+      .getRepository(Observation)
+      .countBy({ serviceRequestId }),
+    reports: await svc.db
+      .getRepository(DiagnosticReport)
+      .countBy({ serviceRequestId }),
+  });
+
   const scan = (qrData: string) =>
     svc.api.post('/orders/scan').set(labStaff.headers).send({ qrData });
 
@@ -81,10 +91,10 @@ describe('Lab specimens and results', () => {
       });
       await expect(savedOrder(order.id)).resolves.toMatchObject({
         receivedAt: expect.any(Date) as unknown,
-        performerId: labStaff.sub,
+        performerId: labStaff.practitionerId,
       });
       await expect(savedLabel(hba1c.id)).resolves.toMatchObject({
-        scannedBy: labStaff.sub,
+        scannedBy: labStaff.practitionerId,
       });
       await expect(savedLabel(labels[0].id)).resolves.toMatchObject({
         scannedAt: null,
@@ -148,6 +158,79 @@ describe('Lab specimens and results', () => {
         status: ServiceRequestStatus.COMPLETED,
         completedAt: expect.any(Date) as unknown,
       });
+      expect(report.performerId).toBe(labStaff.practitionerId);
+    });
+
+    it('saves nothing, and leaves the order open, when any result fails to save', async () => {
+      const { order } = await orderLabs();
+      // valueQuantity is numeric(10,2): this overflows inside the transaction.
+      const overflow = { ...fbc, code: '4548-4', value: 1e9 };
+
+      await enterResults({
+        serviceRequestId: order.id,
+        results: [fbc, overflow],
+      }).expect(500);
+
+      expect(await recordsOf(order.id)).toEqual({
+        observations: 0,
+        reports: 0,
+      });
+      await expect(savedOrder(order.id)).resolves.toMatchObject({
+        status: ServiceRequestStatus.ACTIVE,
+        completedAt: null,
+      });
+    });
+
+    it('files one report when the same results are submitted twice at once', async () => {
+      const { order } = await orderLabs();
+      const body = { serviceRequestId: order.id, results: [fbc] };
+
+      const results = await Promise.all([
+        enterResults(body),
+        enterResults(body),
+      ]);
+
+      expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+      expect(await recordsOf(order.id)).toEqual({
+        observations: 1,
+        reports: 1,
+      });
+    });
+
+    it('refuses results for an order that is already reported', async () => {
+      const { order } = await orderLabs();
+      const body = { serviceRequestId: order.id, results: [fbc] };
+      await enterResults(body).expect(201);
+
+      await enterResults(body).expect(409);
+
+      expect(await recordsOf(order.id)).toEqual({
+        observations: 1,
+        reports: 1,
+      });
+    });
+
+    it('rejects missing or malformed result items before writing anything', async () => {
+      const { order } = await orderLabs();
+      const serviceRequestId = order.id;
+
+      await enterResults({ serviceRequestId, results: [] }).expect(400);
+      await enterResults({
+        serviceRequestId,
+        results: [{ code: '58410-2' }], // no display
+      }).expect(400);
+      await enterResults({
+        serviceRequestId,
+        results: [{ ...fbc, value: 'high' }],
+      }).expect(400);
+
+      expect(await recordsOf(order.id)).toEqual({
+        observations: 0,
+        reports: 0,
+      });
+      await expect(savedOrder(order.id)).resolves.toMatchObject({
+        status: ServiceRequestStatus.ACTIVE,
+      });
     });
 
     it('refuses results for an order that does not exist', async () => {
@@ -155,9 +238,10 @@ describe('Lab specimens and results', () => {
 
       await enterResults({ serviceRequestId, results: [fbc] }).expect(404);
 
-      await expect(
-        svc.db.getRepository(Observation).countBy({ serviceRequestId }),
-      ).resolves.toBe(0);
+      expect(await recordsOf(serviceRequestId)).toEqual({
+        observations: 0,
+        reports: 0,
+      });
     });
 
     it('is refused to roles other than lab staff and admin', async () => {
