@@ -1246,7 +1246,7 @@ Branch `fix/low-stock-per-drug` (stacked on `feat/low-stock-alerts`).
 
 ## Organizations managed in the admin portal ✅ DONE — 2026-10-07
 
-Branch `feat/manage-organizations`. First of two parts of "several pharmacies" (the second,
+Branch `feat/manage-organizations` (stacked on `fix/low-stock-per-drug`). First of two parts of "several pharmacies" (the second,
 `feat/pharmacy-scoping`, limits stock, dispensing and alerts to the pharmacist's pharmacy).
 
 - **Auth service** owns `organizations`:
@@ -1267,3 +1267,28 @@ Branch `feat/manage-organizations`. First of two parts of "several pharmacies" (
   - Workplace picker on New User (required for pharmacists) and a Workplace card on the user page.
   - The two sidebars share `nav-items.ts`.
 - **Not changed:** `POST /auth/staff` (no portal calls it) still creates staff without a workplace.
+
+## Stock, dispensing and alerts per pharmacy ✅ DONE — 2026-10-07
+
+Branch `feat/pharmacy-scoping` (stacked on `feat/manage-organizations`). The second part of "several
+pharmacies"; the first, `feat/manage-organizations`, lets the admin create pharmacies and assign
+pharmacists to them.
+
+- **Token:** access and refresh tokens carry `organizationId` (the practitioner's), and so does
+  `AuthUser`. A refresh reads it again, so a reassignment takes effect within 15 minutes.
+- **Pharmacy service** (`pharmacy-scope.ts`):
+  - A pharmacist works only with their own pharmacy's stock:
+    - dispensing draws from it (FEFO, row-locked as before);
+    - `POST /stock` receives into it, ignoring any organization in the body;
+    - `PUT /stock/:id` only finds its batches (another pharmacy's batch is a 404);
+    - `/stock`, `/stock/grouped` and `/stock/alerts` show only it.
+  - A pharmacist with no pharmacy gets 403 rather than every pharmacy's stock.
+  - Doctors and the admin may pass `?organizationId`; without it, each pharmacy is grouped
+    separately (one group per drug per pharmacy).
+- **Super admin** no longer dispenses or receives stock (they have no pharmacy). They can still read.
+- **Alerts:** `notifyRole(em, role, notice, { organizationId })` reaches only that pharmacy's
+  pharmacists (joined through `practitioners`).
+- **Seed:** kasun → Curo Pharmacy — Colombo, niluka → Kandy. `topUps()` moves them on existing
+  volumes unless they are already at a pharmacy.
+- **Not backfilled:** the 76 batches with no organization are smoke/e2e leftovers ("Smoke Tablet",
+  `B-A`/`B-B`). No pharmacy sees them now.

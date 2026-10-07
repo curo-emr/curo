@@ -160,6 +160,9 @@ export class AuthService {
       practitionerId: user.practitionerId ?? null,
       patientId: user.patientId ?? null,
       name: practitioner ? fullName(practitioner) : null,
+      // Read again on every refresh, so a reassignment reaches the session
+      // within one access-token lifetime.
+      organizationId: practitioner?.organizationId ?? null,
     };
     const accessToken = this.jwtService.sign(payload, {
       secret: jwtSecret(),
@@ -179,6 +182,7 @@ export class AuthService {
         patientId: user.patientId,
         practitionerId: user.practitionerId,
         name: payload.name,
+        organizationId: payload.organizationId,
       },
     };
   }
