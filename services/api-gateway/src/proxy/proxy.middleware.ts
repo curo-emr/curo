@@ -4,7 +4,7 @@ import { Socket } from 'net';
 import * as jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
-import { jwtSecret, type JwtPayload } from '@curo/shared/auth';
+import { jwtSecret } from '@curo/shared/auth';
 
 const SERVICE_MAP: Record<string, string> = {
   '/auth': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
@@ -192,14 +192,10 @@ export class ProxyMiddleware implements NestMiddleware {
           .status(401)
           .json({ message: 'Unauthorized: No token provided' });
       }
+      // Rejects bad tokens at the edge. The request is forwarded unchanged:
+      // each service verifies the token again and reads the user from it.
       try {
-        const token = authHeader.split(' ')[1];
-        const payload = jwt.verify(token, jwtSecret());
-        if (typeof payload === 'string') throw new Error('Unexpected token');
-        const { sub, role, email } = payload as JwtPayload;
-        req.headers['x-user-id'] = sub;
-        req.headers['x-user-role'] = role;
-        req.headers['x-user-email'] = email;
+        jwt.verify(authHeader.split(' ')[1], jwtSecret());
       } catch {
         return res.status(401).json({ message: 'Unauthorized: Invalid token' });
       }
