@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
 import { StatusBadge } from "@curo/web/ui/status-badge";
+import { orderStatus } from "@/lib/order-status";
 import Link from "next/link";
 import { calculateAge, formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
@@ -67,7 +68,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">{order.id.slice(0, 8).toUpperCase()}</h1>
-            <StatusBadge status={order.status} />
+            <StatusBadge status={orderStatus(order)} />
             <Badge variant="outline" className={
               order.priority === 'stat' ? 'text-red-700 border-red-200 bg-red-50' :
               order.priority === 'urgent' ? 'text-amber-700 border-amber-200 bg-amber-50' :

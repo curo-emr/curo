@@ -11,6 +11,7 @@ import { Label } from "@curo/web/ui/label";
 import { Textarea } from "@curo/web/ui/textarea";
 import { LabOrder, Patient } from "@/types";
 import { StatusBadge } from "@curo/web/ui/status-badge";
+import { orderStatus } from "@/lib/order-status";
 import { enterResults, type ResultEntry } from "@/lib/api/lab";
 import { interpret, type Interpretation } from "@/lib/result-flag";
 import { ROUTES } from "@/lib/constants";
@@ -97,7 +98,7 @@ export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Status</p>
-              <StatusBadge status={order.status} />
+              <StatusBadge status={orderStatus(order)} />
             </div>
           </div>
         </CardContent>

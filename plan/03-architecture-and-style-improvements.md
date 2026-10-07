@@ -189,7 +189,8 @@ per frontend). Consolidate into each frontend's `StatusBadge`/`lib/utils`
 through the existing `StatusBadge` component, not new ad-hoc class strings.
 > 2026-10-07: one `StatusBadge` (`@curo/web/ui/status-badge`) with one status list for
 > every portal, typed so an unknown status fails the build. QueueBoard and VitalsPanel
-> class strings are still per component.
+> class strings are still per component. Queue stages are in the list too: the doctor and
+> reception `QueueStageBadge`s keep their own wording but take its colours.
 
 ### C3. Manual refresh patterns differ per screen
 QueueBoard has a manual "Refresh" button doing `window.location.reload()` (full
