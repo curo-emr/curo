@@ -7,25 +7,23 @@ import { Badge } from "@/components/ui/badge";
 import { LabDashboardStats } from "@/components/features/dashboard/LabDashboardStats";
 import { UrgentOrdersList } from "@/components/features/dashboard/UrgentOrdersList";
 import { RecentActivityFeed } from "@/components/features/dashboard/RecentActivityFeed";
-import { getLabOrders, getLabInstruments, getLabTestCatalog, getQCLogs, type LabInstrument } from "@/lib/api/lab";
+import { getLabOrders, getLabInstruments, getQCLogs, type LabInstrument } from "@/lib/api/lab";
 import { getPatients } from "@/lib/api/patients";
-import type { LabOrder, Patient, LabTestCatalogItem, QCLog } from "@/types";
+import type { LabOrder, Patient, QCLog } from "@/types";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export default function DashboardPage() {
   const [orders, setOrders] = useState<LabOrder[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
   const [instruments, setInstruments] = useState<LabInstrument[]>([]);
   const [qcLogs, setQcLogs] = useState<QCLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getLabOrders(), getPatients(), getLabTestCatalog(), getLabInstruments(), getQCLogs()])
-      .then(([ords, pts, catalog, insts, logs]) => {
+    Promise.all([getLabOrders(), getPatients(), getLabInstruments(), getQCLogs()])
+      .then(([ords, pts, insts, logs]) => {
         setOrders(ords);
         setPatients(pts);
-        setTestCatalog(catalog);
         setInstruments(insts);
         setQcLogs(logs);
       })
@@ -51,7 +49,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <UrgentOrdersList orders={urgentOrders} patients={patients} testCatalog={testCatalog} />
+          <UrgentOrdersList orders={urgentOrders} patients={patients} />
           <RecentActivityFeed orders={orders} patients={patients} />
         </div>
 
