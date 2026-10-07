@@ -35,9 +35,11 @@ x-backend-build: &backend-build
   dockerfile: services/Dockerfile
 
 x-portal-build: &portal-build
-  dockerfile: ../Dockerfile
-  args:
-    NEXT_PUBLIC_API_URL: http://localhost:3000
+  context: .
+  dockerfile: apps/Dockerfile
+
+x-portal-build-args: &portal-build-args
+  NEXT_PUBLIC_API_URL: http://localhost:3000
 
 x-db-tools-build: &db-tools-build
   context: .
@@ -305,7 +307,9 @@ services:
   curo-doctor:
     build:
       <<: *portal-build
-      context: ./apps/doctor
+      args:
+        <<: *portal-build-args
+        APP: doctor
     container_name: curo_doctor_ui
     restart: unless-stopped
     environment:
@@ -320,7 +324,9 @@ services:
   curo-patient-portal:
     build:
       <<: *portal-build
-      context: ./apps/patient
+      args:
+        <<: *portal-build-args
+        APP: patient
     container_name: curo_patient_ui
     restart: unless-stopped
     environment:
@@ -335,7 +341,9 @@ services:
   curo-receptionist:
     build:
       <<: *portal-build
-      context: ./apps/receptionist
+      args:
+        <<: *portal-build-args
+        APP: receptionist
     container_name: curo_receptionist_ui
     restart: unless-stopped
     environment:
@@ -350,7 +358,9 @@ services:
   curo-lab-portal:
     build:
       <<: *portal-build
-      context: ./apps/lab
+      args:
+        <<: *portal-build-args
+        APP: lab
     container_name: curo_lab_ui
     restart: unless-stopped
     environment:
@@ -365,7 +375,9 @@ services:
   curo-pharmacy-portal:
     build:
       <<: *portal-build
-      context: ./apps/pharmacy
+      args:
+        <<: *portal-build-args
+        APP: pharmacy
     container_name: curo_pharmacy_ui
     restart: unless-stopped
     environment:
@@ -380,7 +392,9 @@ services:
   curo-admin:
     build:
       <<: *portal-build
-      context: ./apps/admin
+      args:
+        <<: *portal-build-args
+        APP: admin
     container_name: curo_admin_ui
     restart: unless-stopped
     environment:
@@ -395,7 +409,9 @@ services:
   curo-nurse:
     build:
       <<: *portal-build
-      context: ./apps/nurse
+      args:
+        <<: *portal-build-args
+        APP: nurse
     container_name: curo_nurse_ui
     restart: unless-stopped
     environment:

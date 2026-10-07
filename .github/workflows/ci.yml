@@ -35,7 +35,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      # The root tooling plus packages/ and services/; the Frontend jobs install the portals.
+      - run: npm ci --include-workspace-root -w packages -w services
       # Workspaces run in declaration order, so @curo/shared builds before the services.
       - run: npm run build
       # Any lint error or warning fails the build.
@@ -50,17 +51,22 @@ jobs:
       - run: npm run db:check
       - run: npm run seed
 
-  portals:
-    name: Portal (${{ matrix.app }})
+  frontend:
+    name: Frontend (${{ matrix.workspace }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        app: [admin, doctor, lab, nurse, patient, pharmacy, receptionist]
-    defaults:
-      run:
-        working-directory: apps/${{ matrix.app }}
+        workspace:
+          - apps/admin
+          - apps/doctor
+          - apps/lab
+          - apps/nurse
+          - apps/patient
+          - apps/pharmacy
+          - apps/receptionist
+          - packages/web
     env:
       NEXT_PUBLIC_API_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: 1
@@ -70,11 +76,12 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: apps/${{ matrix.app }}/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      # next build also type-checks the app.
-      - run: npm run build
+      # Only this workspace's dependencies (a portal's include @curo/web), from the root lockfile.
+      - run: npm ci --workspace ${{ matrix.workspace }}
+      - run: npm run lint --workspace ${{ matrix.workspace }}
+      # A portal's next build also type-checks it and the @curo/web code it uses; @curo/web
+      # itself is type-checked by the Backends job's `npm run typecheck`.
+      - run: npm run build --workspace ${{ matrix.workspace }} --if-present
 
   secrets:
     name: Secret scan
