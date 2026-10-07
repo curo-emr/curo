@@ -110,19 +110,20 @@ export class LabController {
 
   @Get('instruments')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
-  getInstruments() {
-    return this.labService.getInstruments();
+  getInstruments(@CurrentUser() user: AuthUser) {
+    return this.labService.getInstruments(user);
   }
 
   @Get('qc-logs')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
   getQcLogs(
+    @CurrentUser() user: AuthUser,
     @Query('instrumentId') instrumentId?: string,
     @Query('status') status?: QCStatus,
     @Query() query?: PaginationQuery,
   ) {
-    return this.labService.getQcLogs({ instrumentId, status }, query);
+    return this.labService.getQcLogs(user, { instrumentId, status }, query);
   }
 
   @Get('lab-staff')
@@ -133,17 +134,21 @@ export class LabController {
 
   @Post('instruments')
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
-  createInstrument(@Body() dto: CreateInstrumentDto) {
-    return this.labService.createInstrument(dto);
+  createInstrument(
+    @Body() dto: CreateInstrumentDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.labService.createInstrument(dto, user);
   }
 
   @Put('instruments/:id/status')
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
   updateInstrumentStatus(
     @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
     @Body('status') status: InstrumentStatus,
     @Body('notes') notes?: string,
   ) {
-    return this.labService.updateInstrumentStatus(id, status, notes);
+    return this.labService.updateInstrumentStatus(id, user, status, notes);
   }
 }

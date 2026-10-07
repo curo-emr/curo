@@ -1848,15 +1848,17 @@ async function seed() {
       location: 'Lab Room 2',
     },
   ];
+  // One instrument at each lab, so each lab's staff see only their own.
   const instrumentIds: string[] = [];
-  for (const inst of instruments) {
+  for (const [i, inst] of instruments.entries()) {
     const [createdInstrument] = await db.query<IdRow[]>(
       `
-      INSERT INTO lab_instruments (id, name, model, manufacturer, "serialNumber", status, location, category, "lastMaintenanceDate")
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO lab_instruments (id, "organizationId", name, model, manufacturer, "serialNumber", status, location, category, "lastMaintenanceDate")
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `,
       [
+        labOrgIds[i % labOrgIds.length],
         inst.name,
         inst.model,
         inst.manufacturer,

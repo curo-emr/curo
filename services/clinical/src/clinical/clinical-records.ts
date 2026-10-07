@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { IsNull, type DeepPartial, type EntityManager } from 'typeorm';
 import * as QRCode from 'qrcode';
 import {
@@ -14,7 +13,7 @@ import {
   ObservationStatus,
   ServiceRequestStatus,
 } from '@curo/shared/enums';
-import { labSampleUrl } from '@curo/shared/lab';
+import { assertActiveLab, labSampleUrl } from '@curo/shared/lab';
 import type { Encounter } from '../entities/encounter.entity';
 import { EncounterStatus } from '../enums';
 import type { CreateEncounterDto } from './dto/create-encounter.dto';
@@ -104,27 +103,13 @@ export async function linkTriageVitals(
   );
 }
 
-/** Refuses an order sent anywhere but an active laboratory. */
-async function assertLab(em: EntityManager, organizationId: string) {
-  // organizations is owned by the auth service, so it is read with raw SQL.
-  const labs = await em.query<unknown[]>(
-    `SELECT 1 FROM organizations
-     WHERE id = $1 AND type = 'laboratory' AND active`,
-    [organizationId],
-  );
-  if (!labs.length)
-    throw new BadRequestException(
-      `Organization ${organizationId} is not an active laboratory`,
-    );
-}
-
 /** Saves a lab order, sent to the lab it names, with its order-level QR label. */
 export async function saveLabOrder(
   em: EntityManager,
   dto: CreateLabOrderDto,
   requesterId: string,
 ): Promise<{ order: ServiceRequest; qr: QrCode }> {
-  await assertLab(em, dto.performerOrganizationId);
+  await assertActiveLab(em, dto.performerOrganizationId);
   const order = await em.save(ServiceRequest, {
     ...dto,
     requesterId,

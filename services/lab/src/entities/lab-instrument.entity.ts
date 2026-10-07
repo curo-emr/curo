@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { InstrumentStatus } from '../enums';
 
@@ -14,6 +15,12 @@ export class LabInstrument {
 
   @Column()
   name: string;
+
+  // The lab the instrument is in: only its staff see and look after it.
+  // Null only on instruments added before instruments belonged to a lab.
+  @Index()
+  @Column({ nullable: true })
+  organizationId: string;
 
   @Column({ nullable: true })
   model: string;
