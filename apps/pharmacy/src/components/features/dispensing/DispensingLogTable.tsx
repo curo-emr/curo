@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useClientPagination } from "@curo/web/hooks";
+import { useState } from "react";
+import { findPatientIds } from "@curo/web/api";
+import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import { Input } from "@curo/web/ui/input";
 import { Pagination } from "@curo/web/ui/pagination";
 import { Card, CardContent } from "@curo/web/ui/card";
@@ -13,41 +14,27 @@ import {
   TableHeader,
   TableRow,
 } from "@curo/web/ui/table";
-import { Search } from "lucide-react";
-import type { DispenseRecord } from "@/lib/api/pharmacy";
-import { Patient, PharmacyStaff } from "@/types";
+import { Loader2, Search } from "lucide-react";
+import { getDispensingRecordsPage } from "@/lib/api/pharmacy";
+import { getPatientsByIds } from "@/lib/api/patients";
 import { getPatientName, formatDateTime, formatCurrency } from "@/lib/utils";
 
-interface DispensingLogTableProps {
-  records: DispenseRecord[];
-  patients: Patient[];
-  staff: PharmacyStaff[];
-}
-
-export function DispensingLogTable({ records, patients }: DispensingLogTableProps) {
+/** Every dispense, latest first, paged and searched on the server. */
+export function DispensingLogTable() {
   const [query, setQuery] = useState("");
+  const search = useDebouncedValue(query).trim();
 
-  const sorted = useMemo(() => {
-    return [...records].sort((a, b) => new Date(b.dispensedAt).getTime() - new Date(a.dispensedAt).getTime());
-  }, [records]);
-
-  const filtered = useMemo(() => {
-    return sorted.filter(record => {
-      const q = query.toLowerCase().trim();
-      if (!q) return true;
-      const patientName = getPatientName(record.patientId, patients).toLowerCase();
-      return (
-        record.prescriptionId.toLowerCase().includes(q) ||
-        patientName.includes(q) ||
-        record.items.some(i => i.medicationName.toLowerCase().includes(q))
-      );
-    });
-  }, [query, sorted, patients]);
-
-  // Client-side pagination over the filtered set (search joins patient names from
-  // a separate service, so it can't be pushed server-side).
-  const { page, setPage, pageSize, setPageSize, pageRows: paged } =
-    useClientPagination(filtered, [query]);
+  const { data, items: records, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
+    async (page, pageSize) => {
+      // Patient names live in the patient service: find the matching patients first.
+      const matches = search ? await findPatientIds(search) : undefined;
+      const result = await getDispensingRecordsPage({ page, pageSize, search, searchPatientIds: matches?.ids });
+      const patients = await getPatientsByIds(result.items.map(r => r.patientId));
+      return { ...result, patients, tooManyMatches: matches?.complete === false };
+    },
+    [search],
+  );
+  const patients = data?.patients ?? [];
 
   return (
     <div className="space-y-4">
@@ -66,9 +53,9 @@ export function DispensingLogTable({ records, patients }: DispensingLogTableProp
         </CardContent>
       </Card>
 
-      {query && (
-        <p className="text-sm text-muted-foreground px-1">
-          {filtered.length} of {records.length} records shown
+      {data?.tooManyMatches && (
+        <p className="text-sm text-status-warning-text px-1">
+          More than 100 patients match &ldquo;{search}&rdquo;, so only some of them are searched. Add more of the name, or the MRN.
         </p>
       )}
 
@@ -85,8 +72,19 @@ export function DispensingLogTable({ records, patients }: DispensingLogTableProp
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length > 0 ? (
-              paged.map(record => (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />
+                  Loading dispensing records…
+                </TableCell>
+              </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-32 text-center text-destructive">Failed to load dispensing records.</TableCell>
+              </TableRow>
+            ) : records.length > 0 ? (
+              records.map(record => (
                 <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">
                   <TableCell className="font-mono text-sm font-medium">{record.id.slice(0, 8).toUpperCase()}</TableCell>
                   <TableCell>
@@ -121,7 +119,7 @@ export function DispensingLogTable({ records, patients }: DispensingLogTableProp
       <Pagination
         page={page}
         pageSize={pageSize}
-        total={filtered.length}
+        total={total}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />
