@@ -3,6 +3,12 @@
 Electronic medical records platform: NestJS backends with FHIR-shaped APIs,
 a PostgreSQL database and seven role-specific Next.js portals.
 
+> [!WARNING]
+> Curo is under active development. It has not been certified or validated as a
+> medical device, or for clinical use, anywhere. If you deploy it, you are responsible
+> for its clinical safety and for complying with data-protection law where you run it
+> (in Sri Lanka, the Personal Data Protection Act, No. 9 of 2022).
+
 ## Repository layout
 
 ```
@@ -121,11 +127,9 @@ To change the schema:
 | `npm run db:check` | fail if the entities and the database schema differ (CI runs this) |
 | `npm run seed` | load dev data; safe to re-run |
 
-## Branches and CI
+## CI
 
-Work happens on short-lived branches named by type: `feat/`, `fix/`, `docs/`, `ci/`,
-`chore/`, `refactor/`, `test/` (e.g. `feat/nurse-vitals-history`). Open a PR into `main`.
-Release branches are `dev-release/<x.y.z>`, `qa-release/<x.y.z>` and `stg-release/<x.y.z>`.
+Branch naming and the pull request process are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 [CI](.github/workflows/ci.yml) runs on every PR and on pushes to `main` and release branches:
 
@@ -199,3 +203,18 @@ shadcn/ui primitives are the exception: they all live here, so the portals look 
   `packages/web/src/ui`. It runs `shadcn add`, then fixes the `import { cn } from "cn"`
   that the radix-vega registry ships, pointing it at `"./utils"`.
 
+
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities privately, as described in
+[SECURITY.md](SECURITY.md).
+
+## License
+
+Copyright © 2026 Dilantha Wijesinghe.
+
+Curo is free software: you can redistribute it and/or modify it under the terms of the
+[GNU Affero General Public License](LICENSE), version 3 or (at your option) any later
+version. If you run a modified version for users over a network, the license requires
+you to offer those users its source code.

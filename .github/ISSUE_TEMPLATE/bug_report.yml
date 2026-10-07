@@ -1,0 +1,62 @@
+name: Bug report
+description: Something in Curo doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never include real patient data** — not in the text, logs or screenshots. Reproduce with the [seed accounts](https://github.com/curo-emr/curo/blob/main/docs/TEST_CREDENTIALS.md) instead.
+        Security problems go through [private reporting](https://github.com/curo-emr/curo/security/advisories/new), not issues.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Admin portal
+        - Doctor portal
+        - Lab portal
+        - Nurse portal
+        - Patient portal
+        - Pharmacy portal
+        - Receptionist portal
+        - Backend / API
+        - Database / migrations
+        - Docker / setup
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in as a seed doctor
+        2. Open a patient's chart
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+      description: Output of `git rev-parse --short HEAD`.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant service or browser console output.
+      render: shell
+  - type: checkboxes
+    id: no-phi
+    attributes:
+      label: Patient data
+      options:
+        - label: This report contains no real patient data.
+          required: true
