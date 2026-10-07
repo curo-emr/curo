@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { BookAppointmentForm } from "@/components/features/appointments/BookAppointmentForm";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { getPatients } from "@/lib/api/patients";
 import { getAppointments } from "@/lib/api/appointments";
 import { getDoctors, type Practitioner } from "@/lib/api/practitioners";

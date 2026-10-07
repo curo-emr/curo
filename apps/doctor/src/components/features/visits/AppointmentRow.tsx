@@ -6,7 +6,7 @@ import type { Appointment, Patient } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
 import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { cn, formatAgeSex, formatTime } from "@/lib/utils";
 import { getVisitAction, isClosed } from "@/lib/visit";

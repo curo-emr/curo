@@ -8,7 +8,7 @@ import { Button } from "@curo/web/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 import { formatDate, formatTime } from "@/lib/utils";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { getMyProfile, getMyAppointments, getMyAllergies, getMyConditions, getMyPrescriptions, getMyLabOrders } from "@/lib/api/patient-portal";
 import type { Patient, Appointment, Allergy, Problem, Prescription, LabOrder } from "@/types";
 

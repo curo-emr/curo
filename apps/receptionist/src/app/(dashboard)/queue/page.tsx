@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { getTodayString } from "@/lib/utils";
 import { QueueBoard } from "@/components/features/queue/QueueBoard";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { getAppointments } from "@/lib/api/appointments";
 import { getPatientsByIds } from "@/lib/api/patients";
 import { getDoctors, type Practitioner } from "@/lib/api/practitioners";

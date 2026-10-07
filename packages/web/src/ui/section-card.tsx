@@ -1,6 +1,6 @@
 import { type LucideIcon } from "lucide-react";
-import { Card } from "@curo/web/ui/card";
-import { cn } from "@/lib/utils";
+import { Card } from "./card";
+import { cn } from "./utils";
 
 interface SectionCardProps {
   icon?: LucideIcon;

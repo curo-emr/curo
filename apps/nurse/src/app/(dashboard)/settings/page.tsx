@@ -2,8 +2,8 @@
 
 import { LogOut, Mail, ShieldCheck, Stethoscope } from "lucide-react";
 import { Button } from "@curo/web/ui/button";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { SectionCard } from "@curo/web/ui/section-card";
 import { PatientAvatar } from "@/components/features/queue/PatientAvatar";
 import { useAuth } from "@curo/web/auth";
 import { useCurrentPractitioner } from "@/lib/hooks/useCurrentPractitioner";

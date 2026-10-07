@@ -10,7 +10,7 @@ import { Card, CardContent } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { User, FlaskConical, FileText } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";

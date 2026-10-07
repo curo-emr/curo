@@ -33,17 +33,6 @@ export function calculateAge(dobStr: string): number {
 }
 
 /**
- * Converts a snake_case status string to human-readable Title Case.
- * e.g. "sent_to_pharmacy" → "Sent To Pharmacy"
- */
-export function formatStatus(status: string): string {
-  return status
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
-/**
  * Returns today's date as a YYYY-MM-DD string in local time.
  */
 export function getTodayString(): string {

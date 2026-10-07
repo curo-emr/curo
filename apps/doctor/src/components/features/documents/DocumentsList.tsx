@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { FileText, Eye, Loader2 } from "lucide-react";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { formatDate, formatStatus } from "@/lib/utils";
 import { formatFileSize } from "@curo/web/ui/file-input";
 import { openDocument, type DocumentRef } from "@/lib/api/documents";

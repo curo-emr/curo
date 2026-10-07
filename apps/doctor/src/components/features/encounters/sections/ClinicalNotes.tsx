@@ -6,7 +6,7 @@ import type { SOAP } from "@/types";
 import { Input } from "@curo/web/ui/input";
 import { Textarea } from "@curo/web/ui/textarea";
 import { Label } from "@curo/web/ui/label";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { SectionCard } from "@curo/web/ui/section-card";
 
 const SOAP_SECTIONS = [
   { key: "subjective" as const, label: "Subjective", hint: "History, symptoms as the patient describes them" },

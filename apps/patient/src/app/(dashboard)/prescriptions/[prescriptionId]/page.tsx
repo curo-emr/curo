@@ -8,7 +8,7 @@ import { Button } from "@curo/web/ui/button";
 import Link from "next/link";
 import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { SectionCard } from "@curo/web/ui/section-card";
 import { getMyProfile, getMyPrescriptions, getPractitioners } from "@/lib/api/patient-portal";
 import type { Prescription } from "@/types";
 

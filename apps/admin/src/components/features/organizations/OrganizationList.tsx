@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { Building2, Loader2, Plus } from "lucide-react";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { PageHeader } from "@curo/web/ui/page-header";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@curo/web/ui/select";
@@ -73,7 +73,7 @@ export function OrganizationList() {
         {isLoading ? (
           <div className="py-10 text-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />Loading organizations…</div>
         ) : shown.length === 0 ? (
-          <EmptyState icon={Building2} title="No organizations" description="Add a pharmacy before assigning pharmacists to it." actionLabel="Add Organization" onAction={() => setEditing(null)} />
+          <EmptyState icon={Building2} title="No organizations" description="Add a pharmacy before assigning pharmacists to it." action={<Button variant="outline" size="sm" onClick={() => setEditing(null)}>Add Organization</Button>} />
         ) : (
           <Table>
             <TableHeader className="bg-muted">

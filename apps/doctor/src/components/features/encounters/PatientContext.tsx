@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ClipboardList, ExternalLink } from "lucide-react";
 import type { Problem } from "@/types";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { SectionCard } from "@curo/web/ui/section-card";
 import { ROUTES } from "@/lib/constants";
 import { uniqueActiveProblems } from "@/lib/clinical";
 

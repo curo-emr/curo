@@ -10,7 +10,7 @@ import { RecentActivityFeed } from "@/components/features/dashboard/RecentActivi
 import { getLabOrders, getLabInstruments, getQCLogs, type LabInstrument } from "@/lib/api/lab";
 import { getPatients } from "@/lib/api/patients";
 import type { LabOrder, Patient, QCLog } from "@/types";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 
 export default function DashboardPage() {
   const [orders, setOrders] = useState<LabOrder[]>([]);

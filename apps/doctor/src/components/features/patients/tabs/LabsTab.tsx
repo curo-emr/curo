@@ -1,8 +1,8 @@
 import { FlaskConical } from "lucide-react";
 import type { LabOrder } from "@/types";
-import { SectionCard } from "@/components/ui/SectionCard";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { SectionCard } from "@curo/web/ui/section-card";
+import { StatusBadge } from "@curo/web/ui/status-badge";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { formatDate } from "@/lib/utils";
 
 export function LabsTab({ labOrders }: { labOrders: LabOrder[] }) {

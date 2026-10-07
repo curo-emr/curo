@@ -2,8 +2,8 @@
 
 import { useState, useEffect, use } from "react";
 import { UserX } from "lucide-react";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { PatientEditForm } from "@/components/features/patients/PatientEditForm";
 import { getPatientById, getAllergies } from "@/lib/api/patients";

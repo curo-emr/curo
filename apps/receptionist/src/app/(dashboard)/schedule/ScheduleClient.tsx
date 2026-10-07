@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@curo/web/ui/select";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { checkInPatient } from "@/lib/actions/checkin-actions";
 import {
   cn,

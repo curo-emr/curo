@@ -2,7 +2,7 @@
 
 import { UserPlus } from "lucide-react";
 import { PatientList } from "@/components/features/patients/PatientList";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { Button } from "@curo/web/ui/button";
 import { ROUTES } from "@/lib/constants";
 import Link from "next/link";
