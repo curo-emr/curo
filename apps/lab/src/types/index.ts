@@ -206,6 +206,8 @@ export interface LabOrder {
   status: LabOrderStatus;
   createdAt: string;
   sentToLabAt: string | null;
+  /** When the lab received the sample. */
+  receivedAt: string | null;
   notesToLab: string;
   tests: LabOrderTest[];
   // Per-test QR labels (populated on order detail) for printing & sticking on samples.

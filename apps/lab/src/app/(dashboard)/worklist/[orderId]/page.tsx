@@ -11,6 +11,7 @@ import { calculateAge, formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { getLabOrderById, getLabResultsByOrder, getLabTestCatalog, receiveOrder, type LabResult } from "@/lib/api/lab";
 import { getPatientById } from "@/lib/api/patients";
+import { LabReportUpload } from "@/components/features/worklist/LabReportUpload";
 import type { LabOrder, Patient, LabTestCatalogItem } from "@/types";
 
 export default function OrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
@@ -29,7 +30,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
     const [pt, catalog, res] = await Promise.all([
       getPatientById(ord.patientId),
       getLabTestCatalog(),
-      getLabResultsByOrder(orderId, ord.patientId),
+      getLabResultsByOrder(orderId),
     ]);
     setPatient(pt);
     setTestCatalog(catalog);
@@ -73,7 +74,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
           <p className="text-sm text-muted-foreground">Ordered: {formatDate(order.createdAt)}</p>
         </div>
         <div className="flex items-center gap-2">
-          {order.status === 'sent_to_lab' && (
+          {order.status === 'sent_to_lab' && !order.receivedAt && (
             <Button onClick={handleReceive} disabled={isReceiving} className="bg-teal-600 hover:bg-teal-700">
               {isReceiving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Receiving...</> : "Mark as Received"}
             </Button>
@@ -119,7 +120,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
               <div className="divide-y divide-slate-100">
                 {order.tests.map((test, i) => {
                   const catalogItem = testCatalog.find(t => t.id === test.testId || t.code === test.testId);
-                  const orderResult = results.find(r => r.results?.some(rr => rr.testCode === test.testId));
+                  // A report uploaded as a file completes the order without per-test values.
+                  const orderResult = order.status === 'completed' || results.some(r => r.results?.some(rr => rr.testCode === test.testId));
                   return (
                     <div key={`${test.testId}:${i}`} className="p-4 flex items-center justify-between">
                       <div>
@@ -198,6 +200,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                 {results.map(result => (
                   <div key={result.id}>
                     <p className="text-xs text-slate-400 mb-2">Performed: {formatDate(result.performedAt)}</p>
+                    {!result.results?.length ? (
+                      <p className="text-sm text-slate-500">Reported in the uploaded report file.</p>
+                    ) : (
                     <div className="bg-slate-50 rounded-md overflow-hidden">
                       <table className="w-full text-sm">
                         <thead>
@@ -228,6 +233,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                         </tbody>
                       </table>
                     </div>
+                    )}
                     {result.conclusion && (
                       <p className="text-sm text-slate-600 mt-2 bg-slate-50 rounded p-3">{result.conclusion}</p>
                     )}
@@ -235,6 +241,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                 ))}
               </CardContent>
             </Card>
+          )}
+
+          {order.status === 'completed' && (
+            <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId} />
           )}
         </div>
 
@@ -250,6 +260,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                 {[
                   { label: "Ordered", time: order.createdAt, done: true },
                   { label: "Sent to Lab", time: order.sentToLabAt, done: !!order.sentToLabAt },
+                  { label: "Sample Received", time: order.receivedAt, done: !!order.receivedAt },
                   { label: "Completed", time: null, done: order.status === 'completed' },
                 ].map(step => (
                   <div key={step.label} className="flex items-start gap-3">

@@ -1,8 +1,4 @@
-import type {
-  MedicationRequest,
-  Observation,
-  ServiceRequest,
-} from '@curo/shared/database';
+import type { MedicationRequest, Observation } from '@curo/shared/database';
 import type { Encounter } from '../entities/encounter.entity';
 
 export function toFhirEncounter(e: Encounter) {
@@ -59,29 +55,6 @@ export function toFhirMedRequest(m: MedicationRequest) {
         : undefined,
     },
     note: m.note ? [{ text: m.note }] : undefined,
-  };
-}
-
-export function toFhirServiceRequest(s: ServiceRequest) {
-  return {
-    resourceType: 'ServiceRequest',
-    id: s.id,
-    status: s.status,
-    intent: s.intent || 'order',
-    category: s.category ? [{ coding: [{ code: s.category }] }] : undefined,
-    code: { coding: [{ code: s.code, display: s.display }] },
-    subject: { reference: `Patient/${s.patientId}` },
-    requester: { reference: `Practitioner/${s.requesterId}` },
-    encounter: s.encounterId
-      ? { reference: `Encounter/${s.encounterId}` }
-      : undefined,
-    authoredOn: s.authoredOn,
-    priority: s.priority,
-    note: s.note ? [{ text: s.note }] : undefined,
-    extension: [
-      s.qrCodeId && { url: 'urn:curo:qrCodeId', valueString: s.qrCodeId },
-    ].filter(Boolean),
-    testPanel: s.testPanel,
   };
 }
 

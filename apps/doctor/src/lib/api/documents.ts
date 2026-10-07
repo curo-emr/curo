@@ -9,6 +9,8 @@ export interface DocumentRef {
   size?: number;
   date?: string;
   encounterId?: string;
+  /** What the document belongs to, e.g. the lab order a report file is for. */
+  relatedResourceId?: string;
 }
 
 export interface UploadDocumentInput {
@@ -38,6 +40,7 @@ interface FhirDocumentReference {
 function mapFhirDocument(d: FhirDocumentReference): DocumentRef {
   const attachment = d.content?.[0]?.attachment ?? {};
   const encounterRef: string | undefined = d.context?.encounter?.[0]?.reference;
+  const relatedRef: string | undefined = d.context?.related?.[0]?.reference;
   return {
     id: d.id,
     type: d.type,
@@ -47,6 +50,7 @@ function mapFhirDocument(d: FhirDocumentReference): DocumentRef {
     size: attachment.size,
     date: d.date,
     encounterId: encounterRef ? encounterRef.split('/')[1] : undefined,
+    relatedResourceId: relatedRef ? relatedRef.split('/')[1] : undefined,
   };
 }
 

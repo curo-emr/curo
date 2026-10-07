@@ -41,6 +41,10 @@
       "types": "./dist/identifiers/index.d.ts",
       "default": "./dist/identifiers/index.js"
     },
+    "./lab": {
+      "types": "./dist/lab/index.d.ts",
+      "default": "./dist/lab/index.js"
+    },
     "./notifications": {
       "types": "./dist/notifications/index.d.ts",
       "default": "./dist/notifications/index.js"

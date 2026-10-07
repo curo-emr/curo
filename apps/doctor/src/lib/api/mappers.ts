@@ -145,7 +145,9 @@ export interface FhirServiceRequest {
   subject?: { reference?: string };
   requester?: { reference?: string };
   encounter?: { reference?: string };
+  performer?: Array<{ reference?: string }>;
   authoredOn?: string;
+  receivedAt?: string | null;
   code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
   note?: Array<{ text?: string }>;
   extension?: Array<{ url: string; valueString?: string }>;
@@ -418,7 +420,9 @@ export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
     status: statusMap[fhir.status] ?? 'draft',
     createdAt: fhir.authoredOn ?? fhir.meta?.lastUpdated ?? '',
     sentToLabAt: fhir.status !== 'draft' ? (fhir.authoredOn ?? fhir.meta?.lastUpdated ?? null) : null,
+    receivedAt: fhir.receivedAt ?? null,
     notesToLab: fhir.note?.[0]?.text ?? '',
+    labId: fhir.performer?.[0]?.reference?.replace('Organization/', '') ?? null,
     tests: (fhir.code?.coding ?? []).map(c => ({
       testId: c.code ?? '',
       display: c.display ?? fhir.code?.text ?? c.code ?? '',

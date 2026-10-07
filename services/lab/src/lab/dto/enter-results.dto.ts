@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  ArrayNotEmpty,
   IsArray,
   IsNotEmpty,
   IsNumber,
@@ -53,11 +52,12 @@ export class EnterResultsDto {
   @IsString()
   serviceRequestId: string;
 
+  // May be left out when the report was uploaded as a file instead.
+  @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => ResultItemDto)
-  results: ResultItemDto[];
+  results?: ResultItemDto[];
 
   @IsOptional()
   @IsString()

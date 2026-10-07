@@ -32,6 +32,8 @@ const statusStyles: Record<string, { label?: string; classes: string; strikethro
   draft:            { classes: "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border" },
   sent_to_lab:      { label: "Sent to lab", classes: "bg-status-info-bg text-status-info-text border-status-info-border" },
   results_pending:  { label: "Awaiting results", classes: "bg-status-warning-bg text-status-warning-text border-status-warning-border" },
+  sample_received:  { label: "Sample received", classes: "bg-status-teal-bg text-status-teal-text border-status-teal-border" },
+  results_ready:    { label: "Results ready", classes: "bg-status-success-bg text-status-success-text border-status-success-border" },
   sent_to_pharmacy: { label: "Sent to pharmacy", classes: "bg-status-info-bg text-status-info-text border-status-info-border" },
   // Problems
   active:   { classes: "bg-status-info-bg text-status-info-text border-status-info-border" },

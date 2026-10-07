@@ -232,18 +232,26 @@ export class ClinicalController {
     return this.clinicalService.createLabOrder(dto, actorId(user));
   }
 
+  // Lab staff read orders from the lab service, which limits them to their lab's.
   @Get('lab-orders')
-  @Roles('DOCTOR', 'SUPER_ADMIN', 'LAB_STAFF', 'PATIENT')
+  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getLabOrders(@Query('patientId') patientId?: string) {
     return this.clinicalService.getLabOrders(patientId);
   }
 
   @Get('lab-orders/:id')
-  @Roles('DOCTOR', 'SUPER_ADMIN', 'LAB_STAFF', 'PATIENT')
+  @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getLabOrder(@Param('id') id: string) {
     return this.clinicalService.getLabOrder(id);
+  }
+
+  // The patient's slip for the visit's lab tests: its QR leads each lab to its own.
+  @Get('encounters/:id/lab-slip')
+  @Roles('DOCTOR', 'SUPER_ADMIN')
+  getLabSlip(@Param('id') id: string) {
+    return this.clinicalService.getLabSlip(id);
   }
 
   // Tasks

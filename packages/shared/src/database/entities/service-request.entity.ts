@@ -32,6 +32,12 @@ export class ServiceRequest {
   @Column({ nullable: true })
   performerId: string; // lab staff assigned
 
+  // The lab the doctor sent the test to: only its staff see and work on it.
+  // Null only on orders placed before tests were sent to a lab.
+  @Index()
+  @Column({ nullable: true })
+  performerOrganizationId: string;
+
   @Column({
     type: 'enum',
     enum: ServiceRequestStatus,

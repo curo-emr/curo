@@ -1,21 +1,26 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { FileX, FlaskConical, HeartPulse, NotebookPen, Pill, Printer, Star, Stethoscope, UserCheck } from "lucide-react";
-import type { Encounter, LabOrder, Patient, Prescription, Problem } from "@/types";
+import { FileX, HeartPulse, NotebookPen, Pill, Printer, Star, Stethoscope, UserCheck } from "lucide-react";
+import type { Encounter, Lab, LabOrder, LabReport, Patient, Prescription, Problem } from "@/types";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";
+import { RX_PRINT_ID, RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";
+import { LAB_SLIP_PRINT_ID, LabSlipPrint } from "@/components/features/labs/LabSlipPrint";
+import { VisitLabOrders } from "@/components/features/labs/VisitLabOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEncounterById } from "@/lib/api/encounters";
 import { getConditions, getPatientById } from "@/lib/api/patients";
 import { getEncounterSoap, getEncounterVitals, getLabOrdersByPatient, getPrescriptionsByPatient } from "@/lib/api/clinical";
+import { getDocumentsByPatient, type DocumentRef } from "@/lib/api/documents";
+import { getLabSlipQr, getLabs, getVisitLabReports } from "@/lib/api/labs";
 import { ROUTES } from "@/lib/constants";
 import { encounterDiagnoses } from "@/lib/clinical";
+import { printOnly } from "@/lib/print";
 import { calculateBMI, formatDate } from "@/lib/utils";
 
 interface Summary {
@@ -23,6 +28,11 @@ interface Summary {
   patient: Patient | null;
   prescriptions: Prescription[];
   labOrders: LabOrder[];
+  labReports: LabReport[];
+  /** Report files the labs uploaded for this visit's orders. */
+  labFiles: DocumentRef[];
+  labs: Lab[];
+  labSlipQr: string | null;
   diagnoses: Problem[];
   triagedByNurse: boolean;
 }
@@ -49,15 +59,27 @@ export default function VisitSummaryPage({ params }: { params: Promise<{ patient
       // SOAP and vitals are stored separately from the encounter, so backfill them here.
       getEncounterSoap(encounterId).catch(() => null),
       getEncounterVitals(patientId, encounterId).catch(() => ({ vitals: {}, triagedByNurse: false })),
-    ]).then(([enc, patient, rxs, labs, conditions, soap, { vitals, triagedByNurse }]) =>
+      getVisitLabReports(encounterId).catch(() => [] as LabReport[]),
+      getDocumentsByPatient(patientId).catch(() => [] as DocumentRef[]),
+      // Closed labs too, to name the labs of past orders.
+      getLabs({ includeInactive: true }).catch(() => [] as Lab[]),
+      getLabSlipQr(encounterId).catch(() => null),
+    ]).then(([enc, patient, rxs, labOrders, conditions, soap, { vitals, triagedByNurse }, labReports, documents, labs, labSlipQr]) => {
+      const visitOrders = labOrders.filter(l => l.encounterId === encounterId);
+      const orderIds = new Set(visitOrders.map(o => o.id));
       setData({
         encounter: enc ? { ...enc, soap: soap ?? enc.soap, vitals } : null,
         patient,
         prescriptions: rxs.filter(rx => rx.encounterId === encounterId),
-        labOrders: labs.filter(l => l.encounterId === encounterId),
+        labOrders: visitOrders,
+        labReports,
+        labFiles: documents.filter(d => d.type === "lab-report" && d.relatedResourceId && orderIds.has(d.relatedResourceId)),
+        labs,
+        labSlipQr,
         diagnoses: encounterDiagnoses(conditions, encounterId),
         triagedByNurse,
-      }));
+      });
+    });
   }, [patientId, encounterId]);
 
   if (!data) return <PageSkeleton />;
@@ -87,8 +109,11 @@ export default function VisitSummaryPage({ params }: { params: Promise<{ patient
           title="Visit summary"
           description={<span className="flex flex-wrap items-center gap-2">{formatDate(encounter.startedAt)} · {time} <StatusBadge status={encounter.status} /></span>}
         >
+          {data.labOrders.length > 0 && (
+            <Button variant="outline" onClick={() => printOnly(LAB_SLIP_PRINT_ID)}><Printer /> Print lab slip</Button>
+          )}
           {rxItems.length > 0 && (
-            <Button variant="outline" onClick={() => window.print()}><Printer /> Print prescription</Button>
+            <Button variant="outline" onClick={() => printOnly(RX_PRINT_ID)}><Printer /> Print prescription</Button>
           )}
         </PageHeader>
       </div>
@@ -132,6 +157,8 @@ export default function VisitSummaryPage({ params }: { params: Promise<{ patient
               </ul>
             )}
           </SectionCard>
+
+          <VisitLabOrders orders={data.labOrders} reports={data.labReports} files={data.labFiles} labs={data.labs} />
         </div>
 
         <div className="space-y-6">
@@ -172,28 +199,12 @@ export default function VisitSummaryPage({ params }: { params: Promise<{ patient
               </ul>
             )}
           </SectionCard>
-
-          <SectionCard icon={FlaskConical} iconClassName="text-clinical-lab" title="Lab orders" count={data.labOrders.length} noPadding>
-            {data.labOrders.length === 0 ? (
-              <EmptyState title="No lab orders" className="py-6" />
-            ) : (
-              <ul className="divide-y">
-                {data.labOrders.map(lab => (
-                  <li key={lab.id} className="flex items-center justify-between gap-2 px-5 py-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{lab.tests.map(t => t.display).join(", ")}</p>
-                      {lab.priority !== "routine" && <p className="text-xs font-medium uppercase text-status-error-text">{lab.priority}</p>}
-                    </div>
-                    <StatusBadge status={lab.status} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </SectionCard>
         </div>
       </div>
 
       <RxPrint patient={patient} items={rxItems} prescriber={user?.name} date={encounter.startedAt} />
+      <LabSlipPrint patient={patient} orders={data.labOrders} labs={data.labs} qrBase64={data.labSlipQr}
+        doctor={user?.name} date={encounter.startedAt} />
     </div>
   );
 }

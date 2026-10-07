@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { getNotificationCount } from "@/lib/api/notifications";
+import { WorkplaceBadge } from "./WorkplaceBadge";
 
 export function Topbar() {
   const router = useRouter();
@@ -48,7 +49,8 @@ export function Topbar() {
           />
         </form>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 items-center gap-4 ml-4">
+        <WorkplaceBadge />
         <div className="flex items-center gap-2 mr-4 border-r pr-4">
           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
             <User className="h-4 w-4 text-primary" />

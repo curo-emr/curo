@@ -16,8 +16,12 @@ const WORKPLACE_TYPES: Partial<Record<UserRole, readonly OrganizationType[]>> =
   };
 
 // Roles that can't do their work until they are assigned: a pharmacist
-// dispenses and receives stock only at their own pharmacy.
-const WORKPLACE_REQUIRED: readonly UserRole[] = [UserRole.PHARMACIST];
+// dispenses and receives stock only at their own pharmacy, and lab staff work
+// only on the tests sent to their own lab.
+const WORKPLACE_REQUIRED: readonly UserRole[] = [
+  UserRole.PHARMACIST,
+  UserRole.LAB_STAFF,
+];
 
 /** The kinds of organisation `role` can be assigned to; empty when none. */
 export function workplaceTypes(role: UserRole): readonly OrganizationType[] {

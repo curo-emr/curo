@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { enterResults, type ResultEntry } from "@/lib/api/lab";
 import { interpret, type Interpretation } from "@/lib/result-flag";
 import { ROUTES } from "@/lib/constants";
+import { LabReportUpload } from "./LabReportUpload";
 import { FlaskConical, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,8 +30,10 @@ const FLAG_BADGE: Record<Interpretation, { label: string; className: string }> =
 };
 
 /**
- * One row per ordered test. Submitting files every result at once and completes
- * the order, so each test needs a value first.
+ * One row per ordered test, and the report files uploaded for the order.
+ * Submitting files the results and completes the order. The results are a
+ * value for every test, or an uploaded report with no values typed (the
+ * report holds them), or both.
  */
 export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
   const router = useRouter();
@@ -45,18 +48,24 @@ export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
     })),
   );
   const [conclusion, setConclusion] = useState("");
+  const [reportCount, setReportCount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const update = (index: number, field: keyof ResultEntry, value: string) => {
     setEntries(prev => prev.map((entry, i) => (i === index ? { ...entry, [field]: value } : entry)));
   };
 
-  const isComplete = entries.length > 0 && entries.every(entry => entry.value.trim());
+  const typedCount = entries.filter(entry => entry.value.trim()).length;
+  const allTyped = entries.length > 0 && typedCount === entries.length;
+  const canSubmit = allTyped || (typedCount === 0 && reportCount > 0);
+  const hint = typedCount > 0
+    ? "Enter a result for every test, or clear them and submit the uploaded report."
+    : "Enter a result for every test, or upload the report, to submit.";
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await enterResults({ orderId: order.id, results: entries, conclusion });
+      await enterResults({ orderId: order.id, results: allTyped ? entries : [], conclusion });
       toast.success("Results submitted. The ordering doctor has been notified.");
       router.push(ROUTES.ORDER(order.id));
     } catch (err) {
@@ -186,10 +195,13 @@ export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
         </CardContent>
       </Card>
 
+      <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId}
+        onReportsChange={setReportCount} />
+
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-4">
-        {!isComplete && <p className="text-xs text-muted-foreground">Enter a result for every test to submit.</p>}
-        <Button className="bg-primary hover:bg-primary/90" onClick={handleSubmit} disabled={!isComplete || isSubmitting}>
+        {!canSubmit && <p className="text-xs text-muted-foreground">{hint}</p>}
+        <Button className="bg-primary hover:bg-primary/90" onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
           {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
           Submit results
         </Button>

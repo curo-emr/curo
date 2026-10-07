@@ -21,11 +21,27 @@ import { DiagnosticReport } from '../src/entities/diagnostic-report.entity';
 
 describe('Lab specimens and results', () => {
   let svc: ServiceUnderTest;
+  let lab: string;
   let labStaff: TestActor;
+
+  /** A laboratory, as the auth service keeps them; returns its id. */
+  async function laboratory(name = `Curo Lab ${randomUUID()}`) {
+    const id = randomUUID();
+    await svc.db.query(
+      `INSERT INTO organizations (id, name, type) VALUES ($1, $2, 'laboratory')`,
+      [id, name],
+    );
+    return id;
+  }
+
+  /** A technician working at `labId`. */
+  const technicianAt = (labId: string) =>
+    svc.as(UserRole.LAB_STAFF, { organizationId: labId });
 
   beforeAll(async () => {
     svc = await startService(AppModule);
-    labStaff = svc.as(UserRole.LAB_STAFF);
+    lab = await laboratory();
+    labStaff = technicianAt(lab);
   });
 
   afterAll(() => svc.close());
@@ -44,9 +60,13 @@ describe('Lab specimens and results', () => {
 
   /**
    * An active two-test order with a QR label per test, as a signed visit leaves
-   * it. Ordered by `requesterId`: by default a practitioner with no account.
+   * it, sent to `performerOrganizationId` (by default the technician's lab).
+   * Ordered by `requesterId`: by default a practitioner with no account.
    */
-  async function orderLabs(requesterId = randomUUID()) {
+  async function orderLabs(
+    requesterId = randomUUID(),
+    { performerOrganizationId = lab, encounterId = randomUUID() } = {},
+  ) {
     const patient = await svc.db.getRepository(Patient).save({
       patientCode: `PT-${randomUUID()}`,
       firstName: 'Nimal',
@@ -55,6 +75,8 @@ describe('Lab specimens and results', () => {
     const order = await svc.db.getRepository(ServiceRequest).save({
       patientId: patient.id,
       requesterId,
+      encounterId,
+      performerOrganizationId,
       status: ServiceRequestStatus.ACTIVE,
       category: 'laboratory',
       code: 'PANEL',
@@ -96,8 +118,17 @@ describe('Lab specimens and results', () => {
   const inboxOf = (userId: string) =>
     svc.db.getRepository(Notification).findBy({ recipientId: userId });
 
-  const scan = (qrData: string) =>
-    svc.api.post('/orders/scan').set(labStaff.headers).send({ qrData });
+  const scan = (qrData: string, actor = labStaff) =>
+    svc.api.post('/orders/scan').set(actor.headers).send({ qrData });
+
+  /** A report file the lab uploaded for `order`, as the document service keeps it. */
+  const uploadReport = (order: ServiceRequest) =>
+    svc.db.query(
+      `INSERT INTO document_references
+         ("patientId", "authorId", type, "relatedResourceId", "relatedResourceType", "fileName")
+       VALUES ($1, $2, 'lab-report', $3, 'ServiceRequest', 'fbc.pdf')`,
+      [order.patientId, labStaff.practitionerId, order.id],
+    );
 
   const enterResults = (body: object, actor = labStaff) =>
     svc.api.post('/results').set(actor.headers).send(body);
@@ -143,6 +174,47 @@ describe('Lab specimens and results', () => {
 
       await expect(savedOrder(order.id)).resolves.toMatchObject({
         receivedAt,
+      });
+    });
+
+    it("refuses another lab's sample, saying which lab it is for", async () => {
+      const galle = await laboratory('Curo Diagnostics — Galle');
+      const { order, labels } = await orderLabs(undefined, {
+        performerOrganizationId: galle,
+      });
+
+      const res = await scan(labels[0].encodedUrl).expect(403);
+
+      expect(res.body).toMatchObject({
+        message: 'This sample is for Curo Diagnostics — Galle, not your lab.',
+      });
+      await expect(savedOrder(order.id)).resolves.toMatchObject({
+        receivedAt: null,
+      });
+      await expect(savedLabel(labels[0].id)).resolves.toMatchObject({
+        scannedAt: null,
+      });
+    });
+
+    it("finds a visit slip's tests for the scanner's lab, and receives nothing", async () => {
+      const encounterId = randomUUID();
+      const ours = await orderLabs(undefined, { encounterId });
+      await orderLabs(undefined, {
+        encounterId,
+        performerOrganizationId: await laboratory(),
+      });
+
+      const res = await scan(
+        `http://localhost:3000/lab/visits/${encounterId}`,
+      ).expect(201);
+
+      expect(res.body).toMatchObject({
+        resourceType: 'Bundle',
+        total: 1,
+        entry: [{ resource: { id: ours.order.id } }],
+      });
+      await expect(savedOrder(ours.order.id)).resolves.toMatchObject({
+        receivedAt: null,
       });
     });
 
@@ -311,10 +383,35 @@ describe('Lab specimens and results', () => {
       });
     });
 
+    it('completes the order with the report the lab uploaded, when no values are typed', async () => {
+      const { order } = await orderLabs();
+      await uploadReport(order);
+
+      const res = await enterResults({
+        serviceRequestId: order.id,
+        conclusion: 'See attached report',
+      }).expect(201);
+
+      expect(res.body).toMatchObject({
+        status: 'final',
+        result: [],
+        conclusion: 'See attached report',
+        presentedForm: [],
+      });
+      expect(await recordsOf(order.id)).toEqual({
+        observations: 0,
+        reports: 1,
+      });
+      await expect(savedOrder(order.id)).resolves.toMatchObject({
+        status: ServiceRequestStatus.COMPLETED,
+      });
+    });
+
     it('rejects missing or malformed result items before writing anything', async () => {
       const { order } = await orderLabs();
       const serviceRequestId = order.id;
 
+      await enterResults({ serviceRequestId }).expect(400);
       await enterResults({ serviceRequestId, results: [] }).expect(400);
       await enterResults({
         serviceRequestId,
@@ -355,6 +452,124 @@ describe('Lab specimens and results', () => {
 
       await expect(savedOrder(order.id)).resolves.toMatchObject({
         status: ServiceRequestStatus.ACTIVE,
+      });
+    });
+  });
+
+  describe("one lab's work, kept from another", () => {
+    it("shows a technician only their own lab's orders and reports", async () => {
+      const otherLab = await laboratory();
+      const encounterId = randomUUID();
+      const ours = await orderLabs(undefined, { encounterId });
+      const theirs = await orderLabs(undefined, {
+        encounterId,
+        performerOrganizationId: otherLab,
+      });
+      for (const { order } of [ours, theirs])
+        await enterResults(
+          { serviceRequestId: order.id, results: [fbc] },
+          svc.as(UserRole.SUPER_ADMIN),
+        ).expect(201);
+
+      const ids = async (path: string, actor: TestActor) => {
+        const res = await svc.api
+          .get(path)
+          .query({ encounterId })
+          .set(actor.headers)
+          .expect(200);
+        return (
+          res.body as { entry: { resource: { id: string } }[] }
+        ).entry.map((e) => e.resource.id);
+      };
+      const reportOf = async (orderId: string) =>
+        (
+          await svc.db
+            .getRepository(DiagnosticReport)
+            .findOneByOrFail({ serviceRequestId: orderId })
+        ).id;
+
+      expect(await ids('/orders', labStaff)).toEqual([ours.order.id]);
+      expect(await ids('/reports', labStaff)).toEqual([
+        await reportOf(ours.order.id),
+      ]);
+      // The doctor sees the whole visit.
+      expect((await ids('/orders', svc.as(UserRole.DOCTOR))).sort()).toEqual(
+        [ours.order.id, theirs.order.id].sort(),
+      );
+      await svc.api
+        .get(`/orders/${theirs.order.id}`)
+        .set(labStaff.headers)
+        .expect(404);
+      await svc.api
+        .get(`/reports/${await reportOf(theirs.order.id)}`)
+        .set(labStaff.headers)
+        .expect(404);
+    });
+
+    it("refuses to receive or report on another lab's order", async () => {
+      const { order } = await orderLabs(undefined, {
+        performerOrganizationId: await laboratory(),
+      });
+
+      await svc.api
+        .put(`/orders/${order.id}/receive`)
+        .set(labStaff.headers)
+        .expect(404);
+      await enterResults({ serviceRequestId: order.id, results: [fbc] }).expect(
+        404,
+      );
+
+      await expect(savedOrder(order.id)).resolves.toMatchObject({
+        status: ServiceRequestStatus.ACTIVE,
+        receivedAt: null,
+      });
+    });
+
+    it('refuses a technician who is not assigned to a lab', async () => {
+      const res = await svc.api
+        .get('/orders')
+        .set(svc.as(UserRole.LAB_STAFF).headers)
+        .expect(403);
+
+      expect(res.body).toMatchObject({
+        message: expect.stringContaining('assigned to a laboratory') as unknown,
+      });
+    });
+  });
+
+  describe('GET /orders/:id', () => {
+    it('has a label to print for a single-test order', async () => {
+      const order = await svc.db.getRepository(ServiceRequest).save({
+        patientId: randomUUID(),
+        requesterId: randomUUID(),
+        performerOrganizationId: lab,
+        status: ServiceRequestStatus.ACTIVE,
+        code: '58410-2',
+        display: 'Full blood count',
+      });
+      const label = await svc.db.getRepository(QrCode).save({
+        serviceRequestId: order.id,
+        encodedUrl: `http://localhost:3000/lab/orders/${order.id}`,
+        imageBase64: 'data:image/png;base64,label',
+      });
+      await svc.db
+        .getRepository(ServiceRequest)
+        .update(order.id, { qrCodeId: label.id });
+
+      const res = await svc.api
+        .get(`/orders/${order.id}`)
+        .set(labStaff.headers)
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        performer: [{ reference: `Organization/${lab}` }],
+        tests: [
+          {
+            testCode: '58410-2',
+            display: 'Full blood count',
+            qrBase64: 'data:image/png;base64,label',
+          },
+        ],
       });
     });
   });
