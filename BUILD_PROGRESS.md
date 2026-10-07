@@ -1349,6 +1349,8 @@ Branch `feat/lab-scoping` (stacked on `feat/pharmacy-scoping`).
 - **Ordering:**
   - `service_requests.performerOrganizationId` is the lab a test was sent to.
     Migration `LabOrderPerformer`: where exactly one laboratory exists, earlier orders go to it.
+    Migration `LabStaffToTheOnlyLab` likewise assigns lab staff who are not at a laboratory to it,
+    so a one-lab deployment's technicians aren't locked out.
   - `CreateLabOrderDto`/visit lab orders require it. Clinical refuses anything but an active laboratory.
   - Doctor portal: each test in the visit's lab orders gets a lab.
     - The default is the first lab whose catalog offers the test (every lab for a test none lists).
