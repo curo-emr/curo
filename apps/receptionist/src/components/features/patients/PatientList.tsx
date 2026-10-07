@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import Link from "next/link";
-import { Patient } from "@/types";
 import { ROUTES } from "@/lib/constants";
 import { calculateAge, formatDate } from "@/lib/utils";
 import { SearchInput } from "@/components/ui/SearchInput";
@@ -22,42 +22,11 @@ import { getPatientsPaginated } from "@/lib/api/patients";
 
 export function PatientList() {
   const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query), 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedQuery, pageSize]);
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await getPatientsPaginated({ page, pageSize, search: debouncedQuery || undefined });
-      setPatients(result.items);
-      setTotal(result.total);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load patients.");
-      setPatients([]);
-      setTotal(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, pageSize, debouncedQuery]);
-
-  useEffect(() => { load(); }, [load]);
+  const search = useDebouncedValue(query);
+  const { items: patients, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
+    (page, pageSize) => getPatientsPaginated({ page, pageSize, search: search || undefined }),
+    [search],
+  );
 
   return (
     <div className="space-y-4">
@@ -90,9 +59,9 @@ export function PatientList() {
                   Loading patients…
                 </TableCell>
               </TableRow>
-            ) : error ? (
+            ) : isError ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-destructive">{error}</TableCell>
+                <TableCell colSpan={6} className="h-32 text-center text-destructive">Failed to load patients.</TableCell>
               </TableRow>
             ) : patients.length > 0 ? (
               patients.map((patient) => (

@@ -6,14 +6,15 @@ a PostgreSQL database and seven role-specific Next.js portals.
 ## Repository layout
 
 ```
-apps/                Next.js portals (each a standalone npm project)
+apps/                Next.js portals (npm workspaces, @curo/<name>-portal)
   admin doctor lab nurse patient pharmacy receptionist
-  Dockerfile         shared by every portal
+  Dockerfile         shared by every portal (--build-arg APP=<name>)
 services/            NestJS backends (npm workspaces, @curo/<name>-service)
   api-gateway auth patient appointment clinical pharmacy lab document notification audit
   Dockerfile         shared by every backend (--build-arg SERVICE=<name>)
 packages/shared/     @curo/shared — code used by more than one backend
 packages/testing/    @curo/testing — harness for the backends' API tests (dev only)
+packages/web/        @curo/web — code used by more than one portal
 database/            migrations, seed, and the image that runs them
 scripts/             smoke tests, docker helpers
 docs/  plan/         API docs, test credentials, design plans
@@ -50,6 +51,17 @@ cd services/patient && npm run start:dev
 ```
 
 `npm run build` and `npm test` at the root run across every backend.
+
+## Develop a portal
+
+```bash
+npm install                                  # once, at the repo root: one lockfile for everything
+npm run dev -w apps/doctor                   # or: cd apps/doctor && npm run dev
+```
+
+Portals import shared code from [@curo/web](#curoweb). It ships as TypeScript source,
+so there is nothing to build first; Next compiles it with the portal.
+`npm run build:portals` and `npm run lint:portals` run across every portal.
 
 ## Tests
 
@@ -120,14 +132,14 @@ Release branches are `dev-release/<x.y.z>`, `qa-release/<x.y.z>` and `stg-releas
 | Job | Checks | Run it locally |
 |---|---|---|
 | Backends | build `@curo/shared` + every service, lint, unit tests, API tests, type-check every workspace (tests included) and `database/`, then on an empty Postgres: migrate, check for entity drift, seed | `npm ci && npm run build && npm run lint && npm test && npm run test:e2e && npm run typecheck`, then `npm run db:migrate && npm run db:check` |
-| Portals | lint, then `next build` (includes type-check) for each of the 7 portals | `cd apps/<app> && npm ci && npm run lint && npm run build` |
+| Frontend | for each portal: lint, then `next build` (includes type-check); lint `@curo/web` | `npm ci && npm run lint:portals && npm run build:portals` |
 | Secret scan | gitleaks over the full git history ([allowlist](.gitleaks.toml)) | `docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo` |
 
 ### Lint and formatting
 
 Backends (`services/`, `packages/shared`, `database/`) share one
 [ESLint config](eslint.config.mjs) and one [Prettier config](.prettierrc.json).
-Each portal keeps its own Next.js ESLint config.
+Each portal, and `@curo/web`, keeps its own Next.js ESLint config.
 
 - `npm run lint` checks without changing anything (this is what CI runs);
   `npm run lint:fix` fixes and formats. In a portal, use `npm run lint` there.
@@ -154,3 +166,13 @@ One package, one entry point per concern, so a service imports only what it need
 
 Rule of thumb: code moves into the package only once a second service needs
 it. A table owned by one service keeps its entity in that service.
+
+## `@curo/web`
+
+The portals' counterpart to `@curo/shared`, with the same layout: one entry point per concern.
+
+| Import | Contents |
+|---|---|
+| `@curo/web/hooks` | `useServerPagination` (a server-paged list that refetches when its filters change), `useDebouncedValue` |
+
+The same rule of thumb applies: code moves in once a second portal needs it.

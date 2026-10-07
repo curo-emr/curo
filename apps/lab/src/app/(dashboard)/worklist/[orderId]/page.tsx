@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, use } from "react";
+import { useState, useEffect, use } from "react";
 import { Loader2, User, FlaskConical, Clock, ArrowLeft, CheckCircle2, QrCode, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,43 +9,44 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { calculateAge, formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
-import { getLabOrderById, getLabResultsByOrder, getLabTestCatalog, receiveOrder, type LabResult } from "@/lib/api/lab";
+import { getLabOrderById, getLabResultsByOrder, getLabTestCatalog, receiveOrder } from "@/lib/api/lab";
 import { getPatientById } from "@/lib/api/patients";
 import { LabReportUpload } from "@/components/features/worklist/LabReportUpload";
-import type { LabOrder, Patient, LabTestCatalogItem } from "@/types";
+
+type OrderDetails = NonNullable<Awaited<ReturnType<typeof loadOrderDetails>>>;
+
+// Everything the page shows for one order; null when there is no such order.
+async function loadOrderDetails(orderId: string) {
+  const order = await getLabOrderById(orderId);
+  if (!order) return null;
+  const [patient, testCatalog, results] = await Promise.all([
+    getPatientById(order.patientId),
+    getLabTestCatalog(),
+    getLabResultsByOrder(orderId),
+  ]);
+  return { order, patient, testCatalog, results };
+}
 
 export default function OrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params);
-  const [order, setOrder] = useState<LabOrder | null>(null);
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
-  const [results, setResults] = useState<LabResult[]>([]);
+  const [details, setDetails] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isReceiving, setIsReceiving] = useState(false);
 
-  const loadData = useCallback(async () => {
-    const ord = await getLabOrderById(orderId);
-    if (!ord) return;
-    setOrder(ord);
-    const [pt, catalog, res] = await Promise.all([
-      getPatientById(ord.patientId),
-      getLabTestCatalog(),
-      getLabResultsByOrder(orderId),
-    ]);
-    setPatient(pt);
-    setTestCatalog(catalog);
-    setResults(res);
-  }, [orderId]);
-
   useEffect(() => {
-    loadData().catch(console.error).finally(() => setIsLoading(false));
-  }, [loadData]);
+    let current = true;
+    loadOrderDetails(orderId)
+      .then((loaded) => { if (current) setDetails(loaded); })
+      .catch(console.error)
+      .finally(() => { if (current) setIsLoading(false); });
+    return () => { current = false; };
+  }, [orderId]);
 
   const handleReceive = async () => {
     setIsReceiving(true);
     try {
       await receiveOrder(orderId);
-      await loadData();
+      setDetails(await loadOrderDetails(orderId));
     } catch (err) {
       console.error(err);
     } finally {
@@ -54,7 +55,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
   };
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-  if (!order || !patient) return <div className="p-8 text-center text-slate-500">Order not found.</div>;
+  if (!details?.patient) return <div className="p-8 text-center text-slate-500">Order not found.</div>;
+  const { order, patient, testCatalog, results } = details;
 
   const age = calculateAge(patient.dob);
 
