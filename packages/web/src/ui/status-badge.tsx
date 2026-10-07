@@ -72,6 +72,9 @@ const STATUSES = {
   return: { tone: "teal" },
   adjustment: { tone: "warning" },
   damaged: { tone: "error" },
+  // Payments that no longer count as income (pending is above)
+  refunded: { tone: "neutral" },
+  waived: { tone: "neutral" },
   // Problems and conditions
   active: { tone: "info" },
   resolved: { tone: "success" },

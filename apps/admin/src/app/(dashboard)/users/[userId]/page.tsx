@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { Button } from "@curo/web/ui/button";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
@@ -153,6 +154,8 @@ function CollectedIncome({ practitionerId }: { practitionerId: string }) {
                 <p className="text-xs text-muted-foreground">{p.paidAt ? format(parseISO(p.paidAt), "dd MMM yyyy, HH:mm") : "—"} · {p.paymentMethod}</p>
               </div>
               <div className="flex items-center gap-3">
+                {/* Left out of the total above, which counts paid payments only. */}
+                {p.status && p.status !== "paid" && <StatusBadge status={p.status} />}
                 <span className="font-medium">{money(Number(p.amount), p.currency)}</span>
                 <EditPaymentDialog payment={p} onSaved={(np) => setCorrected((prev) => ({ ...prev, [np.id]: np }))} />
               </div>
