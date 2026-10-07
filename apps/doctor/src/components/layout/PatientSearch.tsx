@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Search } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@curo/web/ui/command";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@curo/web/ui/dialog";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
 import { getPatients } from "@/lib/api/patients";
 import { ROUTES } from "@/lib/constants";

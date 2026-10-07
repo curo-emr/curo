@@ -1,7 +1,7 @@
 import { LabOrder, Patient } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { getPatientName } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";

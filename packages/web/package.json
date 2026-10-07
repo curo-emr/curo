@@ -8,25 +8,40 @@
     "./api": "./src/api/index.ts",
     "./auth": "./src/auth/index.ts",
     "./fhir": "./src/fhir/index.ts",
-    "./hooks": "./src/hooks/index.ts"
+    "./hooks": "./src/hooks/index.ts",
+    "./ui/curo-calendar": "./src/ui/curo-calendar/index.ts",
+    "./ui/utils": "./src/ui/utils.ts",
+    "./ui/*": "./src/ui/*.tsx"
   },
   "scripts": {
     "lint": "eslint --max-warnings 0",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "axios": "^1.16.1"
+    "axios": "^1.16.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "lucide-react": "^0.575.0",
+    "radix-ui": "^1.4.3",
+    "react-day-picker": "^9.14.0",
+    "tailwind-merge": "^3.5.0"
   },
   "peerDependencies": {
     "next": "^16.1.0",
-    "react": "^19.2.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hook-form": "^7.71.0"
   },
   "devDependencies": {
     "@types/react": "^19",
+    "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "next": "16.1.6",
     "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-hook-form": "^7.71.2",
     "typescript": "^5"
   }
 }

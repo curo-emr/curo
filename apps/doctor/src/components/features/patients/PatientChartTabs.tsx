@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Allergy, Encounter, LabOrder, Patient, Prescription, Problem, Vitals } from "@/types";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
 import { SummaryTab } from "./tabs/SummaryTab";
 import { VisitsTab } from "./tabs/VisitsTab";
 import { MedicationsTab } from "./tabs/MedicationsTab";

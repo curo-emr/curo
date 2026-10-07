@@ -2,9 +2,9 @@
 
 import { useState, useEffect, use } from "react";
 import { Loader2, Pill, ArrowLeft, Clock, User } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
 import Link from "next/link";
 import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";

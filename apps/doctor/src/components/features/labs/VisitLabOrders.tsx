@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FileText, FlaskConical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Lab, LabOrder, LabReport, LabResultValue } from "@/types";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";

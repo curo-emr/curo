@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@curo/web/auth";
-import { useSidebar } from "@/contexts/SidebarContext";
+import { useSidebar } from "@curo/web/ui/sidebar-context";
 import { Activity, X } from "lucide-react";
 import { navItems } from "./nav-items";
 

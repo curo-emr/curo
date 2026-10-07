@@ -12,14 +12,14 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { Appointment, Patient, Doctor } from "@/types";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { checkInPatient } from "@/lib/actions/checkin-actions";
 import {
@@ -36,8 +36,8 @@ import {
   CalendarEvent,
   formatDateStr,
   getRelativeDayLabel,
-} from "@/components/ui/CuroCalendar";
-import type { CalendarEventColor } from "@/components/ui/CuroCalendar";
+} from "@curo/web/ui/curo-calendar";
+import type { CalendarEventColor } from "@curo/web/ui/curo-calendar";
 
 // ---------------------------------------------------------------------------
 // Helpers

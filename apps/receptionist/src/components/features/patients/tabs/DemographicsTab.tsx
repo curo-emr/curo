@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Patient } from "@/types";
 import { ROUTES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
 import { Edit, User, Phone, MapPin, Shield } from "lucide-react";
 
 interface DemographicsTabProps {

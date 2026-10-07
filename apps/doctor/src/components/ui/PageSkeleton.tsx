@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@curo/web/ui/skeleton";
 
 // Generic loading placeholder: page header + a main column and a side column of cards.
 export function PageSkeleton({ side = true }: { side?: boolean }) {

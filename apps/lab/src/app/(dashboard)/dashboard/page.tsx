@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, AlertTriangle, Cpu } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
 import { LabDashboardStats } from "@/components/features/dashboard/LabDashboardStats";
 import { UrgentOrdersList } from "@/components/features/dashboard/UrgentOrdersList";
 import { RecentActivityFeed } from "@/components/features/dashboard/RecentActivityFeed";

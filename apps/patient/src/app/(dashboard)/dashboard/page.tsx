@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, Calendar, Pill, FlaskConical, HeartPulse, AlertTriangle, ArrowRight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 import { formatDate, formatTime } from "@/lib/utils";

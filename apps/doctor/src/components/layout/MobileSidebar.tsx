@@ -1,7 +1,7 @@
 "use client";
 
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { useSidebar } from "@/contexts/SidebarContext";
+import { Sheet, SheetContent, SheetTitle } from "@curo/web/ui/sheet";
+import { useSidebar } from "@curo/web/ui/sidebar-context";
 import { SidebarContent } from "./SidebarContent";
 
 export function MobileSidebar() {

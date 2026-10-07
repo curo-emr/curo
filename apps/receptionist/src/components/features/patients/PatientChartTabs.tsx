@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Patient, Appointment, Doctor } from "@/types";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
 import { DemographicsTab } from "./tabs/DemographicsTab";
 import { AppointmentsTab } from "./tabs/AppointmentsTab";
 

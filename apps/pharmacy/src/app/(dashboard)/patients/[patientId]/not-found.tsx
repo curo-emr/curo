@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { UserX } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";

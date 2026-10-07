@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@curo/web/ui/card";
 import { formatDateTime, formatCurrency } from "@/lib/utils";
 import type { DispenseRecord } from "@/lib/api/pharmacy";
 

@@ -1,6 +1,6 @@
 import { ArrowLeft, Loader2, Send } from "lucide-react";
 import type { Vitals } from "@/types";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { cn } from "@/lib/utils";
 import {
   LEVEL_STYLES, VITAL_FIELD, VITAL_FIELDS, assessBMI, assessVital, calculateBMI, worstLevel,

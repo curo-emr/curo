@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { AlertTriangle, Droplet, Pencil, Phone, Play, RotateCcw, ShieldCheck, Contact } from "lucide-react";
 import type { Allergy, Appointment, Patient } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button } from "@curo/web/ui/button";
+import { Card } from "@curo/web/ui/card";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
 import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@curo/web/ui/popover";
 import { ROUTES } from "@/lib/constants";
 import { formatAgeSex, formatDate, formatTime } from "@/lib/utils";
 import { getVisitAction, visitHref } from "@/lib/visit";

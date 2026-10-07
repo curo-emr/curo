@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, TrendingUp, Clock, Pill, XCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { formatStatus, formatCurrency } from "@/lib/utils";
 import { getPendingPrescriptions, getDispensingRecords, getStock, type DispenseRecord, type StockItem } from "@/lib/api/pharmacy";
 import type { Prescription } from "@/types";

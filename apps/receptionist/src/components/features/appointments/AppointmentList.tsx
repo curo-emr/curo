@@ -3,16 +3,16 @@
 import { useState, useMemo, useEffect } from "react";
 import { useClientPagination } from "@curo/web/hooks";
 import type { Appointment, Patient, Doctor } from "@/types";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@curo/web/ui/card";
+import { Button } from "@curo/web/ui/button";
+import { Input } from "@curo/web/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import {
   Table,
   TableBody,
@@ -20,9 +20,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@curo/web/ui/table";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Pagination } from "@/components/ui/pagination";
+import { Pagination } from "@curo/web/ui/pagination";
 import { Calendar, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";

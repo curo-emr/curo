@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { Info, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@curo/web/ui/button";
+import { Skeleton } from "@curo/web/ui/skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
 import { SectionCard } from "@/components/ui/SectionCard";

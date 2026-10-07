@@ -1,6 +1,6 @@
 import { User, AlertTriangle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
 import { calculateAge, formatAllergies } from "@/lib/utils";
 import type { Allergy, Patient } from "@/types";
 

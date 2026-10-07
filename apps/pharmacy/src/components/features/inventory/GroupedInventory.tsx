@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Search, AlertTriangle, PackageX } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
+import { Input } from "@curo/web/ui/input";
 import type { GroupedStock } from "@/lib/api/pharmacy";
 
 function expiryStatus(date: string): "expired" | "soon" | "ok" {

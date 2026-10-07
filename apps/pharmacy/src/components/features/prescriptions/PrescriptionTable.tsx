@@ -3,9 +3,9 @@
 import { useState, useMemo } from "react";
 import { useClientPagination } from "@curo/web/hooks";
 import { useSearchParams } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { Pagination } from "@/components/ui/pagination";
-import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@curo/web/ui/input";
+import { Pagination } from "@curo/web/ui/pagination";
+import { Card, CardContent } from "@curo/web/ui/card";
 import {
   Table,
   TableBody,
@@ -13,15 +13,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@curo/web/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+} from "@curo/web/ui/select";
+import { Button } from "@curo/web/ui/button";
 import { Search, ChevronRight } from "lucide-react";
 import { Prescription, Patient } from "@/types";
 import { getPatientName, formatDate } from "@/lib/utils";

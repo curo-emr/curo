@@ -3,17 +3,17 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Upload, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { FileInput } from "@/components/ui/FileInput";
+import { Button } from "@curo/web/ui/button";
+import { Label } from "@curo/web/ui/label";
+import { Textarea } from "@curo/web/ui/textarea";
+import { FileInput } from "@curo/web/ui/file-input";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader,
   DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@curo/web/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import { uploadDocument } from "@/lib/api/documents";
 
 const DOCUMENT_TYPES: { value: string; label: string }[] = [

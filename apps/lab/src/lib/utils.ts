@@ -1,9 +1,4 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
+export { cn } from "@curo/web/ui/utils";
 
 export function formatDate(dateStr: string): string {
   if (!dateStr) return '';

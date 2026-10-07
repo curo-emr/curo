@@ -3,9 +3,9 @@
 import { forwardRef } from "react";
 import { NotebookPen } from "lucide-react";
 import type { SOAP } from "@/types";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Input } from "@curo/web/ui/input";
+import { Textarea } from "@curo/web/ui/textarea";
+import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@/components/ui/SectionCard";
 
 const SOAP_SECTIONS = [
