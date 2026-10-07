@@ -9,3 +9,11 @@ dist/
 .agents/
 .claude/
 npm-debug.log*
+
+# Local notes and working docs, kept out of the public repo
+/notes.txt
+/docs/history/
+/docs/design/
+
+# Agent tooling
+/skills-lock.json
