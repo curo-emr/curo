@@ -85,7 +85,7 @@ export function PrescriptionTable({ prescriptions, patients }: PrescriptionTable
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="sent_to_pharmacy">Sent to Pharmacy</SelectItem>
                 <SelectItem value="active">Active</SelectItem>

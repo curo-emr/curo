@@ -13,7 +13,8 @@ import {
 } from "@curo/web/ui/select";
 import { Search, ChevronDown, ChevronRight, FlaskConical } from "lucide-react";
 import { LabTestCatalogItem } from "@/types";
-import { formatTAT, formatStatus } from "@/lib/utils";
+import { formatTAT } from "@/lib/utils";
+import { formatStatus } from "@curo/web/format";
 
 interface TestCatalogListProps {
   tests: LabTestCatalogItem[];

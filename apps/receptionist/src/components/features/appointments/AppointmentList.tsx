@@ -32,8 +32,8 @@ import {
   formatDate,
   formatTime,
   getTodayString,
-  formatStatus,
 } from "@/lib/utils";
+import { statusClassName, statusLabel } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { updateAppointmentStatus } from "@/lib/actions/appointment-actions";
 import { RecordPaymentCell } from "@/components/features/payments/RecordPaymentCell";
@@ -48,48 +48,15 @@ interface AppointmentListProps {
   doctors: Doctor[];
 }
 
+// Every status the desk can set, in workflow order; the filter adds "All statuses".
+const ALL_STATUSES: AppointmentStatus[] = [
+  "scheduled", "not_arrived", "arrived", "waiting", "in_progress", "completed", "cancelled", "no_show",
+];
+
 const STATUS_OPTIONS = [
-  { label: "All Statuses", value: "all" },
-  { label: "Scheduled", value: "scheduled" },
-  { label: "Arrived", value: "arrived" },
-  { label: "Waiting", value: "waiting" },
-  { label: "In Progress", value: "in_progress" },
-  { label: "Completed", value: "completed" },
-  { label: "Cancelled", value: "cancelled" },
-  { label: "No Show", value: "no_show" },
+  { label: "All statuses", value: "all" },
+  ...ALL_STATUSES.filter(s => s !== "not_arrived").map(value => ({ label: statusLabel(value), value })),
 ];
-
-const ALL_STATUSES: { label: string; value: AppointmentStatus }[] = [
-  { label: "Scheduled", value: "scheduled" },
-  { label: "Not Arrived", value: "not_arrived" },
-  { label: "Arrived", value: "arrived" },
-  { label: "Waiting", value: "waiting" },
-  { label: "In Progress", value: "in_progress" },
-  { label: "Completed", value: "completed" },
-  { label: "Cancelled", value: "cancelled" },
-  { label: "No Show", value: "no_show" },
-];
-
-const statusStyles: Record<AppointmentStatus, string> = {
-  waiting:     "bg-status-warning-bg text-status-warning-text border-status-warning-border",
-  in_progress: "bg-status-info-bg text-status-info-text border-status-info-border",
-  completed:   "bg-status-success-bg text-status-success-text border-status-success-border",
-  scheduled:   "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
-  not_arrived: "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
-  arrived:     "bg-status-teal-bg text-status-teal-text border-status-teal-border",
-  cancelled:   "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
-  no_show:     "bg-status-error-bg text-status-error-text border-status-error-border",
-};
-
-const statusLabels: Partial<Record<AppointmentStatus, string>> = {
-  not_arrived: "Not Arrived",
-  in_progress: "In Progress",
-  no_show: "No Show",
-};
-
-function getStatusLabel(status: AppointmentStatus) {
-  return statusLabels[status] ?? formatStatus(status);
-}
 
 export function AppointmentList({ appointments: initialAppointments, patients, doctors }: AppointmentListProps) {
   const [appointments, setAppointments] = useState(initialAppointments);
@@ -186,7 +153,7 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
             <div className="flex-1">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="bg-muted border">
-                  <SelectValue placeholder="All Statuses" />
+                  <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
                   {STATUS_OPTIONS.map((opt) => (
@@ -279,20 +246,19 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
                         <SelectTrigger
                           className={cn(
                             "h-7 w-auto min-w-[110px] text-xs font-medium border rounded-full px-2.5 focus:ring-0 focus:ring-offset-0",
-                            statusStyles[status] ?? "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
-                            status === "cancelled" && "line-through"
+                            statusClassName(status),
                           )}
                         >
                           {isPending ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : (
-                            <SelectValue>{getStatusLabel(status)}</SelectValue>
+                            <SelectValue>{statusLabel(status)}</SelectValue>
                           )}
                         </SelectTrigger>
                         <SelectContent>
-                          {ALL_STATUSES.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                              {opt.label}
+                          {ALL_STATUSES.map((value) => (
+                            <SelectItem key={value} value={value}>
+                              {statusLabel(value)}
                             </SelectItem>
                           ))}
                         </SelectContent>

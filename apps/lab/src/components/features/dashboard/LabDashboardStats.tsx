@@ -12,7 +12,7 @@ export function LabDashboardStats({ orders }: LabDashboardStatsProps) {
 
   const statCards = [
     { label: "Pending Orders", value: pendingCount, color: "text-status-warning-text bg-status-warning-bg border-status-warning-border" },
-    { label: "In Progress", value: inProgressCount, color: "text-primary bg-primary/10 border-primary/20" },
+    { label: "In progress", value: inProgressCount, color: "text-primary bg-primary/10 border-primary/20" },
     { label: "Awaiting Verification", value: awaitingVerification, color: "text-status-purple-text bg-status-purple-bg border-status-purple-border" },
     { label: "Completed", value: completedToday, color: "text-status-success-text bg-status-success-bg border-status-success-border" },
   ];

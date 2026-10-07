@@ -8,7 +8,8 @@ import { StatusBadge } from "@curo/web/ui/status-badge";
 import { PatientSummaryCard } from "@/components/features/patients/PatientSummaryCard";
 import { DispenseRecordCard } from "@/components/features/dispensing/DispenseRecordCard";
 import Link from "next/link";
-import { formatDate, formatStatus } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { formatStatus } from "@curo/web/format";
 import { ROUTES } from "@/lib/constants";
 import { getPatientById, getAllergies } from "@/lib/api/patients";
 import {
