@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { PrescriptionTable } from "@/components/features/prescriptions/PrescriptionTable";
 import { getPendingPrescriptions } from "@/lib/api/pharmacy";
-import { getPatients } from "@/lib/api/patients";
+import { getPatientsByIds } from "@/lib/api/patients";
 import type { Prescription, Patient } from "@/types";
 
 export default function PrescriptionsPage() {
@@ -13,8 +13,12 @@ export default function PrescriptionsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getPendingPrescriptions(), getPatients()])
-      .then(([rxs, pts]) => { setPrescriptions(rxs); setPatients(pts); })
+    getPendingPrescriptions()
+      .then(async (rxs) => {
+        const pts = await getPatientsByIds(rxs.map(rx => rx.patientId));
+        setPrescriptions(rxs);
+        setPatients(pts);
+      })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);

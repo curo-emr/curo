@@ -9,13 +9,6 @@ interface AuditFilters {
   to?: string;
 }
 
-export async function getAuditLogs(filters?: AuditFilters): Promise<AuditEntry[]> {
-  const res = await apiClient.get<AuditEntry[] | FhirBundle<AuditEntry>>("/audit", {
-    params: { ...filters, pageSize: 100 },
-  });
-  return unwrapBundle(res.data).resources;
-}
-
 export async function getAuditLogsPaginated(
   params: Omit<PaginationParams, "search"> & AuditFilters = {},
 ): Promise<PaginatedResult<AuditEntry>> {

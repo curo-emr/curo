@@ -179,6 +179,7 @@ export class AdminService {
 
     const [users, total] = await qb
       .orderBy('u.createdAt', 'DESC')
+      .addOrderBy('u.id', 'ASC')
       .skip(skip)
       .take(take)
       .getManyAndCount();

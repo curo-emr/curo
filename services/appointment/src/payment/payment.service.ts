@@ -105,7 +105,7 @@ export class PaymentService {
     const range = this.dateRange(from, to);
     const [payments, total] = await this.paymentsRepo.findAndCount({
       where: { collectedBy, ...(range ? { paidAt: range } : {}) },
-      order: { paidAt: 'DESC' },
+      order: { paidAt: 'DESC', id: 'ASC' },
       skip,
       take,
     });
@@ -181,6 +181,7 @@ export class PaymentService {
       });
     const [payments, total] = await qb
       .orderBy('p.paidAt', 'DESC')
+      .addOrderBy('p.id', 'ASC')
       .skip(skip)
       .take(take)
       .getManyAndCount();

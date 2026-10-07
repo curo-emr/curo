@@ -13,7 +13,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@curo/web/ui/dialog";
 import { getUser, updateUser, resetUserPassword } from "@/lib/api/users";
-import { getAllPayments, correctPayment } from "@/lib/api/payments";
+import { getRecentPayments, correctPayment } from "@/lib/api/payments";
 import { ROUTES, ROLE_LABELS, WORKPLACE_TYPES, type UserRole } from "@/lib/constants";
 import { WorkplaceSelect } from "@/components/features/organizations/WorkplaceSelect";
 import { format, parseISO } from "date-fns";
@@ -36,7 +36,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ userId: s
       .then(async (u) => {
         setUser(u);
         if (u.role === "RECEPTIONIST" && u.practitionerId) {
-          const pays = await getAllPayments({ collectedBy: u.practitionerId }).catch(() => []);
+          const pays = await getRecentPayments({ collectedBy: u.practitionerId }).catch(() => []);
           setPayments(pays);
         }
       })

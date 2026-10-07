@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { BookAppointmentForm } from "@/components/features/appointments/BookAppointmentForm";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { getPatients } from "@/lib/api/patients";
-import { getAppointments } from "@/lib/api/appointments";
+import { getAppointmentsFirstPage } from "@/lib/api/appointments";
 import { getDoctors, type Practitioner } from "@/lib/api/practitioners";
 import type { Patient, Doctor, Appointment } from "@/types";
 
@@ -25,7 +25,7 @@ export default function NewAppointmentPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getPatients(), getDoctors(), getAppointments()])
+    Promise.all([getPatients(), getDoctors(), getAppointmentsFirstPage()])
       .then(([pts, practs, appts]) => {
         setPatients(pts);
         setDoctors(practs.map(mapPractitionerToDoctor));

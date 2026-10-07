@@ -1,4 +1,4 @@
-import { apiClient } from '@curo/web/api';
+import { apiClient, getByIds } from '@curo/web/api';
 import type { Patient, Allergy, Problem } from '@/types';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, type FhirPatient, type FhirAllergy, type FhirCondition } from './mappers';
 import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
@@ -14,11 +14,7 @@ export async function getPatients(search?: string): Promise<Patient[]> {
 
 // Resolve a specific set of patients (FHIR `_id` search) — e.g. the ones on today's queue.
 export async function getPatientsByIds(ids: string[]): Promise<Patient[]> {
-  if (ids.length === 0) return [];
-  const res = await apiClient.get<FhirPatient[] | FhirBundle<FhirPatient>>('/patients', {
-    params: { _id: ids.join(','), pageSize: 100 },
-  });
-  return unwrapBundle(res.data).resources.map(mapFhirPatient);
+  return (await getByIds<FhirPatient>('/patients', ids)).map(mapFhirPatient);
 }
 
 // Server-driven pagination for the patient table.

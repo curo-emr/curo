@@ -1,14 +1,11 @@
-import { apiClient } from '@curo/web/api';
+import { apiClient, getAllPages } from '@curo/web/api';
 import type { Appointment, QueueStage } from '@/types';
 import { mapFhirAppointment, type FhirAppointment } from './mappers';
-import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 
 // One day's appointments in the given queue stages (ordered by start time).
 export async function getQueue(date: string, stages: QueueStage[]): Promise<Appointment[]> {
-  const res = await apiClient.get<FhirAppointment[] | FhirBundle<FhirAppointment>>('/appointments', {
-    params: { date, queueStage: stages.join(','), pageSize: 100 },
-  });
-  return unwrapBundle(res.data).resources.map(mapFhirAppointment);
+  const appointments = await getAllPages<FhirAppointment>('/appointments', { date, queueStage: stages.join(',') });
+  return appointments.map(mapFhirAppointment);
 }
 
 export async function getAppointmentById(id: string): Promise<Appointment> {

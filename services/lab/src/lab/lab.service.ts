@@ -102,21 +102,22 @@ export class LabService {
     return this.catalogRepo.find({ where, order: { name: 'ASC' } });
   }
 
-  /** The orders `user` may see, by status or visit → FHIR searchset Bundle (paginated). */
+  /** The orders `user` may see, by status, visit or patient → FHIR searchset Bundle (paginated). */
   async getOrders(
     user: AuthUser,
-    filter: { status?: string; encounterId?: string } = {},
+    filter: { status?: string; encounterId?: string; patientId?: string } = {},
     pagination: PaginationQuery = {},
   ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const where: FindOptionsWhere<ServiceRequest> = {
       ...(filter.status && { status: filter.status as ServiceRequestStatus }),
       ...(filter.encounterId && { encounterId: filter.encounterId }),
+      ...(filter.patientId && { patientId: filter.patientId }),
       ...this.scopeOf(user),
     };
     const [orders, total] = await this.ordersRepo.findAndCount({
       where,
-      order: { authoredOn: 'ASC' },
+      order: { authoredOn: 'ASC', id: 'ASC' },
       skip,
       take,
     });
@@ -354,6 +355,7 @@ export class LabService {
       query.andWhere('r.serviceRequestId = :serviceRequestId', filter);
     const [reports, total] = await query
       .orderBy('r.issued', 'DESC')
+      .addOrderBy('r.id', 'ASC')
       .skip(skip)
       .take(take)
       .getManyAndCount();
@@ -453,6 +455,7 @@ export class LabService {
       query.andWhere('q.status = :status', { status: filters.status });
     const [logs, total] = await query
       .orderBy('q.performedAt', 'DESC')
+      .addOrderBy('q.id', 'ASC')
       .skip(skip)
       .take(take)
       .getManyAndCount();

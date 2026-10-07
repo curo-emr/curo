@@ -116,6 +116,7 @@ export class AppointmentService {
 
     const [appointments, total] = await query
       .orderBy('a.start', 'ASC')
+      .addOrderBy('a.id', 'ASC')
       .skip(skip)
       .take(take)
       .getManyAndCount();

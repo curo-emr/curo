@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { DispensingLogTable } from "@/components/features/dispensing/DispensingLogTable";
-import { getDispensingRecords, type DispenseRecord } from "@/lib/api/pharmacy";
-import { getPatients } from "@/lib/api/patients";
+import { getRecentDispensingRecords, type DispenseRecord } from "@/lib/api/pharmacy";
+import { getPatientsByIds } from "@/lib/api/patients";
 import type { Patient } from "@/types";
 
 export default function DispensingLogPage() {
@@ -13,8 +13,12 @@ export default function DispensingLogPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getDispensingRecords(), getPatients()])
-      .then(([recs, pts]) => { setRecords(recs); setPatients(pts); })
+    getRecentDispensingRecords()
+      .then(async (recs) => {
+        const pts = await getPatientsByIds(recs.map(r => r.patientId));
+        setRecords(recs);
+        setPatients(pts);
+      })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);

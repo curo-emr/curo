@@ -143,6 +143,7 @@ export class PharmacyService {
     }
     const [rows, total] = await qb
       .orderBy('m.name', 'ASC')
+      .addOrderBy('m.id', 'ASC')
       .skip(skip)
       .take(take)
       .getManyAndCount();
@@ -294,7 +295,7 @@ export class PharmacyService {
     };
     const [dispenses, total] = await this.dispenseRepo.findAndCount({
       where,
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'DESC', id: 'ASC' },
       skip,
       take,
     });
@@ -325,6 +326,7 @@ export class PharmacyService {
       qb.andWhere('s.organizationId = :org', { org: organizationId });
     const [stock, total] = await qb
       .orderBy('s.medicationName', 'ASC')
+      .addOrderBy('s.id', 'ASC')
       .skip(skip)
       .take(take)
       .getManyAndCount();

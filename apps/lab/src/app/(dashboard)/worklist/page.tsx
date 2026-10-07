@@ -6,8 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { WorklistTable } from "@/components/features/worklist/WorklistTable";
 import { ScanBox } from "@/components/features/worklist/ScanBox";
-import { getLabOrders } from "@/lib/api/lab";
-import { getPatients } from "@/lib/api/patients";
+import { getLabOrders, getLabOrdersFirstPage } from "@/lib/api/lab";
+import { getPatientsByIds } from "@/lib/api/patients";
 import { ROUTES } from "@/lib/constants";
 import type { LabOrder, Patient } from "@/types";
 
@@ -28,8 +28,12 @@ function Worklist() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getLabOrders(visit ? { encounterId: visit } : undefined), getPatients()])
-      .then(([ords, pts]) => { setOrders(ords); setPatients(pts); })
+    (visit ? getLabOrders({ encounterId: visit }) : getLabOrdersFirstPage())
+      .then(async (ords) => {
+        const pts = await getPatientsByIds(ords.map(o => o.patientId));
+        setOrders(ords);
+        setPatients(pts);
+      })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [visit]);
