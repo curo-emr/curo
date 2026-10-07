@@ -1123,10 +1123,29 @@ Branch `fix/critical-path-followups`, stacked on `test/critical-paths` (PR #14).
   - All backend images and the migrate/seed image rebuilt. Smoke PASS=146, FAIL=0.
   - Live `GET /notifications/count` returns `{"count":1}` after a new notification.
 - **Still open:**
-  - `POST /auth/register` is public and accepts any role (decision pending).
+  - ~~`POST /auth/register` is public and accepts any role~~: removed, see below.
   - Who may `POST /notifications`: any signed-in user, for any recipient. Nothing but the seed
     and smoke sends them (decision pending).
   - The lab portal's result-entry form is a demo stub: Save and Submit only show a toast and
     never call `POST /results`.
   - The patient's name in the lab PDF is still a placeholder (`Patient <id>`).
   - Observation and ServiceRequest each have two FHIR mappers (patient/clinical, clinical/lab).
+
+## Public self-registration removed ✅ DONE — 2026-10-07
+
+Branch `fix/remove-public-register`, stacked on `fix/critical-path-followups` (PR #15).
+
+- `POST /auth/register` was public at the gateway and saved whatever `role`, `patientId` and
+  `practitionerId` it was sent, then returned tokens. Anyone who could reach the API could make
+  a SUPER_ADMIN, a PATIENT bound to someone else's record, or a DOCTOR with another doctor's
+  practitioner id.
+- Nothing used it: no portal, script or service. Accounts are made by the super admin
+  (`POST /auth/staff`, `POST /auth/users`, which links patients with a `patientId`).
+- Removed: the route, `AuthService.register`, `RegisterDto`, and `/auth/register` from the
+  gateway's public paths. Patient self-signup, if wanted later, must prove the person owns the
+  record (e.g. an OTP to the phone on file); choosing a `patientId` must never be enough.
+- Tests:
+  - The auth API test posts a SUPER_ADMIN registration and gets 404, with no account created.
+  - The gateway route test checks that `/auth/register` needs a token.
+- Verified: live through the gateway, 401 without a token and 404 with one. Smoke PASS=146,
+  FAIL=0.
