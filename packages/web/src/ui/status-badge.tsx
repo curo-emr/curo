@@ -1,3 +1,4 @@
+import { formatStatus } from "../format";
 import { Badge } from "./badge";
 import { cn } from "./utils";
 
@@ -75,17 +76,22 @@ const STATUSES = {
 
 export type Status = keyof typeof STATUSES;
 
-const sentenceCase = (status: string) => {
-  const words = status.replaceAll("_", " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
-};
+// Data from the API can still hold a status this list doesn't know yet: show it, neutral.
+const styleOf = (status: Status): StatusStyle => STATUSES[status] ?? { tone: "neutral" };
+
+/** What a status reads as everywhere, e.g. "Awaiting results" for `results_pending`. */
+export const statusLabel = (status: Status) => styleOf(status).label ?? formatStatus(status);
+
+/** A status's colours, for a control that should look like its badge (such as a status picker). */
+export function statusClassName(status: Status) {
+  const style = styleOf(status);
+  return cn(TONES[style.tone], style.strikethrough && "line-through");
+}
 
 export function StatusBadge({ status, className }: { status: Status; className?: string }) {
-  // Data from the API can still hold a status this list doesn't know yet: show it, neutral.
-  const style: StatusStyle = STATUSES[status] ?? { tone: "neutral" };
   return (
-    <Badge variant="outline" className={cn(TONES[style.tone], style.strikethrough && "line-through", className)}>
-      {style.label ?? sentenceCase(status)}
+    <Badge variant="outline" className={cn(statusClassName(status), className)}>
+      {statusLabel(status)}
     </Badge>
   );
 }

@@ -37,13 +37,6 @@ export function calculateAge(dobStr: string): number {
   return age;
 }
 
-export function formatStatus(status: string): string {
-  return status
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
 export function getPatientName(id: string, patients: { id: string; name: { full: string } }[]): string {
   return patients.find(p => p.id === id)?.name.full || "Unknown Patient";
 }

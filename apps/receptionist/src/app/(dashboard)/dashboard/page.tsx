@@ -71,8 +71,8 @@ export default function DashboardPage() {
 
   const statCards = [
     { label: "Total Appointments", value: totalCount, color: "text-blue-700 bg-blue-50 border-blue-200" },
-    { label: "Checked In", value: checkedInCount, color: "text-orange-700 bg-orange-50 border-orange-200" },
-    { label: "With Doctor", value: withDoctorCount, color: "text-sky-700 bg-sky-50 border-sky-200" },
+    { label: "Checked in", value: checkedInCount, color: "text-orange-700 bg-orange-50 border-orange-200" },
+    { label: "With doctor", value: withDoctorCount, color: "text-sky-700 bg-sky-50 border-sky-200" },
     { label: "Completed", value: completedCount, color: "text-green-700 bg-green-50 border-green-200" },
   ];
 

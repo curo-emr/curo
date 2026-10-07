@@ -66,7 +66,7 @@ export function QCLogTable({ instruments, staff }: QCLogTableProps) {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="pass">Pass</SelectItem>
               <SelectItem value="fail">Fail</SelectItem>
               <SelectItem value="warning">Warning</SelectItem>

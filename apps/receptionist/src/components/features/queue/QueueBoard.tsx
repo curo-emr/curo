@@ -44,7 +44,7 @@ const COLUMNS: Record<QueueStage, { title: string; icon: LucideIcon; accent: str
     empty: "No one ready yet",
   },
   with_doctor: {
-    title: "With Doctor", icon: Stethoscope, accent: "text-primary",
+    title: "With doctor", icon: Stethoscope, accent: "text-primary",
     count: "bg-primary/15 text-primary", border: "border-l-primary",
     empty: "No consultations in progress",
   },
