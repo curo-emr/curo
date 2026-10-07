@@ -192,6 +192,22 @@ export class AdminService {
     });
   }
 
+  /** How many users there are, how many are active, and how many have each role. */
+  async getUserSummary() {
+    const rows = await this.usersRepo
+      .createQueryBuilder('u')
+      .select('u.role', 'role')
+      .addSelect('COUNT(*)::int', 'count')
+      .addSelect('COUNT(*) FILTER (WHERE u.isActive)::int', 'active')
+      .groupBy('u.role')
+      .getRawMany<{ role: string; count: number; active: number }>();
+    return {
+      total: rows.reduce((sum, r) => sum + r.count, 0),
+      active: rows.reduce((sum, r) => sum + r.active, 0),
+      byRole: Object.fromEntries(rows.map((r) => [r.role, r.count])),
+    };
+  }
+
   async getUser(id: string) {
     const user = await this.usersRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException(`User ${id} not found`);

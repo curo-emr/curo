@@ -7,9 +7,9 @@ import {
 import { Loader2 } from "lucide-react";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { getRecentPayments } from "@/lib/api/payments";
+import { getPaymentTotals, type PaymentTotals } from "@/lib/api/payments";
 import { getUsersByRole } from "@/lib/api/users";
-import type { Payment, AdminUser } from "@/types";
+import type { AdminUser } from "@/types";
 
 function money(amount: number, currency = "LKR") {
   const f = Number(amount).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -17,13 +17,13 @@ function money(amount: number, currency = "LKR") {
 }
 
 export default function IncomeOversightPage() {
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [totals, setTotals] = useState<PaymentTotals | null>(null);
   const [receptionists, setReceptionists] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getRecentPayments(), getUsersByRole("RECEPTIONIST")])
-      .then(([p, u]) => { setPayments(p); setReceptionists(u); })
+    Promise.all([getPaymentTotals(), getUsersByRole("RECEPTIONIST")])
+      .then(([t, u]) => { setTotals(t); setReceptionists(u); })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
@@ -34,20 +34,17 @@ export default function IncomeOversightPage() {
     return m;
   }, [receptionists]);
 
-  const byReceptionist = useMemo(() => {
-    const acc = new Map<string, { name: string; total: number; count: number }>();
-    for (const p of payments) {
-      const key = p.collectedBy ?? "unknown";
-      const name = nameByPractitioner.get(key) ?? "Unknown";
-      const cur = acc.get(key) ?? { name, total: 0, count: 0 };
-      cur.total += Number(p.amount);
-      cur.count += 1;
-      acc.set(key, cur);
-    }
-    return Array.from(acc.values()).sort((a, b) => b.total - a.total);
-  }, [payments, nameByPractitioner]);
+  const byReceptionist = useMemo(
+    () =>
+      (totals?.byCollector ?? []).map((c) => ({
+        name: (c.collectedBy && nameByPractitioner.get(c.collectedBy)) || "Unknown",
+        total: c.total,
+        count: c.count,
+      })),
+    [totals, nameByPractitioner],
+  );
 
-  const grandTotal = payments.reduce((s, p) => s + Number(p.amount), 0);
+  const grandTotal = totals?.total ?? 0;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -61,7 +58,7 @@ export default function IncomeOversightPage() {
             <CardContent className="p-5">
               <p className="text-xs text-muted-foreground">Total collected</p>
               <p className="text-2xl font-bold text-foreground">{money(grandTotal)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{payments.length} payments</p>
+              <p className="text-xs text-muted-foreground mt-1">{totals?.count ?? 0} payments</p>
             </CardContent>
           </Card>
 
