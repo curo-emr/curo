@@ -37,12 +37,8 @@ const SERVICE_MAP: Record<string, string> = {
   '/audit': process.env.AUDIT_SERVICE_URL || 'http://localhost:3008',
 };
 
-const PUBLIC_PATHS = [
-  '/auth/login',
-  '/auth/register',
-  '/auth/refresh',
-  '/health',
-];
+// `/health` is answered before this middleware runs (see main.ts).
+const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/refresh'];
 
 // Pre-create one proxy per unique target URL
 const proxies = new Map<string, RequestHandler<Request, Response>>();

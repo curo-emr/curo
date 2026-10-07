@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { Type, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { registerHealthCheck } from '../health';
 
 export interface ServiceInfo {
   title: string;
@@ -8,7 +9,7 @@ export interface ServiceInfo {
   defaultPort: number;
 }
 
-/** Creates and starts a Curo backend service with the standard pipes, CORS and OpenAPI docs. */
+/** Creates and starts a Curo backend service with the standard pipes, CORS, OpenAPI docs and `/health`. */
 export async function bootstrapService(
   appModule: Type<unknown>,
   info: ServiceInfo,
@@ -16,6 +17,7 @@ export async function bootstrapService(
   const app = await NestFactory.create(appModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors();
+  registerHealthCheck(app);
 
   // OpenAPI / Swagger — served at /api-docs (UI) and /api-docs-json (raw spec).
   // The API gateway fetches the raw spec from each service and merges them into
