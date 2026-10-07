@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { registerHealthCheck } from '@curo/shared/health';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -15,6 +16,8 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
+
+  registerHealthCheck(app);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
