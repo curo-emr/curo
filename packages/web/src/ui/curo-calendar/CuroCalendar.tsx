@@ -68,6 +68,10 @@ export interface CuroCalendarProps {
   selectedDate?: Date;
   /** Called when the user clicks a day. */
   onDateSelect?: (date: Date) => void;
+  /** The month shown (controlled): any day in it. Leave out for the calendar to keep its own. */
+  month?: Date;
+  /** Called with the first day of the month the user moves to. */
+  onMonthChange?: (month: Date) => void;
   /** Max number of event pills shown per day before "+N more". Default: 3 */
   maxEventsPerDay?: number;
   /** Extra class names applied to the root element. */
@@ -110,10 +114,21 @@ export function CuroCalendar({
   onDateSelect,
   maxEventsPerDay = 3,
   className,
+  month: controlledMonth,
+  onMonthChange,
 }: CuroCalendarProps) {
-  // viewDate tracks which month is currently displayed
-  const [viewDate, setViewDate] = useState<Date>(
+  // viewDate is any day in the month displayed: the caller's, or the calendar's own
+  const [ownViewDate, setOwnViewDate] = useState<Date>(
     () => selectedDate ?? new Date()
+  );
+  const viewDate = controlledMonth ?? ownViewDate;
+  const showMonth = useCallback(
+    (date: Date) => {
+      const first = new Date(date.getFullYear(), date.getMonth(), 1);
+      setOwnViewDate(first);
+      onMonthChange?.(first);
+    },
+    [onMonthChange]
   );
 
   const year = viewDate.getFullYear();
@@ -132,23 +147,21 @@ export function CuroCalendar({
   const days = useMemo(() => getCalendarDays(year, month), [year, month]);
 
   // Navigation
-  const goToPrev = useCallback(() => setViewDate((d) => addMonths(d, -1)), []);
-  const goToNext = useCallback(() => setViewDate((d) => addMonths(d, 1)), []);
+  const goToPrev = useCallback(() => showMonth(addMonths(viewDate, -1)), [showMonth, viewDate]);
+  const goToNext = useCallback(() => showMonth(addMonths(viewDate, 1)), [showMonth, viewDate]);
   const goToToday = useCallback(() => {
     const today = new Date();
-    setViewDate(today);
+    showMonth(today);
     onDateSelect?.(today);
-  }, [onDateSelect]);
+  }, [showMonth, onDateSelect]);
 
   const handleDayClick = useCallback(
     (date: Date, isCurrentMonth: boolean) => {
       // When clicking an out-of-month day, navigate to that month first
-      if (!isCurrentMonth) {
-        setViewDate(new Date(date.getFullYear(), date.getMonth(), 1));
-      }
+      if (!isCurrentMonth) showMonth(date);
       onDateSelect?.(date);
     },
-    [onDateSelect]
+    [showMonth, onDateSelect]
   );
 
   return (

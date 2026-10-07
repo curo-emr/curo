@@ -4,6 +4,7 @@ export type { CalendarEvent, CalendarEventColor, CalendarView } from "./types";
 export {
   formatDateStr,
   getCalendarDays,
+  calendarRange,
   isToday,
   isSameDay,
   addMonths,

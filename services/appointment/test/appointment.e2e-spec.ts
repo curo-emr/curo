@@ -139,4 +139,112 @@ describe('Appointments and the patient queue', () => {
   it("doesn't let a nurse book an appointment", async () => {
     await svc.api.post('/appointments').set(nurse.headers).send({}).expect(403);
   });
+
+  describe('GET /appointments', () => {
+    /** An appointment for `patientId` starting at `start`, saved as given. */
+    const saveAppointment = (
+      patientId: string,
+      start: Date,
+      status = AppointmentStatus.BOOKED,
+    ) =>
+      svc.db.getRepository(Appointment).save({
+        patientId,
+        practitionerId: doctor.practitionerId as string,
+        start,
+        end: new Date(start.getTime() + 15 * 60_000),
+        status,
+      });
+
+    /** The ids `receptionist` gets for `query`, in order. */
+    const listed = async (query: object) => {
+      const res = await svc.api
+        .get('/appointments')
+        .query(query)
+        .set(receptionist.headers)
+        .expect(200);
+      return (res.body as { entry: { resource: { id: string } }[] }).entry.map(
+        (e) => e.resource.id,
+      );
+    };
+
+    it('lists the appointments within whole days, latest first when asked', async () => {
+      const patientId = randomUUID();
+      const first = await saveAppointment(
+        patientId,
+        new Date(2030, 0, 10, 0, 0),
+      );
+      const second = await saveAppointment(
+        patientId,
+        new Date(2030, 0, 11, 23, 59),
+      );
+      await saveAppointment(patientId, new Date(2030, 0, 12, 0, 0));
+
+      const range = { patientId, from: '2030-01-10', to: '2030-01-11' };
+      expect(await listed(range)).toEqual([first.id, second.id]);
+      expect(await listed({ ...range, _sort: '-start' })).toEqual([
+        second.id,
+        first.id,
+      ]);
+      // One day as a range is the same as that date.
+      expect(
+        await listed({ patientId, from: '2030-01-11', to: '2030-01-11' }),
+      ).toEqual(await listed({ patientId, date: '2030-01-11' }));
+    });
+
+    it('narrows by status, a list; an unknown status matches nothing', async () => {
+      const patientId = randomUUID();
+      const start = new Date(2030, 1, 1, 9);
+      await saveAppointment(patientId, start);
+      const arrived = await saveAppointment(
+        patientId,
+        start,
+        AppointmentStatus.ARRIVED,
+      );
+      const noShow = await saveAppointment(
+        patientId,
+        start,
+        AppointmentStatus.NOSHOW,
+      );
+
+      expect(
+        (await listed({ patientId, status: 'arrived,noshow' })).sort(),
+      ).toEqual([arrived.id, noShow.id].sort());
+      expect(await listed({ patientId, status: 'nonsense' })).toEqual([]);
+    });
+
+    it('refuses a day that is not a date', async () => {
+      await svc.api
+        .get('/appointments')
+        .query({ from: 'yesterday' })
+        .set(receptionist.headers)
+        .expect(400);
+    });
+  });
+
+  describe('GET /payments/mine', () => {
+    it('lists only the payments for the appointments asked about', async () => {
+      const pay = async (appointmentId: string) =>
+        (
+          await svc.api
+            .post('/payments')
+            .set(receptionist.headers)
+            .send({ patientId: randomUUID(), appointmentId, amount: 1500 })
+            .expect(201)
+        ).body as { id: string };
+      const [paidA, paidB] = [randomUUID(), randomUUID()];
+      const a = await pay(paidA);
+      const b = await pay(paidB);
+      await pay(randomUUID());
+
+      const res = await svc.api
+        .get('/payments/mine')
+        .query({ appointmentId: `${paidA},${paidB}` })
+        .set(receptionist.headers)
+        .expect(200);
+      const ids = (res.body as { entry: { resource: { id: string } }[] }).entry
+        .map((e) => e.resource.id)
+        .sort();
+      expect(ids).toEqual([a.id, b.id].sort());
+    });
+  });
 });

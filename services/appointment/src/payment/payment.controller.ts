@@ -39,9 +39,14 @@ export class PaymentController {
     @CurrentUser() user: AuthUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('appointmentId') appointmentId?: string,
     @Query() query?: PaginationQuery,
   ) {
-    return this.paymentService.findMine(user, from, to, query);
+    return this.paymentService.findMine(
+      user,
+      { from, to, appointmentId },
+      query,
+    );
   }
 
   @Get('summary')
