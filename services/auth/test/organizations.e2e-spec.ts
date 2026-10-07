@@ -199,4 +199,29 @@ describe('Organizations', () => {
       expect(await workplaceOf(practitionerId)).toBe(kandy.id);
     });
   });
+
+  describe('GET /organizations/mine', () => {
+    it('is where the token says the caller works', async () => {
+      const pharmacy = await create(OrganizationType.PHARMACY);
+      const pharmacist = await signedIn(svc, UserRole.PHARMACIST, {
+        organizationId: pharmacy.id,
+      });
+
+      const res = await svc.api
+        .get('/organizations/mine')
+        .set(pharmacist.headers)
+        .expect(200);
+
+      expect(res.body).toMatchObject({ id: pharmacy.id, name: pharmacy.name });
+    });
+
+    it('is empty for someone who works nowhere', async () => {
+      const res = await svc.api
+        .get('/organizations/mine')
+        .set(admin.headers)
+        .expect(200);
+
+      expect(res.text).toBe('');
+    });
+  });
 });

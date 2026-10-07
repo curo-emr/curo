@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -11,12 +6,9 @@ import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
 import { LoginDto } from './dto/login.dto';
-import { CreateStaffDto } from './dto/create-staff.dto';
-import { UserRole, Gender } from '@curo/shared/enums';
 import {
   jwtSecret,
   jwtRefreshSecret,
-  type AuthUser,
   type JwtPayload,
 } from '@curo/shared/auth';
 
@@ -49,58 +41,6 @@ export class AuthService {
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
     return this.issueTokens(user);
-  }
-
-  async createStaff(
-    dto: CreateStaffDto,
-    requestingUser: Pick<AuthUser, 'role'>,
-  ) {
-    if (requestingUser.role !== UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException(
-        'Only super admin can create staff accounts',
-      );
-    }
-
-    const existing = await this.usersRepo.findOne({
-      where: { email: dto.email },
-    });
-    if (existing) throw new ConflictException('Email already registered');
-
-    // Create practitioner record
-    const practitioner = this.practitionersRepo.create({
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      email: dto.email,
-      phone: dto.phone,
-      gender: dto.gender || Gender.UNKNOWN,
-      role: dto.role,
-      specialization: dto.specialization,
-      qualification: dto.qualification,
-      licenseNumber: dto.licenseNumber,
-    });
-    const savedPractitioner = await this.practitionersRepo.save(practitioner);
-
-    const passwordHash = await bcrypt.hash(dto.password, 12);
-    const user = this.usersRepo.create({
-      email: dto.email,
-      passwordHash,
-      role: dto.role,
-      practitionerId: savedPractitioner.id,
-    });
-    const savedUser = await this.usersRepo.save(user);
-
-    // Link user back to practitioner
-    await this.practitionersRepo.update(savedPractitioner.id, {
-      userId: savedUser.id,
-    });
-
-    return {
-      userId: savedUser.id,
-      practitionerId: savedPractitioner.id,
-      email: savedUser.email,
-      role: savedUser.role,
-      name: fullName(dto),
-    };
   }
 
   async refresh(refreshToken: string) {

@@ -41,6 +41,12 @@ export class OrganizationController {
     });
   }
 
+  // Before ':id', which would take 'mine' for an id.
+  @Get('mine')
+  mine(@CurrentUser() user: AuthUser) {
+    return this.orgService.workplaceOf(user);
+  }
+
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.orgService.get(id);
