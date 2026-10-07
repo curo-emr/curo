@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-import { ConditionClinicalStatus } from '../enums';
+import { ConditionClinicalStatus } from '../../enums';
 
 @Entity('conditions')
 export class Condition {

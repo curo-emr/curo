@@ -1,6 +1,5 @@
-import { Patient, Observation } from '@curo/shared/database';
+import { Patient, Condition, Observation } from '@curo/shared/database';
 import { AllergyIntolerance } from '../entities/allergy-intolerance.entity';
-import { Condition } from '../entities/condition.entity';
 
 // Roles that receive a minimized patient projection (data minimization).
 // Pharmacy & lab only need identity for dispensing / specimen labeling — not

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { Patient, Observation } from '@curo/shared/database';
+import { Patient, Condition, Observation } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import {
   parsePagination,
@@ -15,7 +15,6 @@ import {
   PaginationQuery,
 } from '@curo/shared/fhir';
 import { AllergyIntolerance } from '../entities/allergy-intolerance.entity';
-import { Condition } from '../entities/condition.entity';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { CreateAllergyDto } from './dto/create-allergy.dto';
