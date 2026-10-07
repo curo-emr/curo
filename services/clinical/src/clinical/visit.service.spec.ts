@@ -26,6 +26,7 @@ const doctor: AuthUser = {
   practitionerId: 'doctor-1',
   patientId: null,
   name: 'Dr Test',
+  organizationId: null,
 };
 
 const visit = (overrides: Partial<CompleteVisitDto> = {}): CompleteVisitDto =>
