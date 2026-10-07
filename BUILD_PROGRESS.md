@@ -1125,9 +1125,8 @@ Branch `fix/critical-path-followups`, stacked on `test/critical-paths` (PR #14).
 - **Still open:**
   - ~~`POST /auth/register` is public and accepts any role~~: removed, see below.
   - ~~Who may `POST /notifications`~~: no one; see System notifications below.
-  - The lab portal's result-entry form is a demo stub: Save and Submit only show a toast and
-    never call `POST /results`.
-  - The patient's name in the lab PDF is still a placeholder (`Patient <id>`).
+  - ~~The lab portal's result-entry form is a demo stub~~: wired up; see Lab results entry below.
+  - ~~The patient's name in the lab PDF is still a placeholder~~: the PDF has the real details.
   - Observation and ServiceRequest each have two FHIR mappers (patient/clinical, clinical/lab).
 
 ## Public self-registration removed ✅ DONE — 2026-10-07
@@ -1177,3 +1176,47 @@ happens. No user can create one, so an inbox entry is proof that the system sent
     lab results it entered.
 - **Next events** reuse the helper. Prescription ready, appointment confirmed and low stock
   need a patient or role recipient, so add a sibling helper when the first one is built.
+
+## Lab results entry ✅ DONE — 2026-10-07
+
+Branch `fix/lab-results-entry`. Lab staff enter results in the portal, which completes the order
+and notifies the ordering doctor.
+
+- **The form was empty, not just fake.** It rendered no input rows, for three reasons:
+  - `order.tests` came from the panel code, not the order's `testPanel`;
+  - tests were matched to the catalog by uuid against a code;
+  - the catalog mapper always returned `components: []`.
+
+  The order mapper now builds `tests` (code and name) from `testPanel`, falling back to the
+  order's own code. The dashboard, patient, reports and worklist pages use those names directly,
+  and the broken `getTestName` catalog lookup is gone.
+- **Form:**
+  - One row per test: value, unit, reference low and high, and a live LOW/Normal/HIGH badge.
+  - One Conclusion field, printed on the report.
+  - A single **Submit results** button, enabled once every test has a value. "Save Draft" and
+    "Submit for Verification" are gone: the backend has no drafts or sign-off, and one
+    submit completes the order.
+  - On 409 it says the results were already entered. A completed order shows a link to it in
+    place of the form.
+- **Submit shape:**
+  - A numeric value goes in `value`, anything else in `valueString`.
+  - The range goes in `referenceRangeLow`/`High` as strings.
+  - `interpretation` is `L`/`N`/`H`, computed by `lib/result-flag.ts`, the same function that
+    drives the badge.
+  - Units and ranges are typed by the technician. The catalog has no reference data yet, and
+    real ranges depend on age and sex.
+- **Reports read back whole:** `toFhirReport` returned only each result's `display`, so the order
+  page showed no values and every test stayed "Pending". It now returns the stored items.
+- **PDF:**
+  - It shows the patient's name, code and date of birth.
+  - The conclusion and footer start at the left margin again; the table had left the cursor in
+    the Flag column.
+- **Verified:**
+  - Lab API tests: 13, now pinning the returned values.
+  - Lint, `npm run typecheck`, the lab portal's `next build`. Smoke PASS=147, FAIL=0.
+  - Live run on a fresh three-test order (two numeric, one text):
+    - entered and submitted in the lab portal;
+    - the order page shows values, ranges and the LOW flag;
+    - the doctor portal's bell shows "CBC panel results for Samantha Wijesekara (CUR-FJJ9AZTX)
+      are ready to review.";
+    - the PDF, checked with `pdftotext`, has the patient's details.
