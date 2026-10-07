@@ -117,13 +117,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-slate-100">
-                {order.tests.map(test => {
+                {order.tests.map((test, i) => {
                   const catalogItem = testCatalog.find(t => t.id === test.testId || t.code === test.testId);
                   const orderResult = results.find(r => r.results?.some(rr => rr.testCode === test.testId));
                   return (
-                    <div key={test.testId} className="p-4 flex items-center justify-between">
+                    <div key={`${test.testId}:${i}`} className="p-4 flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-sm">{catalogItem?.name || test.testId}</p>
+                        <p className="font-medium text-sm">{test.name}</p>
                         {catalogItem && <p className="text-xs text-slate-400">{catalogItem.code} · {catalogItem.category}</p>}
                       </div>
                       {orderResult ? (

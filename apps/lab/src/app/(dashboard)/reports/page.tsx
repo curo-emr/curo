@@ -3,17 +3,16 @@
 import { useState, useEffect } from "react";
 import { Loader2, Clock, FlaskConical, XCircle, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getLabOrders, getLabTestCatalog } from "@/lib/api/lab";
-import type { LabOrder, LabTestCatalogItem } from "@/types";
+import { getLabOrders } from "@/lib/api/lab";
+import type { LabOrder } from "@/types";
 
 export default function ReportsPage() {
   const [orders, setOrders] = useState<LabOrder[]>([]);
-  const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getLabOrders(), getLabTestCatalog()])
-      .then(([ords, catalog]) => { setOrders(ords); setTestCatalog(catalog); })
+    getLabOrders()
+      .then(setOrders)
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
@@ -26,9 +25,11 @@ export default function ReportsPage() {
 
   // Count tests
   const testCounts: Record<string, number> = {};
+  const testNames: Record<string, string> = {};
   for (const order of orders) {
     for (const t of order.tests) {
       testCounts[t.testId] = (testCounts[t.testId] || 0) + 1;
+      testNames[t.testId] = t.name;
     }
   }
   const topTests = Object.entries(testCounts)
@@ -65,7 +66,7 @@ export default function ReportsPage() {
   const maxDeptCount = Math.max(...deptEntries.map(([, v]) => v), 1);
 
   const mostOrderedTest = topTests.length > 0
-    ? (testCatalog.find(t => t.id === topTests[0][0])?.name || topTests[0][0])
+    ? testNames[topTests[0][0]]
     : 'N/A';
 
   return (
@@ -115,11 +116,10 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent className="p-4 space-y-3">
             {topTests.map(([testId, count]) => {
-              const test = testCatalog.find(t => t.id === testId);
               return (
                 <div key={testId}>
                   <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-slate-700">{test?.name || testId}</span>
+                    <span className="text-slate-700">{testNames[testId]}</span>
                     <span className="text-slate-500 font-mono text-xs">{count}</span>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
