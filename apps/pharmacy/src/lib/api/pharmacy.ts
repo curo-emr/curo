@@ -72,8 +72,8 @@ export async function dispense(prescriptionId: string): Promise<DispenseRecord> 
 
 type DispenseApi = FhirMedicationDispense | DispenseRecord;
 
-// One page of dispenses, latest first. `search` matches the start of a prescription
-// id or part of a medication name, or any dispense for `searchPatientIds`.
+// One page of this pharmacy's dispenses, latest first. `search` matches the start of a
+// prescription id or part of a medication name, or any dispense for `searchPatientIds`.
 export async function getDispensingRecordsPage({ page, pageSize, search, searchPatientIds }: {
   page: number;
   pageSize: number;
@@ -94,12 +94,13 @@ export interface DispenseSummary {
   topMedications: { name: string; quantity: number }[];
 }
 
-// Counts across every dispense.
+// Counts this pharmacy's dispenses.
 export async function getDispenseSummary(): Promise<DispenseSummary> {
   const res = await apiClient.get<DispenseSummary>('/dispense/summary');
   return res.data;
 }
 
+// A patient's or a prescription's dispenses come from every pharmacy, so their history is whole.
 export async function getDispensingRecordsByPatient(patientId: string): Promise<DispenseRecord[]> {
   return (await getAllPages<DispenseApi>('/dispense', { patientId })).map(mapFhirMedicationDispense);
 }

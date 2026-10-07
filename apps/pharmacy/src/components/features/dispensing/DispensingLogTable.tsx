@@ -19,7 +19,7 @@ import { getDispensingRecordsPage } from "@/lib/api/pharmacy";
 import { getPatientsByIds } from "@/lib/api/patients";
 import { getPatientName, formatDateTime, formatCurrency } from "@/lib/utils";
 
-/** Every dispense, latest first, paged and searched on the server. */
+/** This pharmacy's dispenses, latest first, paged and searched on the server. */
 export function DispensingLogTable() {
   const [query, setQuery] = useState("");
   const search = useDebouncedValue(query).trim();
