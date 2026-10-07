@@ -89,7 +89,7 @@ delivery ever becomes a hard requirement, add an outbox table + relay per
 service, or Debezium CDC. Not worth it at current stakes — documenting so the
 tradeoff is on record.
 
-### A10. Multi-observation writes aren't atomic
+### A10. Multi-observation writes aren't atomic ✅ *(fixed 2026-10-07: `POST /encounters/visit`)*
 `EncounterEditor.handleFinishVisit` makes ~5–15 sequential/parallel API calls
 (encounter → note → N vitals → N prescriptions → N lab orders → status). A
 mid-sequence failure leaves a partial visit with no retry/rollback. Options: a

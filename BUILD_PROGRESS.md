@@ -953,3 +953,60 @@ Branch `fix/security-hardening` (plan/03 A5, A6, A7). The fourth part of this ba
   merged `/openapi.json` has paths from all 9 services (78 total), fetched over the compose network. Smoke PASS=130, FAIL=0 (`/health` now 200
   plus a body check). The auth image, started with `JWT_SECRET` but no
   `JWT_REFRESH_SECRET`, exits with "JWT_REFRESH_SECRET must be set when NODE_ENV=production".
+
+## Sign a visit in one transaction ✅ DONE — 2026-10-07
+
+Branch `feat/save-visit-atomic` (plan/03 A10).
+
+- **Endpoint:** `POST /encounters/visit` (clinical service, DOCTOR/SUPER_ADMIN) saves a signed
+  visit in one transaction: the encounter, created `completed` with `periodEnd`, plus its note,
+  vitals, diagnoses, prescriptions and lab orders (each with its QR label). It also links the
+  appointment's triage vitals. A failure at any step rolls back the whole visit. Before this, the
+  doctor portal made 5–15 calls, and a failure left a half-saved visit whose orders the pharmacy
+  and lab could already see.
+- **Idempotent:** the client sends the encounter id (`crypto.randomUUID()`, kept in the visit
+  draft from the start). If that id already exists for the same patient, the endpoint returns it
+  and writes nothing. If it exists for another patient, the endpoint returns 409. A concurrent
+  double submit fails on the primary key and rolls back. This replaces the portal's
+  `SignProgress` bookkeeping.
+- **Not in the transaction:** closing the appointment (queue → done) is still a separate,
+  best-effort call after the sign. It belongs to the appointment service and its queue rules, and
+  the portal warns if it fails.
+- **DTO:** `CompleteVisitDto` reuses the single-record DTOs through `OmitType` (dropping
+  `patientId`/`encounterId`), with `@ValidateNested` + `@Type`. A diagnosis is
+  `{ code, display, isPrimary }`. The server adds category `encounter-diagnosis` and the
+  `Primary diagnosis` note, which the doctor portal reads back.
+- **Shared kernel:** `Condition` and `ConditionClinicalStatus` moved to `@curo/shared`, because
+  conditions is now mapped by the patient and clinical services. The schema is unchanged
+  (`db:check` finds no drift).
+- **Clinical refactor:**
+  - `clinical-records.ts` holds each record's defaults (`newEncounter`, `newVital`,
+    `newPrescription`, `newDiagnosis`) and the writing helpers that take the caller's
+    `EntityManager` (`linkTriageVitals`, `saveLabOrder`). The single-record endpoints and the
+    visit share them.
+  - `createEncounter` and `createLabOrder` now run in a transaction too.
+  - The FHIR mappers moved to `fhir.mapper.ts`.
+- **Doctor portal:** `signVisit` makes one `completeVisit` call, then closes the appointment. The
+  write helpers only the old sign used (`createEncounter`, `updateEncounterStatus`, `createNote`,
+  `createVitals`, `createPrescription`, `createLabOrder`, `createCondition`) are removed. The
+  backend's single-record endpoints stay; the nurse portal and the smoke script use them.
+- **Known edge cases:**
+  - A draft left half-signed by the old code gets a new id and saves a new, complete encounter.
+    The old in-progress encounter stays behind.
+  - If a sign commits but its response is lost, edits made before signing again are not applied.
+    The retry returns the saved visit.
+- **Tests:** `visit.service.spec.ts` (6 cases) runs `VisitService`
+  against an in-memory `EntityManager`. It covers the completed encounter under the client id,
+  every record linked to it, the primary diagnosis, the triage-vitals link, a replay writing
+  nothing, and 409 for another patient's id.
+- **Verified:**
+  - Root build, lint, tests, `typecheck:db` and `db:check` pass.
+  - Smoke: PASS=146, FAIL=0. The new section 8c covers the signed visit, every record counted
+    once before and after a replay, the triage-vitals link, 400 for a bad id or item, and 403 for
+    a pharmacist.
+  - Rollback by hand: a visit whose prescription has `quantityValue: 1.5` (an integer column)
+    returns 500. Afterwards there is no encounter, note, condition or prescription for its id.
+  - In the browser (doctor portal on :3010), signing a visit for a checked-in appointment made one
+    `POST /encounters/visit` (201) and the appointment `PUT` (200). The summary showed the note,
+    the vital, the primary diagnosis, the Rx and the lab order. The pharmacy pending list and the
+    lab's active queue both had the orders.
