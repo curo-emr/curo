@@ -50,18 +50,31 @@ export class PharmacyController {
   @Get('dispense')
   @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  getDispenseHistory(@Query() query: DispenseHistoryFilter & PaginationQuery) {
-    const { patientId, prescriptionId, search, searchPatientIds } = query;
+  getDispenseHistory(
+    @CurrentUser() user: AuthUser,
+    @Query() query: DispenseHistoryFilter & PaginationQuery,
+  ) {
+    const {
+      organizationId,
+      patientId,
+      prescriptionId,
+      search,
+      searchPatientIds,
+    } = query;
     return this.pharmacyService.getDispenseHistory(
-      { patientId, prescriptionId, search, searchPatientIds },
+      user,
+      { organizationId, patientId, prescriptionId, search, searchPatientIds },
       query,
     );
   }
 
   @Get('dispense/summary')
   @Roles('PHARMACIST', 'SUPER_ADMIN')
-  getDispenseSummary() {
-    return this.pharmacyService.getDispenseSummary();
+  getDispenseSummary(
+    @CurrentUser() user: AuthUser,
+    @Query('organizationId') organizationId?: string,
+  ) {
+    return this.pharmacyService.getDispenseSummary(user, organizationId);
   }
 
   @Get('dispense/:id')

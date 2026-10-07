@@ -1220,8 +1220,10 @@ async function seed() {
   await seedLabOrders(db, labs, encounterIds);
 
   // ---- DISPENSE RECORDS ----
+  // Each at the pharmacy of the pharmacist who dispensed it, by turns.
   for (let i = 0; i < 5; i++) {
     const rxId = prescriptionIds[i];
+    const by = i % pharmacists.length;
     const [rx] = await db.query<
       {
         patientId: string;
@@ -1237,18 +1239,19 @@ async function seed() {
     );
     await db.query(
       `
-      INSERT INTO medication_dispenses (id, "medicationRequestId", "patientId", "pharmacistId", status, "medicationCode", "medicationDisplay", "quantityValue", "quantityUnit", "dispenserName", "unitPrice", "totalPrice", "receiptNumber", "whenHandedOver")
-      VALUES (gen_random_uuid(), $1, $2, $3, 'completed', $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      INSERT INTO medication_dispenses (id, "medicationRequestId", "patientId", "pharmacistId", "organizationId", status, "medicationCode", "medicationDisplay", "quantityValue", "quantityUnit", "dispenserName", "unitPrice", "totalPrice", "receiptNumber", "whenHandedOver")
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, 'completed', $5, $6, $7, $8, $9, $10, $11, $12, $13)
     `,
       [
         rxId,
         rx.patientId,
-        rnd(pharmacistIds),
+        pharmacistIds[by],
+        pharmacyOrgIds[by],
         rx.medicationCode,
         rx.medicationDisplay,
         rx.quantityValue || 30,
         rx.quantityUnit || 'tablets',
-        'Kasun Bandara',
+        `${pharmacists[by].firstName} ${pharmacists[by].lastName}`,
         50,
         (rx.quantityValue || 30) * 50,
         `RX-${Date.now()}-${i}`,
