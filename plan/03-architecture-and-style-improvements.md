@@ -47,14 +47,19 @@ package). Worth doing before the service count grows again.
 near-identical ×9. Same remedy as A3 (`@curo/shared` or `@curo/nest-common`).
 Until then: any guard fix must be applied 9×; add that to the review checklist.
 
-### A5. Every backend publishes its port to the host
+### A5. Every backend publishes its port to the host ✅ *(fixed 2026-10-07)*
+> 2026-10-07 (`fix/security-hardening`): backends publish no host ports. Only the gateway and
+> portals do; Postgres and MinIO bind to 127.0.0.1, Redis and the MinIO console publish nothing.
 `docker-compose.yml` maps 3001–3009 to the host, so clients can bypass the
 gateway (and its CORS/central JWT check — services do verify JWTs themselves,
 so this is exposure rather than a hole). Only the gateway (3000) and frontends
 need host ports; drop the rest (keep them reachable on the compose network).
 Dev convenience can be restored with a `docker-compose.override.yml`.
 
-### A6. Gateway header injection is dead code / mild risk
+### A6. Gateway header injection is dead code / mild risk ✅ *(fixed 2026-10-07)*
+> 2026-10-07 (`fix/security-hardening`): the injection is removed (the gateway forwards the
+> request unchanged). The gateway and every backend serve `GET /health` (one shared
+> `registerHealthCheck`), and the compose health checks call it over HTTP.
 The gateway injects `x-user-id/x-user-role/x-user-email`, but no service reads
 them (each re-verifies the JWT itself — good). Either remove the injection, or
 if it's ever used, the gateway must first **strip client-supplied `x-user-*`
@@ -62,7 +67,11 @@ headers** to prevent spoofing. Also: `/health` is listed as a public path but
 returns 404 — add a real handler; compose healthchecks are `nc` port pokes and
 would be better as HTTP checks against real `/health` endpoints.
 
-### A7. Secrets hygiene
+### A7. Secrets hygiene ✅ *(fixed 2026-10-07)*
+> 2026-10-07 (`fix/security-hardening`): compose reads every secret from a git-ignored `.env`
+> (template: `.env.example`) and refuses to start without one. Postgres no longer uses `trust`
+> auth. `secretFromEnv()` in `@curo/shared/config` makes production refuse the dev fallback
+> for `JWT_SECRET`, `JWT_REFRESH_SECRET`, `DB_PASS` and `MINIO_SECRET_KEY`.
 JWT secrets, DB and MinIO credentials are hardcoded in `docker-compose.yml` and
 as in-code fallbacks (`|| 'curo_jwt_secret_dev_2024_change_in_prod'` in every
 guard). Move to a git-ignored `.env` consumed by compose; make services **fail

@@ -55,7 +55,7 @@ producing manual test material. Update the checkboxes as items land.
 
 ### Phase 4 — Housekeeping
 - [ ] Decide whether to commit (`docs/`, `scripts/smoke-e2e.sh`, swagger wiring, lockfiles)
-- [ ] Consider adding a real gateway `/health` handler (currently 404)
+- [x] Add a real gateway `/health` handler (2026-10-07; every backend has one too)
 
 ## Notes / decisions
 - **Domain-driven services kept** (not per-frontend) — settled architecture.
