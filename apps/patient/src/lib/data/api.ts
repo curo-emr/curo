@@ -16,4 +16,3 @@ export async function getEncounterById() { return null; }
 
 // Catalog readers — DB-backed endpoints via the gateway.
 export { getLabTestCatalog } from '@/lib/api/catalog';
-export { getMedicationCatalog } from '@/lib/api/medications';

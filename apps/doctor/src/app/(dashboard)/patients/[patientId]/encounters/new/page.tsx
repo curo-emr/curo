@@ -8,7 +8,7 @@ import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { getPatientById, getAllergies, getConditions } from "@/lib/api/patients";
 import { getPrescriptionsByPatient } from "@/lib/api/clinical";
-import { getMedicationCatalog } from "@/lib/api/medications";
+import { searchMedications } from "@/lib/api/medications";
 import { getLabTestCatalog } from "@/lib/api/catalog";
 import { getLabs } from "@/lib/api/labs";
 import { recentMedicationNames } from "@/lib/clinical";
@@ -21,7 +21,7 @@ interface VisitContext {
   problems: Problem[];
   recentMedications: string[];
   appointmentId?: string;
-  medications: Medication[];
+  medicationSuggestions: Medication[];
   labTests: LabTestCatalogItem[];
   labs: Lab[];
 }
@@ -37,19 +37,20 @@ export default function NewVisitPage({ params }: { params: Promise<{ patientId: 
       getAllergies(patientId).catch(() => []),
       getConditions(patientId).catch(() => []),
       getPrescriptionsByPatient(patientId).catch(() => []),
-      getMedicationCatalog().catch(() => []),
+      // Offered before the doctor types; typing searches the whole catalog.
+      searchMedications("", 6).catch(() => []),
       getLabTestCatalog().catch(() => []),
       getLabs().catch(() => []),
       // Started from the chart? Attach the visit to the patient's open appointment today.
       appointmentParam ? Promise.resolve(null) : findTodaysAppointment(patientId),
     ])
-      .then(([patient, allergies, problems, rxs, medications, labTests, labs, todays]) =>
+      .then(([patient, allergies, problems, rxs, medicationSuggestions, labTests, labs, todays]) =>
         setCtx({
-          patient, allergies, problems, medications, labTests, labs,
+          patient, allergies, problems, medicationSuggestions, labTests, labs,
           recentMedications: recentMedicationNames(rxs),
           appointmentId: appointmentParam ?? todays?.id,
         }))
-      .catch(() => setCtx({ patient: null, allergies: [], problems: [], recentMedications: [], medications: [], labTests: [], labs: [] }));
+      .catch(() => setCtx({ patient: null, allergies: [], problems: [], recentMedications: [], medicationSuggestions: [], labTests: [], labs: [] }));
   }, [patientId, appointmentParam]);
 
   if (!ctx) return <PageSkeleton />;
@@ -62,7 +63,7 @@ export default function NewVisitPage({ params }: { params: Promise<{ patientId: 
       problems={ctx.problems}
       recentMedications={ctx.recentMedications}
       appointmentId={ctx.appointmentId}
-      medicationsCatalog={ctx.medications}
+      medicationSuggestions={ctx.medicationSuggestions}
       labTestsCatalog={ctx.labTests}
       labs={ctx.labs}
     />
