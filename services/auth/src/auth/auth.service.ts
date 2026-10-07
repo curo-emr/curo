@@ -14,17 +14,15 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UserRole, Gender } from '@curo/shared/enums';
-import { jwtSecret, type AuthUser, type JwtPayload } from '@curo/shared/auth';
+import {
+  jwtSecret,
+  jwtRefreshSecret,
+  type AuthUser,
+  type JwtPayload,
+} from '@curo/shared/auth';
 
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
-
-function refreshSecret(): string {
-  return (
-    process.env.JWT_REFRESH_SECRET ||
-    'curo_refresh_secret_dev_2024_change_in_prod'
-  );
-}
 
 function fullName(p: { firstName: string; lastName: string }): string {
   return `${p.firstName} ${p.lastName}`;
@@ -32,6 +30,9 @@ function fullName(p: { firstName: string; lastName: string }): string {
 
 @Injectable()
 export class AuthService {
+  // Read once at startup, so a production deploy without it fails to boot.
+  private readonly refreshSecret = jwtRefreshSecret();
+
   constructor(
     @InjectRepository(User)
     private usersRepo: Repository<User>,
@@ -124,7 +125,7 @@ export class AuthService {
   async refresh(refreshToken: string) {
     try {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
-        secret: refreshSecret(),
+        secret: this.refreshSecret,
       });
       const user = await this.usersRepo.findOne({ where: { id: payload.sub } });
       if (!user || !user.isActive) throw new UnauthorizedException();
@@ -184,7 +185,7 @@ export class AuthService {
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,
     });
     const refreshToken = this.jwtService.sign(payload, {
-      secret: refreshSecret(),
+      secret: this.refreshSecret,
       expiresIn: REFRESH_TOKEN_TTL_SECONDS,
     });
     return {
