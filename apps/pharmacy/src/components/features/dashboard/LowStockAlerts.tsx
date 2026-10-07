@@ -33,7 +33,7 @@ export function LowStockAlerts({ medications }: LowStockAlertsProps) {
               return (
                 <div key={med.id} className="px-4 py-3">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-foreground">{med.genericName}</span>
+                    <span className="text-sm font-medium text-foreground">{med.genericName || med.medicationName}</span>
                     <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                       isOutOfStock ? 'bg-status-error-bg text-status-error-text' :
                       ratio <= 0.5 ? 'bg-status-error-bg text-status-error-text' :
@@ -43,7 +43,9 @@ export function LowStockAlerts({ medications }: LowStockAlertsProps) {
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {med.brandName ?? ''} {med.strength} &middot; {formatStatus(med.form)} &middot; Reorder at {med.reorderThreshold}
+                    {[med.brandName, med.strength, med.form && formatStatus(med.form), `Reorder at ${med.reorderThreshold}`]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                 </div>
               );
