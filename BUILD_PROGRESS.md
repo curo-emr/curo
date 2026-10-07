@@ -1060,8 +1060,8 @@ Branch `test/critical-paths` (plan/03 A11).
 - **Verified:** root build, lint, `npm test`, `npm run test:e2e`. The pharmacy, lab and
   patient images rebuild with the new workspace in the lockfile. Smoke PASS=146, FAIL=0.
 - **Not covered yet:** document (needs MinIO), notification, audit, the gateway proxying itself,
-  and the FHIR mappers.
-- **Found while writing these (not fixed here):**
+  and the FHIR mappers. All but the proxying are covered by the follow-ups below.
+- **Found while writing these** (all but the first fixed in `fix/critical-path-followups`, below):
   - `POST /auth/register` is public at the gateway and takes any `role`, so anyone can create a
     SUPER_ADMIN account. No portal calls it.
   - `POST /results` (lab) saves observations, then the report, then completes the order without
@@ -1071,3 +1071,62 @@ Branch `test/critical-paths` (plan/03 A11).
     practitioner, where clinical uses `actorId()` (practitionerId for staff).
   - `database/seed.ts` still has its own copy of the PHN generator. The seed image is built
     without the workspaces, so it can't import `phn.ts` yet.
+
+## Critical-path follow-ups ✅ DONE — 2026-10-07
+
+Branch `fix/critical-path-followups`, stacked on `test/critical-paths` (PR #14).
+
+- **Lab results (`POST /results`):**
+  - The PDF is rendered first. Then one transaction claims the order (active → completed),
+    saves the observations and the report.
+  - Results are saved whole or not at all. A double submit, or results for an
+    already-reported or revoked order, get 409.
+  - Items are validated (`@ValidateNested`, numeric `value`, at least one item).
+  - The PDF names the staff member instead of an id.
+  - API tests cover a real mid-save database failure (`numeric(10,2)` overflow), two
+    simultaneous submits, re-entry and malformed items. Mutation-checked: removing the claim or
+    the transaction fails them.
+- **Practitioner, not account:** lab scans, receipts and results, and chart allergies and
+  conditions now record `actorId()`, like the clinical service and the seed. Rows written
+  before keep their account ids; there is no backfill, since no deployed data exists.
+- **Patient identifiers:** the PHN (Luhn) and patient-code generators live in
+  `@curo/shared/identifiers` and replace the copies in `PatientService` and `database/seed.ts`.
+  - The seed imports the folder's source by relative path, and the database image copies just
+    that folder. Keep it free of outside imports.
+  - `@curo/shared` has a Jest setup now and builds from `tsconfig.build.json`, which leaves specs
+    out of dist.
+  - The rebuilt seed image migrated and seeded a fresh database (11 valid PHNs).
+- **Document:** `startService(AppModule, overrides)` swaps a provider; the document tests use an
+  in-memory `StorageProvider`. They cover the upload rules (file types, roles, author,
+  CREATE audit), owner-only download for patients (READ audit, 403 without one for another
+  patient), staff access, and `/documents/me`.
+- **Notification:**
+  - `POST /notifications` takes a validated `CreateNotificationDto`. The inline body type had
+    meant nothing was validated, even `isRead`.
+  - `GET /notifications/count` returns `{ count }`. It returned a bare number as `text/html`, and
+    all seven portals read `res.data.count`, so the unread badge always showed 0.
+  - API tests show users see, count and mark only their own notifications.
+- **Audit:** API tests check that the token, not the body, says who did it, that only the super
+  admin reads the log, and the filters and newest-first order.
+- **Gateway:** `proxy/routes.ts` holds the route table (`targetFor`, `SERVICE_TARGETS`,
+  `isPublicPath`), unit-tested for every service's routes and whole-segment matching. The
+  proxying itself stays covered by the smoke script (`http-proxy-middleware` is ESM-only).
+- **FHIR mappers:**
+  - The patient mapper's minimized record for pharmacists and lab staff is pinned to its exact
+    fields. An API test reads a patient as each of those roles through every route they can use.
+  - The clinical mapper tests pin the triage-vitals extensions the doctor portal reads.
+- **Type-check:** every workspace has `typecheck` (`tsc --noEmit`, tests included). The root
+  `npm run typecheck` runs them and `typecheck:db`, and CI runs it in place of `typecheck:db`.
+- **Verified:**
+  - Root lint, build, `npm test` (82), `npm run test:e2e` (63 across 9 services),
+    `npm run typecheck`, `db:check`.
+  - All backend images and the migrate/seed image rebuilt. Smoke PASS=146, FAIL=0.
+  - Live `GET /notifications/count` returns `{"count":1}` after a new notification.
+- **Still open:**
+  - `POST /auth/register` is public and accepts any role (decision pending).
+  - Who may `POST /notifications`: any signed-in user, for any recipient. Nothing but the seed
+    and smoke sends them (decision pending).
+  - The lab portal's result-entry form is a demo stub: Save and Submit only show a toast and
+    never call `POST /results`.
+  - The patient's name in the lab PDF is still a placeholder (`Patient <id>`).
+  - Observation and ServiceRequest each have two FHIR mappers (patient/clinical, clinical/lab).

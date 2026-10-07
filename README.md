@@ -57,6 +57,7 @@ cd services/patient && npm run start:dev
 |---|---|---|
 | `npm test` | unit tests (`src/**/*.spec.ts`): pure logic such as queue moves, PHN check digits, FEFO dispensing | nothing |
 | `npm run test:e2e` | API tests (`test/*.e2e-spec.ts`): each service's HTTP endpoints, in-process, on a real database | Postgres (`docker compose up -d postgres`) and a built `@curo/shared` |
+| `npm run typecheck` | `tsc --noEmit` over every workspace, tests included, and `database/` | nothing |
 
 The API tests never touch `curo_db`. Before each service's run, the
 [@curo/testing](packages/testing) preset drops and recreates `curo_test` (or `TEST_DB_NAME`,
@@ -83,6 +84,8 @@ it('dispenses', async () => {
 ```
 
 Tests share the database, so each one creates its own rows (fresh ids) and checks only those.
+To replace a provider, such as object storage, pass overrides:
+`startService(AppModule, [{ provide: STORAGE_PROVIDER, useValue: memoryStorage }])`.
 
 ## Database schema
 
@@ -116,7 +119,7 @@ Release branches are `dev-release/<x.y.z>`, `qa-release/<x.y.z>` and `stg-releas
 
 | Job | Checks | Run it locally |
 |---|---|---|
-| Backends | build `@curo/shared` + every service, lint, unit tests, API tests, type-check `database/`, then on an empty Postgres: migrate, check for entity drift, seed | `npm ci && npm run build && npm run lint && npm test && npm run test:e2e && npm run typecheck:db`, then `npm run db:migrate && npm run db:check` |
+| Backends | build `@curo/shared` + every service, lint, unit tests, API tests, type-check every workspace (tests included) and `database/`, then on an empty Postgres: migrate, check for entity drift, seed | `npm ci && npm run build && npm run lint && npm test && npm run test:e2e && npm run typecheck`, then `npm run db:migrate && npm run db:check` |
 | Portals | lint, then `next build` (includes type-check) for each of the 7 portals | `cd apps/<app> && npm ci && npm run lint && npm run build` |
 | Secret scan | gitleaks over the full git history ([allowlist](.gitleaks.toml)) | `docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo` |
 
