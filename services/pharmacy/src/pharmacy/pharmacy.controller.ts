@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   Header,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { PharmacyService } from './pharmacy.service';
 import { DispenseMedicationDto } from './dto/dispense.dto';
@@ -34,8 +35,10 @@ export class PharmacyController {
     return this.pharmacyService.getMedicationCatalog(query);
   }
 
+  // Dispensing and receiving stock happen at a pharmacy, so only its
+  // pharmacists do them; the super admin has no pharmacy.
   @Post('dispense')
-  @Roles('PHARMACIST', 'SUPER_ADMIN')
+  @Roles('PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
   dispense(@Body() dto: DispenseMedicationDto, @CurrentUser() user: AuthUser) {
     return this.pharmacyService.dispense(dto, user);
@@ -66,35 +69,46 @@ export class PharmacyController {
   @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
   getStock(
+    @CurrentUser() user: AuthUser,
     @Query('organizationId') organizationId?: string,
     @Query() query?: PaginationQuery,
   ) {
-    return this.pharmacyService.getStock(organizationId, query);
+    return this.pharmacyService.getStock(user, organizationId, query);
   }
 
   // Stock grouped by drug, with batches (different expiry dates) listed FEFO-first.
   @Get('stock/grouped')
   @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
-  getGroupedStock() {
-    return this.pharmacyService.getGroupedStock();
+  getGroupedStock(
+    @CurrentUser() user: AuthUser,
+    @Query('organizationId') organizationId?: string,
+  ) {
+    return this.pharmacyService.getGroupedStock(user, organizationId);
   }
 
   @Post('stock')
-  @Roles('PHARMACIST', 'SUPER_ADMIN')
-  addStock(@Body() dto: CreateStockDto) {
-    return this.pharmacyService.addStock(dto);
+  @Roles('PHARMACIST')
+  addStock(@Body() dto: CreateStockDto, @CurrentUser() user: AuthUser) {
+    return this.pharmacyService.addStock(dto, user);
   }
 
   @Put('stock/:id')
-  @Roles('PHARMACIST', 'SUPER_ADMIN')
-  updateStock(@Param('id') id: string, @Body() dto: UpdateStockDto) {
-    return this.pharmacyService.updateStock(id, dto);
+  @Roles('PHARMACIST')
+  updateStock(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateStockDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.pharmacyService.updateStock(id, dto, user);
   }
 
   // The drugs at or below their reorder level, one entry per drug.
   @Get('stock/alerts')
   @Roles('PHARMACIST', 'SUPER_ADMIN')
-  getLowStockAlerts() {
-    return this.pharmacyService.getLowStockAlerts();
+  getLowStockAlerts(
+    @CurrentUser() user: AuthUser,
+    @Query('organizationId') organizationId?: string,
+  ) {
+    return this.pharmacyService.getLowStockAlerts(user, organizationId);
   }
 }
