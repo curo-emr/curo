@@ -7,23 +7,37 @@ import { Badge } from "@curo/web/ui/badge";
 import { LabDashboardStats } from "@/components/features/dashboard/LabDashboardStats";
 import { UrgentOrdersList } from "@/components/features/dashboard/UrgentOrdersList";
 import { RecentActivityFeed } from "@/components/features/dashboard/RecentActivityFeed";
-import { getLabOrdersFirstPage, getLabInstruments, getRecentQCLogs, type LabInstrument } from "@/lib/api/lab";
+import { getLabInstruments, getLabOrderSummary, getLabOrdersPage, getRecentQCLogs, type LabInstrument, type LabOrderSummary } from "@/lib/api/lab";
 import { getPatientsByIds } from "@/lib/api/patients";
 import type { LabOrder, Patient, QCLog } from "@/types";
+
+const URGENT_LIMIT = 10;
+const RECENT_LIMIT = 8;
 import { StatusBadge } from "@curo/web/ui/status-badge";
 
 export default function DashboardPage() {
-  const [orders, setOrders] = useState<LabOrder[]>([]);
+  const [summary, setSummary] = useState<LabOrderSummary | null>(null);
+  const [urgent, setUrgent] = useState<{ items: LabOrder[]; total: number }>({ items: [], total: 0 });
+  const [recent, setRecent] = useState<LabOrder[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [instruments, setInstruments] = useState<LabInstrument[]>([]);
   const [qcLogs, setQcLogs] = useState<QCLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getLabOrdersFirstPage(), getLabInstruments(), getRecentQCLogs()])
-      .then(async ([ords, insts, logs]) => {
-        const pts = await getPatientsByIds(ords.map(o => o.patientId));
-        setOrders(ords);
+    Promise.all([
+      getLabOrderSummary(),
+      // Urgent orders still waiting on the lab, most urgent first.
+      getLabOrdersPage({ page: 1, pageSize: URGENT_LIMIT, status: "sent_to_lab", priorities: ["stat", "urgent"], sort: "priority" }),
+      getLabOrdersPage({ page: 1, pageSize: RECENT_LIMIT, sort: "newest" }),
+      getLabInstruments(),
+      getRecentQCLogs(),
+    ])
+      .then(async ([counts, urgentPage, recentPage, insts, logs]) => {
+        const pts = await getPatientsByIds([...urgentPage.items, ...recentPage.items].map(o => o.patientId));
+        setSummary(counts);
+        setUrgent(urgentPage);
+        setRecent(recentPage.items);
         setPatients(pts);
         setInstruments(insts);
         setQcLogs(logs);
@@ -34,7 +48,6 @@ export default function DashboardPage() {
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
-  const urgentOrders = orders.filter(o => o.priority === 'urgent' || o.priority === 'stat');
   const qcAlerts = qcLogs.filter(log => log.status === 'fail' || log.status === 'warning');
 
   return (
@@ -46,12 +59,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <LabDashboardStats orders={orders} />
+      <LabDashboardStats counts={summary?.byStatus ?? {}} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <UrgentOrdersList orders={urgentOrders} patients={patients} />
-          <RecentActivityFeed orders={orders} patients={patients} />
+          <UrgentOrdersList orders={urgent.items} total={urgent.total} patients={patients} />
+          <RecentActivityFeed orders={recent} patients={patients} />
         </div>
 
         <div className="space-y-6">

@@ -16,28 +16,29 @@ import {
 import { Button } from "@curo/web/ui/button";
 import { Pagination } from "@curo/web/ui/pagination";
 import { Search, ChevronRight, User, Loader2 } from "lucide-react";
-import { LabOrder } from "@/types";
 import { calculateAge, formatDate } from "@/lib/utils";
+import { getLabOrders } from "@/lib/api/lab";
 import { getPatientsPaginated } from "@/lib/api/patients";
 import Link from "next/link";
 
-interface PatientListProps {
-  orders: LabOrder[];
-}
-
-export function PatientList({ orders }: PatientListProps) {
+export function PatientList() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
   const [query, setQuery] = useState(initialQuery);
   const search = useDebouncedValue(query);
-  const { items: patients, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
-    (page, pageSize) => getPatientsPaginated({ page, pageSize, search: search || undefined }),
+  const { data, items: patients, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
+    async (page, pageSize) => {
+      const result = await getPatientsPaginated({ page, pageSize, search: search || undefined });
+      // The lab-history columns: these patients' orders, not every order.
+      const orders = await getLabOrders({ patientIds: result.items.map(p => p.id) });
+      return { ...result, orders };
+    },
     [search],
   );
 
   const getPatientOrderInfo = (patientId: string) => {
-    const patientOrders = orders.filter(o => o.patientId === patientId);
+    const patientOrders = (data?.orders ?? []).filter(o => o.patientId === patientId);
     const lastOrder = [...patientOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
     return { count: patientOrders.length, lastOrder };
   };

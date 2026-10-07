@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { findPatientIds } from "@curo/web/api";
+import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import { Input } from "@curo/web/ui/input";
 import { Card, CardContent } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
+import { Pagination } from "@curo/web/ui/pagination";
 import {
   Table,
   TableBody,
@@ -13,16 +16,18 @@ import {
   TableHeader,
   TableRow,
 } from "@curo/web/ui/table";
-import { Search, Eye } from "lucide-react";
-import { LabOrder, Patient } from "@/types";
+import { Search, Eye, Loader2 } from "lucide-react";
+import type { LabOrder } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { orderStatus } from "@/lib/order-status";
+import { getLabOrderSummary, getLabOrdersPage } from "@/lib/api/lab";
+import { getPatientsByIds } from "@/lib/api/patients";
 import { StatusBadge, statusLabel } from "@curo/web/ui/status-badge";
 import { WorklistFilters } from "./WorklistFilters";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
-const STATUS_TABS = [
+const STATUS_TABS: { label: string; value: LabOrder["status"] | "all" }[] = [
   { label: "All", value: "all" },
   { label: "Draft", value: "draft" },
   { label: statusLabel("sent_to_lab"), value: "sent_to_lab" },
@@ -30,47 +35,40 @@ const STATUS_TABS = [
   { label: "Completed", value: "completed" },
 ];
 
-interface WorklistTableProps {
-  orders: LabOrder[];
-  patients: Patient[];
-}
-
-export function WorklistTable({ orders, patients }: WorklistTableProps) {
+/** The lab's orders, stat first, paged and filtered on the server; `visit` narrows them to one visit. */
+export function WorklistTable({ visit }: { visit?: string }) {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
   const [query, setQuery] = useState(initialQuery);
-  const [statusTab, setStatusTab] = useState("all");
+  const search = useDebouncedValue(query).trim();
+  const [statusTab, setStatusTab] = useState<LabOrder["status"] | "all">("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
 
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: orders.length };
-    for (const o of orders) {
-      counts[o.status] = (counts[o.status] || 0) + 1;
-    }
-    return counts;
-  }, [orders]);
-
-  const filtered = useMemo(() => {
-    return orders.filter(o => {
-      const q = query.toLowerCase().trim();
-      const patient = patients.find(p => p.id === o.patientId);
-      const matchesQuery = !q || (
-        o.id.toLowerCase().includes(q) ||
-        (patient?.name.full.toLowerCase().includes(q)) ||
-        (patient?.mrn.toLowerCase().includes(q))
-      );
-      const matchesStatus = statusTab === "all" || o.status === statusTab;
-      const matchesPriority = priorityFilter === "all" || o.priority === priorityFilter;
-      return matchesQuery && matchesStatus && matchesPriority;
-    }).sort((a, b) => {
-      const priorityOrder = { stat: 0, urgent: 1, routine: 2 };
-      const pa = priorityOrder[a.priority] ?? 2;
-      const pb = priorityOrder[b.priority] ?? 2;
-      if (pa !== pb) return pa - pb;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  }, [query, statusTab, priorityFilter, orders, patients]);
+  const { data, items: orders, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
+    async (page, pageSize) => {
+      // Patient names live in the patient service: find the matching patients first.
+      const matches = search ? await findPatientIds(search) : undefined;
+      const [result, summary] = await Promise.all([
+        getLabOrdersPage({
+          page,
+          pageSize,
+          encounterId: visit,
+          status: statusTab === "all" ? undefined : statusTab,
+          priorities: priorityFilter === "all" ? undefined : [priorityFilter as LabOrder["priority"]],
+          search,
+          searchPatientIds: matches?.ids,
+          sort: "priority",
+        }),
+        getLabOrderSummary(visit),
+      ]);
+      const patients = await getPatientsByIds(result.items.map(o => o.patientId));
+      return { ...result, patients, summary, tooManyMatches: matches?.complete === false };
+    },
+    [search, statusTab, priorityFilter, visit],
+  );
+  const patients = data?.patients ?? [];
+  const statusCounts: Partial<Record<string, number>> = { all: data?.summary.total, ...data?.summary.byStatus };
 
   const hasFilters = priorityFilter !== "all" || query !== "";
 
@@ -120,9 +118,9 @@ export function WorklistTable({ orders, patients }: WorklistTableProps) {
         </CardContent>
       </Card>
 
-      {hasFilters && (
-        <p className="text-sm text-muted-foreground px-1">
-          {filtered.length} of {orders.length} orders shown
+      {data?.tooManyMatches && (
+        <p className="text-sm text-status-warning-text px-1">
+          More than 100 patients match &ldquo;{search}&rdquo;, so only some of them are searched. Add more of the name, or the MRN.
         </p>
       )}
 
@@ -142,8 +140,19 @@ export function WorklistTable({ orders, patients }: WorklistTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length > 0 ? (
-              filtered.map(order => {
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />
+                  Loading orders…
+                </TableCell>
+              </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-32 text-center text-destructive">Failed to load orders.</TableCell>
+              </TableRow>
+            ) : orders.length > 0 ? (
+              orders.map(order => {
                 const patient = patients.find(p => p.id === order.patientId);
                 return (
                   <TableRow key={order.id} className="hover:bg-muted/50 transition-colors group">
@@ -197,6 +206,8 @@ export function WorklistTable({ orders, patients }: WorklistTableProps) {
           </TableBody>
         </Table>
       </div>
+
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} onPageSizeChange={setPageSize} />
     </div>
   );
 }

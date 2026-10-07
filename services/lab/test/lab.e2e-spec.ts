@@ -475,6 +475,147 @@ describe('Lab specimens and results', () => {
       expect(body.total).toBe(1);
       expect(body.entry.map((e) => e.resource.id)).toEqual([mine.order.id]);
     });
+
+    /** An order at `labId`, with `fields` over a plain active glucose test. */
+    const saveOrder = (labId: string, fields: Partial<ServiceRequest> = {}) =>
+      svc.db.getRepository(ServiceRequest).save({
+        patientId: randomUUID(),
+        requesterId: randomUUID(),
+        performerOrganizationId: labId,
+        status: ServiceRequestStatus.ACTIVE,
+        category: 'laboratory',
+        code: '2345-7',
+        display: 'Glucose',
+        ...fields,
+      });
+
+    /** The ids a technician at `labId` gets for `query`, in order. */
+    const listed = async (labId: string, query: object) => {
+      const res = await svc.api
+        .get('/orders')
+        .query(query)
+        .set(technicianAt(labId).headers)
+        .expect(200);
+      return (res.body as { entry: { resource: { id: string } }[] }).entry.map(
+        (e) => e.resource.id,
+      );
+    };
+
+    it('narrows by status and priority, each a list', async () => {
+      const labId = await laboratory();
+      const statUrgent = await saveOrder(labId, { priority: 'stat' });
+      await saveOrder(labId, { priority: 'routine' });
+      const doneUrgent = await saveOrder(labId, {
+        priority: 'urgent',
+        status: ServiceRequestStatus.COMPLETED,
+      });
+      await saveOrder(labId, {
+        priority: 'stat',
+        status: ServiceRequestStatus.DRAFT,
+      });
+
+      const unprioritised = await saveOrder(labId);
+
+      const ids = await listed(labId, {
+        status: 'active,completed',
+        priority: 'stat,urgent',
+      });
+      expect(ids.sort()).toEqual([statUrgent.id, doneUrgent.id].sort());
+      expect(await listed(labId, { status: 'no-such-status' })).toEqual([]);
+      // An order given no priority is routine.
+      expect(
+        (await listed(labId, { priority: 'routine' })).includes(
+          unprioritised.id,
+        ),
+      ).toBe(true);
+    });
+
+    it('finds orders by the start of their id, or by the patients a name search matched', async () => {
+      const labId = await laboratory();
+      const byId = await saveOrder(labId);
+      const byPatient = await saveOrder(labId);
+      await saveOrder(labId);
+
+      const ids = await listed(labId, {
+        search: byId.id.slice(0, 8).toUpperCase(),
+        searchPatientIds: byPatient.patientId,
+      });
+      expect(ids.sort()).toEqual([byId.id, byPatient.id].sort());
+      // Search text is literal: a wildcard matches no id.
+      expect(await listed(labId, { search: '%' })).toEqual([]);
+    });
+
+    it('puts stat before urgent before routine, newest first within each, when sorted by priority', async () => {
+      const labId = await laboratory();
+      const at = (day: number) => new Date(Date.UTC(2026, 0, day));
+      const oldStat = await saveOrder(labId, {
+        priority: 'stat',
+        authoredOn: at(1),
+      });
+      const routine = await saveOrder(labId, {
+        priority: 'routine',
+        authoredOn: at(9),
+      });
+      const urgent = await saveOrder(labId, {
+        priority: 'urgent',
+        authoredOn: at(5),
+      });
+      const newAsap = await saveOrder(labId, {
+        priority: 'asap',
+        authoredOn: at(7),
+      });
+
+      expect(await listed(labId, { _sort: 'priority' })).toEqual([
+        newAsap.id,
+        oldStat.id,
+        urgent.id,
+        routine.id,
+      ]);
+      expect(await listed(labId, { _sort: '-authored' })).toEqual([
+        routine.id,
+        newAsap.id,
+        urgent.id,
+        oldStat.id,
+      ]);
+    });
+  });
+
+  describe('GET /orders/summary', () => {
+    it("counts a lab's orders by status and priority, and its most-ordered tests", async () => {
+      const labId = await laboratory();
+      const { order: panel } = await orderLabs(undefined, {
+        performerOrganizationId: labId,
+      });
+      await svc.db
+        .getRepository(ServiceRequest)
+        .update(panel.id, { priority: 'stat' });
+      for (const status of [
+        ServiceRequestStatus.COMPLETED,
+        ServiceRequestStatus.ACTIVE,
+      ])
+        await svc.db.getRepository(ServiceRequest).save({
+          patientId: randomUUID(),
+          requesterId: randomUUID(),
+          performerOrganizationId: labId,
+          status,
+          priority: 'routine',
+          code: '58410-2',
+          display: 'Full blood count',
+        });
+
+      const res = await svc.api
+        .get('/orders/summary')
+        .set(technicianAt(labId).headers)
+        .expect(200);
+      expect(res.body).toEqual({
+        byStatus: { active: 2, completed: 1 },
+        byPriority: { stat: 1, routine: 2 },
+        topTests: [
+          { code: '58410-2', display: 'Full blood count', count: 3 },
+          { code: '4548-4', display: 'HbA1c', count: 1 },
+        ],
+      });
+    });
   });
 
   describe("one lab's work, kept from another", () => {
