@@ -1,0 +1,28 @@
+import { Search } from "lucide-react";
+import { Input } from "./input";
+import { cn } from "./utils";
+
+interface SearchInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+  autoFocus?: boolean;
+}
+
+export function SearchInput({ value, onChange, placeholder = "Search...", className, autoFocus }: SearchInputProps) {
+  return (
+    <div className={cn("relative", className)}>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+      <Input
+        type="search"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="pl-9"
+        autoComplete="off"
+        autoFocus={autoFocus}
+      />
+    </div>
+  );
+}

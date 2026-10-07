@@ -12,17 +12,17 @@ import {
 } from "@/lib/validations/patient";
 import { registerPatient } from "@/lib/actions/patient-actions";
 import { ROUTES, MARITAL_STATUS } from "@/lib/constants";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Input } from "@curo/web/ui/input";
+import { Label } from "@curo/web/ui/label";
+import { Button } from "@curo/web/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import { Loader2, ChevronDown, Plus, Trash2 } from "lucide-react";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];

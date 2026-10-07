@@ -1,10 +1,6 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
 import type { Vitals } from "@/types"
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
+export { cn } from "@curo/web/ui/utils";
 
 export function calculateBMI(heightCm: number, weightKg: number): number {
   if (!heightCm || !weightKg) return 0;

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, HeartPulse, AlertTriangle, Pill, ShieldAlert } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
 import { formatDate, formatStatus } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";

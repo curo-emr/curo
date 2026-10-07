@@ -2,9 +2,9 @@
 
 import { useState, useEffect, use } from "react";
 import { Loader2, User, FlaskConical, Clock, ArrowLeft, CheckCircle2, QrCode, Printer } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { calculateAge, formatDate } from "@/lib/utils";

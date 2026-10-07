@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Appointment, Doctor } from "@/types";
 import { ROUTES } from "@/lib/constants";
 import { formatDate, formatTime, getDoctorName } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
@@ -13,7 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@curo/web/ui/table";
 import { CalendarPlus, Calendar } from "lucide-react";
 
 interface AppointmentsTabProps {

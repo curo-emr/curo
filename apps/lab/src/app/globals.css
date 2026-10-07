@@ -19,6 +19,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Shared components live in @curo/web: scan them for class names too. */
+@source "../../../../packages/web/src";
+
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------------------

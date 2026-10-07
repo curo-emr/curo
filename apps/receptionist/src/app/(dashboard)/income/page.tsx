@@ -8,14 +8,14 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Pagination } from "@/components/ui/pagination";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Pagination } from "@curo/web/ui/pagination";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+} from "@curo/web/ui/table";
 import { getIncomeSummary, getMyPayments, type IncomeSummary, type Payment } from "@/lib/api/payments";
 
 type Period = "day" | "week" | "month";

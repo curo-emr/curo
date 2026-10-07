@@ -1,6 +1,6 @@
 import type { DispenseRecord } from "@/lib/api/pharmacy";
 import { Patient } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Clock, ArrowRight } from "lucide-react";
 import { getPatientName, formatDate, formatCurrency } from "@/lib/utils";
 

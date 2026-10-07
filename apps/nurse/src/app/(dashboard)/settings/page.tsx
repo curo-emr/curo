@@ -1,7 +1,7 @@
 "use client";
 
 import { LogOut, Mail, ShieldCheck, Stethoscope } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { PatientAvatar } from "@/components/features/queue/PatientAvatar";

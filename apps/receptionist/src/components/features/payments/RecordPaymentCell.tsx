@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { Loader2, Lock, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@curo/web/ui/button";
+import { Input } from "@curo/web/ui/input";
+import { Label } from "@curo/web/ui/label";
+import { Badge } from "@curo/web/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@curo/web/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import { toast } from "sonner";
 import { createPayment, type Payment } from "@/lib/api/payments";
 import { apiErrorMessage } from "@curo/web/api";

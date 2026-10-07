@@ -3,16 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Building2, Loader2, Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+} from "@curo/web/ui/table";
 import { getOrganizations, updateOrganization } from "@/lib/api/organizations";
 import { apiErrorMessage } from "@curo/web/api";
 import { ORGANIZATION_TYPES, ORGANIZATION_TYPE_LABELS } from "@/lib/constants";

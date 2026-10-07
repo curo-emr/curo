@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import { useSearchParams } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@curo/web/ui/input";
+import { Card, CardContent } from "@curo/web/ui/card";
 import {
   Table,
   TableBody,
@@ -12,9 +12,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Pagination } from "@/components/ui/pagination";
+} from "@curo/web/ui/table";
+import { Button } from "@curo/web/ui/button";
+import { Pagination } from "@curo/web/ui/pagination";
 import { Search, ChevronRight, User, Loader2 } from "lucide-react";
 import { calculateAge, formatAllergies, formatDate } from "@/lib/utils";
 import { getAllergiesByPatient, getPatientsPaginated } from "@/lib/api/patients";

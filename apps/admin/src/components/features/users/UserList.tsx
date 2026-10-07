@@ -6,13 +6,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+} from "@curo/web/ui/table";
+import { Badge } from "@curo/web/ui/badge";
+import { Input } from "@curo/web/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Pagination } from "@/components/ui/pagination";
+} from "@curo/web/ui/select";
+import { Pagination } from "@curo/web/ui/pagination";
 import { Search, Loader2 } from "lucide-react";
 import { ROUTES, ROLE_LABELS, USER_ROLES } from "@/lib/constants";
 import { getUsersPaginated } from "@/lib/api/users";

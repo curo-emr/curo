@@ -7,8 +7,8 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { Loader2, TriangleAlert } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
 import { getObservationTrends, type TrendPoint } from "@/lib/api/clinical";
 
 // Standard clinical reference ranges used for high/low flagging.

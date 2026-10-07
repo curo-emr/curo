@@ -3,10 +3,10 @@
 import { useCallback } from "react";
 import { Star, Stethoscope, X } from "lucide-react";
 import type { Diagnosis, ICD10 } from "@/types";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { SearchCombobox } from "@/components/ui/SearchCombobox";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@curo/web/ui/tooltip";
 import { searchICD10 } from "@/lib/api/icd";
 import { cn } from "@/lib/utils";
 

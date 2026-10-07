@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, Users } from "lucide-react";
 import type { Appointment, Patient } from "@/types";
-import { Card } from "@/components/ui/card";
+import { Card } from "@curo/web/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AppointmentRow } from "@/components/features/visits/AppointmentRow";
 import { cn } from "@/lib/utils";

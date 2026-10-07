@@ -1,6 +1,6 @@
 import { ArrowRight, Clock, Loader2, Stethoscope } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@curo/web/ui/button";
+import { Badge } from "@curo/web/ui/badge";
 import { calculateAge, cn, formatPhn, formatTime, minutesSince } from "@/lib/utils";
 import { waitBadgeClass } from "@/lib/queue";
 import type { QueueEntry } from "@/lib/hooks/useTodayQueue";

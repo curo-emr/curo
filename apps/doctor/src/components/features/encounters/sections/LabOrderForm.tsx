@@ -3,12 +3,12 @@
 import { useCallback, useMemo } from "react";
 import { FlaskConical, X } from "lucide-react";
 import type { Lab, LabTestCatalogItem } from "@/types";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Input } from "@curo/web/ui/input";
+import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { SearchCombobox } from "@/components/ui/SearchCombobox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@curo/web/ui/toggle-group";
 import type { LabPriority, LabTestDraft } from "../visit";
 
 interface LabOrderFormProps {

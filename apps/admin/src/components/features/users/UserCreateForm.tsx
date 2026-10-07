@@ -6,13 +6,13 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Input } from "@curo/web/ui/input";
+import { Label } from "@curo/web/ui/label";
+import { Button } from "@curo/web/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import { createUserSchema, type CreateUserInput } from "@/lib/validations/user";
 import { createUser } from "@/lib/api/users";
 import { ROUTES, USER_ROLES, ROLE_LABELS, GENDERS } from "@/lib/constants";

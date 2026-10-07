@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import { Loader2, Users as UsersIcon, UserCheck, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { getUsers } from "@/lib/api/users";
 import { getAllPayments } from "@/lib/api/payments";
 import { ROLE_LABELS } from "@/lib/constants";

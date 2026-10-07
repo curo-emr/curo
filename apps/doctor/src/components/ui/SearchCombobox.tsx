@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Plus, Search } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@curo/web/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@curo/web/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface SearchComboboxProps<T> {
