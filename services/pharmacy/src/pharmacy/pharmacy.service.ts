@@ -20,6 +20,7 @@ import { MedicationCatalog } from '../entities/medication-catalog.entity';
 import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
 import { MedicationDispenseStatus } from '../enums';
+import { byExpiry, planFefoDraws } from './fefo';
 
 /** What one stock batch supplied to a dispense. */
 interface BatchDraw {
@@ -128,31 +129,29 @@ export class PharmacyService {
   }
 
   /**
-   * Draw `qty` units of a drug from stock, FEFO (First-Expiry-First-Out): the
-   * earliest-expiring non-expired batches first, across several if needed. The
-   * batches are row-locked, so concurrent dispenses of one drug can't lose updates.
-   * Throws 409 when stock can't cover `qty`, so nothing is dispensed unpriced or
-   * left out of the stock count.
+   * Draw `qty` units of a drug from stock, FEFO (see fefo.ts), across several
+   * batches if needed. The drug's batches are row-locked, so concurrent
+   * dispenses of it can't lose updates. Throws 409 when stock can't cover
+   * `qty`, so nothing is dispensed unpriced or left out of the stock count.
    */
   private async drawStockFEFO(
     em: EntityManager,
     rx: Pick<MedicationRequest, 'medicationCode' | 'medicationDisplay'>,
     qty: number,
   ): Promise<BatchDraw[]> {
-    const today = new Date().toISOString().slice(0, 10);
     const batches = await em
       .getRepository(Stock)
       .createQueryBuilder('s')
-      .where(
-        's.medicationCode = :code AND s.active = true AND s.quantity > 0',
-        { code: rx.medicationCode },
-      )
-      .andWhere('(s.expiryDate IS NULL OR s.expiryDate >= :today)', { today })
-      .orderBy('s.expiryDate', 'ASC', 'NULLS LAST')
+      .where('s.medicationCode = :code AND s.active = true', {
+        code: rx.medicationCode,
+      })
+      .orderBy('s.id') // one lock order, so two dispenses can't deadlock
       .setLock('pessimistic_write')
       .getMany();
 
-    const available = batches.reduce((sum, b) => sum + b.quantity, 0);
+    const today = new Date().toISOString().slice(0, 10);
+    const draws = planFefoDraws(batches, qty, today);
+    const available = draws.reduce((sum, d) => sum + d.quantity, 0);
     if (available < qty) {
       throw new ConflictException(
         `Not enough ${rx.medicationDisplay} in stock: ${available} available, ` +
@@ -160,21 +159,13 @@ export class PharmacyService {
       );
     }
 
-    let remaining = qty;
-    const draws: BatchDraw[] = [];
-    for (const b of batches) {
-      if (remaining <= 0) break;
-      const take = Math.min(b.quantity, remaining);
-      b.quantity -= take;
-      remaining -= take;
-      await em.save(b);
-      draws.push({
-        batchNumber: b.batchNumber,
-        quantity: take,
-        unitPrice: Number(b.unitPrice ?? 0), // decimal columns arrive as strings
-      });
-    }
-    return draws;
+    for (const { batch, quantity } of draws) batch.quantity -= quantity;
+    await em.save(draws.map((d) => d.batch));
+    return draws.map(({ batch, quantity }) => ({
+      batchNumber: batch.batchNumber,
+      quantity,
+      unitPrice: Number(batch.unitPrice ?? 0), // decimal columns arrive as strings
+    }));
   }
 
   async dispense(dto: DispenseMedicationDto, pharmacist: AuthUser) {
@@ -322,13 +313,8 @@ export class PharmacyService {
       });
       groups.set(s.medicationCode, g);
     }
-    // sort each drug's batches earliest-expiry first (FEFO)
     const result = Array.from(groups.values());
-    for (const g of result) {
-      g.batches.sort((a, b) =>
-        (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999'),
-      );
-    }
+    for (const g of result) g.batches.sort(byExpiry);
     return result;
   }
 
