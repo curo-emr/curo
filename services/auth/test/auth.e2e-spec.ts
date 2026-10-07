@@ -42,7 +42,7 @@ describe('Sign-in', () => {
   async function onboard() {
     const staff = newStaff();
     await svc.api
-      .post('/auth/staff')
+      .post('/auth/users')
       .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
       .send(staff)
       .expect(201);
@@ -149,12 +149,12 @@ describe('Sign-in', () => {
     );
   });
 
-  describe('POST /auth/staff', () => {
+  describe('POST /auth/users', () => {
     it('refuses an email that already has an account', async () => {
       const staff = await onboard();
 
       await svc.api
-        .post('/auth/staff')
+        .post('/auth/users')
         .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
         .send({ ...staff, firstName: 'Someone', lastName: 'Else' })
         .expect(409);
@@ -164,7 +164,7 @@ describe('Sign-in', () => {
       const staff = newStaff();
 
       await svc.api
-        .post('/auth/staff')
+        .post('/auth/users')
         .set((await signedIn(svc, UserRole.DOCTOR)).headers)
         .send(staff)
         .expect(403);
