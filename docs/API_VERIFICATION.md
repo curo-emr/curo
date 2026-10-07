@@ -4,9 +4,9 @@
 **Driver:** [`scripts/smoke-e2e.sh`](../scripts/smoke-e2e.sh) — re-run any time with `bash scripts/smoke-e2e.sh`.
 
 Every check is made **through the API gateway at `http://localhost:3000`** with a real JWT for
-the appropriate role. This is the only path that exercises the gateway's role-header injection
-(`x-user-role`) **and** each service's `RolesGuard`. Hitting a service's own port directly would
-test a different (unguarded) code path, so it is deliberately avoided.
+the appropriate role. This exercises the gateway's token check **and** each service's
+`RolesGuard`. It is also the only way in: the services' own ports (shown below) are not
+published to the host.
 
 ## How to reproduce
 
@@ -135,9 +135,9 @@ one corrects an outdated note in the build history.
    by clinical-service's handler (which permits `PHARMACIST`). Pharmacy-service's own copy of that
    route was only reachable on its direct port `:3005`. **Resolved 2026-10-06:** the pharmacy copy
    was removed (`refactor/remove-dead-pending-route`); clinical's is the only one.
-3. **`GET /health` returns 404.** `/health` is listed in the gateway's public-paths allowlist but
-   no handler serves it, so it 404s (it still bypasses auth). Minor — consider adding a real
-   gateway health route. Per-service health is available at `GET /` and `GET /auth/health`.
+3. **`GET /health` returned 404.** `/health` was in the gateway's public-paths allowlist but no
+   handler served it. **Resolved 2026-10-07:** the gateway and every backend answer
+   `GET /health` → `{"status":"ok"}` without a token, and the compose health checks use it.
 4. **Document uploads accept only `application/pdf`, `image/jpeg`, `image/png`** (25 MB max).
    Other content types return `400 Bad Request` by design.
 
@@ -147,6 +147,5 @@ one corrects an outdated note in the build history.
 routes. Endpoints **not** directly exercised by the script (low-risk, equivalent paths covered):
 `POST /auth/register` (public self-register — staff creation covered via `/auth/staff`), the admin
 user-management variants `POST/GET/PATCH /auth/users/:id` and `/auth/users/:id/reset-password`
-(the create path is covered via `/auth/staff`; the list path via `GET /auth/users`), and the
-per-service `GET /` hello/health endpoints. Add these to the script if full admin-CRUD
+(the create path is covered via `/auth/staff`; the list path via `GET /auth/users`). Add these to the script if full admin-CRUD
 verification is needed.
