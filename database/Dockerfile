@@ -11,4 +11,6 @@ COPY package*.json ./
 RUN npm ci --no-workspaces --no-audit --no-fund
 COPY tsconfig.base.json ./
 COPY database/ ./database/
+# the seed imports the patient identifier generators from source
+COPY packages/shared/src/identifiers/ ./packages/shared/src/identifiers/
 CMD ["npm", "run", "db:migrate"]

@@ -1,7 +1,7 @@
 {
   "name": "@curo/shared",
   "version": "1.0.0",
-  "description": "Shared kernel for Curo EMR backends: auth guards, cross-service entities, enums and DTOs, FHIR helpers, env secrets, health check and service bootstrap",
+  "description": "Shared kernel for Curo EMR backends: auth guards, cross-service entities, enums and DTOs, FHIR helpers, patient identifiers, env secrets, health check and service bootstrap",
   "private": true,
   "license": "UNLICENSED",
   "exports": {
@@ -36,6 +36,10 @@
     "./health": {
       "types": "./dist/health/index.d.ts",
       "default": "./dist/health/index.js"
+    },
+    "./identifiers": {
+      "types": "./dist/identifiers/index.d.ts",
+      "default": "./dist/identifiers/index.js"
     }
   },
   "files": [
@@ -43,7 +47,8 @@
   ],
   "scripts": {
     "build": "nest build",
-    "build:watch": "nest build --watch"
+    "build:watch": "nest build --watch",
+    "test": "jest"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.1",
@@ -79,12 +84,28 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/swagger": "^11.4.4",
     "@nestjs/typeorm": "^11.0.1",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "jest": "^30.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "ts-jest": "^29.2.5",
     "typeorm": "^1.0.0",
     "typescript": "^5.7.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "testEnvironment": "node"
   }
 }

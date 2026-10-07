@@ -3,6 +3,11 @@ import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as QRCode from 'qrcode';
 import { connectionOptions } from './data-source';
+// Imported from source: this image is built without the workspaces.
+import {
+  generatePatientCode,
+  generatePhn,
+} from '../packages/shared/src/identifiers';
 
 // The seed writes raw SQL against the schema created by `npm run db:migrate`.
 // These enums are just the column values it inserts.
@@ -23,38 +28,6 @@ enum QCStatus {
 }
 
 const AppDataSource = new DataSource(connectionOptions);
-
-function genCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = 'CUR-';
-  for (let i = 0; i < 8; i++)
-    code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
-}
-
-function luhnCheckDigit(payload: string): number {
-  let sum = 0;
-  let double = true;
-  for (let i = payload.length - 1; i >= 0; i--) {
-    let d = payload.charCodeAt(i) - 48;
-    if (double) {
-      d *= 2;
-      if (d > 9) d -= 9;
-    }
-    sum += d;
-    double = !double;
-  }
-  return (10 - (sum % 10)) % 10;
-}
-
-// Personal Health Number: YYYY + 7-digit sequence + Luhn check digit (12 digits).
-function genPhn() {
-  const year = new Date().getFullYear().toString();
-  let seq = '';
-  for (let i = 0; i < 7; i++) seq += Math.floor(Math.random() * 10).toString();
-  const payload = year + seq;
-  return payload + luhnCheckDigit(payload).toString();
-}
 
 function rnd<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -578,8 +551,8 @@ async function seed() {
   const patientIds: string[] = [];
   const patientUserIds: string[] = [];
   for (const p of patientData) {
-    const code = genCode();
-    const phn = genPhn();
+    const code = generatePatientCode();
+    const phn = generatePhn();
     const [patient] = await db.query<IdRow[]>(
       `
       INSERT INTO patients (id, "patientCode", "personalHealthNumber", "firstName", "lastName", "birthDate", gender, nic, phone, email, "bloodType", city, country, active)

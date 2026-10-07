@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Condition, Patient } from '@curo/shared/database';
 import { ConditionClinicalStatus, Gender, UserRole } from '@curo/shared/enums';
+import { luhnCheckDigit } from '@curo/shared/identifiers';
 import {
   startService,
   type ServiceUnderTest,
@@ -12,7 +13,6 @@ import {
   AllergyIntoleranceCriticality,
   AllergyIntoleranceType,
 } from '../src/enums';
-import { luhnCheckDigit } from '../src/patient/phn';
 
 describe('Patient records', () => {
   let svc: ServiceUnderTest;
