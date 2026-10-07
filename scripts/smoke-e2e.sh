@@ -378,6 +378,51 @@ req "nurse→encounters" 403 POST /encounters "{\"patientId\":\"$PATIENT_ID\"}" 
 req "vitals without filter" 400 GET "/vitals" "" "$NURSE" >/dev/null
 
 # ---------------------------------------------------------------------------
+# 8c. SIGNED VISIT — the doctor portal's sign: the whole visit in one
+#     transaction, under a client-generated id that makes a replay harmless
+# ---------------------------------------------------------------------------
+echo "-- signed visit --" >&2
+VA=$(req "receptionist" 201 POST /appointments \
+  "{\"patientId\":\"$PATIENT_ID\",\"practitionerId\":\"$DOC_PID\",\"start\":\"${TODAY}T11:00:00.000Z\",\"end\":\"${TODAY}T11:30:00.000Z\",\"reasonCode\":\"visit smoke\"}" "$RECEP")
+VAPPT=$(jq -r '.id' <<<"$VA")
+req "nurse" 201 POST /vitals "{\"patientId\":\"$PATIENT_ID\",\"appointmentId\":\"$VAPPT\",\"code\":\"8867-4\",\"display\":\"Heart rate\",\"valueQuantity\":88,\"valueUnit\":\"bpm\"}" "$NURSE" >/dev/null
+
+VID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+echo "   encounterId=$VID" >&2
+VISIT="{\"id\":\"$VID\",\"patientId\":\"$PATIENT_ID\",\"appointmentId\":\"$VAPPT\",\"reasonCode\":\"visit smoke\",
+  \"note\":{\"subjective\":\"Cough for 3 days\",\"plan\":\"Rest\",\"additionalNotes\":\"visit smoke\"},
+  \"vitals\":[{\"code\":\"8310-5\",\"display\":\"Body temperature\",\"valueQuantity\":38.1,\"valueUnit\":\"Cel\"}],
+  \"diagnoses\":[{\"code\":\"J20.9\",\"display\":\"Acute bronchitis\",\"isPrimary\":true}],
+  \"prescriptions\":[{\"medicationCode\":\"860975\",\"medicationDisplay\":\"Metformin 500mg\",\"dosageText\":\"1 tab BD\",\"quantityValue\":10}],
+  \"labOrders\":[{\"code\":\"58410-2\",\"display\":\"CBC panel\",\"priority\":\"routine\"}]}"
+SV=$(req "doctor" 201 POST /encounters/visit "$VISIT" "$DOC")
+expect_eq "signed visit keeps the client's id" "$(jq -r .id <<<"$SV")" "$VID"
+expect_eq "signed visit is completed" "$(jq -r .status <<<"$SV")" "completed"
+
+# of_visit <path> — how many records at <path> belong to the signed visit
+of_visit() {
+  req "doctor" 200 GET "$1" "" "$DOC" |
+    jq -r --arg e "Encounter/$VID" '[(if type == "array" then .[] else .entry[].resource end) | select(.encounter.reference == $e)] | length'
+}
+visit_records() {
+  expect_eq "$1: prescriptions" "$(of_visit "/prescriptions?patientId=$PATIENT_ID")" "1"
+  expect_eq "$1: lab orders" "$(of_visit "/lab-orders?patientId=$PATIENT_ID")" "1"
+  expect_eq "$1: diagnoses" "$(of_visit "/patients/$PATIENT_ID/conditions")" "1"
+  expect_eq "$1: notes" "$(req "doctor" 200 GET "/notes?encounterId=$VID" "" "$DOC" | jq -r length)" "1"
+}
+visit_records "signed visit"
+V=$(req "doctor" 200 GET "/vitals?appointmentId=$VAPPT" "" "$DOC")
+expect_eq "signed visit links triage vitals" "$(jq -r --arg e "Encounter/$VID" '[.[] | .encounter.reference == $e] | all' <<<"$V")" "true"
+
+SV=$(req "doctor (replay)" 201 POST /encounters/visit "$VISIT" "$DOC")
+expect_eq "replayed visit returns the same encounter" "$(jq -r .id <<<"$SV")" "$VID"
+visit_records "after replay"
+
+req "visit: id not a uuid" 400 POST /encounters/visit "{\"id\":\"visit-1\",\"patientId\":\"$PATIENT_ID\"}" "$DOC" >/dev/null
+req "visit: invalid item" 400 POST /encounters/visit "{\"id\":\"$(uuidgen)\",\"patientId\":\"$PATIENT_ID\",\"prescriptions\":[{\"medicationCode\":\"860975\"}]}" "$DOC" >/dev/null
+req "pharmacist→visit" 403 POST /encounters/visit "$VISIT" "$PHARM" >/dev/null
+
+# ---------------------------------------------------------------------------
 # 9. Organizations directory (any authenticated user) + gateway health
 # ---------------------------------------------------------------------------
 echo "-- organizations + health --" >&2
