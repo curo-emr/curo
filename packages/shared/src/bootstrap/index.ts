@@ -1,1 +1,5 @@
-export { bootstrapService, type ServiceInfo } from './bootstrap-service';
+export {
+  bootstrapService,
+  configureApp,
+  type ServiceInfo,
+} from './bootstrap-service';

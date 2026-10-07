@@ -41,6 +41,8 @@ jobs:
       # Any lint error or warning fails the build.
       - run: npm run lint
       - run: npm test
+      # API tests: each service against curo_test, recreated and migrated on the same server.
+      - run: npm run test:e2e
       - run: npm run typecheck:db
       # Against an empty database: migrations apply, entities match them, and the seed runs.
       - run: npm run db:migrate

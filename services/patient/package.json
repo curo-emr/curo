@@ -39,6 +39,7 @@
     "uuid": "^14.0.0"
   },
   "devDependencies": {
+    "@curo/testing": "*",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",

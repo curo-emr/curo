@@ -98,7 +98,7 @@ in one DB transaction, or at minimum client-side retry + idempotency keys.
 (Doc 02 inherits this pattern for nurse vitals; acceptable there — vitals are
 independent facts — but the composite-endpoint idea is worth doing later.)
 
-### A11. Testing gap
+### A11. Testing gap ✅ *(critical paths covered 2026-10-07; ongoing)*
 Only scaffold `*.spec.ts` files exist; verification is manual/smoke-script
 (`scripts/smoke-e2e.sh`, `docs/API_TESTING_PLAN.md`). Highest-value additions,
 in order: (1) supertest e2e per service on the critical write flows, (2) unit
