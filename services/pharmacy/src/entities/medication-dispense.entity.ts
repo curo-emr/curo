@@ -24,6 +24,12 @@ export class MedicationDispense {
   @Column()
   pharmacistId: string; // practitioner dispensing
 
+  // The pharmacy it was dispensed at, from whose stock. Empty for an early
+  // dispense whose pharmacy could not be worked out.
+  @Index()
+  @Column({ nullable: true })
+  organizationId: string;
+
   @Column({
     type: 'enum',
     enum: MedicationDispenseStatus,

@@ -170,13 +170,14 @@ delete the other; bundled JSON + DB copies will diverge.
   and a receptionist's payments in admin. Searches by patient name find the matching
   patients first (`findPatientIds`) and say when more than 100 match.
 - Dashboards and reports read totals the server counts: `/orders/summary`,
-  `/dispense/summary`, `/payments/totals`, `/auth/users/summary`, and
-  `getTotal('/patients', { registeredFrom, registeredTo })`. Schedules and reports read
+  `/dispense/summary`, `/payments/totals` (paid payments only, as My Income counts),
+  `/auth/users/summary`, and `getTotal('/patients', { registeredFrom, registeredTo })`. Schedules and reports read
   their date window (`/appointments?from&to`).
+- Each dispense records its pharmacy (`organizationId`), so a pharmacist's dispensing log
+  and summary are their own pharmacy's; one patient's or prescription's dispenses still
+  come from every pharmacy. Earlier dispenses got their pharmacy where it could be worked out.
 - The lab dashboard's QC alerts are the controls whose latest run failed or warned
   (`/qc-logs/alerts`), however many runs came after on other controls.
-- Still open: dispenses carry no pharmacy, so the dispensing log and its summary span
-  every pharmacy; scoping them needs the pharmacy on each dispense.
 
 ### B5. Error boundaries and empty/loading states are uneven
 `error.tsx` exists in doctor/receptionist dashboards but not everywhere; some

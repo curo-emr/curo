@@ -283,6 +283,51 @@ describe('Appointments and the patient queue', () => {
       ]);
     });
 
+    it('leaves out payments corrected to refunded or waived, as My Income does', async () => {
+      const desk = svc.as(UserRole.RECEPTIONIST);
+      const admin = svc.as(UserRole.SUPER_ADMIN);
+      const ids: string[] = [];
+      for (const amount of [1000, 300, 200]) {
+        const res = await svc.api
+          .post('/payments')
+          .set(desk.headers)
+          .send({ patientId: randomUUID(), amount })
+          .expect(201);
+        ids.push((res.body as { id: string }).id);
+      }
+      for (const [id, status] of [
+        [ids[1], 'refunded'],
+        [ids[2], 'waived'],
+      ])
+        await svc.api
+          .put(`/payments/${id}`)
+          .set(admin.headers)
+          .send({ status })
+          .expect(200);
+
+      await expect(
+        totals({ collectedBy: desk.practitionerId }),
+      ).resolves.toMatchObject({ total: 1000, count: 1 });
+      const own = await svc.api
+        .get('/payments/summary')
+        .set(desk.headers)
+        .expect(200);
+      expect(own.body).toMatchObject({ total: 1000, count: 1 });
+    });
+
+    it('refuses a correction to a status payments do not have', async () => {
+      const res = await svc.api
+        .post('/payments')
+        .set(receptionist.headers)
+        .send({ patientId: randomUUID(), amount: 100 })
+        .expect(201);
+      await svc.api
+        .put(`/payments/${(res.body as { id: string }).id}`)
+        .set(svc.as(UserRole.SUPER_ADMIN).headers)
+        .send({ status: 'Paid' })
+        .expect(400);
+    });
+
     it('is refused to receptionists', async () => {
       await svc.api
         .get('/payments/totals')
