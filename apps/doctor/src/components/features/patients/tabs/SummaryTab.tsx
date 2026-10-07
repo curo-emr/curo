@@ -1,7 +1,7 @@
 import { AlertTriangle, ChevronRight, ClipboardList, HeartPulse, History, Pill } from "lucide-react";
 import type { Allergy, Encounter, Patient, Prescription, Problem, Vitals } from "@/types";
-import { SectionCard } from "@/components/ui/SectionCard";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { SectionCard } from "@curo/web/ui/section-card";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { Button } from "@curo/web/ui/button";
 import { ROUTES } from "@/lib/constants";
 import { calculateBMI, formatDate, formatRelative } from "@/lib/utils";

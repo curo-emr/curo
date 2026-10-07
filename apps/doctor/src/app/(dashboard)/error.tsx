@@ -2,7 +2,7 @@
 
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@curo/web/ui/button";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@curo/web/ui/empty-state";
 
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (

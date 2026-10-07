@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { format, parseISO } from "date-fns";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { Pagination } from "@curo/web/ui/pagination";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import {

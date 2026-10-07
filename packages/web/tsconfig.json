@@ -8,7 +8,9 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "isolatedModules": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    // Lets the shadcn CLI resolve the @curo/web/* aliases in components.json to folders.
+    "paths": { "@curo/web/*": ["./src/*"] }
   },
   "include": ["src"]
 }

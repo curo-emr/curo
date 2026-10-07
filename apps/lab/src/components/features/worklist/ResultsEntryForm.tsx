@@ -10,7 +10,7 @@ import { Badge } from "@curo/web/ui/badge";
 import { Label } from "@curo/web/ui/label";
 import { Textarea } from "@curo/web/ui/textarea";
 import { LabOrder, Patient } from "@/types";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { enterResults, type ResultEntry } from "@/lib/api/lab";
 import { interpret, type Interpretation } from "@/lib/result-flag";
 import { ROUTES } from "@/lib/constants";

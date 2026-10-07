@@ -4,8 +4,8 @@ import { Appointment, Doctor } from "@/types";
 import { ROUTES } from "@/lib/constants";
 import { formatDate, formatTime, getDoctorName } from "@/lib/utils";
 import { Button } from "@curo/web/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { StatusBadge } from "@curo/web/ui/status-badge";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import {
   Table,
   TableBody,
@@ -37,8 +37,7 @@ export function AppointmentsTab({
         icon={Calendar}
         title="No appointments"
         description="This patient has no appointment records."
-        actionLabel="Book New Appointment"
-        actionHref={ROUTES.NEW_APPOINTMENT}
+        action={<Button asChild variant="outline" size="sm"><Link href={ROUTES.NEW_APPOINTMENT}>Book New Appointment</Link></Button>}
       />
     );
   }

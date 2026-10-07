@@ -25,7 +25,7 @@ import { Button } from "@curo/web/ui/button";
 import { Search, ChevronRight } from "lucide-react";
 import { Prescription, Patient } from "@/types";
 import { getPatientName, formatDate } from "@/lib/utils";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 

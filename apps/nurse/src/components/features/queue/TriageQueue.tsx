@@ -8,8 +8,8 @@ import type { QueueStage } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
 import { Badge } from "@curo/web/ui/badge";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { QueueRow, patientName } from "./QueueRow";
 import { useTodayQueue, type QueueEntry } from "@/lib/hooks/useTodayQueue";
 import { useTriageActions } from "@/lib/hooks/useTriageActions";
@@ -66,11 +66,11 @@ export function TriageQueue() {
         </div>
       ) : status === "error" ? (
         <Card className="shadow-sm border">
-          <EmptyState icon={HeartPulse} title="The triage queue could not be loaded" description="Check your connection, then try again." actionLabel="Try again" onAction={refresh} />
+          <EmptyState icon={HeartPulse} title="The triage queue could not be loaded" description="Check your connection, then try again." action={<Button variant="outline" size="sm" onClick={refresh}>Try again</Button>} />
         </Card>
       ) : query && visible.length === 0 ? (
         <Card className="shadow-sm border">
-          <EmptyState icon={SearchX} title={`No one in today's queue matches "${query}"`} description="Search by first name, last name or PHN." actionLabel="Show everyone" actionHref={ROUTES.TRIAGE_QUEUE} />
+          <EmptyState icon={SearchX} title={`No one in today's queue matches "${query}"`} description="Search by first name, last name or PHN." action={<Button asChild variant="outline" size="sm"><Link href={ROUTES.TRIAGE_QUEUE}>Show everyone</Link></Button>} />
         </Card>
       ) : (
         SECTIONS.map(({ stage, title, empty }) => {

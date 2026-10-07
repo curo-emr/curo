@@ -8,8 +8,8 @@ import { Button } from "@curo/web/ui/button";
 import Link from "next/link";
 import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { getMyProfile, getMyPrescriptions, getPractitioners } from "@/lib/api/patient-portal";
 import type { Prescription } from "@/types";
 
@@ -51,7 +51,7 @@ export default function PrescriptionsPage() {
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             {prescriptions.length === 0 ? (
-              <EmptyState message="No prescriptions found." />
+              <EmptyState title="No prescriptions found." />
             ) : (
               prescriptions.map(rx => (
                 <Link

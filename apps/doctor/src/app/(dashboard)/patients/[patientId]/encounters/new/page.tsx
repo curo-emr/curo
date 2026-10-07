@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useSearchParams } from "next/navigation";
 import { UserX } from "lucide-react";
 import { EncounterEditor } from "@/components/features/encounters/EncounterEditor";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { getPatientById, getAllergies, getConditions } from "@/lib/api/patients";
 import { getPrescriptionsByPatient } from "@/lib/api/clinical";

@@ -5,7 +5,7 @@ import { ArrowRight, HeartPulse, Hourglass, Loader2, Timer, UserRoundCheck } fro
 import type { QueueStage } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { FlowStrip } from "@/components/features/dashboard/FlowStrip";
 import { QueueRow, patientName } from "@/components/features/queue/QueueRow";
 import { useTodayQueue } from "@/lib/hooks/useTodayQueue";
@@ -74,8 +74,7 @@ export default function DashboardPage() {
             icon={HeartPulse}
             title="Today's queue could not be loaded"
             description="Check your connection, then try again."
-            actionLabel="Try again"
-            onAction={refresh}
+            action={<Button variant="outline" size="sm" onClick={refresh}>Try again</Button>}
           />
         </Card>
       ) : (

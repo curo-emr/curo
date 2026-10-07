@@ -5,9 +5,9 @@ import { FileText, FlaskConical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Lab, LabOrder, LabReport, LabResultValue } from "@/types";
 import { Button } from "@curo/web/ui/button";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { SectionCard } from "@/components/ui/SectionCard";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { SectionCard } from "@curo/web/ui/section-card";
+import { StatusBadge, type Status } from "@curo/web/ui/status-badge";
 import { openDocument, type DocumentRef } from "@/lib/api/documents";
 import { openPdf } from "@/lib/api/labs";
 import { cn, formatDate } from "@/lib/utils";
@@ -44,7 +44,7 @@ export function VisitLabOrders({ orders, reports, files, labs }: Props) {
   );
 }
 
-function stageOf(order: LabOrder, report?: LabReport): string {
+function stageOf(order: LabOrder, report?: LabReport): Status {
   if (report || order.status === "completed") return "results_ready";
   return order.receivedAt ? "sample_received" : "sent_to_lab";
 }

@@ -177,7 +177,9 @@ The portals' counterpart to `@curo/shared`, with the same layout: one entry poin
 | `@curo/web/auth` | `AuthProvider` and `useAuth()`: the signed-in user, `login`, `logout`; `ProtectedRoute` (optionally limited to `roles`) |
 | `@curo/web/fhir` | `unwrapBundle`, `paginationParams`, and the Bundle and pagination types |
 | `@curo/web/hooks` | `useServerPagination` (a server-paged list that refetches when its filters change), `useClientPagination`, `useDebouncedValue` |
-| `@curo/web/ui/<name>` | the shadcn/ui primitives (`button`, `dialog`, `select`, …), `search-input`, `file-input`, `curo-calendar`, `sidebar-context`, and `cn` in `ui/utils` |
+| `@curo/web/ui/<name>` | the shadcn/ui primitives (`button`, `dialog`, `select`, …); Curo's own `page-header`, `section-card`, `empty-state`, `status-badge`, `search-input`, `file-input`, `curo-calendar`, `sidebar-context`; `cn` in `ui/utils` |
+| `@curo/web/print` | `printOnly(id)`: print just one element of the page |
+| `@curo/web/styles.css` | the theme: colour tokens (including the status palette), base styles, print rules |
 
 A portal that needs more than the login response about its user passes `enrichUser`
 to `AuthProvider` (the doctor portal looks up the doctor's specialty), and `onLogout`
@@ -186,6 +188,12 @@ for anything to drop on sign-out.
 The same rule of thumb applies: code moves in once a second portal needs it. The
 shadcn/ui primitives are the exception: they all live here, so the portals look alike.
 
-Each portal's `globals.css` has `@source "../../../../packages/web/src"`, so Tailwind
-generates the classes the shared components use. Without that line, those components render unstyled.
+- A portal's `globals.css` is one line, `@import "@curo/web/styles.css"`. The stylesheet
+  also tells Tailwind to scan the package, so the shared components get their classes.
+- `StatusBadge` holds every status the portals show, each with one colour and label
+  everywhere. Its `status` prop accepts only those statuses, so a new one fails the
+  type-check until it is added there.
+- `npx shadcn add <component>`, run in a portal or in `packages/web`, writes the component
+  to `packages/web/src/ui`. The CLI currently writes `import { cn } from "cn"`; change it to
+  `"./utils"`.
 

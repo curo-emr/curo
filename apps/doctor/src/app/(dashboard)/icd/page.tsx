@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { ICDSearchClient } from "./ICDSearchClient";
 
 export default function ICDPage() {
