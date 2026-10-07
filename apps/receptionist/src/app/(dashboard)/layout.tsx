@@ -6,13 +6,16 @@ import { TooltipProvider } from "@curo/web/ui/tooltip";
 import { ProtectedRoute } from "@curo/web/auth";
 import { SidebarProvider } from "@curo/web/ui/sidebar-context";
 
+// The front desk is for receptionists (super admins may look in for support).
+const PORTAL_ROLES = ["RECEPTIONIST", "SUPER_ADMIN"];
+
 export default function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute roles={PORTAL_ROLES} audience="receptionists">
       <SidebarProvider>
         <TooltipProvider>
           <Sidebar />
