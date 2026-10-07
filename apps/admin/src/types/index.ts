@@ -49,7 +49,8 @@ export interface Payment {
   amount: number;
   currency?: string;
   paymentMethod?: string;
-  status?: string;
+  /** Only `paid` counts towards income. */
+  status?: "pending" | "paid" | "refunded" | "waived";
   receiptNumber?: string;
   notes?: string;
   paidAt?: string;
