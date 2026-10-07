@@ -46,7 +46,13 @@ const visit = (overrides: Partial<CompleteVisitDto> = {}): CompleteVisitDto =>
     prescriptions: [
       { medicationCode: 'AMOX500', medicationDisplay: 'Amoxicillin 500mg' },
     ],
-    labOrders: [{ code: '58410-2', display: 'Full blood count' }],
+    labOrders: [
+      {
+        code: '58410-2',
+        display: 'Full blood count',
+        performerOrganizationId: 'lab-1',
+      },
+    ],
     ...overrides,
   });
 
@@ -57,6 +63,8 @@ function setup(existing: Encounter | null = null) {
   const em = {
     findOneBy: jest.fn().mockResolvedValue(existing),
     update: jest.fn().mockResolvedValue({ affected: 1 }),
+    // Raw SQL only asks whether a lab order's lab exists: every one does here.
+    query: jest.fn().mockResolvedValue([{}]),
     save: jest.fn((target: EntityTarget<object>, value: object | object[]) => {
       const rows = ([] as object[])
         .concat(value)

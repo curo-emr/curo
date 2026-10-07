@@ -60,5 +60,6 @@ export const WORKPLACE_TYPES: Partial<Record<UserRole, readonly OrganizationType
   LAB_STAFF: ["laboratory"],
 };
 
-// Roles that can't work until assigned: pharmacists dispense from their pharmacy's stock.
-export const WORKPLACE_REQUIRED: readonly UserRole[] = ["PHARMACIST"];
+// Roles that can't work until assigned: pharmacists dispense from their pharmacy's
+// stock, and lab staff work only on the tests sent to their lab.
+export const WORKPLACE_REQUIRED: readonly UserRole[] = ["PHARMACIST", "LAB_STAFF"];

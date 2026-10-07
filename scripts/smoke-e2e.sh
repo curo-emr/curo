@@ -82,6 +82,7 @@ DOC_R=$(login dr.priya@curo.health Doctor@123)
 RECEP_R=$(login chamali@curo.health Recept@123)
 PHARM_R=$(login kasun.pharma@curo.health Pharma@123)
 LAB_R=$(login tharindi.lab@curo.health LabStaff@123)
+LAB2_R=$(login rukshan.lab@curo.health LabStaff@123)  # works at the other lab
 PAT_R=$(login samantha@email.com Patient@123)
 NURSE_R=$(login nimasha@curo.health Nurse@123)
 
@@ -90,10 +91,12 @@ DOC=$(jq -r .accessToken <<<"$DOC_R")
 RECEP=$(jq -r .accessToken <<<"$RECEP_R")
 PHARM=$(jq -r .accessToken <<<"$PHARM_R")
 LAB=$(jq -r .accessToken <<<"$LAB_R")
+LAB2=$(jq -r .accessToken <<<"$LAB2_R")
 PAT=$(jq -r .accessToken <<<"$PAT_R")
 NURSE=$(jq -r .accessToken <<<"$NURSE_R")
 
 DOC_PID=$(jq -r .user.practitionerId <<<"$DOC_R")
+LAB_ORG=$(jq -r .user.organizationId <<<"$LAB_R")  # lab tests go to this technician's lab
 PAT_ID_SELF=$(jq -r .user.patientId <<<"$PAT_R")
 
 for r in "ADMIN:$ADMIN" "DOCTOR:$DOC" "RECEP:$RECEP" "PHARM:$PHARM" "LAB:$LAB" "PATIENT:$PAT" "NURSE:$NURSE"; do
@@ -188,7 +191,7 @@ req "doctor" 200 GET "/patients/code/$PCODE" "" "$DOC" >/dev/null
 # 4. LAB ORDER (doctor) → fulfillment (lab staff)
 # ---------------------------------------------------------------------------
 echo "-- lab order + fulfillment --" >&2
-LO_BODY="{\"patientId\":\"$PATIENT_ID\",\"encounterId\":\"$ENC_ID\",\"code\":\"58410-2\",\"display\":\"CBC panel\",\"testPanel\":[{\"code\":\"718-7\",\"display\":\"Hemoglobin\"},{\"code\":\"4544-3\",\"display\":\"Hematocrit\"}]}"
+LO_BODY="{\"patientId\":\"$PATIENT_ID\",\"encounterId\":\"$ENC_ID\",\"performerOrganizationId\":\"$LAB_ORG\",\"code\":\"58410-2\",\"display\":\"CBC panel\",\"testPanel\":[{\"code\":\"718-7\",\"display\":\"Hemoglobin\"},{\"code\":\"4544-3\",\"display\":\"Hematocrit\"}]}"
 LO=$(req "doctor" 201 POST /lab-orders "$LO_BODY" "$DOC")
 ORDER_ID=$(jq -r '.id' <<<"$LO")
 echo "   orderId=$ORDER_ID" >&2
@@ -196,6 +199,10 @@ echo "   orderId=$ORDER_ID" >&2
 req "lab"    200 GET  "/orders?status=active" "" "$LAB" >/dev/null
 req "lab"    200 GET  "/orders/$ORDER_ID" "" "$LAB" >/dev/null
 req "lab"    200 GET  "/catalog" "" "$LAB" >/dev/null
+req "lab2"   404 GET  "/orders/$ORDER_ID" "" "$LAB2" >/dev/null  # sent to the other lab
+SLIP=$(req "doctor" 200 GET "/encounters/$ENC_ID/lab-slip" "" "$DOC")
+SLIP_SCAN=$(req "lab" 201 POST "/orders/scan" "{\"qrData\":\"$(jq -r .encodedUrl <<<"$SLIP")\"}" "$LAB")
+expect_eq "visit slip finds the lab's test" "$(jq -r '.entry[0].resource.id' <<<"$SLIP_SCAN")" "$ORDER_ID"
 req "lab"    201 POST "/orders/scan" "{\"qrData\":\"$BASE/lab/orders/$ORDER_ID?test=718-7&i=0\"}" "$LAB" >/dev/null
 req "lab"    200 PUT  "/orders/$ORDER_ID/receive" '{}' "$LAB" >/dev/null
 RES_BODY="{\"serviceRequestId\":\"$ORDER_ID\",\"results\":[{\"code\":\"718-7\",\"display\":\"Hemoglobin\",\"value\":14.2,\"unit\":\"g/dL\",\"referenceRangeLow\":\"13\",\"referenceRangeHigh\":\"17\",\"interpretation\":\"N\"}],\"conclusion\":\"Within normal limits\"}"
@@ -396,7 +403,7 @@ VISIT="{\"id\":\"$VID\",\"patientId\":\"$PATIENT_ID\",\"appointmentId\":\"$VAPPT
   \"vitals\":[{\"code\":\"8310-5\",\"display\":\"Body temperature\",\"valueQuantity\":38.1,\"valueUnit\":\"Cel\"}],
   \"diagnoses\":[{\"code\":\"J20.9\",\"display\":\"Acute bronchitis\",\"isPrimary\":true}],
   \"prescriptions\":[{\"medicationCode\":\"860975\",\"medicationDisplay\":\"Metformin 500mg\",\"dosageText\":\"1 tab BD\",\"quantityValue\":10}],
-  \"labOrders\":[{\"code\":\"58410-2\",\"display\":\"CBC panel\",\"priority\":\"routine\"}]}"
+  \"labOrders\":[{\"code\":\"58410-2\",\"display\":\"CBC panel\",\"priority\":\"routine\",\"performerOrganizationId\":\"$LAB_ORG\"}]}"
 SV=$(req "doctor" 201 POST /encounters/visit "$VISIT" "$DOC")
 expect_eq "signed visit keeps the client's id" "$(jq -r .id <<<"$SV")" "$VID"
 expect_eq "signed visit is completed" "$(jq -r .status <<<"$SV")" "completed"

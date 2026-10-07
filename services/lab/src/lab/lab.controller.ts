@@ -14,7 +14,6 @@ import { EnterResultsDto } from './dto/enter-results.dto';
 import { ScanQrDto } from './dto/scan-qr.dto';
 import { CreateInstrumentDto } from './dto/create-instrument.dto';
 import {
-  actorId,
   JwtAuthGuard,
   RolesGuard,
   Roles,
@@ -34,10 +33,12 @@ export class LabController {
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
   getOrders(
+    @CurrentUser() user: AuthUser,
     @Query('status') status?: string,
+    @Query('encounterId') encounterId?: string,
     @Query() query?: PaginationQuery,
   ) {
-    return this.labService.getOrders(status, query);
+    return this.labService.getOrders(user, { status, encounterId }, query);
   }
 
   // Test catalog a lab offers — doctors browse before ordering.
@@ -49,29 +50,31 @@ export class LabController {
 
   @Get('orders/tat')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
-  getTatStats() {
-    return this.labService.getTatStats();
+  getTatStats(@CurrentUser() user: AuthUser) {
+    return this.labService.getTatStats(user);
   }
 
   @Get('orders/:id')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getOrder(@Param('id') id: string) {
-    return this.labService.getOrder(id);
+  getOrder(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.labService.getOrder(id, user);
   }
 
+  // A sample label receives the sample (a ServiceRequest comes back); a visit
+  // slip finds the visit's tests for the scanner's lab (a searchset Bundle).
   @Post('orders/scan')
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   scanQr(@Body() dto: ScanQrDto, @CurrentUser() user: AuthUser) {
-    return this.labService.scanQr(dto, actorId(user));
+    return this.labService.scanQr(dto, user);
   }
 
   @Put('orders/:id/receive')
   @Roles('LAB_STAFF', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   receiveOrder(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.labService.receiveOrder(id, actorId(user));
+    return this.labService.receiveOrder(id, user);
   }
 
   @Post('results')
@@ -85,17 +88,24 @@ export class LabController {
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getReports(
+    @CurrentUser() user: AuthUser,
     @Query('patientId') patientId?: string,
+    @Query('encounterId') encounterId?: string,
+    @Query('serviceRequestId') serviceRequestId?: string,
     @Query() query?: PaginationQuery,
   ) {
-    return this.labService.getReports(patientId, query);
+    return this.labService.getReports(
+      user,
+      { patientId, encounterId, serviceRequestId },
+      query,
+    );
   }
 
   @Get('reports/:id')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getReport(@Param('id') id: string) {
-    return this.labService.getReport(id);
+  getReport(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.labService.getReport(id, user);
   }
 
   @Get('instruments')
@@ -117,8 +127,8 @@ export class LabController {
 
   @Get('lab-staff')
   @Roles('LAB_STAFF', 'SUPER_ADMIN', 'DOCTOR')
-  getLabStaff() {
-    return this.labService.getLabStaff();
+  getLabStaff(@CurrentUser() user: AuthUser) {
+    return this.labService.getLabStaff(user);
   }
 
   @Post('instruments')

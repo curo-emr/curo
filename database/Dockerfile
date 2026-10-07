@@ -13,4 +13,5 @@ COPY tsconfig.base.json ./
 COPY database/ ./database/
 # the seed imports the patient identifier generators from source
 COPY packages/shared/src/identifiers/ ./packages/shared/src/identifiers/
+COPY packages/shared/src/lab/ ./packages/shared/src/lab/
 CMD ["npm", "run", "db:migrate"]

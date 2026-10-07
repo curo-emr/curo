@@ -16,7 +16,7 @@ export interface JwtPayload {
   patientId?: string | null;
   /** Staff display name; absent for patients, admins and tokens issued before it existed. */
   name?: string | null;
-  /** Where staff work (a pharmacist's pharmacy); absent when unassigned. */
+  /** Where staff work (a pharmacist's pharmacy, a technician's lab); absent when unassigned. */
   organizationId?: string | null;
 }
 

@@ -1,5 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
-import type { AuthUser } from '@curo/shared/auth';
+import { workplaceOf, type AuthUser } from '@curo/shared/auth';
 import { UserRole } from '@curo/shared/enums';
 
 // Each pharmacy keeps its own stock. A pharmacist works only with their own
@@ -8,11 +7,7 @@ import { UserRole } from '@curo/shared/enums';
 
 /** The pharmacy a pharmacist works at; 403 until they are assigned one. */
 export function pharmacyOf(user: AuthUser): string {
-  if (!user.organizationId)
-    throw new ForbiddenException(
-      "Your account isn't assigned to a pharmacy yet. Ask an administrator to assign one.",
-    );
-  return user.organizationId;
+  return workplaceOf(user, 'pharmacy');
 }
 
 /**
