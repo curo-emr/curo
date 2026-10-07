@@ -3,9 +3,9 @@
 import { useState, useEffect, use } from "react";
 import { Loader2 } from "lucide-react";
 import { getPatientById } from "@/lib/api/patients";
-import { getLabOrdersByPatient, getLabResultsByPatient, getLabTestCatalog, type LabResult } from "@/lib/api/lab";
-import { calculateAge, formatDate, getTestName } from "@/lib/utils";
-import type { Patient, LabOrder, LabTestCatalogItem } from "@/types";
+import { getLabOrdersByPatient, getLabResultsByPatient, type LabResult } from "@/lib/api/lab";
+import { calculateAge, formatDate } from "@/lib/utils";
+import type { Patient, LabOrder } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,12 +20,11 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
   const [patient, setPatient] = useState<Patient | null>(null);
   const [orders, setOrders] = useState<LabOrder[]>([]);
   const [results, setResults] = useState<LabResult[]>([]);
-  const [testCatalog, setTestCatalog] = useState<LabTestCatalogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getPatientById(patientId), getLabOrdersByPatient(patientId), getLabResultsByPatient(patientId), getLabTestCatalog()])
-      .then(([pt, ords, res, catalog]) => { setPatient(pt); setOrders(ords); setResults(res); setTestCatalog(catalog); })
+    Promise.all([getPatientById(patientId), getLabOrdersByPatient(patientId), getLabResultsByPatient(patientId)])
+      .then(([pt, ords, res]) => { setPatient(pt); setOrders(ords); setResults(res); })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [patientId]);
@@ -94,7 +93,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
                         </Badge>
                       </div>
                       <p className="text-sm text-slate-600">
-                        {order.tests.map(t => getTestName(t.testId, testCatalog)).join(', ')}
+                        {order.tests.map(t => t.name).join(', ')}
                       </p>
                       <p className="text-xs text-slate-400 mt-1">
                         Ordered: {formatDate(order.createdAt)}
