@@ -8,7 +8,7 @@ import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
-import { Patient, AuditLog } from '@curo/shared/database';
+import { Patient } from '@curo/shared/database';
 import { Gender, UserRole } from '@curo/shared/enums';
 import {
   parsePagination,
@@ -18,6 +18,8 @@ import {
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import type { AuthUser } from '@curo/shared/auth';
+import { AuditTrail } from '../audit/audit-trail';
+import { OrganizationService } from '../organization/organization.service';
 
 @Injectable()
 export class AdminService {
@@ -28,21 +30,16 @@ export class AdminService {
     private practitionersRepo: Repository<Practitioner>,
     @InjectRepository(Patient)
     private patientsRepo: Repository<Patient>,
-    @InjectRepository(AuditLog)
-    private auditRepo: Repository<AuditLog>,
+    private auditTrail: AuditTrail,
+    private organizations: OrganizationService,
   ) {}
-
-  private async audit(entry: Partial<AuditLog>) {
-    await this.auditRepo.save(
-      this.auditRepo.create({ outcome: 'success', ...entry }),
-    );
-  }
 
   async createUser(dto: CreateUserDto, requestingUser: AuthUser) {
     const existing = await this.usersRepo.findOne({
       where: { email: dto.email },
     });
     if (existing) throw new ConflictException('Email already registered');
+    await this.organizations.checkWorkplace(dto.role, dto.organizationId);
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
     let practitionerId: string | undefined;
@@ -79,9 +76,7 @@ export class AdminService {
       await this.practitionersRepo.update(practitionerId, { userId: user.id });
     }
 
-    await this.audit({
-      userId: requestingUser.userId,
-      userRole: requestingUser.role,
+    await this.auditTrail.record(requestingUser, {
       action: 'CREATE',
       resourceType: 'User',
       resourceId: user.id,
@@ -207,6 +202,9 @@ export class AdminService {
     const user = await this.usersRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException(`User ${id} not found`);
 
+    if (dto.organizationId != null)
+      await this.organizations.checkWorkplace(user.role, dto.organizationId);
+
     const before: Record<string, unknown> = { isActive: user.isActive };
     if (dto.isActive != null) {
       user.isActive = dto.isActive;
@@ -233,9 +231,7 @@ export class AdminService {
       }
     }
 
-    await this.audit({
-      userId: requestingUser.userId,
-      userRole: requestingUser.role,
+    await this.auditTrail.record(requestingUser, {
       action: 'UPDATE',
       resourceType: 'User',
       resourceId: id,
@@ -256,9 +252,7 @@ export class AdminService {
     user.passwordHash = await bcrypt.hash(newPassword, 12);
     await this.usersRepo.save(user);
 
-    await this.audit({
-      userId: requestingUser.userId,
-      userRole: requestingUser.role,
+    await this.auditTrail.record(requestingUser, {
       action: 'UPDATE',
       resourceType: 'User',
       resourceId: id,

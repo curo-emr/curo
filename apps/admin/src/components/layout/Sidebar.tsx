@@ -4,23 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { ROUTES } from "@/lib/constants";
-import {
-  LayoutDashboard,
-  Users,
-  Wallet,
-  ScrollText,
-  Settings,
-  Activity,
-} from "lucide-react";
-
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", href: ROUTES.DASHBOARD },
-  { icon: Users, label: "Users", href: ROUTES.USERS },
-  { icon: Wallet, label: "Income", href: ROUTES.INCOME },
-  { icon: ScrollText, label: "Audit Log", href: ROUTES.AUDIT },
-  { icon: Settings, label: "Settings", href: ROUTES.SETTINGS },
-];
+import { Activity } from "lucide-react";
+import { NAV_ITEMS } from "./nav-items";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -36,7 +21,7 @@ export function Sidebar() {
         <p className="text-xs text-blue-300 mt-1">Super Admin Portal</p>
       </div>
       <nav className="flex-1 space-y-1 px-4 py-4">
-        {navItems.map((item) => {
+        {NAV_ITEMS.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
             <Link

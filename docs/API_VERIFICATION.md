@@ -43,6 +43,8 @@ real IDs captured from prior steps.
 | POST | `/auth/staff` | SUPER_ADMIN | ✅ 201 |
 | GET | `/auth/users?role=` | SUPER_ADMIN | ✅ 200 |
 | GET | `/organizations?type=` | any authed | ✅ 200 |
+| GET | `/organizations/:id` · `?includeInactive=true` | any authed | ✅ 200 |
+| POST · PATCH | `/organizations` · `/organizations/:id` (deactivate with `active: false`) | SUPER_ADMIN | ✅ 201 / 200 |
 
 ### Patient service (`:3002` — `/patients`)
 | Method | Path | Role | Status |

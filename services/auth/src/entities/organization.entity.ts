@@ -6,6 +6,13 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum OrganizationType {
+  CLINIC = 'clinic',
+  HOSPITAL = 'hospital',
+  PHARMACY = 'pharmacy',
+  LABORATORY = 'laboratory',
+}
+
 @Entity('organizations')
 export class Organization {
   @PrimaryGeneratedColumn('uuid')
@@ -14,8 +21,8 @@ export class Organization {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
-  type: string; // clinic | pharmacy | laboratory | hospital
+  @Column({ type: 'varchar', nullable: true })
+  type: OrganizationType;
 
   @Column({ nullable: true })
   phone: string;
