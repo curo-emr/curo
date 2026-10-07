@@ -21,18 +21,29 @@ docs/  plan/         API docs, test credentials, design plans
 ## Run everything (Docker)
 
 ```bash
+cp .env.example .env      # once: secrets for compose (dev values; never commit .env)
 npm run docker:rebuild    # builds images one at a time, then `docker compose up -d`
 ```
 
 Gateway on :3000 (API reference at http://localhost:3000/docs), portals on
 :3010–:3016. Seed accounts are listed in [docs/TEST_CREDENTIALS.md](docs/TEST_CREDENTIALS.md).
 
+Only the gateway and the portals are published to the host. The backends are
+reachable only through the gateway; Postgres (:5432) and MinIO (:9000) listen
+on 127.0.0.1 for running code from source. Every backend and the gateway answer
+`GET /health`, which the compose health checks use.
+
+Production images (`NODE_ENV=production`) refuse to start without `JWT_SECRET`,
+`JWT_REFRESH_SECRET`, `DB_PASS` and, for the document service, `MINIO_SECRET_KEY`.
+Outside production a service run from source falls back to the dev values in
+`.env.example`.
+
 ## Develop a backend
 
 ```bash
 npm install                                  # once, at the repo root
 npm run build:shared                         # services import the built package
-docker compose up -d postgres                # or point DB_* env vars at your own Postgres
+docker compose up -d postgres                # needs .env (above), or point DB_* at your own Postgres
 npm run db:migrate && npm run seed           # schema + dev data
 cd services/patient && npm run start:dev
 ```

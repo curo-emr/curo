@@ -1,3 +1,19 @@
+# Host ports: only the gateway (3000) and the portals (3010–3016) are published.
+# Backends are reachable only on the compose network, through the gateway.
+# Postgres and MinIO listen on 127.0.0.1 only, for running a service or the
+# migrations from source.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Secrets, read from .env (git-ignored): `cp .env.example .env` before the
+# first `docker compose up`. Compose refuses to start while any is unset.
+# ─────────────────────────────────────────────────────────────────────────────
+x-secrets:
+  db-pass: &db-pass ${DB_PASS:?set DB_PASS in .env (see .env.example)}
+  jwt-secret: &jwt-secret ${JWT_SECRET:?set JWT_SECRET in .env (see .env.example)}
+  jwt-refresh-secret: &jwt-refresh-secret ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in .env (see .env.example)}
+  minio-access-key: &minio-access-key ${MINIO_ACCESS_KEY:?set MINIO_ACCESS_KEY in .env (see .env.example)}
+  minio-secret-key: &minio-secret-key ${MINIO_SECRET_KEY:?set MINIO_SECRET_KEY in .env (see .env.example)}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared environment fragments
 # ─────────────────────────────────────────────────────────────────────────────
@@ -5,12 +21,12 @@ x-db-env: &db-env
   DB_HOST: postgres
   DB_PORT: "5432"
   DB_USER: curo
-  DB_PASS: curo_secret
+  DB_PASS: *db-pass
   DB_NAME: curo_db
 
 x-jwt-env: &jwt-env
-  JWT_SECRET: curo_jwt_secret_dev_2024_change_in_prod
-  JWT_REFRESH_SECRET: curo_refresh_secret_dev_2024_change_in_prod
+  JWT_SECRET: *jwt-secret
+  JWT_REFRESH_SECRET: *jwt-refresh-secret
   JWT_EXPIRES_IN: 15m
   JWT_REFRESH_EXPIRES_IN: 7d
 
@@ -32,7 +48,9 @@ x-needs-migrated-db: &needs-migrated-db
   curo-migrate:
     condition: service_completed_successfully
 
+# Every backend serves GET /health on its PORT ($$ escapes compose interpolation).
 x-backend-healthcheck: &backend-healthcheck
+  test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:$${PORT}/health || exit 1"]
   interval: 15s
   timeout: 5s
   retries: 10
@@ -48,11 +66,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: curo
-      POSTGRES_PASSWORD: curo_secret
+      POSTGRES_PASSWORD: *db-pass
       POSTGRES_DB: curo_db
-      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -65,8 +82,6 @@ services:
     image: redis:7-alpine
     container_name: curo_redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -79,11 +94,10 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: curo
-      MINIO_ROOT_PASSWORD: curo_secret_minio
+      MINIO_ROOT_USER: *minio-access-key
+      MINIO_ROOT_PASSWORD: *minio-secret-key
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # web console
+      - "127.0.0.1:9000:9000"   # S3 API
     volumes:
       - minio_data:/data
     healthcheck:
@@ -103,12 +117,8 @@ services:
     environment:
       PORT: "3001"
       <<: [*db-env, *jwt-env]
-    ports:
-      - "3001:3001"
     depends_on: *needs-migrated-db
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3001 || exit 1"]
-      <<: *backend-healthcheck
+    healthcheck: *backend-healthcheck
 
   curo-patient-service:
     build:
@@ -120,12 +130,8 @@ services:
     environment:
       PORT: "3002"
       <<: [*db-env, *jwt-env]
-    ports:
-      - "3002:3002"
     depends_on: *needs-migrated-db
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3002 || exit 1"]
-      <<: *backend-healthcheck
+    healthcheck: *backend-healthcheck
 
   curo-appointment-service:
     build:
@@ -138,12 +144,8 @@ services:
       PORT: "3003"
       CURRENCY: ${CURRENCY:-LKR}
       <<: [*db-env, *jwt-env]
-    ports:
-      - "3003:3003"
     depends_on: *needs-migrated-db
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3003 || exit 1"]
-      <<: *backend-healthcheck
+    healthcheck: *backend-healthcheck
 
   curo-clinical-service:
     build:
@@ -155,12 +157,8 @@ services:
     environment:
       PORT: "3004"
       <<: [*db-env, *jwt-env]
-    ports:
-      - "3004:3004"
     depends_on: *needs-migrated-db
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3004 || exit 1"]
-      <<: *backend-healthcheck
+    healthcheck: *backend-healthcheck
 
   curo-pharmacy-service:
     build:
@@ -172,12 +170,8 @@ services:
     environment:
       PORT: "3005"
       <<: [*db-env, *jwt-env]
-    ports:
-      - "3005:3005"
     depends_on: *needs-migrated-db
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3005 || exit 1"]
-      <<: *backend-healthcheck
+    healthcheck: *backend-healthcheck
 
   curo-lab-service:
     build:
@@ -189,12 +183,8 @@ services:
     environment:
       PORT: "3006"
       <<: [*db-env, *jwt-env]
-    ports:
-      - "3006:3006"
     depends_on: *needs-migrated-db
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3006 || exit 1"]
-      <<: *backend-healthcheck
+    healthcheck: *backend-healthcheck
 
   curo-document-service:
     build:
@@ -208,19 +198,15 @@ services:
       MINIO_ENDPOINT: minio
       MINIO_PORT: "9000"
       MINIO_USE_SSL: "false"
-      MINIO_ACCESS_KEY: curo
-      MINIO_SECRET_KEY: curo_secret_minio
+      MINIO_ACCESS_KEY: *minio-access-key
+      MINIO_SECRET_KEY: *minio-secret-key
       MINIO_BUCKET: curo-documents
       <<: [*db-env, *jwt-env]
-    ports:
-      - "3009:3009"
     depends_on:
       <<: *needs-migrated-db
       minio:
         condition: service_started
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3009 || exit 1"]
-      <<: *backend-healthcheck
+    healthcheck: *backend-healthcheck
 
   curo-notification-service:
     build:
@@ -232,12 +218,8 @@ services:
     environment:
       PORT: "3007"
       <<: [*db-env, *jwt-env]
-    ports:
-      - "3007:3007"
     depends_on: *needs-migrated-db
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3007 || exit 1"]
-      <<: *backend-healthcheck
+    healthcheck: *backend-healthcheck
 
   curo-audit-service:
     build:
@@ -249,12 +231,8 @@ services:
     environment:
       PORT: "3008"
       <<: [*db-env, *jwt-env]
-    ports:
-      - "3008:3008"
     depends_on: *needs-migrated-db
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3008 || exit 1"]
-      <<: *backend-healthcheck
+    healthcheck: *backend-healthcheck
 
   curo-api-gateway:
     build:
@@ -265,7 +243,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "3000"
-      JWT_SECRET: curo_jwt_secret_dev_2024_change_in_prod
+      JWT_SECRET: *jwt-secret
       AUTH_SERVICE_URL: http://curo-auth-service:3001
       PATIENT_SERVICE_URL: http://curo-patient-service:3002
       APPOINTMENT_SERVICE_URL: http://curo-appointment-service:3003
@@ -298,9 +276,7 @@ services:
         condition: service_healthy
       curo-audit-service:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3000 || exit 1"]
-      <<: *backend-healthcheck
+    healthcheck: *backend-healthcheck
 
   # ── Database tooling (one-shot: run, then exit) ────────────────────────────────
   curo-migrate:

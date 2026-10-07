@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { Client } from 'minio';
 import { Readable } from 'stream';
+import { secretFromEnv } from '@curo/shared/config';
 import { StorageProvider } from './storage.provider';
 
 /**
@@ -21,7 +22,7 @@ export class MinioStorageProvider implements StorageProvider, OnModuleInit {
       port: parseInt(process.env.MINIO_PORT || '9000'),
       useSSL: (process.env.MINIO_USE_SSL || 'false') === 'true',
       accessKey: process.env.MINIO_ACCESS_KEY || 'curo',
-      secretKey: process.env.MINIO_SECRET_KEY || 'curo_secret_minio',
+      secretKey: secretFromEnv('MINIO_SECRET_KEY', 'curo_secret_minio'),
     });
   }
 

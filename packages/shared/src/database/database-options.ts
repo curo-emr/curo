@@ -1,4 +1,5 @@
 import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { secretFromEnv } from '../config';
 
 /**
  * Connection options for the shared Postgres database, read from DB_* env vars.
@@ -15,7 +16,7 @@ export function databaseOptions(
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432'),
     username: process.env.DB_USER || 'curo',
-    password: process.env.DB_PASS || 'curo_secret',
+    password: secretFromEnv('DB_PASS', 'curo_secret'),
     database: process.env.DB_NAME || 'curo_db',
     entities,
     synchronize: false,

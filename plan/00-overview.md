@@ -88,8 +88,8 @@ queue-stage endpoint accepts DOCTOR as a manual fallback).
   writes `audit_logs`). The backend **never creates notifications** today; rows
   only come from seed or `POST /notifications`.
 - JWT payload: `{ sub, email, role, practitionerId, patientId }`. Each service
-  verifies the JWT itself in `src/common/jwt-auth.guard.ts` (gateway `x-user-*`
-  headers exist but are unused by services).
+  verifies the JWT itself in `src/common/jwt-auth.guard.ts` (the gateway checks it
+  too, then forwards the request unchanged; it sets no `x-user-*` headers since 2026-10-07).
 - Gateway routing is prefix-based in
   `services/api-gateway/src/proxy/proxy.middleware.ts` (`SERVICE_MAP`). New API
   prefixes must be added there and to the compose env of the gateway.

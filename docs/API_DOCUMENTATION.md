@@ -83,10 +83,11 @@ without a restart via **`GET /openapi.json?refresh=1`** (e.g. after restarting o
 
 ## Accessing an individual service's docs
 
-Each service also serves its own UI directly, handy when working on one service:
-`http://localhost:3001/api-docs` (auth), `:3002` (patient), `:3003` (appointment), `:3004`
-(clinical), `:3005` (pharmacy), `:3006` (lab), `:3007` (notification), `:3008` (audit),
-`:3009` (document). Raw JSON at `…/api-docs-json`.
+Each service also serves its own UI at `/api-docs` (raw JSON at `/api-docs-json`) on its own
+port: auth 3001, patient 3002, appointment 3003, clinical 3004, pharmacy 3005, lab 3006,
+notification 3007, audit 3008, document 3009. In Docker those ports are not published to the
+host, so use the gateway's `/docs`; a service started from source (`npm run start:dev`) serves
+its own at `http://localhost:<port>/api-docs`.
 
 ## Notes
 
