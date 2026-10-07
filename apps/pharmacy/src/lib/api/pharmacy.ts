@@ -72,17 +72,32 @@ export async function dispense(prescriptionId: string): Promise<DispenseRecord> 
 
 type DispenseApi = FhirMedicationDispense | DispenseRecord;
 
-// The latest 100 dispenses, newest first. The dispensing log and reports still
-// use this until they page on the server or ask for a date range (plan/03 B2).
-export async function getRecentDispensingRecords(): Promise<DispenseRecord[]> {
-  const res = await apiClient.get<DispenseApi[] | FhirBundle<DispenseApi>>('/dispense', { params: { pageSize: 100 } });
-  return unwrapBundle(res.data).resources.map(mapFhirMedicationDispense);
+// One page of dispenses, latest first. `search` matches the start of a prescription
+// id or part of a medication name, or any dispense for `searchPatientIds`.
+export async function getDispensingRecordsPage({ page, pageSize, search, searchPatientIds }: {
+  page: number;
+  pageSize: number;
+  search?: string;
+  searchPatientIds?: string[];
+}): Promise<PaginatedResult<DispenseRecord>> {
+  const res = await apiClient.get<FhirBundle<DispenseApi>>('/dispense', {
+    params: { page, pageSize, search: search || undefined, searchPatientIds: searchPatientIds?.join(',') || undefined },
+  });
+  const { resources, total } = unwrapBundle(res.data);
+  return { items: resources.map(mapFhirMedicationDispense), total, page, pageSize };
 }
 
-export async function getDispensingRecordsPaginated(params: PaginationParams = {}): Promise<PaginatedResult<DispenseRecord>> {
-  const res = await apiClient.get<DispenseApi[] | FhirBundle<DispenseApi>>('/dispense', { params: paginationParams(params) });
-  const { resources, total } = unwrapBundle(res.data);
-  return { items: resources.map(mapFhirMedicationDispense), total, page: params.page ?? 1, pageSize: params.pageSize ?? 25 };
+export interface DispenseSummary {
+  count: number;
+  revenue: number;
+  /** The ten medications dispensed most, by units. */
+  topMedications: { name: string; quantity: number }[];
+}
+
+// Counts across every dispense.
+export async function getDispenseSummary(): Promise<DispenseSummary> {
+  const res = await apiClient.get<DispenseSummary>('/dispense/summary');
+  return res.data;
 }
 
 export async function getDispensingRecordsByPatient(patientId: string): Promise<DispenseRecord[]> {

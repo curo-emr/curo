@@ -9,11 +9,13 @@ import { LowStockAlerts } from "@/components/features/dashboard/LowStockAlerts";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import {
-  getPendingPrescriptions, getRecentDispensingRecords, getStock, getLowStockAlerts,
+  getPendingPrescriptions, getDispensingRecordsPage, getStock, getLowStockAlerts,
   type StockItem, type DispenseRecord, type GroupedStock,
 } from "@/lib/api/pharmacy";
 import { getPatientsByIds } from "@/lib/api/patients";
 import type { Prescription, Patient } from "@/types";
+
+const RECENT_LIMIT = 8;
 
 export default function DashboardPage() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -24,8 +26,8 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getPendingPrescriptions(), getStock(), getLowStockAlerts(), getRecentDispensingRecords()])
-      .then(async ([rxs, meds, low, records]) => {
+    Promise.all([getPendingPrescriptions(), getStock(), getLowStockAlerts(), getDispensingRecordsPage({ page: 1, pageSize: RECENT_LIMIT })])
+      .then(async ([rxs, meds, low, { items: records }]) => {
         const pts = await getPatientsByIds([...rxs.map(rx => rx.patientId), ...records.map(r => r.patientId)]);
         setPrescriptions(rxs);
         setPatients(pts);

@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { Brackets, EntityManager, Repository } from 'typeorm';
 import { MedicationRequest } from '@curo/shared/database';
 import {
   MedicationRequestStatus,
@@ -14,6 +14,8 @@ import {
 import type { AuthUser } from '@curo/shared/auth';
 import { notifyRole } from '@curo/shared/notifications';
 import {
+  escapeLike,
+  parseList,
   parsePagination,
   toSearchset,
   PaginationQuery,
@@ -56,6 +58,10 @@ const isoToday = () => new Date().toISOString().slice(0, 10);
 export interface DispenseHistoryFilter {
   patientId?: string;
   prescriptionId?: string;
+  /** The start of a prescription id, or part of a medication's name. */
+  search?: string;
+  /** With `search`: the patients whose name matched it, whose dispenses match too. */
+  searchPatientIds?: string;
 }
 
 export type StockBatch = Pick<
@@ -283,28 +289,78 @@ export class PharmacyService {
     return toFhirDispense(saved);
   }
 
+  /** Dispenses, latest first → FHIR searchset Bundle (paginated). */
   async getDispenseHistory(
     filter: DispenseHistoryFilter,
     pagination: PaginationQuery = {},
   ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const { patientId, prescriptionId } = filter;
-    const where = {
-      ...(patientId ? { patientId } : {}),
-      ...(prescriptionId ? { medicationRequestId: prescriptionId } : {}),
-    };
-    const [dispenses, total] = await this.dispenseRepo.findAndCount({
-      where,
-      order: { createdAt: 'DESC', id: 'ASC' },
-      skip,
-      take,
-    });
+    const qb = this.dispenseRepo.createQueryBuilder('d');
+    if (patientId) qb.andWhere('d.patientId = :patientId', { patientId });
+    if (prescriptionId)
+      qb.andWhere('d.medicationRequestId = :prescriptionId', {
+        prescriptionId,
+      });
+    const search = filter.search?.trim();
+    if (search) {
+      const searchPatientIds = parseList(filter.searchPatientIds);
+      qb.andWhere(
+        new Brackets((match) => {
+          match
+            .where('d.medicationRequestId ILIKE :prefix', {
+              prefix: `${escapeLike(search)}%`,
+            })
+            .orWhere('d.medicationDisplay ILIKE :part', {
+              part: `%${escapeLike(search)}%`,
+            });
+          if (searchPatientIds.length)
+            match.orWhere('d.patientId IN (:...searchPatientIds)', {
+              searchPatientIds,
+            });
+        }),
+      );
+    }
+    const [dispenses, total] = await qb
+      .orderBy('d.createdAt', 'DESC')
+      .addOrderBy('d.id', 'ASC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
     return toSearchset(dispenses.map(toFhirDispense), total, {
       page,
       pageSize,
       baseUrl: '/dispense',
-      query: { patientId, prescriptionId },
+      query: {
+        patientId,
+        prescriptionId,
+        search: filter.search,
+        searchPatientIds: filter.searchPatientIds,
+      },
     });
+  }
+
+  /** Every dispense counted: how many, what they took in, and the ten medications dispensed most. */
+  async getDispenseSummary() {
+    const totals = await this.dispenseRepo
+      .createQueryBuilder('d')
+      .select('COUNT(*)::int', 'count')
+      .addSelect('COALESCE(SUM(d.totalPrice), 0)::float', 'revenue')
+      .getRawOne<{ count: number; revenue: number }>();
+    const topMedications = await this.dispenseRepo
+      .createQueryBuilder('d')
+      .select('d.medicationDisplay', 'name')
+      .addSelect('COALESCE(SUM(d.quantityValue), 0)::int', 'quantity')
+      .groupBy('d.medicationDisplay')
+      .orderBy('quantity', 'DESC')
+      .addOrderBy('name', 'ASC')
+      .limit(10)
+      .getRawMany<{ name: string; quantity: number }>();
+    return {
+      count: totals?.count ?? 0,
+      revenue: totals?.revenue ?? 0,
+      topMedications,
+    };
   }
 
   async getDispense(id: string) {

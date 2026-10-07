@@ -5,18 +5,18 @@ import { Loader2, TrendingUp, Clock, Pill, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { formatStatus } from "@curo/web/format";
-import { getPendingPrescriptions, getRecentDispensingRecords, getStock, type DispenseRecord, type StockItem } from "@/lib/api/pharmacy";
+import { getPendingPrescriptions, getDispenseSummary, getStock, type DispenseSummary, type StockItem } from "@/lib/api/pharmacy";
 import type { Prescription } from "@/types";
 
 export default function ReportsPage() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [medications, setMedications] = useState<StockItem[]>([]);
-  const [dispensingRecords, setDispensingRecords] = useState<DispenseRecord[]>([]);
+  const [dispensing, setDispensing] = useState<DispenseSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getPendingPrescriptions(), getStock(), getRecentDispensingRecords()])
-      .then(([rxs, meds, records]) => { setPrescriptions(rxs); setMedications(meds); setDispensingRecords(records); })
+    Promise.all([getPendingPrescriptions(), getStock(), getDispenseSummary()])
+      .then(([rxs, meds, summary]) => { setPrescriptions(rxs); setMedications(meds); setDispensing(summary); })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
@@ -27,18 +27,10 @@ export default function ReportsPage() {
   const cancelledCount = prescriptions.filter(p => p.status === 'cancelled').length;
   const cancellationRate = totalPrescriptions > 0 ? ((cancelledCount / totalPrescriptions) * 100).toFixed(1) : '0';
 
-  const totalRevenue = dispensingRecords.reduce((sum, r) => sum + r.totalAmount, 0);
+  const totalRevenue = dispensing?.revenue ?? 0;
 
-  // Count dispensed medications
-  const medCounts: Record<string, number> = {};
-  for (const record of dispensingRecords) {
-    for (const item of record.items) {
-      medCounts[item.medicationName] = (medCounts[item.medicationName] || 0) + item.quantity;
-    }
-  }
-  const topMeds = Object.entries(medCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10);
+  // The ten medications dispensed most, as [name, units].
+  const topMeds = (dispensing?.topMedications ?? []).map(m => [m.name, m.quantity] as const);
 
   const maxMedCount = topMeds.length > 0 ? topMeds[0][1] : 1;
 
