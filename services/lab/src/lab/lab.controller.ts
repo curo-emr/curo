@@ -36,9 +36,14 @@ export class LabController {
     @CurrentUser() user: AuthUser,
     @Query('status') status?: string,
     @Query('encounterId') encounterId?: string,
+    @Query('patientId') patientId?: string,
     @Query() query?: PaginationQuery,
   ) {
-    return this.labService.getOrders(user, { status, encounterId }, query);
+    return this.labService.getOrders(
+      user,
+      { status, encounterId, patientId },
+      query,
+    );
   }
 
   // Test catalog a lab offers — doctors browse before ordering.

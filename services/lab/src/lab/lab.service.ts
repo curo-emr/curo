@@ -102,16 +102,17 @@ export class LabService {
     return this.catalogRepo.find({ where, order: { name: 'ASC' } });
   }
 
-  /** The orders `user` may see, by status or visit → FHIR searchset Bundle (paginated). */
+  /** The orders `user` may see, by status, visit or patient → FHIR searchset Bundle (paginated). */
   async getOrders(
     user: AuthUser,
-    filter: { status?: string; encounterId?: string } = {},
+    filter: { status?: string; encounterId?: string; patientId?: string } = {},
     pagination: PaginationQuery = {},
   ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const where: FindOptionsWhere<ServiceRequest> = {
       ...(filter.status && { status: filter.status as ServiceRequestStatus }),
       ...(filter.encounterId && { encounterId: filter.encounterId }),
+      ...(filter.patientId && { patientId: filter.patientId }),
       ...this.scopeOf(user),
     };
     const [orders, total] = await this.ordersRepo.findAndCount({
