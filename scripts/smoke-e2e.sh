@@ -223,7 +223,6 @@ RXR=$(req "pharma" 200 GET "/prescriptions/$RX_ID" "" "$PHARM")
 expect_eq "prescription by id" "$(jq -r '.id' <<<"$RXR")" "$RX_ID"
 req "recep"  403 GET  "/prescriptions/$RX_ID" "" "$RECEP" >/dev/null
 req "pharma" 200 GET  "/stock/grouped" "" "$PHARM" >/dev/null
-req "pharma" 200 GET  "/stock?lowOnly=true" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock/alerts" "" "$PHARM" >/dev/null
 RXS=$(req "pharma" 200 GET "/prescriptions/summary?patientIds=$PATIENT_ID" "" "$PHARM")
 expect_eq "prescription summary: pending count" "$(jq -r '.[0].pendingCount' <<<"$RXS")" "1"
@@ -253,7 +252,7 @@ prescribe_priced() {  # prescribe_priced [quantity=10] -> echoes the prescriptio
   req "doctor" 201 POST /prescriptions "{\"patientId\":\"$PATIENT_ID\",\"medicationCode\":\"$PRICED_CODE\",\"medicationDisplay\":\"Smoke Priced\",\"dosageText\":\"1 tab OD\",\"quantityValue\":${1:-10},\"quantityUnit\":\"tablet\"}" "$DOC" | jq -r '.id'
 }
 priced_stock_left() {
-  req "pharma" 200 GET "/stock/grouped" "" "$PHARM" | jq -r --arg c "$PRICED_CODE" '.[] | select(.medicationCode == $c) | .totalQuantity'
+  req "pharma" 200 GET "/stock/grouped" "" "$PHARM" | jq -r --arg c "$PRICED_CODE" '.[] | select(.medicationCode == $c) | .usableQuantity'
 }
 ext() { jq -r --arg u "urn:curo:$1" '.extension[] | select(.url == $u) | (.valueDecimal // .valueString)'; }
 D2=$(req "pharma" 201 POST "/dispense" "{\"medicationRequestId\":\"$(prescribe_priced)\"}" "$PHARM")

@@ -113,10 +113,6 @@ export function formatCurrency(amount: number): string {
   return `Rs. ${amount.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function isLowStock(current: number, reorderLevel: number): boolean {
-  return current <= reorderLevel;
-}
-
 export function isExpiringSoon(expiryDate: string, daysThreshold: number = 90): boolean {
   const expiry = new Date(expiryDate);
   const now = new Date();

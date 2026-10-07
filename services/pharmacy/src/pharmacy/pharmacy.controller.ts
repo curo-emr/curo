@@ -66,15 +66,10 @@ export class PharmacyController {
   @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
   getStock(
-    @Query('lowOnly') lowOnly?: string,
     @Query('organizationId') organizationId?: string,
     @Query() query?: PaginationQuery,
   ) {
-    return this.pharmacyService.getStock(
-      lowOnly === 'true',
-      organizationId,
-      query,
-    );
+    return this.pharmacyService.getStock(organizationId, query);
   }
 
   // Stock grouped by drug, with batches (different expiry dates) listed FEFO-first.
@@ -96,6 +91,7 @@ export class PharmacyController {
     return this.pharmacyService.updateStock(id, dto);
   }
 
+  // The drugs at or below their reorder level, one entry per drug.
   @Get('stock/alerts')
   @Roles('PHARMACIST', 'SUPER_ADMIN')
   getLowStockAlerts() {
