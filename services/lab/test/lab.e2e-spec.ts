@@ -459,6 +459,24 @@ describe('Lab specimens and results', () => {
     });
   });
 
+  describe('GET /orders', () => {
+    it("lists only one patient's orders when asked for that patient", async () => {
+      const mine = await orderLabs();
+      await orderLabs(); // another patient's, at the same lab
+      const res = await svc.api
+        .get('/orders')
+        .query({ patientId: mine.order.patientId })
+        .set(labStaff.headers)
+        .expect(200);
+      const body = res.body as {
+        total: number;
+        entry: { resource: { id: string } }[];
+      };
+      expect(body.total).toBe(1);
+      expect(body.entry.map((e) => e.resource.id)).toEqual([mine.order.id]);
+    });
+  });
+
   describe("one lab's work, kept from another", () => {
     it("shows a technician only their own lab's orders and reports", async () => {
       const otherLab = await laboratory();
