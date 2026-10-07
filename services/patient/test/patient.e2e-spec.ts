@@ -199,4 +199,33 @@ describe('Patient records', () => {
       ]);
     });
   });
+
+  describe('GET /patients', () => {
+    it('counts the patients registered within whole days', async () => {
+      const family = `Silva-${randomUUID()}`;
+      const registeredOn = async (date: Date) => {
+        const res = await register(newPatient({ lastName: family })).expect(
+          201,
+        );
+        await svc.db
+          .getRepository(Patient)
+          .update((res.body as { id: string }).id, { createdAt: date });
+      };
+      await registeredOn(new Date(2031, 2, 5, 0, 0));
+      await registeredOn(new Date(2031, 2, 6, 23, 59));
+      await registeredOn(new Date(2031, 2, 7, 0, 0));
+
+      const res = await svc.api
+        .get('/patients')
+        .query({
+          search: family,
+          registeredFrom: '2031-03-05',
+          registeredTo: '2031-03-06',
+          pageSize: 1,
+        })
+        .set(receptionist.headers)
+        .expect(200);
+      expect((res.body as { total: number }).total).toBe(2);
+    });
+  });
 });

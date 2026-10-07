@@ -11,6 +11,7 @@ import { Patient, Condition, Observation } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import { generatePatientCode, generatePhn } from '@curo/shared/identifiers';
 import {
+  dayBounds,
   parsePagination,
   parseUuidList,
   toSearchset,
@@ -108,7 +109,12 @@ export class PatientService implements OnModuleInit {
       throw new ForbiddenException('Patients cannot list all patients');
     }
     const { page, pageSize, skip, take } = parsePagination(pagination);
-    const { gender, _id } = pagination as { gender?: string; _id?: string };
+    const { gender, _id, registeredFrom, registeredTo } = pagination as {
+      gender?: string;
+      _id?: string;
+      registeredFrom?: string;
+      registeredTo?: string;
+    };
     const query = this.patientsRepo
       .createQueryBuilder('p')
       .where('p.active = true');
@@ -121,6 +127,15 @@ export class PatientService implements OnModuleInit {
     if (gender) {
       query.andWhere('p.gender = :gender', { gender });
     }
+    // Registered between two days, inclusive.
+    if (registeredFrom)
+      query.andWhere('p.createdAt >= :registeredFrom', {
+        registeredFrom: dayBounds(registeredFrom).start,
+      });
+    if (registeredTo)
+      query.andWhere('p.createdAt <= :registeredTo', {
+        registeredTo: dayBounds(registeredTo).end,
+      });
     // FHIR `_id` search: comma-separated ids — lets list screens resolve just the patients they show.
     if (_id) {
       const ids = parseUuidList(_id);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useEffect, useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -34,9 +34,12 @@ import { ROUTES, APPOINTMENT_STATUS } from "@/lib/constants";
 import {
   CuroCalendar,
   CalendarEvent,
+  calendarRange,
   formatDateStr,
   getRelativeDayLabel,
 } from "@curo/web/ui/curo-calendar";
+import { getAppointments } from "@/lib/api/appointments";
+import { getPatientsByIds } from "@/lib/api/patients";
 import type { CalendarEventColor } from "@curo/web/ui/curo-calendar";
 
 // ---------------------------------------------------------------------------
@@ -273,14 +276,34 @@ function DayAppointments({
 // Root
 // ---------------------------------------------------------------------------
 interface Props {
-  appointments: Appointment[];
-  patients: Patient[];
   doctors: Doctor[];
 }
 
-export function ScheduleClient({ appointments, patients, doctors }: Props) {
+export function ScheduleClient({ doctors }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [month, setMonth] = useState<Date>(() => new Date());
   const [doctorFilter, setDoctorFilter] = useState("all");
+
+  // The appointments on the month's grid, and their patients, loaded per month.
+  const { from, to } = calendarRange(month);
+  const [loaded, setLoaded] = useState<{ appointments: Appointment[]; patients: Patient[] }>();
+  useEffect(() => {
+    let current = true;
+    getAppointments({ from, to })
+      .then(async (appointments) => {
+        const patients = await getPatientsByIds(appointments.map((a) => a.patientId));
+        if (current) setLoaded({ appointments, patients });
+      })
+      .catch((error: unknown) => {
+        console.error(error);
+        toast.error("Could not load the schedule");
+      });
+    return () => {
+      current = false;
+    };
+  }, [from, to]);
+  const appointments = useMemo(() => loaded?.appointments ?? [], [loaded]);
+  const patients = useMemo(() => loaded?.patients ?? [], [loaded]);
 
   const selectedDateStr = formatDateStr(selectedDate);
 
@@ -349,6 +372,8 @@ export function ScheduleClient({ appointments, patients, doctors }: Props) {
         events={calendarEvents}
         selectedDate={selectedDate}
         onDateSelect={setSelectedDate}
+        month={month}
+        onMonthChange={setMonth}
         maxEventsPerDay={3}
       />
 

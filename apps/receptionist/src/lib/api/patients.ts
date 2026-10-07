@@ -3,12 +3,9 @@ import type { Patient, Allergy, Problem } from '@/types';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, type FhirPatient, type FhirAllergy, type FhirCondition } from './mappers';
 import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
 
-// Backward-compatible: returns up to 100 patients as a flat array (used by
-// dropdowns / lookups). Unwraps either a bare array or a FHIR searchset Bundle.
-export async function getPatients(search?: string): Promise<Patient[]> {
-  const res = await apiClient.get<FhirPatient[] | FhirBundle<FhirPatient>>('/patients', {
-    params: { pageSize: 100, ...(search ? { search } : {}) },
-  });
+// The first `limit` patients whose name, MRN, PHN, NIC or phone matches `search`.
+export async function searchPatients(search: string, limit: number): Promise<Patient[]> {
+  const res = await apiClient.get<FhirBundle<FhirPatient>>('/patients', { params: { search, pageSize: limit } });
   return unwrapBundle(res.data).resources.map(mapFhirPatient);
 }
 

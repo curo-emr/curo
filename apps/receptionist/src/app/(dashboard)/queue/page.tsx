@@ -7,19 +7,10 @@ import { QueueBoard } from "@/components/features/queue/QueueBoard";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { getAppointments } from "@/lib/api/appointments";
 import { getPatientsByIds } from "@/lib/api/patients";
-import { getDoctors, type Practitioner } from "@/lib/api/practitioners";
+import { getDoctors } from "@/lib/api/practitioners";
 import { usePolling } from "@/lib/hooks/usePolling";
 import { QUEUE_POLL_MS, QUEUE_STAGES } from "@/lib/queue";
 import type { Appointment, Patient, Doctor } from "@/types";
-
-function mapPractitionerToDoctor(p: Practitioner): Doctor {
-  return {
-    id: p.id, name: p.name, specialty: p.specialty,
-    phone: p.phone, email: p.email, roomNumber: "",
-    availableDays: [], slotDurationMinutes: 30,
-    workingHours: { start: "08:00", end: "17:00" },
-  };
-}
 
 export default function QueuePage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -28,7 +19,7 @@ export default function QueuePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getDoctors().then((practs) => setDoctors(practs.map(mapPractitionerToDoctor))).catch(console.error);
+    getDoctors().then(setDoctors).catch(console.error);
   }, []);
 
   // Today's checked-in patients, refreshed while the board is open.

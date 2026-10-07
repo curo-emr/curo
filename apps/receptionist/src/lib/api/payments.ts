@@ -1,5 +1,5 @@
-import { apiClient } from "@curo/web/api";
-import { unwrapBundle, type FhirBundle } from "@curo/web/fhir";
+import { apiClient, getAllPages } from "@curo/web/api";
+import { unwrapBundle, type FhirBundle, type PaginatedResult } from "@curo/web/fhir";
 
 export interface Payment {
   id: string;
@@ -40,11 +40,17 @@ export async function createPayment(input: CreatePaymentInput): Promise<Payment>
   return res.data;
 }
 
-export async function getMyPayments(from?: string, to?: string): Promise<Payment[]> {
-  const res = await apiClient.get<Payment[] | FhirBundle<Payment>>("/payments/mine", {
-    params: { from, to, pageSize: 100 },
-  });
-  return unwrapBundle(res.data).resources;
+// One page of the payments you collected, latest first.
+export async function getMyPaymentsPage(page: number, pageSize: number): Promise<PaginatedResult<Payment>> {
+  const res = await apiClient.get<FhirBundle<Payment>>("/payments/mine", { params: { page, pageSize } });
+  const { resources, total } = unwrapBundle(res.data);
+  return { items: resources, total, page, pageSize };
+}
+
+// The payments you collected for these appointments.
+export async function getMyPaymentsForAppointments(appointmentIds: string[]): Promise<Payment[]> {
+  if (appointmentIds.length === 0) return [];
+  return getAllPages<Payment>("/payments/mine", { appointmentId: appointmentIds.join(",") });
 }
 
 export async function getIncomeSummary(
