@@ -5,44 +5,11 @@ import * as jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
 import { jwtSecret } from '@curo/shared/auth';
-
-const SERVICE_MAP: Record<string, string> = {
-  '/auth': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
-  '/organizations': process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
-  '/patients': process.env.PATIENT_SERVICE_URL || 'http://localhost:3002',
-  '/appointments':
-    process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
-  '/payments': process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
-  '/encounters': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
-  '/notes': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
-  '/vitals': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
-  '/prescriptions': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
-  '/lab-orders': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
-  '/tasks': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
-  '/icd10': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
-  '/dispense': process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
-  '/stock': process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
-  '/medication-catalog':
-    process.env.PHARMACY_SERVICE_URL || 'http://localhost:3005',
-  '/orders': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
-  '/catalog': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
-  '/results': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
-  '/reports': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
-  '/instruments': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
-  '/qc-logs': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
-  '/lab-staff': process.env.LAB_SERVICE_URL || 'http://localhost:3006',
-  '/documents': process.env.DOCUMENT_SERVICE_URL || 'http://localhost:3009',
-  '/notifications':
-    process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3007',
-  '/audit': process.env.AUDIT_SERVICE_URL || 'http://localhost:3008',
-};
-
-// `/health` is answered before this middleware runs (see main.ts).
-const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/refresh'];
+import { SERVICE_TARGETS, isPublicPath, targetFor } from './routes';
 
 // Pre-create one proxy per unique target URL
 const proxies = new Map<string, RequestHandler<Request, Response>>();
-for (const target of new Set(Object.values(SERVICE_MAP))) {
+for (const target of SERVICE_TARGETS) {
   proxies.set(
     target,
     createProxyMiddleware<Request, Response>({
@@ -64,26 +31,12 @@ for (const target of new Set(Object.values(SERVICE_MAP))) {
   );
 }
 
-function getTarget(path: string): string | null {
-  for (const [prefix, target] of Object.entries(SERVICE_MAP)) {
-    if (
-      path === prefix ||
-      path.startsWith(prefix + '/') ||
-      path.startsWith(prefix + '?')
-    ) {
-      return target;
-    }
-  }
-  return null;
-}
-
 // ─── Aggregated OpenAPI docs ────────────────────────────────────────────────
 // Each downstream service exposes its own spec at `${base}/api-docs-json`. We
 // fetch them all once (cached), merge paths + schemas into a single OpenAPI 3
 // document with one server (the gateway) and a global bearer-auth scheme, and
 // serve it at GET /openapi.json. GET /docs renders it with Scalar. Both routes
 // are handled here in the middleware so they are never proxied and need no auth.
-const SPEC_BASES = Array.from(new Set(Object.values(SERVICE_MAP)));
 const GATEWAY_PUBLIC_URL =
   process.env.GATEWAY_PUBLIC_URL || 'http://localhost:3000';
 
@@ -112,8 +65,8 @@ async function buildMergedSpec(): Promise<object> {
   const schemas: Record<string, unknown> = {};
   const tags: { name: string }[] = [];
   const seenTags = new Set<string>();
-  // Fetched in parallel, merged in SERVICE_MAP order.
-  for (const spec of await Promise.all(SPEC_BASES.map(fetchSpec))) {
+  // Fetched in parallel, merged in route order.
+  for (const spec of await Promise.all(SERVICE_TARGETS.map(fetchSpec))) {
     for (const [p, item] of Object.entries(spec.paths ?? {})) {
       // First service to declare a path wins.
       paths[p] ??= item;
@@ -183,9 +136,7 @@ export class ProxyMiddleware implements NestMiddleware {
       return res.send(SCALAR_HTML);
     }
 
-    const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
-
-    if (!isPublic) {
+    if (!isPublicPath(path)) {
       const authHeader = req.headers.authorization;
       if (!authHeader?.startsWith('Bearer ')) {
         return res
@@ -201,7 +152,7 @@ export class ProxyMiddleware implements NestMiddleware {
       }
     }
 
-    const target = getTarget(path);
+    const target = targetFor(path);
     if (!target) {
       return res
         .status(404)

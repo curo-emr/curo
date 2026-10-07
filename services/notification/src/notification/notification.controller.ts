@@ -11,7 +11,7 @@ import {
 import { NotificationService } from './notification.service';
 import { JwtAuthGuard, CurrentUser, type AuthUser } from '@curo/shared/auth';
 import type { PaginationQuery } from '@curo/shared/fhir';
-import { NotificationEventType } from '../enums';
+import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
@@ -19,18 +19,7 @@ export class NotificationController {
   constructor(private notificationService: NotificationService) {}
 
   @Post()
-  create(
-    @Body()
-    dto: {
-      recipientId: string;
-      recipientRole?: string;
-      eventType: NotificationEventType;
-      title: string;
-      message: string;
-      relatedResourceId?: string;
-      relatedResourceType?: string;
-    },
-  ) {
+  create(@Body() dto: CreateNotificationDto) {
     return this.notificationService.create(dto);
   }
 
@@ -48,8 +37,11 @@ export class NotificationController {
   }
 
   @Get('count')
-  getUnreadCount(@CurrentUser() user: AuthUser) {
-    return this.notificationService.getUnreadCount(user.userId);
+  // An object, as every portal reads it: a bare number goes out as text/html.
+  async getUnreadCount(@CurrentUser() user: AuthUser) {
+    return {
+      count: await this.notificationService.getUnreadCount(user.userId),
+    };
   }
 
   @Put(':id/read')

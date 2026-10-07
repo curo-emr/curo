@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import { ServiceRequest, Observation, QrCode } from '@curo/shared/database';
 import { ServiceRequestStatus, ObservationStatus } from '@curo/shared/enums';
+import { actorId, type AuthUser } from '@curo/shared/auth';
 import {
   parsePagination,
   toSearchset,
@@ -71,8 +76,6 @@ export class LabService {
     private ordersRepo: Repository<ServiceRequest>,
     @InjectRepository(DiagnosticReport)
     private reportsRepo: Repository<DiagnosticReport>,
-    @InjectRepository(Observation)
-    private observationsRepo: Repository<Observation>,
     @InjectRepository(QrCode)
     private qrRepo: Repository<QrCode>,
     @InjectRepository(LabInstrument)
@@ -190,8 +193,13 @@ export class LabService {
     return toFhirServiceRequest(saved);
   }
 
-  // Enter results and generate PDF report
-  async enterResults(dto: EnterResultsDto, performerId: string) {
+  /**
+   * Records an order's results, with their PDF report, and completes the order
+   * in one transaction, so they are saved whole or not at all. The order is
+   * claimed first: results for an order that is no longer active (already
+   * reported, or revoked) get a 409, so a double submit can't file two reports.
+   */
+  async enterResults(dto: EnterResultsDto, performer: AuthUser) {
     const order = await this.ordersRepo.findOne({
       where: { id: dto.serviceRequestId },
     });
@@ -199,30 +207,10 @@ export class LabService {
       throw new NotFoundException(
         `Lab order ${dto.serviceRequestId} not found`,
       );
+    const performerId = actorId(performer);
+    const now = new Date();
 
-    // Save individual observations
-    for (const r of dto.results) {
-      const obs = this.observationsRepo.create({
-        patientId: order.patientId,
-        practitionerId: performerId,
-        serviceRequestId: order.id,
-        status: ObservationStatus.FINAL,
-        category: 'laboratory',
-        code: r.code,
-        display: r.display,
-        valueQuantity: r.value,
-        valueUnit: r.unit,
-        valueString: r.valueString,
-        interpretation: r.interpretation,
-        referenceRangeLow: r.referenceRangeLow,
-        referenceRangeHigh: r.referenceRangeHigh,
-        referenceRangeText: r.referenceRangeText,
-        effectiveDateTime: new Date(),
-      });
-      await this.observationsRepo.save(obs);
-    }
-
-    // Generate PDF report
+    // Rendered before the transaction opens, so no rows stay locked meanwhile.
     const pdfBase64 = await generateLabReportPdf({
       patientName: `Patient ${order.patientId}`,
       patientCode: order.patientId,
@@ -230,37 +218,56 @@ export class LabService {
       testName: order.display,
       results: dto.results,
       conclusion: dto.conclusion,
-      labStaffName: `Staff ${performerId}`,
+      labStaffName: performer.name ?? performer.email,
       clinicName: 'Curo Medical Center',
-      reportDate: new Date().toLocaleDateString(),
+      reportDate: now.toLocaleDateString(),
     });
 
-    // Create DiagnosticReport
-    const reportData: Partial<DiagnosticReport> = {
-      patientId: order.patientId,
-      serviceRequestId: order.id,
-      performerId,
-      status: DiagnosticReportStatus.FINAL,
-      code: order.code,
-      display: order.display,
-      results: dto.results,
-      conclusion: dto.conclusion,
-      pdfBase64,
-      effectiveDateTime: new Date(),
-      issued: new Date(),
-    };
-    const savedReports = await this.reportsRepo.save([
-      reportData as DiagnosticReport,
-    ]);
-    const savedReport = savedReports[0];
+    const report = await this.dataSource.transaction(async (em) => {
+      const { affected } = await em.update(
+        ServiceRequest,
+        { id: order.id, status: ServiceRequestStatus.ACTIVE },
+        { status: ServiceRequestStatus.COMPLETED, completedAt: now },
+      );
+      if (!affected)
+        throw new ConflictException(`Lab order ${order.id} is not active`);
 
-    // Mark order as completed
-    await this.ordersRepo.update(order.id, {
-      status: ServiceRequestStatus.COMPLETED,
-      completedAt: new Date(),
+      await em.save(
+        Observation,
+        dto.results.map((r) => ({
+          patientId: order.patientId,
+          practitionerId: performerId,
+          serviceRequestId: order.id,
+          status: ObservationStatus.FINAL,
+          category: 'laboratory',
+          code: r.code,
+          display: r.display,
+          valueQuantity: r.value,
+          valueUnit: r.unit,
+          valueString: r.valueString,
+          interpretation: r.interpretation,
+          referenceRangeLow: r.referenceRangeLow,
+          referenceRangeHigh: r.referenceRangeHigh,
+          referenceRangeText: r.referenceRangeText,
+          effectiveDateTime: now,
+        })),
+      );
+      return em.save(DiagnosticReport, {
+        patientId: order.patientId,
+        serviceRequestId: order.id,
+        performerId,
+        status: DiagnosticReportStatus.FINAL,
+        code: order.code,
+        display: order.display,
+        results: dto.results,
+        conclusion: dto.conclusion,
+        pdfBase64,
+        effectiveDateTime: now,
+        issued: now,
+      });
     });
 
-    return toFhirReport(savedReport);
+    return toFhirReport(report);
   }
 
   async getReports(patientId?: string, pagination: PaginationQuery = {}) {

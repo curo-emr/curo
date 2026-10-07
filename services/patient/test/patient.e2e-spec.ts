@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { Patient } from '@curo/shared/database';
-import { Gender, UserRole } from '@curo/shared/enums';
+import { Condition, Patient } from '@curo/shared/database';
+import { ConditionClinicalStatus, Gender, UserRole } from '@curo/shared/enums';
+import { luhnCheckDigit } from '@curo/shared/identifiers';
 import {
   startService,
   type ServiceUnderTest,
@@ -12,7 +13,6 @@ import {
   AllergyIntoleranceCriticality,
   AllergyIntoleranceType,
 } from '../src/enums';
-import { luhnCheckDigit } from '../src/patient/phn';
 
 describe('Patient records', () => {
   let svc: ServiceUnderTest;
@@ -94,6 +94,39 @@ describe('Patient records', () => {
     });
   });
 
+  /** A registered patient's id. */
+  async function registered(): Promise<string> {
+    const body = newPatient();
+    await register(body).expect(201);
+    return (await savedPatient(body.lastName))!.id;
+  }
+
+  describe('reading a patient as pharmacy or lab staff', () => {
+    it.each([UserRole.PHARMACIST, UserRole.LAB_STAFF])(
+      'every route %s can use leaves out NIC, contact and address',
+      async (role) => {
+        const body = newPatient({ nic: '199012345678', phone: '+94771234567' });
+        await register(body).expect(201);
+        const { id, patientCode } = (await savedPatient(body.lastName))!;
+        const actor = svc.as(role);
+
+        const reads = await Promise.all(
+          [
+            `/patients/${id}`,
+            `/patients/code/${patientCode}`,
+            `/patients?search=${body.lastName}`,
+          ].map((path) => svc.api.get(path).set(actor.headers).expect(200)),
+        );
+
+        for (const { text } of reads) {
+          expect(text).toContain(id);
+          expect(text).not.toContain('199012345678');
+          expect(text).not.toContain('+94771234567');
+        }
+      },
+    );
+  });
+
   describe('POST /patients/:id/allergies', () => {
     const penicillin = {
       type: AllergyIntoleranceType.ALLERGY,
@@ -102,24 +135,28 @@ describe('Patient records', () => {
       display: 'Penicillin',
     };
 
-    it("records an allergy on the patient's chart", async () => {
-      const body = newPatient();
-      await register(body).expect(201);
-      const patient = (await savedPatient(body.lastName))!;
+    it("records an allergy on the patient's chart, by the doctor's practitioner record", async () => {
+      const patientId = await registered();
+      const doctor = svc.as(UserRole.DOCTOR);
 
-      await svc.api
-        .post(`/patients/${patient.id}/allergies`)
-        .set(svc.as(UserRole.DOCTOR).headers)
+      const res = await svc.api
+        .post(`/patients/${patientId}/allergies`)
+        .set(doctor.headers)
         .send(penicillin)
         .expect(201);
 
       await expect(
-        svc.db
-          .getRepository(AllergyIntolerance)
-          .findBy({ patientId: patient.id }),
+        svc.db.getRepository(AllergyIntolerance).findBy({ patientId }),
       ).resolves.toEqual([
-        expect.objectContaining({ code: 'PEN', criticality: 'high' }),
+        expect.objectContaining({
+          code: 'PEN',
+          criticality: 'high',
+          practitionerId: doctor.practitionerId,
+        }),
       ]);
+      expect(res.body).toMatchObject({
+        recorder: { reference: `Practitioner/${doctor.practitionerId}` },
+      });
     });
 
     it('refuses an allergy for a patient who does not exist', async () => {
@@ -134,6 +171,32 @@ describe('Patient records', () => {
       await expect(
         svc.db.getRepository(AllergyIntolerance).countBy({ patientId }),
       ).resolves.toBe(0);
+    });
+  });
+
+  describe('POST /patients/:id/conditions', () => {
+    it("records a condition on the patient's chart, by the doctor's practitioner record", async () => {
+      const patientId = await registered();
+      const doctor = svc.as(UserRole.DOCTOR);
+
+      await svc.api
+        .post(`/patients/${patientId}/conditions`)
+        .set(doctor.headers)
+        .send({
+          clinicalStatus: ConditionClinicalStatus.ACTIVE,
+          code: 'E11.9',
+          display: 'Type 2 diabetes mellitus',
+        })
+        .expect(201);
+
+      await expect(
+        svc.db.getRepository(Condition).findBy({ patientId }),
+      ).resolves.toEqual([
+        expect.objectContaining({
+          code: 'E11.9',
+          practitionerId: doctor.practitionerId,
+        }),
+      ]);
     });
   });
 });
