@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -28,13 +28,13 @@ export function UserCreateForm() {
   const [submitting, setSubmitting] = useState(false);
 
   const {
-    register, handleSubmit, watch, setValue, formState: { errors },
+    register, handleSubmit, control, setValue, formState: { errors },
   } = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
     defaultValues: { gender: "unknown", role: "DOCTOR" },
   });
+  const [role, gender, organizationId] = useWatch({ control, name: ["role", "gender", "organizationId"] });
 
-  const role = watch("role");
   const isStaff = role !== "PATIENT";
 
   const onSubmit = async (data: CreateUserInput) => {
@@ -110,7 +110,7 @@ export function UserCreateForm() {
             </div>
             <div className="space-y-1.5">
               <Label>Gender</Label>
-              <Select value={watch("gender") ?? "unknown"} onValueChange={(v) => setValue("gender", v as CreateUserInput["gender"])}>
+              <Select value={gender ?? "unknown"} onValueChange={(v) => setValue("gender", v as CreateUserInput["gender"])}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {GENDERS.map((g) => <SelectItem key={g} value={g} className="capitalize">{g}</SelectItem>)}
@@ -139,7 +139,7 @@ export function UserCreateForm() {
               </div>
               <WorkplaceSelect
                 role={role}
-                value={watch("organizationId")}
+                value={organizationId}
                 onChange={(id) => setValue("organizationId", id, { shouldValidate: true })}
                 error={errors.organizationId?.message}
               />
