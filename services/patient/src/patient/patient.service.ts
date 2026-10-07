@@ -12,6 +12,7 @@ import { UserRole } from '@curo/shared/enums';
 import { generatePatientCode, generatePhn } from '@curo/shared/identifiers';
 import {
   parsePagination,
+  parseUuidList,
   toSearchset,
   PaginationQuery,
 } from '@curo/shared/fhir';
@@ -27,9 +28,6 @@ import {
   toFhirObservation,
 } from './fhir.mapper';
 import type { AuthUser } from '@curo/shared/auth';
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class PatientService implements OnModuleInit {
@@ -125,10 +123,7 @@ export class PatientService implements OnModuleInit {
     }
     // FHIR `_id` search: comma-separated ids — lets list screens resolve just the patients they show.
     if (_id) {
-      const ids = _id
-        .split(',')
-        .map((id) => id.trim())
-        .filter((id) => UUID_RE.test(id));
+      const ids = parseUuidList(_id);
       query.andWhere(ids.length ? 'p.id IN (:...ids)' : '1 = 0', { ids });
     }
     const [patients, total] = await query

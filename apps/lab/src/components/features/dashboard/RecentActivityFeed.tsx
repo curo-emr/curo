@@ -10,11 +10,8 @@ interface RecentActivityFeedProps {
   patients: Patient[];
 }
 
+/** The lab's newest orders, newest first. */
 export function RecentActivityFeed({ orders, patients }: RecentActivityFeedProps) {
-  const recentOrders = [...orders]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 8);
-
   return (
     <Card className="shadow-sm border">
       <CardHeader className="bg-muted/50 border-b">
@@ -25,7 +22,7 @@ export function RecentActivityFeed({ orders, patients }: RecentActivityFeedProps
       </CardHeader>
       <CardContent className="p-0">
         <div className="divide-y">
-          {recentOrders.map(order => (
+          {orders.map(order => (
             <div key={order.id} className="px-4 py-3 flex items-center gap-3">
               <div className="h-2 w-2 rounded-full shrink-0" style={{
                 backgroundColor: order.priority === 'stat' ? '#dc2626' : order.priority === 'urgent' ? '#d97706' : '#94a3b8'

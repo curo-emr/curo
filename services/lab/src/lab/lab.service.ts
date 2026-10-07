@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
+import { Brackets, DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import {
   ServiceRequest,
   Observation,
@@ -21,6 +21,8 @@ import {
 import { actorId, type AuthUser } from '@curo/shared/auth';
 import { notifyPractitioner } from '@curo/shared/notifications';
 import {
+  escapeLike,
+  parseList,
   parsePagination,
   toSearchset,
   toFhirServiceRequest,
@@ -73,6 +75,26 @@ function toFhirReport(r: DiagnosticReport) {
   };
 }
 
+/** Filters for `getOrders`; list filters are comma-separated. */
+export interface OrderFilter {
+  status?: string;
+  priority?: string;
+  encounterId?: string;
+  patientId?: string;
+  search?: string;
+  searchPatientIds?: string;
+  _sort?: string;
+}
+
+const isOrderStatus = (value: string): value is ServiceRequestStatus =>
+  (Object.values(ServiceRequestStatus) as string[]).includes(value);
+
+/** An order's priority: one given none is routine. */
+const PRIORITY = `COALESCE(o.priority, 'routine')`;
+
+/** Sorts stat (and asap) before urgent before routine. */
+const PRIORITY_RANK = `CASE ${PRIORITY} WHEN 'stat' THEN 0 WHEN 'asap' THEN 0 WHEN 'urgent' THEN 1 ELSE 2 END`;
+
 @Injectable()
 export class LabService {
   constructor(
@@ -102,31 +124,137 @@ export class LabService {
     return this.catalogRepo.find({ where, order: { name: 'ASC' } });
   }
 
-  /** The orders `user` may see, by status, visit or patient → FHIR searchset Bundle (paginated). */
+  /**
+   * The orders `user` may see → FHIR searchset Bundle (paginated). Filters take
+   * comma-separated values. `search` matches the start of an order id, or any
+   * order for `searchPatientIds` (the patients whose name matched it).
+   * `_sort=priority` puts stat before urgent before routine, newest first within
+   * each; `_sort=-authored` is newest first; otherwise oldest first.
+   */
   async getOrders(
     user: AuthUser,
-    filter: { status?: string; encounterId?: string; patientId?: string } = {},
+    filter: OrderFilter = {},
     pagination: PaginationQuery = {},
   ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
-    const where: FindOptionsWhere<ServiceRequest> = {
-      ...(filter.status && { status: filter.status as ServiceRequestStatus }),
-      ...(filter.encounterId && { encounterId: filter.encounterId }),
-      ...(filter.patientId && { patientId: filter.patientId }),
-      ...this.scopeOf(user),
-    };
-    const [orders, total] = await this.ordersRepo.findAndCount({
-      where,
-      order: { authoredOn: 'ASC', id: 'ASC' },
-      skip,
-      take,
-    });
+    const qb = this.ordersQuery(user, filter);
+    // A status the enum column doesn't know would be a query error: it matches nothing.
+    const status = parseList(filter.status);
+    if (status.length) {
+      const known = status.filter(isOrderStatus);
+      qb.andWhere(known.length ? 'o.status IN (:...known)' : '1 = 0', {
+        known,
+      });
+    }
+    const priority = parseList(filter.priority);
+    if (priority.length)
+      qb.andWhere(`${PRIORITY} IN (:...priority)`, { priority });
+    const patientIds = parseList(filter.patientId);
+    if (patientIds.length)
+      qb.andWhere('o.patientId IN (:...patientIds)', { patientIds });
+    const search = filter.search?.trim();
+    if (search) {
+      const searchPatientIds = parseList(filter.searchPatientIds);
+      qb.andWhere(
+        new Brackets((match) => {
+          match.where('o.id::text ILIKE :idPrefix', {
+            idPrefix: `${escapeLike(search)}%`,
+          });
+          if (searchPatientIds.length)
+            match.orWhere('o.patientId IN (:...searchPatientIds)', {
+              searchPatientIds,
+            });
+        }),
+      );
+    }
+
+    if (filter._sort === 'priority')
+      qb.orderBy(PRIORITY_RANK, 'ASC').addOrderBy(
+        'o.authoredOn',
+        'DESC',
+        'NULLS LAST',
+      );
+    else if (filter._sort === '-authored')
+      qb.orderBy('o.authoredOn', 'DESC', 'NULLS LAST');
+    else qb.orderBy('o.authoredOn', 'ASC', 'NULLS LAST');
+    const [orders, total] = await qb
+      .addOrderBy('o.id', 'ASC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+
     return toSearchset(orders.map(toFhirServiceRequest), total, {
       page,
       pageSize,
       baseUrl: '/orders',
-      query: filter,
+      query: {
+        status: filter.status,
+        priority: filter.priority,
+        encounterId: filter.encounterId,
+        patientId: filter.patientId,
+        search: filter.search,
+        searchPatientIds: filter.searchPatientIds,
+        _sort: filter._sort,
+      },
     });
+  }
+
+  /**
+   * Counts across the orders `user` may see (one visit's, given `encounterId`):
+   * by FHIR status, by priority, and the ten most-ordered tests, counting each
+   * test in a panel.
+   */
+  async getOrderSummary(
+    user: AuthUser,
+    filter: Pick<OrderFilter, 'encounterId'> = {},
+  ) {
+    const countBy = async (expression: string) => {
+      const rows = await this.ordersQuery(user, filter)
+        .select(expression, 'key')
+        .addSelect('COUNT(*)::int', 'count')
+        .groupBy(expression)
+        .getRawMany<{ key: string; count: number }>();
+      return Object.fromEntries(rows.map((r) => [r.key, r.count]));
+    };
+    // Each test in a panel counts; an order without a panel is its own test.
+    const [scoped, params] = this.ordersQuery(user, filter)
+      .select('o.id')
+      .getQueryAndParameters();
+    const topTests: { code: string; display: string; count: number }[] =
+      await this.dataSource.query(
+        `SELECT t.code, MIN(t.display) AS display, COUNT(*)::int AS count
+         FROM service_requests o
+         CROSS JOIN LATERAL jsonb_to_recordset(
+           CASE WHEN jsonb_array_length(COALESCE(o."testPanel", '[]'::jsonb)) > 0 THEN o."testPanel"
+                ELSE jsonb_build_array(jsonb_build_object('code', o.code, 'display', o.display)) END
+         ) AS t(code text, display text)
+         WHERE o.id IN (${scoped})
+         GROUP BY t.code
+         ORDER BY count DESC, t.code
+         LIMIT 10`,
+        params,
+      );
+
+    return {
+      byStatus: await countBy('o.status'),
+      byPriority: await countBy(PRIORITY),
+      topTests,
+    };
+  }
+
+  /** `user`'s orders (their own lab's, for lab staff), narrowed to one visit when given. */
+  private ordersQuery(
+    user: AuthUser,
+    filter: Pick<OrderFilter, 'encounterId'>,
+  ) {
+    const qb = this.ordersRepo.createQueryBuilder('o');
+    const lab = labScope(user);
+    if (lab) qb.andWhere('o.performerOrganizationId = :lab', { lab });
+    if (filter.encounterId)
+      qb.andWhere('o.encounterId = :encounterId', {
+        encounterId: filter.encounterId,
+      });
+    return qb;
   }
 
   /** An order with the labels to print for its samples: one per test in a panel, else the order's own. */
