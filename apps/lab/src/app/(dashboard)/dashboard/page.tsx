@@ -7,12 +7,13 @@ import { Badge } from "@curo/web/ui/badge";
 import { LabDashboardStats } from "@/components/features/dashboard/LabDashboardStats";
 import { UrgentOrdersList } from "@/components/features/dashboard/UrgentOrdersList";
 import { RecentActivityFeed } from "@/components/features/dashboard/RecentActivityFeed";
-import { getLabInstruments, getLabOrderSummary, getLabOrdersPage, getRecentQCLogs, type LabInstrument, type LabOrderSummary } from "@/lib/api/lab";
+import { getLabInstruments, getLabOrderSummary, getLabOrdersPage, getQCAlerts, type LabInstrument, type LabOrderSummary } from "@/lib/api/lab";
 import { getPatientsByIds } from "@/lib/api/patients";
 import type { LabOrder, Patient, QCLog } from "@/types";
 
 const URGENT_LIMIT = 10;
 const RECENT_LIMIT = 8;
+const QC_ALERT_LIMIT = 5;
 import { StatusBadge } from "@curo/web/ui/status-badge";
 
 export default function DashboardPage() {
@@ -21,7 +22,7 @@ export default function DashboardPage() {
   const [recent, setRecent] = useState<LabOrder[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [instruments, setInstruments] = useState<LabInstrument[]>([]);
-  const [qcLogs, setQcLogs] = useState<QCLog[]>([]);
+  const [qcAlerts, setQcAlerts] = useState<{ items: QCLog[]; total: number }>({ items: [], total: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -31,24 +32,22 @@ export default function DashboardPage() {
       getLabOrdersPage({ page: 1, pageSize: URGENT_LIMIT, status: "sent_to_lab", priorities: ["stat", "urgent"], sort: "priority" }),
       getLabOrdersPage({ page: 1, pageSize: RECENT_LIMIT, sort: "newest" }),
       getLabInstruments(),
-      getRecentQCLogs(),
+      getQCAlerts(QC_ALERT_LIMIT),
     ])
-      .then(async ([counts, urgentPage, recentPage, insts, logs]) => {
+      .then(async ([counts, urgentPage, recentPage, insts, alerts]) => {
         const pts = await getPatientsByIds([...urgentPage.items, ...recentPage.items].map(o => o.patientId));
         setSummary(counts);
         setUrgent(urgentPage);
         setRecent(recentPage.items);
         setPatients(pts);
         setInstruments(insts);
-        setQcLogs(logs);
+        setQcAlerts(alerts);
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-
-  const qcAlerts = qcLogs.filter(log => log.status === 'fail' || log.status === 'warning');
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -70,21 +69,26 @@ export default function DashboardPage() {
         <div className="space-y-6">
           {/* QC Alerts */}
           <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
                 QC Alerts
               </CardTitle>
+              {qcAlerts.total > 0 && (
+                <Badge variant="secondary" className="bg-status-warning-bg text-status-warning-text hover:bg-status-warning-bg">
+                  {qcAlerts.total} open
+                </Badge>
+              )}
             </CardHeader>
             <CardContent className="p-0">
-              {qcAlerts.length === 0 ? (
+              {qcAlerts.total === 0 ? (
                 <div className="p-6 text-center text-sm text-muted-foreground">All QC checks passing.</div>
               ) : (
                 <div className="divide-y divide-slate-100">
-                  {qcAlerts.slice(0, 5).map(log => (
+                  {qcAlerts.items.map(log => (
                     <div key={log.id} className="px-4 py-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-slate-700">{log.testCode}</span>
+                        <span className="text-sm font-medium text-slate-700">{log.testCode} · {log.controlLevel}</span>
                         <StatusBadge status={log.status} />
                       </div>
                       <p className="text-xs text-slate-500">{log.notes || `Expected: ${log.expectedValue}, Got: ${log.observedValue} ${log.unit}`}</p>

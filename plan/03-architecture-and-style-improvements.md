@@ -173,9 +173,10 @@ delete the other; bundled JSON + DB copies will diverge.
   `/dispense/summary`, `/payments/totals`, `/auth/users/summary`, and
   `getTotal('/patients', { registeredFrom, registeredTo })`. Schedules and reports read
   their date window (`/appointments?from&to`).
+- The lab dashboard's QC alerts are the controls whose latest run failed or warned
+  (`/qc-logs/alerts`), however many runs came after on other controls.
 - Still open: dispenses carry no pharmacy, so the dispensing log and its summary span
-  every pharmacy; scoping them needs the pharmacy on each dispense. The lab dashboard's QC
-  alerts come from the latest 100 QC logs.
+  every pharmacy; scoping them needs the pharmacy on each dispense.
 
 ### B5. Error boundaries and empty/loading states are uneven
 `error.tsx` exists in doctor/receptionist dashboards but not everywhere; some

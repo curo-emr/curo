@@ -561,20 +561,26 @@ export class LabService {
     return this.instrumentsRepo.find({ where: this.instrumentScopeOf(user) });
   }
 
+  /** The QC logs of the instruments `user` may see, aliased `q`. */
+  private qcLogsFor(user: AuthUser) {
+    const query = this.qcLogRepo.createQueryBuilder('q');
+    const lab = labScope(user);
+    // A log's instrumentId is text; an instrument's id is a uuid.
+    if (lab)
+      query.where(
+        `q.instrumentId IN (SELECT id::text FROM lab_instruments WHERE "organizationId" = :lab)`,
+        { lab },
+      );
+    return query;
+  }
+
   async getQcLogs(
     user: AuthUser,
     filters?: { instrumentId?: string; status?: QCStatus },
     pagination: PaginationQuery = {},
   ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
-    // A log's instrumentId is text; an instrument's id is a uuid.
-    const query = this.qcLogRepo.createQueryBuilder('q');
-    const lab = labScope(user);
-    if (lab)
-      query.where(
-        `q.instrumentId IN (SELECT id::text FROM lab_instruments WHERE "organizationId" = :lab)`,
-        { lab },
-      );
+    const query = this.qcLogsFor(user);
     if (filters?.instrumentId)
       query.andWhere('q.instrumentId = :instrumentId', {
         instrumentId: filters.instrumentId,
@@ -592,6 +598,33 @@ export class LabService {
       pageSize,
       baseUrl: '/qc-logs',
       query: { ...filters },
+    });
+  }
+
+  /**
+   * Open QC alerts, newest first: each control (an instrument's test at one
+   * level) whose latest run failed or warned. Running the control again and
+   * passing clears its alert.
+   */
+  async getQcAlerts(user: AuthUser, pagination: PaginationQuery = {}) {
+    const { page, pageSize, skip, take } = parsePagination(pagination);
+    const [logs, total] = await this.qcLogsFor(user)
+      .andWhere('q.status != :pass', { pass: QCStatus.PASS })
+      .andWhere(
+        `q.id IN (
+          SELECT DISTINCT ON ("instrumentId", "testCode", "controlLevel") id
+          FROM lab_qc_logs
+          ORDER BY "instrumentId", "testCode", "controlLevel", "performedAt" DESC, id)`,
+      )
+      .orderBy('q.performedAt', 'DESC')
+      .addOrderBy('q.id', 'ASC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
+    return toSearchset(logs, total, {
+      page,
+      pageSize,
+      baseUrl: '/qc-logs/alerts',
     });
   }
 

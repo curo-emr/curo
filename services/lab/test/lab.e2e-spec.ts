@@ -700,14 +700,10 @@ describe('Lab specimens and results', () => {
   });
 
   describe("one lab's instruments and QC, kept from another", () => {
-    /** An instrument in `labId`, with one passing QC run on it. */
-    async function instrumentAt(labId: string) {
-      const instrument = await svc.db.getRepository(LabInstrument).save({
-        organizationId: labId,
-        name: `Sysmex XN-550 ${randomUUID()}`,
-      });
-      const qcLog = await svc.db.getRepository(QCLog).save({
-        instrumentId: instrument.id,
+    /** A QC run on `instrumentId`: a passing one of the normal control, now, unless `fields` say otherwise. */
+    const runQc = (instrumentId: string, fields: Partial<QCLog> = {}) =>
+      svc.db.getRepository(QCLog).save({
+        instrumentId,
         testCode: '58410-2',
         controlLevel: 'normal',
         expectedValue: 13.5,
@@ -715,7 +711,16 @@ describe('Lab specimens and results', () => {
         status: QCStatus.PASS,
         performedBy: randomUUID(),
         performedAt: new Date(),
+        ...fields,
       });
+
+    /** An instrument in `labId`, with one passing QC run on it. */
+    async function instrumentAt(labId: string) {
+      const instrument = await svc.db.getRepository(LabInstrument).save({
+        organizationId: labId,
+        name: `Sysmex XN-550 ${randomUUID()}`,
+      });
+      const qcLog = await runQc(instrument.id);
       return { instrument, qcLog };
     }
 
@@ -758,6 +763,71 @@ describe('Lab specimens and results', () => {
       expect(await instrumentIds(svc.as(UserRole.SUPER_ADMIN))).toEqual(
         expect.arrayContaining([ours.instrument.id, theirs.instrument.id]),
       );
+    });
+
+    describe('GET /qc-logs/alerts', () => {
+      const alertIds = async (actor: TestActor) => {
+        const res = await svc.api
+          .get('/qc-logs/alerts')
+          .query({ pageSize: 100 })
+          .set(actor.headers)
+          .expect(200);
+        const { entry = [] } = res.body as {
+          entry?: { resource: { id: string } }[];
+        };
+        return entry.map((e) => e.resource.id);
+      };
+      const minutesAgo = (minutes: number) =>
+        new Date(Date.now() - minutes * 60_000);
+
+      it('alerts on each control whose latest run failed or warned, until it passes again', async () => {
+        const { instrument } = await instrumentAt(lab);
+        const failing = await runQc(instrument.id, {
+          controlLevel: 'high',
+          status: QCStatus.FAIL,
+        });
+        const warning = await runQc(instrument.id, {
+          testCode: '718-7',
+          status: QCStatus.WARNING,
+        });
+        const rerunPassed = await runQc(instrument.id, {
+          controlLevel: 'low',
+          status: QCStatus.FAIL,
+          performedAt: minutesAgo(10),
+        });
+        await runQc(instrument.id, { controlLevel: 'low' });
+
+        const alerts = await alertIds(labStaff);
+        expect(alerts).toEqual(
+          expect.arrayContaining([failing.id, warning.id]),
+        );
+        expect(alerts).not.toContain(rerunPassed.id);
+      });
+
+      it('keeps alerting on a failed control however many runs come after on others', async () => {
+        const { instrument } = await instrumentAt(lab);
+        const failing = await runQc(instrument.id, {
+          controlLevel: 'high',
+          status: QCStatus.FAIL,
+          performedAt: minutesAgo(60),
+        });
+        // More than the 100 latest logs the dashboard used to read.
+        await Promise.all(
+          Array.from({ length: 101 }, () => runQc(instrument.id)),
+        );
+
+        expect(await alertIds(labStaff)).toContain(failing.id);
+      });
+
+      it("shows a technician only their own lab's alerts", async () => {
+        const { instrument } = await instrumentAt(await laboratory());
+        const theirs = await runQc(instrument.id, { status: QCStatus.FAIL });
+
+        expect(await alertIds(labStaff)).not.toContain(theirs.id);
+        expect(await alertIds(svc.as(UserRole.SUPER_ADMIN))).toContain(
+          theirs.id,
+        );
+      });
     });
 
     it("refuses to change another lab's instrument", async () => {
