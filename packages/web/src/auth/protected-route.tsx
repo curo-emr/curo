@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import { useAuth } from "./auth-provider";
 
-type ProtectedRouteProps = { children: ReactNode } & (
-  /** Any signed-in user may use the portal; the API still checks each request. */
-  | { roles?: undefined; audience?: undefined }
-  /** Only these roles may; `audience` names them, as in "This portal is for nursing officers". */
-  | { roles: readonly string[]; audience: string }
-);
+interface ProtectedRouteProps {
+  children: ReactNode;
+  /** The roles that may use the portal. The API still checks each request. */
+  roles: readonly string[];
+  /** Names those roles, as in "This portal is for nursing officers". */
+  audience: string;
+}
 
 function CenteredScreen({ children }: { children: ReactNode }) {
   return <div className="flex h-screen flex-1 items-center justify-center bg-background p-6">{children}</div>;
@@ -20,7 +21,7 @@ const Spinner = () => (
   <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
 );
 
-/** Renders its children only for a signed-in user (with one of `roles`, when given); sends anyone else to /login. */
+/** Renders its children only for a signed-in user with one of `roles`; sends anyone signed out to /login. */
 export function ProtectedRoute({ children, roles, audience }: ProtectedRouteProps) {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
@@ -48,7 +49,7 @@ export function ProtectedRoute({ children, roles, audience }: ProtectedRouteProp
     );
   }
 
-  if (roles && !roles.includes(user.role)) {
+  if (!roles.includes(user.role)) {
     return (
       <CenteredScreen>
         <div className="flex max-w-sm flex-col items-center gap-3 text-center">
