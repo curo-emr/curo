@@ -13,7 +13,7 @@ export function PharmacyDashboardStats({ prescriptions, lowStockCount }: Pharmac
 
   const statCards = [
     { label: "Pending Prescriptions", value: pendingCount, color: "text-status-warning-text bg-status-warning-bg border-status-warning-border" },
-    { label: "On Hold", value: onHoldCount, color: "text-status-teal-text bg-status-teal-bg border-status-teal-border" },
+    { label: "On hold", value: onHoldCount, color: "text-status-teal-text bg-status-teal-bg border-status-teal-border" },
     { label: "Dispensed", value: dispensedCount, color: "text-status-success-text bg-status-success-bg border-status-success-border" },
     { label: "Low Stock Items", value: lowStockCount, color: "text-status-error-text bg-status-error-bg border-status-error-border" },
   ];

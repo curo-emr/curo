@@ -16,7 +16,7 @@ import {
 import { Search, Eye } from "lucide-react";
 import { LabOrder, Patient } from "@/types";
 import { formatDate } from "@/lib/utils";
-import { StatusBadge } from "@curo/web/ui/status-badge";
+import { StatusBadge, statusLabel } from "@curo/web/ui/status-badge";
 import { WorklistFilters } from "./WorklistFilters";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
@@ -24,8 +24,8 @@ import { ROUTES } from "@/lib/constants";
 const STATUS_TABS = [
   { label: "All", value: "all" },
   { label: "Draft", value: "draft" },
-  { label: "Sent to Lab", value: "sent_to_lab" },
-  { label: "Results Pending", value: "results_pending" },
+  { label: statusLabel("sent_to_lab"), value: "sent_to_lab" },
+  { label: statusLabel("results_pending"), value: "results_pending" },
   { label: "Completed", value: "completed" },
 ];
 

@@ -262,8 +262,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
               <div className="space-y-3">
                 {[
                   { label: "Ordered", time: order.createdAt, done: true },
-                  { label: "Sent to Lab", time: order.sentToLabAt, done: !!order.sentToLabAt },
-                  { label: "Sample Received", time: order.receivedAt, done: !!order.receivedAt },
+                  { label: "Sent to lab", time: order.sentToLabAt, done: !!order.sentToLabAt },
+                  { label: "Sample received", time: order.receivedAt, done: !!order.receivedAt },
                   { label: "Completed", time: null, done: order.status === 'completed' },
                 ].map(step => (
                   <div key={step.label} className="flex items-start gap-3">
