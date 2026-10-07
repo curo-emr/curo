@@ -5,9 +5,9 @@ import { Loader2, CheckCircle2, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { formatDate, getTestName, getDoctorName } from "@/lib/utils";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { StatusBadge } from "@curo/web/ui/status-badge";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { getMyProfile, getMyLabOrders, getPractitioners } from "@/lib/api/patient-portal";
 import { getLabTestCatalog } from "@/lib/data/api";
 import type { LabOrder, LabTestCatalogItem } from "@/types";
@@ -107,7 +107,7 @@ export default function LabReportsPage() {
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             {completedLabs.length === 0 ? (
-              <EmptyState message="No completed lab results yet." />
+              <EmptyState title="No completed lab results yet." />
             ) : (
               completedLabs.map(lab => (
                 <div key={lab.id} className="p-4">

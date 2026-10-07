@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { UserCreateForm } from "@/components/features/users/UserCreateForm";
 
 export default function NewUserPage() {

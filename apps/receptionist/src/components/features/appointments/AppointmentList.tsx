@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@curo/web/ui/table";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { Pagination } from "@curo/web/ui/pagination";
 import { Calendar, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -227,8 +227,7 @@ export function AppointmentList({ appointments: initialAppointments, patients, d
             icon={Calendar}
             title="No appointments found"
             description="Try changing the filters or book a new appointment."
-            actionLabel="Book Appointment"
-            actionHref={ROUTES.NEW_APPOINTMENT}
+            action={<Button asChild variant="outline" size="sm"><Link href={ROUTES.NEW_APPOINTMENT}>Book Appointment</Link></Button>}
           />
         ) : (
           <Table>

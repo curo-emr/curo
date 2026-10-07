@@ -9,9 +9,9 @@ import Link from "next/link";
 import { formatDate, getDoctorName } from "@/lib/utils";
 import type { Encounter } from "@/types";
 import { ROUTES } from "@/lib/constants";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { StatusBadge } from "@curo/web/ui/status-badge";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { getMyProfile, getMyEncounters, getPractitioners } from "@/lib/api/patient-portal";
 
 export default function VisitsPage() {
@@ -69,7 +69,7 @@ export default function VisitsPage() {
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             {completedVisits.length === 0 ? (
-              <EmptyState message="No visit records found." />
+              <EmptyState title="No visit records found." />
             ) : (
               completedVisits.map(enc => (
                 <Link

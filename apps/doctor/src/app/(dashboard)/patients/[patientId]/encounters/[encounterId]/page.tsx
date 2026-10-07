@@ -4,11 +4,11 @@ import { useState, useEffect, use } from "react";
 import { FileX, HeartPulse, NotebookPen, Pill, Printer, Star, Stethoscope, UserCheck } from "lucide-react";
 import type { Encounter, Lab, LabOrder, LabReport, Patient, Prescription, Problem } from "@/types";
 import { Button } from "@curo/web/ui/button";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
-import { SectionCard } from "@/components/ui/SectionCard";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { SectionCard } from "@curo/web/ui/section-card";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { RX_PRINT_ID, RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";
 import { LAB_SLIP_PRINT_ID, LabSlipPrint } from "@/components/features/labs/LabSlipPrint";
 import { VisitLabOrders } from "@/components/features/labs/VisitLabOrders";
@@ -20,7 +20,7 @@ import { getDocumentsByPatient, type DocumentRef } from "@/lib/api/documents";
 import { getLabSlipQr, getLabs, getVisitLabReports } from "@/lib/api/labs";
 import { ROUTES } from "@/lib/constants";
 import { encounterDiagnoses } from "@/lib/clinical";
-import { printOnly } from "@/lib/print";
+import { printOnly } from "@curo/web/print";
 import { calculateBMI, formatDate } from "@/lib/utils";
 
 interface Summary {

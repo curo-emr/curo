@@ -22,7 +22,7 @@ import { Pagination } from "@curo/web/ui/pagination";
 import { Loader2 } from "lucide-react";
 import { LabInstrument, LabStaff, QCStatus } from "@/types";
 import { formatDate, getStaffName } from "@/lib/utils";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { getQCLogsPaginated } from "@/lib/api/lab";
 
 interface QCLogTableProps {

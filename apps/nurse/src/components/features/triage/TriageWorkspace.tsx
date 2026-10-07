@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Activity, Droplets, HeartPulse, Info, Loader2, Ruler, Thermometer, UserX, Wind } from "lucide-react";
 import type { Allergy, Appointment, Patient, Problem, QueueStage, Vitals } from "@/types";
 import { Card } from "@curo/web/ui/card";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import Link from "next/link";
+import { Button } from "@curo/web/ui/button";
 import { getAppointmentById, updateQueueStage } from "@/lib/api/appointments";
 import { getAllergies, getConditions, getPatientById } from "@/lib/api/patients";
 import { getPractitioners, type Practitioner } from "@/lib/api/practitioners";
@@ -76,7 +78,7 @@ export function TriageWorkspace({ appointmentId }: { appointmentId: string }) {
   if (loadError) {
     return (
       <Card className="max-w-6xl mx-auto shadow-sm border">
-        <EmptyState icon={UserX} title="Triage unavailable" description={loadError} actionLabel="Back to triage queue" actionHref={ROUTES.TRIAGE_QUEUE} />
+        <EmptyState icon={UserX} title="Triage unavailable" description={loadError} action={<Button asChild variant="outline" size="sm"><Link href={ROUTES.TRIAGE_QUEUE}>Back to triage queue</Link></Button>} />
       </Card>
     );
   }

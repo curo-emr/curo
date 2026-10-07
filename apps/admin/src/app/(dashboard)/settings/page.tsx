@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { useAuth } from "@curo/web/auth";
 

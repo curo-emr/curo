@@ -5,12 +5,12 @@ import { Pill, Printer } from "lucide-react";
 import type { Patient, Prescription } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { Checkbox } from "@curo/web/ui/checkbox";
-import { SectionCard } from "@/components/ui/SectionCard";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { SectionCard } from "@curo/web/ui/section-card";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { RX_PRINT_ID, RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";
 import { useAuth } from "@/contexts/AuthContext";
-import { printOnly } from "@/lib/print";
+import { printOnly } from "@curo/web/print";
 import { formatDate } from "@/lib/utils";
 
 export function MedicationsTab({ prescriptions, patient }: { prescriptions: Prescription[]; patient: Patient }) {

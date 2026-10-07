@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { UserX } from "lucide-react";
 import { Button } from "@curo/web/ui/button";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { ROUTES } from "@/lib/constants";
 
 export default function PatientNotFound() {

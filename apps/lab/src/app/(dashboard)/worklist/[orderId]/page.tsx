@@ -5,12 +5,13 @@ import { Loader2, User, FlaskConical, Clock, ArrowLeft, CheckCircle2, QrCode, Pr
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import Link from "next/link";
 import { calculateAge, formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { getLabOrderById, getLabResultsByOrder, getLabTestCatalog, receiveOrder } from "@/lib/api/lab";
 import { getPatientById } from "@/lib/api/patients";
+import { printOnly } from "@curo/web/print";
 import { LabReportUpload } from "@/components/features/worklist/LabReportUpload";
 
 type OrderDetails = NonNullable<Awaited<ReturnType<typeof loadOrderDetails>>>;
@@ -151,7 +152,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                 <CardTitle className="flex items-center gap-2 text-base">
                   <QrCode className="h-4 w-4 text-blue-600" />Sample Labels ({order.testQrs.length})
                 </CardTitle>
-                <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Button variant="outline" size="sm" onClick={() => printOnly("sample-labels")}>
                   <Printer className="h-4 w-4 mr-2" />Print labels
                 </Button>
               </CardHeader>

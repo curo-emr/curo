@@ -2,7 +2,7 @@
 
 import { useServerPagination } from "@curo/web/hooks";
 import { Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { Card, CardContent } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import {

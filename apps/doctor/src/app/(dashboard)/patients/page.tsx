@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { Button } from "@curo/web/ui/button";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { PatientList } from "@/components/features/patients/PatientList";
 import { ROUTES } from "@/lib/constants";
 

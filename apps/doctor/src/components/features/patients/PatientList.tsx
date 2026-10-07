@@ -7,7 +7,7 @@ import type { Allergy, Patient } from "@/types";
 import { Card } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
 import { Skeleton } from "@curo/web/ui/skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
 import { Pagination } from "@curo/web/ui/pagination";
 import { ToggleGroup, ToggleGroupItem } from "@curo/web/ui/toggle-group";

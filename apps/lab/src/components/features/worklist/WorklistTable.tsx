@@ -16,7 +16,7 @@ import {
 import { Search, Eye } from "lucide-react";
 import { LabOrder, Patient } from "@/types";
 import { formatDate } from "@/lib/utils";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { WorklistFilters } from "./WorklistFilters";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";

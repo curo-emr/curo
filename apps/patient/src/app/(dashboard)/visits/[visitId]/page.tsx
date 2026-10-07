@@ -6,8 +6,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@curo/web/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { StatusBadge } from "@curo/web/ui/status-badge";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import type { Encounter } from "@/types";
@@ -111,7 +111,7 @@ export default function VisitDetailPage({ params }: { params: Promise<{ visitId:
         </CardHeader>
         <CardContent className="p-0">
           {documents.length === 0 ? (
-            <EmptyState message="No documents have been shared for this visit." />
+            <EmptyState title="No documents have been shared for this visit." />
           ) : (
             <div className="divide-y divide-border">
               {documents.map((doc) => (

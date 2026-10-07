@@ -3,7 +3,7 @@
 import { HeartPulse, UserCheck } from "lucide-react";
 import type { Vitals } from "@/types";
 import { calculateBMI, cn, getBMICategory } from "@/lib/utils";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { SectionCard } from "@curo/web/ui/section-card";
 
 type VitalKey = keyof Vitals;
 

@@ -6,7 +6,7 @@ import type { ICD10 } from "@/types";
 import { Card } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
 import { Skeleton } from "@curo/web/ui/skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@curo/web/ui/empty-state";
 import { Pagination } from "@curo/web/ui/pagination";
 import { getICD10Paginated } from "@/lib/api/icd";
 
