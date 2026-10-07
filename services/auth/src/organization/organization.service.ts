@@ -44,6 +44,15 @@ export class OrganizationService {
     return org;
   }
 
+  /**
+   * Where `user` works, as their token says: the organization the services
+   * scope their work to. Null when they have none.
+   */
+  async workplaceOf(user: AuthUser): Promise<Organization | null> {
+    if (!user.organizationId) return null;
+    return this.orgRepo.findOne({ where: { id: user.organizationId } });
+  }
+
   async create(
     dto: CreateOrganizationDto,
     actor: AuthUser,
