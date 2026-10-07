@@ -72,7 +72,9 @@ function toFhirReport(r: DiagnosticReport) {
     effectiveDateTime: r.effectiveDateTime,
     issued: r.issued,
     conclusion: r.conclusion,
-    result: (r.results ?? []).map((res) => ({ display: res.display })),
+    // Pragmatic FHIR: each result carries its values inline (code, value or
+    // valueString, unit, range, interpretation), which the lab portal reads.
+    result: r.results ?? [],
     presentedForm: r.pdfBase64
       ? [{ contentType: 'application/pdf', data: r.pdfBase64 }]
       : [],
@@ -225,18 +227,21 @@ export class LabService {
     // Compared as text: an order's patientId is not validated as a uuid.
     const patient = await this.patientsRepo
       .createQueryBuilder('p')
-      .select(['p.firstName', 'p.lastName', 'p.patientCode'])
+      .select(['p.firstName', 'p.lastName', 'p.patientCode', 'p.birthDate'])
       .where('p.id::text = :id', { id: order.patientId })
       .getOne();
-    const patientName = patient
-      ? `${patient.firstName} ${patient.lastName} (${patient.patientCode})`
+    const fullName = patient
+      ? `${patient.firstName} ${patient.lastName}`
+      : null;
+    const patientLabel = patient
+      ? `${fullName} (${patient.patientCode})`
       : `patient ${order.patientId}`;
 
     // Rendered before the transaction opens, so no rows stay locked meanwhile.
     const pdfBase64 = await generateLabReportPdf({
-      patientName: `Patient ${order.patientId}`,
-      patientCode: order.patientId,
-      birthDate: 'On file',
+      patientName: fullName ?? 'Unknown patient',
+      patientCode: patient?.patientCode ?? order.patientId,
+      birthDate: patient?.birthDate ?? 'Not recorded',
       testName: order.display,
       results: dto.results,
       conclusion: dto.conclusion,
@@ -291,7 +296,7 @@ export class LabService {
       await notifyPractitioner(em, order.requesterId, {
         eventType: NotificationEventType.LAB_RESULTS_READY,
         title: 'Lab results ready',
-        message: `${order.display} results for ${patientName} are ready to review.`,
+        message: `${order.display} results for ${patientLabel} are ready to review.`,
         relatedResourceType: 'DiagnosticReport',
         relatedResourceId: report.id,
       });
