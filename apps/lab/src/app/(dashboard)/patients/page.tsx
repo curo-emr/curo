@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { PatientList } from "@/components/features/patients/PatientList";
-import { getLabOrders } from "@/lib/api/lab";
+import { getLabOrdersFirstPage } from "@/lib/api/lab";
 import type { LabOrder } from "@/types";
 
 export default function PatientsDirectoryPage() {
@@ -12,7 +12,7 @@ export default function PatientsDirectoryPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getLabOrders()
+    getLabOrdersFirstPage()
       .then(setOrders)
       .catch(console.error)
       .finally(() => setIsLoading(false));

@@ -7,8 +7,8 @@ import {
 import { Loader2, Users as UsersIcon, UserCheck, Wallet } from "lucide-react";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { getUsers } from "@/lib/api/users";
-import { getAllPayments } from "@/lib/api/payments";
+import { getRecentUsers } from "@/lib/api/users";
+import { getRecentPayments } from "@/lib/api/payments";
 import { ROLE_LABELS } from "@/lib/constants";
 import type { AdminUser, Payment } from "@/types";
 
@@ -23,7 +23,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getUsers(), getAllPayments().catch(() => [])])
+    Promise.all([getRecentUsers(), getRecentPayments().catch(() => [])])
       .then(([u, p]) => { setUsers(u); setPayments(p); })
       .catch(console.error)
       .finally(() => setIsLoading(false));

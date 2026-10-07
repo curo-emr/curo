@@ -5,7 +5,7 @@ import { Loader2, TrendingUp, Clock, Pill, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { formatStatus } from "@curo/web/format";
-import { getPendingPrescriptions, getDispensingRecords, getStock, type DispenseRecord, type StockItem } from "@/lib/api/pharmacy";
+import { getPendingPrescriptions, getRecentDispensingRecords, getStock, type DispenseRecord, type StockItem } from "@/lib/api/pharmacy";
 import type { Prescription } from "@/types";
 
 export default function ReportsPage() {
@@ -15,7 +15,7 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getPendingPrescriptions(), getStock(), getDispensingRecords()])
+    Promise.all([getPendingPrescriptions(), getStock(), getRecentDispensingRecords()])
       .then(([rxs, meds, records]) => { setPrescriptions(rxs); setMedications(meds); setDispensingRecords(records); })
       .catch(console.error)
       .finally(() => setIsLoading(false));

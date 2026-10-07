@@ -1,4 +1,4 @@
-import { apiClient } from '@curo/web/api';
+import { apiClient, getByIds } from '@curo/web/api';
 import type { Patient, Allergy, Problem } from '@/types';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, type FhirPatient, type FhirAllergy, type FhirCondition } from './mappers';
 import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
@@ -72,14 +72,7 @@ export async function createAllergy(patientId: string, data: Record<string, unkn
 }
 
 // Resolve a set of patients by id (e.g. everyone on today's list), keyed by id.
-// Larger sets start from one page of patients and only look up the rest individually.
 export async function getPatientsByIds(ids: string[]): Promise<Record<string, Patient>> {
-  const unique = [...new Set(ids)].filter(Boolean);
-  const byId: Record<string, Patient> = {};
-  if (unique.length > 10) {
-    for (const p of await getPatients().catch(() => [] as Patient[])) byId[p.id] = p;
-  }
-  const missing = unique.filter(id => !byId[id]);
-  for (const p of await Promise.all(missing.map(id => getPatientById(id)))) if (p) byId[p.id] = p;
-  return byId;
+  const patients = (await getByIds<FhirPatient>('/patients', ids.filter(Boolean))).map(mapFhirPatient);
+  return Object.fromEntries(patients.map(p => [p.id, p]));
 }
