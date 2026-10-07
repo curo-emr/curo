@@ -1,8 +1,12 @@
-import { workplaceOf, type AuthUser } from '@curo/shared/auth';
-import { UserRole } from '@curo/shared/enums';
+import { workplaceOf, type AuthUser } from '../auth';
+import { UserRole } from '../enums';
 
 // Each test goes to the lab the doctor sent it to. Lab staff see and work on
-// only their own lab's tests and reports; doctors and the admin see every lab's.
+// only their own lab's tests, reports and report files; doctors and the admin
+// see every lab's.
+
+/** The document type of a report file the lab uploads for a lab order. */
+export const LAB_REPORT_DOCUMENT = 'lab-report';
 
 /** The lab whose work `user` sees: a technician's own, or every lab (undefined) for anyone else. */
 export function labScope(user: AuthUser): string | undefined {

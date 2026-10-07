@@ -17,14 +17,23 @@ import type { StorageProvider } from '../storage/storage.provider';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { actorId, type AuthUser } from '@curo/shared/auth';
 import { UserRole } from '@curo/shared/enums';
+import { LAB_REPORT_DOCUMENT, labScope } from '@curo/shared/lab';
 
 const ALLOWED_CONTENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
-const STAFF_ROLES: UserRole[] = [
-  UserRole.DOCTOR,
-  UserRole.LAB_STAFF,
-  UserRole.SUPER_ADMIN,
-];
+
+/** What staff list documents by; at least one is required. */
+export interface DocumentFilter {
+  patientId?: string;
+  encounterId?: string;
+  serviceRequestId?: string;
+}
+
+/** The patient and visit of a lab order, which a lab's report file goes on. */
+interface LabOrderRow {
+  patientId: string;
+  encounterId: string | null;
+}
 
 @Injectable()
 export class DocumentService {
@@ -51,6 +60,7 @@ export class DocumentService {
     if (file.size > MAX_FILE_BYTES) {
       throw new BadRequestException('File exceeds the 20 MB limit');
     }
+    const encounterId = await this.encounterOfUpload(dto, user);
 
     const objectKey = `${dto.patientId}/${randomUUID()}-${this.sanitize(file.originalname)}`;
     await this.storage.put(objectKey, file.buffer, file.mimetype);
@@ -58,7 +68,7 @@ export class DocumentService {
     const doc = this.docRepo.create({
       patientId: dto.patientId,
       authorId: actorId(user),
-      encounterId: dto.encounterId,
+      encounterId,
       relatedResourceId: dto.relatedResourceId,
       relatedResourceType: dto.relatedResourceType,
       status: 'current',
@@ -79,21 +89,28 @@ export class DocumentService {
     return this.toFhir(saved);
   }
 
-  async listForStaff(patientId?: string, encounterId?: string) {
-    const where: Record<string, string> = {};
-    if (patientId) where.patientId = patientId;
-    if (encounterId) where.encounterId = encounterId;
-    const docs = await this.docRepo.find({ where, order: { date: 'DESC' } });
+  async listForStaff(user: AuthUser, filter: DocumentFilter) {
+    const { patientId, encounterId, serviceRequestId } = filter;
+    if (!patientId && !encounterId && !serviceRequestId)
+      throw new BadRequestException(
+        'Give a patientId, encounterId or serviceRequestId',
+      );
+
+    const query = this.visibleTo(user);
+    if (patientId) query.andWhere('d.patientId = :patientId', { patientId });
+    if (encounterId)
+      query.andWhere('d.encounterId = :encounterId', { encounterId });
+    if (serviceRequestId)
+      query.andWhere(
+        `d.relatedResourceType = 'ServiceRequest' AND d.relatedResourceId = :serviceRequestId`,
+        { serviceRequestId },
+      );
+    const docs = await query.orderBy('d.date', 'DESC').getMany();
     return docs.map((d) => this.toFhir(d));
   }
 
-  async listForPatient(patientId: string | null) {
-    if (!patientId)
-      throw new ForbiddenException('No patient identity on token');
-    const docs = await this.docRepo.find({
-      where: { patientId },
-      order: { date: 'DESC' },
-    });
+  async listForPatient(user: AuthUser) {
+    const docs = await this.visibleTo(user).orderBy('d.date', 'DESC').getMany();
     return docs.map((d) => this.toFhir(d));
   }
 
@@ -102,19 +119,74 @@ export class DocumentService {
     id: string,
     user: AuthUser,
   ): Promise<{ doc: DocumentReference; stream: Readable }> {
-    const doc = await this.docRepo.findOne({ where: { id } });
+    const doc = await this.visibleTo(user)
+      .andWhere('d.id = :id', { id })
+      .getOne();
     if (!doc) throw new NotFoundException('Document not found');
-
-    const isStaff = STAFF_ROLES.includes(user.role);
-    const isOwner =
-      user.role === UserRole.PATIENT && doc.patientId === user.patientId;
-    if (!isStaff && !isOwner) {
-      throw new ForbiddenException('Not allowed to access this document');
-    }
 
     const stream = await this.storage.getStream(doc.filePath);
     await this.audit(user, 'READ', doc);
     return { doc, stream };
+  }
+
+  /**
+   * The documents `user` may see, as `d`: a patient sees their own; lab staff
+   * see the report files of their lab's orders; doctors and the admin see all.
+   * Any other document is as good as missing.
+   */
+  private visibleTo(user: AuthUser) {
+    const query = this.docRepo.createQueryBuilder('d');
+    if (user.role === UserRole.PATIENT) {
+      if (!user.patientId)
+        throw new ForbiddenException('No patient identity on token');
+      return query.where('d.patientId = :patientId', {
+        patientId: user.patientId,
+      });
+    }
+    const lab = labScope(user);
+    if (lab)
+      // service_requests is owned by the clinical service, so it is read with raw SQL.
+      query.where(
+        `d.type = :labReport AND d.relatedResourceType = 'ServiceRequest'
+         AND d.relatedResourceId IN (
+           SELECT id::text FROM service_requests WHERE "performerOrganizationId" = :lab
+         )`,
+        { labReport: LAB_REPORT_DOCUMENT, lab },
+      );
+    return query;
+  }
+
+  /**
+   * The visit an upload goes on. Lab staff upload only report files for their
+   * lab's orders, and those go on the order's patient and visit.
+   */
+  private async encounterOfUpload(
+    dto: CreateDocumentDto,
+    user: AuthUser,
+  ): Promise<string | undefined> {
+    const lab = labScope(user);
+    if (!lab) return dto.encounterId;
+
+    if (
+      dto.type !== LAB_REPORT_DOCUMENT ||
+      dto.relatedResourceType !== 'ServiceRequest' ||
+      !dto.relatedResourceId
+    )
+      throw new BadRequestException(
+        `Lab staff upload ${LAB_REPORT_DOCUMENT} files for a lab order (relatedResourceType ServiceRequest)`,
+      );
+    const [order] = await this.docRepo.manager.query<LabOrderRow[]>(
+      `SELECT "patientId", "encounterId" FROM service_requests
+       WHERE id::text = $1 AND "performerOrganizationId" = $2`,
+      [dto.relatedResourceId, lab],
+    );
+    if (!order)
+      throw new NotFoundException(
+        `Lab order ${dto.relatedResourceId} not found`,
+      );
+    if (order.patientId !== dto.patientId)
+      throw new BadRequestException('That lab order is for another patient');
+    return order.encounterId ?? undefined;
   }
 
   private sanitize(name: string): string {
