@@ -110,7 +110,7 @@ done
 req "any"   200 GET  /auth/profile "" "$DOC"
 req "any"   200 GET  "/auth/practitioners?role=DOCTOR" "" "$RECEP" >/dev/null
 req "admin" 200 GET  "/auth/users?role=DOCTOR" "" "$ADMIN" >/dev/null
-req "admin" 201 POST /auth/staff "{\"email\":\"smoke.$RANDOM@curo.health\",\"password\":\"Smoke@123\",\"role\":\"RECEPTIONIST\",\"firstName\":\"Smoke\",\"lastName\":\"Test\"}" "$ADMIN" >/dev/null
+req "admin" 201 POST /auth/users "{\"email\":\"smoke.$RANDOM@curo.health\",\"password\":\"Smoke@123\",\"role\":\"RECEPTIONIST\",\"firstName\":\"Smoke\",\"lastName\":\"Test\"}" "$ADMIN" >/dev/null
 
 # ---------------------------------------------------------------------------
 # 1. PATIENT registration (receptionist)
