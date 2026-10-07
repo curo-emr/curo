@@ -5,6 +5,7 @@ import type { LabTestCatalogItem } from '@/types';
 // Raw shape returned by the lab-service /catalog endpoint.
 interface ApiCatalogItem {
   id: string;
+  organizationId?: string | null;
   code: string;
   name: string;
   category?: string | null;
@@ -18,6 +19,7 @@ function mapCatalogItem(item: ApiCatalogItem): LabTestCatalogItem {
     code: item.code,
     name: item.name,
     category: item.category ?? '',
+    labId: item.organizationId ?? null,
   };
 }
 

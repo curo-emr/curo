@@ -9,6 +9,8 @@ export type LabPriority = "routine" | "urgent" | "stat";
 export interface LabTestDraft {
   code: string;
   name: string;
+  /** The lab the test is sent to. Drafts saved before tests went to a lab have none. */
+  labId?: string;
 }
 
 export interface VisitDraft {
@@ -83,6 +85,7 @@ export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ 
       note: rx.instructions || undefined,
     })),
     labOrders: visit.labTests.map(test => ({
+      performerOrganizationId: test.labId,
       code: test.code,
       display: test.name,
       priority: visit.labPriority,
