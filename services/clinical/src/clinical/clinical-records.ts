@@ -1,12 +1,14 @@
 import { IsNull, type DeepPartial, type EntityManager } from 'typeorm';
 import * as QRCode from 'qrcode';
 import {
+  Condition,
   MedicationRequest,
   Observation,
   QrCode,
   ServiceRequest,
 } from '@curo/shared/database';
 import {
+  ConditionClinicalStatus,
   MedicationRequestStatus,
   ObservationStatus,
   ServiceRequestStatus,
@@ -17,6 +19,7 @@ import type { CreateEncounterDto } from './dto/create-encounter.dto';
 import type { CreateLabOrderDto } from './dto/create-lab-order.dto';
 import type { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import type { CreateVitalsDto } from './dto/create-vitals.dto';
+import type { VisitDiagnosisDto } from './dto/complete-visit.dto';
 
 // How each clinical record is built, shared by the single-record endpoints and
 // the signed-visit transaction, so a record's defaults live in one place.
@@ -61,6 +64,28 @@ export function newPrescription(
     status: MedicationRequestStatus.ACTIVE,
     intent: 'order',
     authoredOn: new Date(),
+  };
+}
+
+// Read back by the doctor portal: a visit's diagnoses are encounter-diagnosis
+// conditions, and the primary one carries this note.
+export const ENCOUNTER_DIAGNOSIS = 'encounter-diagnosis';
+export const PRIMARY_DIAGNOSIS_NOTE = 'Primary diagnosis';
+
+export function newDiagnosis(
+  diagnosis: VisitDiagnosisDto,
+  ref: { patientId: string; encounterId: string },
+  practitionerId: string,
+): DeepPartial<Condition> {
+  return {
+    ...ref,
+    practitionerId,
+    code: diagnosis.code,
+    display: diagnosis.display,
+    clinicalStatus: ConditionClinicalStatus.ACTIVE,
+    category: ENCOUNTER_DIAGNOSIS,
+    onsetDate: new Date().toISOString().slice(0, 10),
+    note: diagnosis.isPrimary ? PRIMARY_DIAGNOSIS_NOTE : undefined,
   };
 }
 
