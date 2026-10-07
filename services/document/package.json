@@ -4,7 +4,7 @@
   "description": "Document/media service - owns document_references, stores binaries in object storage (MinIO)",
   "author": "",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "build": "nest build",
     "typecheck": "tsc --noEmit --incremental false",

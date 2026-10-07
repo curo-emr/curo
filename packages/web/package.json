@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Shared code for the Curo portals. Shipped as TypeScript source, which each portal's Next build compiles",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-or-later",
   "exports": {
     "./api": "./src/api/index.ts",
     "./auth": "./src/auth/index.ts",
