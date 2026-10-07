@@ -47,6 +47,7 @@
   ],
   "scripts": {
     "build": "nest build",
+    "typecheck": "tsc --noEmit --incremental false",
     "build:watch": "nest build --watch",
     "test": "jest"
   },
