@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { Search, ChevronRight, User, Loader2 } from "lucide-react";
-import { Patient, LabOrder } from "@/types";
+import { LabOrder } from "@/types";
 import { calculateAge, formatDate } from "@/lib/utils";
 import { getPatientsPaginated } from "@/lib/api/patients";
 import Link from "next/link";
@@ -29,42 +30,11 @@ export function PatientList({ orders }: PatientListProps) {
   const initialQuery = searchParams.get("q") || "";
 
   const [query, setQuery] = useState(initialQuery);
-  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query), 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedQuery, pageSize]);
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await getPatientsPaginated({ page, pageSize, search: debouncedQuery || undefined });
-      setPatients(result.items);
-      setTotal(result.total);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load patients.");
-      setPatients([]);
-      setTotal(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, pageSize, debouncedQuery]);
-
-  useEffect(() => { load(); }, [load]);
+  const search = useDebouncedValue(query);
+  const { items: patients, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
+    (page, pageSize) => getPatientsPaginated({ page, pageSize, search: search || undefined }),
+    [search],
+  );
 
   const getPatientOrderInfo = (patientId: string) => {
     const patientOrders = orders.filter(o => o.patientId === patientId);
@@ -109,9 +79,9 @@ export function PatientList({ orders }: PatientListProps) {
                   Loading patients…
                 </TableCell>
               </TableRow>
-            ) : error ? (
+            ) : isError ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-destructive">{error}</TableCell>
+                <TableCell colSpan={6} className="h-32 text-center text-destructive">Failed to load patients.</TableCell>
               </TableRow>
             ) : patients.length > 0 ? (
               patients.map(patient => {

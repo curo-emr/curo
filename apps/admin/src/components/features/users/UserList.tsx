@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -14,7 +15,6 @@ import {
 import { Pagination } from "@/components/ui/pagination";
 import { Search, Loader2 } from "lucide-react";
 import { ROUTES, ROLE_LABELS, USER_ROLES } from "@/lib/constants";
-import type { AdminUser } from "@/types";
 import { getUsersPaginated } from "@/lib/api/users";
 
 const roleBadgeClass: Record<string, string> = {
@@ -30,48 +30,19 @@ const roleBadgeClass: Record<string, string> = {
 export function UserList({ initialQuery = "" }: { initialQuery?: string }) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
-  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [roleFilter, setRoleFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const search = useDebouncedValue(query);
 
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query), 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedQuery, roleFilter, pageSize]);
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await getUsersPaginated({
+  const { items: users, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
+    (page, pageSize) =>
+      getUsersPaginated({
         page,
         pageSize,
-        search: debouncedQuery || undefined,
+        search: search || undefined,
         role: roleFilter === "all" ? undefined : roleFilter,
-      });
-      setUsers(result.items);
-      setTotal(result.total);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load users.");
-      setUsers([]);
-      setTotal(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, pageSize, debouncedQuery, roleFilter]);
-
-  useEffect(() => { load(); }, [load]);
+      }),
+    [search, roleFilter],
+  );
 
   return (
     <div className="space-y-4">
@@ -109,8 +80,8 @@ export function UserList({ initialQuery = "" }: { initialQuery?: string }) {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-10"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />Loading users…</TableCell></TableRow>
-            ) : error ? (
-              <TableRow><TableCell colSpan={4} className="text-center text-destructive py-10">{error}</TableCell></TableRow>
+            ) : isError ? (
+              <TableRow><TableCell colSpan={4} className="text-center text-destructive py-10">Failed to load users.</TableCell></TableRow>
             ) : users.length === 0 ? (
               <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-10">No users found.</TableCell></TableRow>
             ) : (

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -36,7 +36,6 @@ export function PatientRegistrationForm() {
     register,
     handleSubmit,
     setValue,
-    watch,
     control,
     formState: { errors },
   } = useForm<PatientRegistrationFormValues, unknown, PatientRegistrationInput>({
@@ -71,6 +70,10 @@ export function PatientRegistrationForm() {
       tags: "",
       allergies: [],
     },
+  });
+  const [sex, bloodType, maritalStatus, insuranceRelationship, allergies] = useWatch({
+    control,
+    name: ["sex", "bloodType", "maritalStatus", "insuranceRelationship", "allergies"],
   });
 
   const { fields: allergyFields, append: appendAllergy, remove: removeAllergy } = useFieldArray({
@@ -147,7 +150,7 @@ export function PatientRegistrationForm() {
             <div className="space-y-1.5">
               <Label>Sex *</Label>
               <Select
-                value={watch("sex") || ""}
+                value={sex || ""}
                 onValueChange={(val) =>
                   setValue("sex", val as "male" | "female" | "other", {
                     shouldValidate: true,
@@ -171,7 +174,7 @@ export function PatientRegistrationForm() {
             <div className="space-y-1.5">
               <Label>Blood Type</Label>
               <Select
-                value={watch("bloodType") || ""}
+                value={bloodType || ""}
                 onValueChange={(val) => setValue("bloodType", val)}
               >
                 <SelectTrigger className="w-full">
@@ -195,7 +198,7 @@ export function PatientRegistrationForm() {
             <div className="space-y-1.5">
               <Label>Marital Status</Label>
               <Select
-                value={watch("maritalStatus") || "single"}
+                value={maritalStatus || "single"}
                 onValueChange={(val) =>
                   setValue(
                     "maritalStatus",
@@ -412,7 +415,7 @@ export function PatientRegistrationForm() {
               <div className="space-y-1.5">
                 <Label>Relationship</Label>
                 <Select
-                  value={watch("insuranceRelationship") || "self"}
+                  value={insuranceRelationship || "self"}
                   onValueChange={(val) =>
                     setValue(
                       "insuranceRelationship",
@@ -484,7 +487,7 @@ export function PatientRegistrationForm() {
                     <div className="space-y-1.5">
                       <Label>Severity</Label>
                       <Select
-                        value={watch(`allergies.${index}.severity`) || "mild"}
+                        value={allergies?.[index]?.severity || "mild"}
                         onValueChange={(val) => setValue(`allergies.${index}.severity`, val as "mild" | "moderate" | "severe")}
                       >
                         <SelectTrigger className="w-full">

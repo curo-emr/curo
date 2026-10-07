@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,10 +16,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { Search, ChevronRight, User, Loader2 } from "lucide-react";
-import { Allergy, Patient } from "@/types";
 import { calculateAge, formatAllergies, formatDate } from "@/lib/utils";
 import { getAllergiesByPatient, getPatientsPaginated } from "@/lib/api/patients";
-import { getPrescriptionSummaries, type PrescriptionSummary } from "@/lib/api/pharmacy";
+import { getPrescriptionSummaries } from "@/lib/api/pharmacy";
 import Link from "next/link";
 
 export function PatientList() {
@@ -26,52 +26,20 @@ export function PatientList() {
   const initialQuery = searchParams.get("q") || "";
 
   const [query, setQuery] = useState(initialQuery);
-  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-
-  const [patients, setPatients] = useState<Patient[]>([]);
-  // null when a lookup failed: show "Unavailable", never "None known" or 0.
-  const [allergies, setAllergies] = useState<Map<string, Allergy[]> | null>(null);
-  const [rxSummaries, setRxSummaries] = useState<Map<string, PrescriptionSummary> | null>(null);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query), 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedQuery, pageSize]);
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await getPatientsPaginated({ page, pageSize, search: debouncedQuery || undefined });
-      setPatients(result.items);
-      setTotal(result.total);
+  const search = useDebouncedValue(query);
+  const { data, items: patients, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
+    async (page, pageSize) => {
+      const result = await getPatientsPaginated({ page, pageSize, search: search || undefined });
       const ids = result.items.map(p => p.id);
-      const [allergyMap, rxMap] = await Promise.all([
+      // null when a lookup failed: show "Unavailable", never "None known" or 0.
+      const [allergies, rxSummaries] = await Promise.all([
         getAllergiesByPatient(ids).catch(() => null),
         getPrescriptionSummaries(ids).catch(() => null),
       ]);
-      setAllergies(allergyMap);
-      setRxSummaries(rxMap);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load patients.");
-      setPatients([]);
-      setTotal(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, pageSize, debouncedQuery]);
-
-  useEffect(() => { load(); }, [load]);
+      return { ...result, allergies, rxSummaries };
+    },
+    [search],
+  );
 
   return (
     <div className="space-y-4">
@@ -110,14 +78,14 @@ export function PatientList() {
                   Loading patients…
                 </TableCell>
               </TableRow>
-            ) : error ? (
+            ) : isError ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-destructive">{error}</TableCell>
+                <TableCell colSpan={6} className="h-32 text-center text-destructive">Failed to load patients.</TableCell>
               </TableRow>
             ) : patients.length > 0 ? (
               patients.map(patient => {
-                const rx = rxSummaries?.get(patient.id);
-                const patientAllergies = allergies?.get(patient.id);
+                const rx = data?.rxSummaries?.get(patient.id);
+                const patientAllergies = data?.allergies?.get(patient.id);
                 return (
                   <TableRow key={patient.id} className="hover:bg-muted/50 transition-colors group">
                     <TableCell>
