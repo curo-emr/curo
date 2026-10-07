@@ -1,9 +1,9 @@
-import { LabOrder, Patient, LabTestCatalogItem } from "@/types";
+import { LabOrder, Patient } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
-import { getPatientName, getTestName } from "@/lib/utils";
+import { getPatientName } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
@@ -11,10 +11,9 @@ import { ROUTES } from "@/lib/constants";
 interface UrgentOrdersListProps {
   orders: LabOrder[];
   patients: Patient[];
-  testCatalog: LabTestCatalogItem[];
 }
 
-export function UrgentOrdersList({ orders, patients, testCatalog }: UrgentOrdersListProps) {
+export function UrgentOrdersList({ orders, patients }: UrgentOrdersListProps) {
   return (
     <Card className="shadow-sm border">
       <CardHeader className="bg-muted/50 border-b">
@@ -50,7 +49,7 @@ export function UrgentOrdersList({ orders, patients, testCatalog }: UrgentOrders
                       {getPatientName(order.patientId, patients)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {order.tests.map(t => getTestName(t.testId, testCatalog)).join(', ')}
+                      {order.tests.map(t => t.name).join(', ')}
                     </p>
                   </div>
                   <Link href={ROUTES.ORDER(order.id)}>
