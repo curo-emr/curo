@@ -3,12 +3,12 @@
 import { useServerPagination } from "@curo/web/hooks";
 import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import { Pagination } from "@/components/ui/pagination";
+} from "@curo/web/ui/table";
+import { Pagination } from "@curo/web/ui/pagination";
 import { getAuditLogsPaginated } from "@/lib/api/audit";
 import { format, parseISO } from "date-fns";
 

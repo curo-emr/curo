@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { Loader2, Cpu } from "lucide-react";
 import { QCLogTable } from "@/components/features/qc/QCLogTable";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@curo/web/ui/badge";
+import { Card, CardContent } from "@curo/web/ui/card";
 import { getLabInstruments, getLabStaff, type LabInstrument } from "@/lib/api/lab";
 import type { LabStaff } from "@/types";
 

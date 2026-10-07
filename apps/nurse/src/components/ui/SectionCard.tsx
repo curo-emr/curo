@@ -1,5 +1,5 @@
 import { type LucideIcon } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { cn } from "@/lib/utils";
 
 interface SectionCardProps {

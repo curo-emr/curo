@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Activity, Droplets, HeartPulse, Info, Loader2, Ruler, Thermometer, UserX, Wind } from "lucide-react";
 import type { Allergy, Appointment, Patient, Problem, QueueStage, Vitals } from "@/types";
-import { Card } from "@/components/ui/card";
+import { Card } from "@curo/web/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAppointmentById, updateQueueStage } from "@/lib/api/appointments";
 import { getAllergies, getConditions, getPatientById } from "@/lib/api/patients";

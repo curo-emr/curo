@@ -1,6 +1,6 @@
 import { Clock, Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
 import { getPatientName, getDoctorName } from "@/lib/utils";
 import { isAwaitingDoctor, minutesInStage, waitBadgeClass } from "@/lib/queue";
 import type { Appointment, Patient, Doctor } from "@/types";

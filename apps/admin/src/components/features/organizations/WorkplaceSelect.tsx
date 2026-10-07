@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Label } from "@/components/ui/label";
+import { Label } from "@curo/web/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+} from "@curo/web/ui/select";
 import { getOrganizations } from "@/lib/api/organizations";
 import { ORGANIZATION_TYPE_LABELS, WORKPLACE_REQUIRED, WORKPLACE_TYPES, type UserRole } from "@/lib/constants";
 import type { Organization } from "@/types";

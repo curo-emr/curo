@@ -5,10 +5,10 @@ import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 import { calculateAge, formatDate } from "@/lib/utils";
-import { SearchInput } from "@/components/ui/SearchInput";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Pagination } from "@/components/ui/pagination";
+import { SearchInput } from "@curo/web/ui/search-input";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
+import { Pagination } from "@curo/web/ui/pagination";
 import {
   Table,
   TableBody,
@@ -16,7 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@curo/web/ui/table";
 import { Eye, Loader2 } from "lucide-react";
 import { getPatientsPaginated } from "@/lib/api/patients";
 

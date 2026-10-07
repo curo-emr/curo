@@ -2,8 +2,8 @@
 
 import { useState, useEffect, use } from "react";
 import { Loader2, Pill, ClipboardList, ArrowLeft } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Button } from "@curo/web/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PatientSummaryCard } from "@/components/features/patients/PatientSummaryCard";
 import { DispenseRecordCard } from "@/components/features/dispensing/DispenseRecordCard";

@@ -1,5 +1,5 @@
 import { type LucideIcon, Inbox } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import Link from "next/link";
 
 interface EmptyStateProps {

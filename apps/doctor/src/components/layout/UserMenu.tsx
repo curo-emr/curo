@@ -12,7 +12,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@curo/web/ui/dropdown-menu";
 
 export function UserMenu({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuth();

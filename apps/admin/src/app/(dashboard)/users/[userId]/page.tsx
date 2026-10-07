@@ -4,14 +4,14 @@ import { useEffect, useState, use } from "react";
 import { Loader2, ArrowLeft, KeyRound, ShieldCheck, ShieldOff } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
+import { Input } from "@curo/web/ui/input";
+import { Label } from "@curo/web/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@curo/web/ui/dialog";
 import { getUser, updateUser, resetUserPassword } from "@/lib/api/users";
 import { getAllPayments, correctPayment } from "@/lib/api/payments";
 import { ROUTES, ROLE_LABELS, WORKPLACE_TYPES, type UserRole } from "@/lib/constants";

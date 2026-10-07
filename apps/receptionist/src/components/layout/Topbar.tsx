@@ -3,10 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Search, Bell, LogOut, User, Menu } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Input } from "@curo/web/ui/input";
+import { Button } from "@curo/web/ui/button";
 import { useAuth } from "@curo/web/auth";
-import { useSidebar } from "@/contexts/SidebarContext";
+import { useSidebar } from "@curo/web/ui/sidebar-context";
 import { getNotificationCount } from "@/lib/api/notifications";
 
 export function Topbar() {

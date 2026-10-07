@@ -1,9 +1,9 @@
 "use client";
 
 import { Bell, LogOut, User, Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@curo/web/ui/button";
 import { useAuth } from "@curo/web/auth";
-import { useSidebar } from "@/contexts/SidebarContext";
+import { useSidebar } from "@curo/web/ui/sidebar-context";
 
 export function Topbar() {
   const { user, logout } = useAuth();

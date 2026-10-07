@@ -1,5 +1,5 @@
 import { LabOrder, Patient } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Clock, ArrowRight } from "lucide-react";
 import { getPatientName, formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";

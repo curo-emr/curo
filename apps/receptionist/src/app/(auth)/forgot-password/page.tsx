@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Input } from "@curo/web/ui/input";
+import { Button } from "@curo/web/ui/button";
+import { Label } from "@curo/web/ui/label";
 import Link from "next/link";
 import { Mail, ArrowLeft, CheckCircle2, Loader2, RotateCcw } from "lucide-react";
 

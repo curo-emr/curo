@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, ClipboardList, ArrowRight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Badge } from "@curo/web/ui/badge";
+import { Button } from "@curo/web/ui/button";
 import Link from "next/link";
 import { formatDate, getDoctorName } from "@/lib/utils";
 import type { Encounter } from "@/types";

@@ -2,9 +2,9 @@
 
 import { useTransition } from "react";
 import type { Appointment, Patient, Doctor, QueueStage } from "@/types";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@curo/web/ui/card";
+import { Button } from "@curo/web/ui/button";
+import { Badge } from "@curo/web/ui/badge";
 import {
   Clock,
   Stethoscope,

@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FlaskConical, Pill, Search } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@curo/web/ui/card";
+import { Input } from "@curo/web/ui/input";
+import { Skeleton } from "@curo/web/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
 import {
   getOrganizations, getPharmacyStock, getLabCatalog,
   type Organization, type PharmacyStockItem, type LabCatalogTest,
