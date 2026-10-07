@@ -1,7 +1,12 @@
-# Applies to every portal build (context = the portal directory).
-node_modules
-.next
-.env*
-*.log
-coverage
-.git
+# The context is the repo root: send only what a portal image needs.
+**
+!package.json
+!package-lock.json
+!packages/web/**
+!apps/**
+**/node_modules
+**/.next
+**/coverage
+**/.env*
+**/*.log
+**/*.tsbuildinfo

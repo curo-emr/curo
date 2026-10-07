@@ -1,5 +1,5 @@
 {
-  "name": "lab-portal",
+  "name": "@curo/lab-portal",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,6 +9,7 @@
     "lint": "eslint --max-warnings 0"
   },
   "dependencies": {
+    "@curo/web": "*",
     "@hookform/resolvers": "^5.2.2",
     "axios": "^1.16.1",
     "class-variance-authority": "^0.7.1",
