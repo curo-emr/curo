@@ -170,8 +170,8 @@ delete the other; bundled JSON + DB copies will diverge.
   and a receptionist's payments in admin. Searches by patient name find the matching
   patients first (`findPatientIds`) and say when more than 100 match.
 - Dashboards and reports read totals the server counts: `/orders/summary`,
-  `/dispense/summary`, `/payments/totals`, `/auth/users/summary`, and
-  `getTotal('/patients', { registeredFrom, registeredTo })`. Schedules and reports read
+  `/dispense/summary`, `/payments/totals` (paid payments only, as My Income counts),
+  `/auth/users/summary`, and `getTotal('/patients', { registeredFrom, registeredTo })`. Schedules and reports read
   their date window (`/appointments?from&to`).
 - Still open: dispenses carry no pharmacy, so the dispensing log and its summary span
   every pharmacy; scoping them needs the pharmacy on each dispense. The lab dashboard's QC
