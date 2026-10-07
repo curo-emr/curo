@@ -5,8 +5,8 @@
 # Drives the full clinical journey (patient → appointment → encounter → vitals →
 # lab order → scan → results → prescription → FEFO dispense → read-back) plus a
 # sweep of the remaining read endpoints and a few authorization spot-checks —
-# ALL through the API gateway at :3000 with real JWTs (the only path that exercises
-# the gateway's role-header injection + each service's RolesGuard).
+# ALL through the API gateway at :3000 with real JWTs (the only host-reachable
+# path: it exercises the gateway's token check + each service's RolesGuard).
 #
 # Requires: bash, curl, jq. Stack must be running: `docker compose up -d --build`.
 #
@@ -378,12 +378,13 @@ req "nurse→encounters" 403 POST /encounters "{\"patientId\":\"$PATIENT_ID\"}" 
 req "vitals without filter" 400 GET "/vitals" "" "$NURSE" >/dev/null
 
 # ---------------------------------------------------------------------------
-# 9. Organizations directory (any authenticated user) + known-anomaly probes
+# 9. Organizations directory (any authenticated user) + gateway health
 # ---------------------------------------------------------------------------
-echo "-- organizations + known anomalies --" >&2
+echo "-- organizations + health --" >&2
 req "any"             200 GET "/organizations?type=pharmacy" "" "$DOC" >/dev/null
-# Gateway lists /health as a public path but no handler serves it -> 404 (minor, documented).
-req "anomaly /health" 404 GET "/health" "" "" >/dev/null
+# Public liveness probe, answered by the gateway itself (no token).
+HEALTH=$(req "public" 200 GET "/health" "" "")
+expect_eq "/health body" "$(jq -r .status <<<"$HEALTH")" "ok"
 
 # ---------------------------------------------------------------------------
 echo >&2

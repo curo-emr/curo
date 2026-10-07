@@ -60,9 +60,4 @@ export class AuthController {
   getPractitioners(@Query('role') role?: string) {
     return this.authService.getPractitioners(role);
   }
-
-  @Get('health')
-  health() {
-    return { status: 'ok', service: 'auth' };
-  }
 }

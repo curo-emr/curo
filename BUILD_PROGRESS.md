@@ -163,9 +163,9 @@ All 22 entities created in `packages/shared/src/entities/`:
 - Entities: AuditLog
 
 ### curo-api-gateway (port 3000) ✅
-- [x] JWT validation at gateway (decodes token, injects x-user-id/x-user-role/x-user-email headers)
+- [x] JWT validation at gateway (rejects missing/invalid tokens; forwards the request unchanged)
 - [x] Path-based proxy routing to all 8 upstream services
-- [x] Public paths bypassed: /auth/login, /auth/register, /auth/refresh, /health
+- [x] Public paths bypassed: /auth/login, /auth/register, /auth/refresh; `GET /health` answered by the gateway itself
 - [x] CORS configured for localhost:3010–3014
 - [x] 502 error handling when services are down
 
@@ -910,3 +910,46 @@ to clinical, so pharmacy-service's own paginated `GET /prescriptions/pending` (a
 - Verified: root lint, build, tests; pharmacy portal lint and typecheck; smoke PASS=130 on
   rebuilt images; pharmacy-service `:3005/prescriptions/pending` → 404 (was 401). In the
   browser: the prescriptions queue lists pending prescriptions as before.
+
+---
+
+## Security hardening: ports, health, gateway headers, secrets ✅ DONE — 2026-10-07
+
+Branch `fix/security-hardening` (plan/03 A5, A6, A7). The fourth part of this batch, the
+`GET /prescriptions/pending` clash, was already fixed in `refactor/remove-dead-pending-route`.
+
+- **Ports (A5):** only the gateway (3000) and portals (3010–3016) publish host ports. The 9
+  backends are reachable only through the gateway. Postgres (5432) and MinIO's S3 API (9000)
+  bind to 127.0.0.1 for running code from source; Redis and the MinIO console publish nothing.
+  Documents are streamed through the document service (presigned URLs are unused), so the
+  browser never needs MinIO.
+- **Health (A6):** `registerHealthCheck()` (`@curo/shared/health`) serves
+  `GET /health` → `{"status":"ok"}` from the HTTP adapter, ahead of every middleware and guard.
+  `bootstrapService` registers it for every backend; the gateway's `main.ts` does the same, so
+  `/health` left the gateway's public-path list (where it 404'd). `GET /auth/health` is gone.
+  Compose has one health check, `wget` against `$PORT/health`, in place of ten `nc` port pokes.
+- **Gateway headers (A6):** `x-user-id/role/email` are no longer injected (nothing read them,
+  and a client could send its own). The gateway still rejects a missing or invalid token,
+  then forwards the request unchanged.
+- **Secrets (A7):** compose reads `DB_PASS`, `JWT_SECRET`, `JWT_REFRESH_SECRET`,
+  `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY` from a git-ignored `.env`
+  (`cp .env.example .env`). Each is declared once under `x-secrets` with `${VAR:?…}`, so compose
+  refuses to start without it. `.env.example` was rewritten (it had `DB_PASSWORD`, which nothing
+  reads). `POSTGRES_HOST_AUTH_METHOD: trust` is removed.
+- **Production fallbacks:** `secretFromEnv()` (`@curo/shared/config`) throws under
+  `NODE_ENV=production` instead of using the dev default. It covers `JWT_SECRET` (as before),
+  plus `JWT_REFRESH_SECRET`, which silently fell back to a public value and made refresh tokens
+  forgeable, and `DB_PASS` and `MINIO_SECRET_KEY`. The auth service reads the refresh secret at
+  startup, so a missing value stops the boot.
+- **Existing dev volumes:** Postgres writes `pg_hba.conf` only when the volume is first
+  created, so a volume from before this change still has `trust`. Run
+  `docker compose down -v` (this deletes the data) to get password auth.
+- Tests: new `services/api-gateway/src/gateway.spec.ts` checks that `/health` needs no token
+  and that proxied paths without a valid token get 401. It stubs `http-proxy-middleware`, which
+  is ESM-only.
+- Verified: root build, lint, tests, `typecheck:db`. `docker compose config` errors without
+  `.env` and renders with it. Rebuilt backends are all `(healthy)` via HTTP. Host
+  `:3001`–`:3009`, `:6379` and `:9001` refuse connections. `GET :3000/health` → 200. The
+  merged `/openapi.json` has paths from all 9 services (78 total), fetched over the compose network. Smoke PASS=130, FAIL=0 (`/health` now 200
+  plus a body check). The auth image, started with `JWT_SECRET` but no
+  `JWT_REFRESH_SECRET`, exits with "JWT_REFRESH_SECRET must be set when NODE_ENV=production".
