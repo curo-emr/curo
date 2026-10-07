@@ -18,7 +18,13 @@ import {
   type LabPanelTest,
 } from '@curo/shared/database';
 import { MedicationRequestStatus } from '@curo/shared/enums';
-import { parsePagination, toSearchset, SearchQuery } from '@curo/shared/fhir';
+import {
+  parsePagination,
+  toSearchset,
+  toFhirServiceRequest,
+  SearchQuery,
+} from '@curo/shared/fhir';
+import { labSampleUrl, labVisitUrl } from '@curo/shared/lab';
 import { Task } from '../entities/task.entity';
 import { CreateEncounterDto } from './dto/create-encounter.dto';
 import { CreateNoteDto } from './dto/create-note.dto';
@@ -32,10 +38,8 @@ import {
   toFhirEncounter,
   toFhirMedRequest,
   toFhirObservation,
-  toFhirServiceRequest,
 } from './fhir.mapper';
 import {
-  labOrderUrl,
   linkTriageVitals,
   newEncounter,
   newPrescription,
@@ -353,7 +357,7 @@ export class ClinicalService implements OnModuleInit {
       const t = testPanel[i];
       let qr = byCode.get(`${t.code}:${i}`);
       if (!qr) {
-        const testUrl = `${labOrderUrl(orderId)}?test=${encodeURIComponent(t.code)}&i=${i}`;
+        const testUrl = labSampleUrl(orderId, { code: t.code, index: i });
         qr = await this.qrCodesRepo.save(
           this.qrCodesRepo.create({
             serviceRequestId: orderId,
@@ -394,6 +398,12 @@ export class ClinicalService implements OnModuleInit {
       qrCode: qr ? { id: qr.id, imageBase64: qr.imageBase64 } : null,
       tests: await this.getTestQrs(order.id, order.testPanel ?? []),
     };
+  }
+
+  /** The QR on a visit's lab slip, which every lab scans to find the tests sent to it. */
+  async getLabSlip(encounterId: string) {
+    const encodedUrl = labVisitUrl(encounterId);
+    return { encodedUrl, qrBase64: await QRCode.toDataURL(encodedUrl) };
   }
 
   // Tasks

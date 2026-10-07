@@ -12,14 +12,18 @@ import { formatDate } from "@/lib/utils";
 import {
   getDocumentsByPatient, uploadDocument, openDocument, type DocumentRef,
 } from "@/lib/api/documents";
+import { LAB_REPORT_DOCUMENT } from "@/lib/api/lab";
 
 interface Props {
   orderId: string;
   patientId: string;
   encounterId?: string;
+  /** Told how many report files the order has, whenever the list loads. */
+  onReportsChange?: (count: number) => void;
 }
 
-export function LabReportUpload({ orderId, patientId, encounterId }: Props) {
+/** Report files for an order, as the lab's analyser or a scan produced them. The ordering doctor sees them too. */
+export function LabReportUpload({ orderId, patientId, encounterId, onReportsChange }: Props) {
   const [reports, setReports] = useState<DocumentRef[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [description, setDescription] = useState("");
@@ -28,9 +32,13 @@ export function LabReportUpload({ orderId, patientId, encounterId }: Props) {
 
   const load = useCallback(() => {
     getDocumentsByPatient(patientId)
-      .then((docs) => setReports(docs.filter((d) => d.relatedResourceId === orderId)))
+      .then((docs) => {
+        const forOrder = docs.filter((d) => d.type === LAB_REPORT_DOCUMENT && d.relatedResourceId === orderId);
+        setReports(forOrder);
+        onReportsChange?.(forOrder.length);
+      })
       .catch(console.error);
-  }, [patientId, orderId]);
+  }, [patientId, orderId, onReportsChange]);
 
   useEffect(() => {
     load();
@@ -46,7 +54,7 @@ export function LabReportUpload({ orderId, patientId, encounterId }: Props) {
       await uploadDocument({
         file,
         patientId,
-        type: "lab-report",
+        type: LAB_REPORT_DOCUMENT,
         description: description || undefined,
         encounterId,
         relatedResourceId: orderId,

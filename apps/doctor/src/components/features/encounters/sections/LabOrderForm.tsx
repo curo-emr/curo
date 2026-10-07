@@ -2,11 +2,12 @@
 
 import { useCallback, useMemo } from "react";
 import { FlaskConical, X } from "lucide-react";
-import type { LabTestCatalogItem } from "@/types";
+import type { Lab, LabTestCatalogItem } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { SearchCombobox } from "@/components/ui/SearchCombobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { LabPriority, LabTestDraft } from "../visit";
 
@@ -18,11 +19,22 @@ interface LabOrderFormProps {
   notes: string;
   onNotesChange: (notes: string) => void;
   catalog: LabTestCatalogItem[];
+  labs: Lab[];
 }
 
-export function LabOrderForm({ tests, onTestsChange, priority, onPriorityChange, notes, onNotesChange, catalog }: LabOrderFormProps) {
+export function LabOrderForm({ tests, onTestsChange, priority, onPriorityChange, notes, onNotesChange, catalog, labs }: LabOrderFormProps) {
   // The catalog lists each test once per lab; one entry per code is enough to order it.
   const uniqueCatalog = useMemo(() => [...new Map(catalog.map(t => [t.code, t])).values()], [catalog]);
+
+  // The labs to offer for a test: those whose catalog has it, or every lab for a test none lists.
+  const labsFor = useCallback(
+    (code: string) => {
+      const offering = new Set(catalog.filter(t => t.code === code).map(t => t.labId));
+      const offered = labs.filter(l => offering.has(l.id));
+      return offered.length ? offered : labs;
+    },
+    [catalog, labs],
+  );
 
   const search = useCallback(
     (q: string) => {
@@ -32,14 +44,29 @@ export function LabOrderForm({ tests, onTestsChange, priority, onPriorityChange,
     [uniqueCatalog],
   );
 
+  // A new test goes to the first lab that offers it; the doctor can change that.
   const add = (code: string, name: string) => {
     if (tests.some(t => t.code === code)) return;
-    onTestsChange([...tests, { code, name }]);
+    onTestsChange([...tests, { code, name, labId: labsFor(code)[0]?.id }]);
   };
+
+  const sendTo = (code: string, labId: string) =>
+    onTestsChange(tests.map(t => (t.code === code ? { ...t, labId } : t)));
+
+  const description =
+    labs.length === 1 ? `Sent to ${labs[0].name} when you sign the visit`
+      : "Each test goes to the lab you choose when you sign the visit";
+
+  if (labs.length === 0)
+    return (
+      <SectionCard id="labs" icon={FlaskConical} iconClassName="text-clinical-lab" title="Lab orders">
+        <p className="text-sm text-muted-foreground">No laboratory is set up yet, so tests can&apos;t be ordered. Ask an administrator to add one.</p>
+      </SectionCard>
+    );
 
   return (
     <SectionCard id="labs" icon={FlaskConical} iconClassName="text-clinical-lab" title="Lab orders" count={tests.length}
-      description="Sent to the lab when you sign the visit">
+      description={description}>
       <div className="space-y-3">
         <SearchCombobox<LabTestCatalogItem>
           placeholder="Add a lab test…"
@@ -57,17 +84,28 @@ export function LabOrderForm({ tests, onTestsChange, priority, onPriorityChange,
         />
         {tests.length > 0 && (
           <>
-            <div className="flex flex-wrap gap-2">
+            <ul className="divide-y rounded-lg border">
               {tests.map(t => (
-                <span key={t.code} className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 py-1 pl-3 pr-1.5 text-sm text-foreground">
-                  {t.name}
+                <li key={t.code} className="flex flex-wrap items-center gap-2 py-1.5 pl-3 pr-1.5">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{t.name}</span>
+                  {(labs.length > 1 || !t.labId) && (
+                    <Select value={t.labId ?? ""} onValueChange={labId => sendTo(t.code, labId)}>
+                      <SelectTrigger size="sm" aria-label={`Lab for ${t.name}`} aria-invalid={!t.labId}
+                        className="max-w-full bg-card text-xs sm:w-60">
+                        <SelectValue placeholder="Choose a lab" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {labsFor(t.code).map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
                   <button type="button" onClick={() => onTestsChange(tests.filter(x => x.code !== t.code))}
-                    className="rounded-full p-0.5 text-muted-foreground hover:bg-background hover:text-destructive" aria-label={`Remove ${t.name}`}>
+                    className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label={`Remove ${t.name}`}>
                     <X className="h-3.5 w-3.5" />
                   </button>
-                </span>
+                </li>
               ))}
-            </div>
+            </ul>
             <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-end">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Priority</Label>

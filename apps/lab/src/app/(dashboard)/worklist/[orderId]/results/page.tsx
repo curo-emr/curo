@@ -35,15 +35,17 @@ export default function ResultsEntryPage({ params }: { params: Promise<{ orderId
       </div>
 
       {order.status === 'completed' ? (
-        <div className="rounded-lg border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-          Results for this order have already been entered.{" "}
-          <Link href={ROUTES.ORDER(order.id)} className="font-medium text-primary hover:underline">View the order</Link>
-        </div>
+        <>
+          <div className="rounded-lg border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+            Results for this order have already been entered.{" "}
+            <Link href={ROUTES.ORDER(order.id)} className="font-medium text-primary hover:underline">View the order</Link>
+          </div>
+          {/* A report file can still follow; the doctor sees it with the results. */}
+          <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId} />
+        </>
       ) : (
         <ResultsEntryForm order={order} patient={patient} />
       )}
-
-      <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId} />
     </div>
   );
 }

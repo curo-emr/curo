@@ -8,10 +8,12 @@ interface RxPrintProps {
   date?: string;
 }
 
-// Print-only e-prescription. Hidden on screen; the print stylesheet (globals.css) shows only #rx-print.
+export const RX_PRINT_ID = "rx-print";
+
+// Print-only e-prescription. Hidden on screen; printed with printOnly(RX_PRINT_ID).
 export function RxPrint({ patient, items, prescriber, date }: RxPrintProps) {
   return (
-    <div id="rx-print" className="hidden">
+    <div id={RX_PRINT_ID} className="hidden">
       <div style={{ padding: 24, fontFamily: "serif", color: "#111" }}>
         <div style={{ borderBottom: "2px solid #1e3a8a", paddingBottom: 12, marginBottom: 16 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1e3a8a", margin: 0 }}>CuroMD — e-Prescription</h1>
