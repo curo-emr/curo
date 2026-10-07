@@ -1,7 +1,7 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import type { Patient, Allergy, Problem } from '@/types';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, type FhirPatient, type FhirAllergy, type FhirCondition } from './mappers';
-import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from './fhir';
+import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
 
 // Backward-compatible: returns up to 100 patients as a flat array (used by
 // dropdowns / lookups). Unwraps either a bare array or a FHIR searchset Bundle.

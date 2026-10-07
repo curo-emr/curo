@@ -1,6 +1,6 @@
-import { apiClient } from "./client";
+import { apiClient } from "@curo/web/api";
 import type { AuditEntry } from "@/types";
-import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from "./fhir";
+import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from "@curo/web/fhir";
 
 interface AuditFilters {
   userId?: string;

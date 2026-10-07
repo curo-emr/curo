@@ -1,9 +1,9 @@
 /**
- * FHIR Bundle / pagination shared types + unwrap helper (copied per frontend).
+ * FHIR Bundle and pagination types, and the helpers the portals' API modules use.
  *
  * List API methods route their response through `unwrapBundle`, which accepts
  * BOTH a legacy bare array of resources AND a FHIR searchset Bundle. This makes
- * the frontend tolerant of the backend before/after it switches to Bundles.
+ * the portals tolerant of the backend before/after it switches to Bundles.
  */
 
 export interface FhirBundleEntry<T> {
@@ -16,7 +16,7 @@ export interface FhirBundleLink {
 }
 
 export interface FhirBundle<T> {
-  resourceType: 'Bundle';
+  resourceType: "Bundle";
   type: string;
   total?: number;
   link?: FhirBundleLink[];
@@ -39,8 +39,8 @@ export interface PaginatedResult<T> {
 export function isFhirBundle<T>(data: unknown): data is FhirBundle<T> {
   return (
     !!data &&
-    typeof data === 'object' &&
-    (data as { resourceType?: unknown }).resourceType === 'Bundle'
+    typeof data === "object" &&
+    (data as { resourceType?: unknown }).resourceType === "Bundle"
   );
 }
 
@@ -67,6 +67,6 @@ export function paginationParams(params?: PaginationParams): Record<string, unkn
   const out: Record<string, unknown> = {};
   if (params.page != null) out.page = params.page;
   if (params.pageSize != null) out.pageSize = params.pageSize;
-  if (params.search != null && params.search !== '') out.search = params.search;
+  if (params.search != null && params.search !== "") out.search = params.search;
   return out;
 }

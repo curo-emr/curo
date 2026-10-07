@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Search, Bell, LogOut, User, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@curo/web/auth";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { getNotificationCount } from "@/lib/api/notifications";
 import { ROUTES } from "@/lib/constants";

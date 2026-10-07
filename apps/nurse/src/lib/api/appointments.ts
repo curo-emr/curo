@@ -1,7 +1,7 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import type { Appointment, QueueStage } from '@/types';
 import { mapFhirAppointment, type FhirAppointment } from './mappers';
-import { unwrapBundle, type FhirBundle } from './fhir';
+import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 
 // One day's appointments in the given queue stages (ordered by start time).
 export async function getQueue(date: string, stages: QueueStage[]): Promise<Appointment[]> {

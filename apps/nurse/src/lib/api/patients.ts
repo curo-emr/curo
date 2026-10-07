@@ -1,7 +1,7 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import type { Patient, Allergy, Problem } from '@/types';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, type FhirPatient, type FhirAllergy, type FhirCondition } from './mappers';
-import { unwrapBundle, type FhirBundle } from './fhir';
+import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 
 // Resolve a specific set of patients (FHIR `_id` search) — e.g. the ones on today's queue.
 export async function getPatientsByIds(ids: string[]): Promise<Patient[]> {

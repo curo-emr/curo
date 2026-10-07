@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import type { Appointment } from "@/types";
 import { updateQueueStage } from "@/lib/api/appointments";
 import { ROUTES } from "@/lib/constants";
-import { apiErrorMessage } from "@/lib/api/client";
+import { apiErrorMessage } from "@curo/web/api";
 
 // Queue actions shared by the dashboard and the triage queue.
 export function useTriageActions(onChange?: () => void) {

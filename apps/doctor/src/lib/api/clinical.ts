@@ -1,10 +1,10 @@
-import { apiClient } from './client';
+import { apiClient } from '@curo/web/api';
 import type { Prescription, LabOrder, Vitals, SOAP } from '@/types';
 import {
   mapFhirMedicationRequest, mapFhirServiceRequest,
   type FhirMedicationRequest, type FhirServiceRequest,
 } from './mappers';
-import { unwrapBundle, type FhirBundle } from './fhir';
+import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 
 // Shared LOINC ⇄ Vitals-field map, used both to write vitals (one observation per
 // field) and to read them back. Keyed by LOINC code; display/unit are for the write path.
