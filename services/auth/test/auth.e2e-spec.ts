@@ -113,6 +113,19 @@ describe('Sign-in', () => {
       .expect(401);
   });
 
+  it('has no self-registration: accounts are created by the super admin', async () => {
+    const email = `intruder.${randomUUID()}@curo.test`;
+
+    await svc.api
+      .post('/auth/register')
+      .send({ email, password: PASSWORD, role: UserRole.SUPER_ADMIN })
+      .expect(404);
+
+    await expect(svc.db.getRepository(User).countBy({ email })).resolves.toBe(
+      0,
+    );
+  });
+
   describe('POST /auth/staff', () => {
     it('refuses an email that already has an account', async () => {
       const staff = await onboard();

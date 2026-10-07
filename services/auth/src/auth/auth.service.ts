@@ -11,7 +11,6 @@ import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UserRole, Gender } from '@curo/shared/enums';
 import {
@@ -49,24 +48,6 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    return this.issueTokens(user);
-  }
-
-  async register(dto: RegisterDto) {
-    const existing = await this.usersRepo.findOne({
-      where: { email: dto.email },
-    });
-    if (existing) throw new ConflictException('Email already registered');
-
-    const passwordHash = await bcrypt.hash(dto.password, 12);
-    const user = this.usersRepo.create({
-      email: dto.email,
-      passwordHash,
-      role: dto.role,
-      patientId: dto.patientId,
-      practitionerId: dto.practitionerId,
-    });
-    await this.usersRepo.save(user);
     return this.issueTokens(user);
   }
 
