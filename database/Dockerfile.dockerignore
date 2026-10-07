@@ -1,8 +1,11 @@
-# The context is the repo root: the image needs only the root manifests, the base tsconfig and database/.
+# The context is the repo root: the image needs only the root manifests, the base tsconfig,
+# database/ and the identifier generators the seed imports from @curo/shared's source.
 **
 !package.json
 !package-lock.json
 !tsconfig.base.json
 !database/**
+!packages/shared/src/identifiers/**
+**/*.spec.ts
 **/node_modules
 **/.env*
