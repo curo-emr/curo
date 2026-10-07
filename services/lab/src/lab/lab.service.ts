@@ -17,6 +17,7 @@ import { ScanQrDto } from './dto/scan-qr.dto';
 import { CreateInstrumentDto } from './dto/create-instrument.dto';
 import { DiagnosticReportStatus, InstrumentStatus } from '../enums';
 import { generateLabReportPdf } from './pdf.generator';
+import { parseLabQr } from './lab-qr';
 
 interface LabStaffRow {
   id: string;
@@ -138,9 +139,7 @@ export class LabService {
   }
 
   async scanQr(dto: ScanQrDto, performerId: string) {
-    // QR encodes either an order-level URL (.../lab/orders/:id) or a per-test URL
-    // (.../lab/orders/:id?test=<code>&i=<index>). Resolve order id + optional test.
-    const { orderId, testCode, testIndex } = this.parseQrData(dto.qrData);
+    const { orderId, testCode, testIndex } = parseLabQr(dto.qrData);
 
     // Mark the specific per-test QR (or order-level QR) as scanned.
     let qr: QrCode | null;
@@ -180,29 +179,6 @@ export class LabService {
           }
         : null;
     return { ...toFhirServiceRequest(order), scannedTest };
-  }
-
-  private parseQrData(raw: string): {
-    orderId: string;
-    testCode?: string;
-    testIndex?: number;
-  } {
-    const [path, qs] = raw.split('?');
-    const segs = path.split('/').filter(Boolean);
-    const ordersIdx = segs.indexOf('orders');
-    const orderId =
-      ordersIdx >= 0 && segs[ordersIdx + 1]
-        ? segs[ordersIdx + 1]
-        : segs[segs.length - 1];
-    let testCode: string | undefined;
-    let testIndex: number | undefined;
-    if (qs) {
-      const sp = new URLSearchParams(qs);
-      testCode = sp.get('test') ?? undefined;
-      const i = sp.get('i');
-      testIndex = i != null ? parseInt(i, 10) : undefined;
-    }
-    return { orderId, testCode, testIndex };
   }
 
   async receiveOrder(id: string, performerId: string) {
