@@ -1,6 +1,16 @@
 import { randomUUID } from 'node:crypto';
-import { Observation, QrCode, ServiceRequest } from '@curo/shared/database';
-import { ServiceRequestStatus, UserRole } from '@curo/shared/enums';
+import {
+  Notification,
+  Observation,
+  Patient,
+  QrCode,
+  ServiceRequest,
+} from '@curo/shared/database';
+import {
+  NotificationEventType,
+  ServiceRequestStatus,
+  UserRole,
+} from '@curo/shared/enums';
 import {
   startService,
   type ServiceUnderTest,
@@ -20,11 +30,31 @@ describe('Lab specimens and results', () => {
 
   afterAll(() => svc.close());
 
-  /** An active two-test order with a QR label per test, as a signed visit leaves it. */
-  async function orderLabs() {
+  /** A doctor with a login, as the auth service links them: returns both ids. */
+  async function doctorWithAccount() {
+    const practitionerId = randomUUID();
+    const userId = randomUUID();
+    await svc.db.query(
+      `INSERT INTO practitioners (id, "firstName", "lastName", role, "userId")
+       VALUES ($1, 'Test', 'Doctor', 'DOCTOR', $2)`,
+      [practitionerId, userId],
+    );
+    return { practitionerId, userId };
+  }
+
+  /**
+   * An active two-test order with a QR label per test, as a signed visit leaves
+   * it. Ordered by `requesterId`: by default a practitioner with no account.
+   */
+  async function orderLabs(requesterId = randomUUID()) {
+    const patient = await svc.db.getRepository(Patient).save({
+      patientCode: `PT-${randomUUID()}`,
+      firstName: 'Nimal',
+      lastName: 'Perera',
+    });
     const order = await svc.db.getRepository(ServiceRequest).save({
-      patientId: randomUUID(),
-      requesterId: randomUUID(),
+      patientId: patient.id,
+      requesterId,
       status: ServiceRequestStatus.ACTIVE,
       category: 'laboratory',
       code: 'PANEL',
@@ -62,6 +92,9 @@ describe('Lab specimens and results', () => {
       .getRepository(DiagnosticReport)
       .countBy({ serviceRequestId }),
   });
+
+  const inboxOf = (userId: string) =>
+    svc.db.getRepository(Notification).findBy({ recipientId: userId });
 
   const scan = (qrData: string) =>
     svc.api.post('/orders/scan').set(labStaff.headers).send({ qrData });
@@ -161,8 +194,64 @@ describe('Lab specimens and results', () => {
       expect(report.performerId).toBe(labStaff.practitionerId);
     });
 
-    it('saves nothing, and leaves the order open, when any result fails to save', async () => {
+    it("notifies the ordering doctor's account that the results are ready", async () => {
+      const doctor = await doctorWithAccount();
+      const { order } = await orderLabs(doctor.practitionerId);
+
+      const res = await enterResults({
+        serviceRequestId: order.id,
+        results: [fbc],
+      }).expect(201);
+
+      await expect(inboxOf(doctor.userId)).resolves.toEqual([
+        expect.objectContaining({
+          recipientRole: UserRole.DOCTOR,
+          eventType: NotificationEventType.LAB_RESULTS_READY,
+          message: expect.stringContaining('Nimal Perera') as unknown,
+          relatedResourceType: 'DiagnosticReport',
+          relatedResourceId: (res.body as { id: string }).id,
+          isRead: false,
+        }),
+      ]);
+    });
+
+    it('records the results without a notification when the orderer has no account', async () => {
       const { order } = await orderLabs();
+
+      const res = await enterResults({
+        serviceRequestId: order.id,
+        results: [fbc],
+      }).expect(201);
+
+      await expect(
+        svc.db.getRepository(Notification).countBy({
+          relatedResourceId: (res.body as { id: string }).id,
+        }),
+      ).resolves.toBe(0);
+    });
+
+    it('records the results when the order carries a patient id that is not a uuid', async () => {
+      const doctor = await doctorWithAccount();
+      const { order } = await orderLabs(doctor.practitionerId);
+      await svc.db
+        .getRepository(ServiceRequest)
+        .update(order.id, { patientId: 'legacy-42' });
+
+      await enterResults({
+        serviceRequestId: order.id,
+        results: [fbc],
+      }).expect(201);
+
+      await expect(inboxOf(doctor.userId)).resolves.toEqual([
+        expect.objectContaining({
+          message: expect.stringContaining('patient legacy-42') as unknown,
+        }),
+      ]);
+    });
+
+    it('saves nothing, and leaves the order open, when any result fails to save', async () => {
+      const doctor = await doctorWithAccount();
+      const { order } = await orderLabs(doctor.practitionerId);
       // valueQuantity is numeric(10,2): this overflows inside the transaction.
       const overflow = { ...fbc, code: '4548-4', value: 1e9 };
 
@@ -175,14 +264,16 @@ describe('Lab specimens and results', () => {
         observations: 0,
         reports: 0,
       });
+      await expect(inboxOf(doctor.userId)).resolves.toEqual([]);
       await expect(savedOrder(order.id)).resolves.toMatchObject({
         status: ServiceRequestStatus.ACTIVE,
         completedAt: null,
       });
     });
 
-    it('files one report when the same results are submitted twice at once', async () => {
-      const { order } = await orderLabs();
+    it('files one report, and one notification, when the same results are submitted twice at once', async () => {
+      const doctor = await doctorWithAccount();
+      const { order } = await orderLabs(doctor.practitionerId);
       const body = { serviceRequestId: order.id, results: [fbc] };
 
       const results = await Promise.all([
@@ -195,6 +286,7 @@ describe('Lab specimens and results', () => {
         observations: 1,
         reports: 1,
       });
+      await expect(inboxOf(doctor.userId)).resolves.toHaveLength(1);
     });
 
     it('refuses results for an order that is already reported', async () => {

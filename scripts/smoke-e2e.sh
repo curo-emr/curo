@@ -289,9 +289,12 @@ req "patient" 200 GET "/encounters/patient/$PAT_ID_SELF" "" "$PAT" >/dev/null
 # ---------------------------------------------------------------------------
 echo "-- notifications / audit / documents --" >&2
 DOC_UID=$(jq -r .user.id <<<"$DOC_R")
-N=$(req "any" 201 POST "/notifications" "{\"recipientId\":\"$DOC_UID\",\"eventType\":\"general\",\"title\":\"Smoke\",\"message\":\"test\"}" "$DOC")
-NOTIF_ID=$(jq -r '.id' <<<"$N")
-req "any"   200 GET  "/notifications" "" "$DOC" >/dev/null
+# Notifications come only from the services: entering the lab results above
+# notified the ordering doctor, and no user can send one through the API.
+req "no sender" 404 POST "/notifications" "{\"recipientId\":\"$DOC_UID\",\"eventType\":\"general\",\"title\":\"Smoke\",\"message\":\"test\"}" "$DOC" >/dev/null
+N=$(req "any" 200 GET "/notifications" "" "$DOC")
+NOTIF_ID=$(jq -r --arg r "$REPORT_ID" 'map(select(.eventType=="lab_results_ready" and .relatedResourceId==$r)) | .[0].id // empty' <<<"$N")
+expect_eq "doctor notified of lab results" "$([[ -n "$NOTIF_ID" ]] && echo yes || echo no)" "yes"
 req "any"   200 GET  "/notifications/count" "" "$DOC" >/dev/null
 [[ -n "$NOTIF_ID" && "$NOTIF_ID" != "null" ]] && req "any" 200 PUT "/notifications/$NOTIF_ID/read" '{}' "$DOC" >/dev/null
 req "any"   200 PUT  "/notifications/read-all" '{}' "$DOC" >/dev/null
