@@ -10,7 +10,10 @@ import {
   Header,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { PharmacyService } from './pharmacy.service';
+import {
+  PharmacyService,
+  type DispenseHistoryFilter,
+} from './pharmacy.service';
 import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
 import {
@@ -47,15 +50,18 @@ export class PharmacyController {
   @Get('dispense')
   @Roles('PHARMACIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  getDispenseHistory(
-    @Query('patientId') patientId?: string,
-    @Query('prescriptionId') prescriptionId?: string,
-    @Query() query?: PaginationQuery,
-  ) {
+  getDispenseHistory(@Query() query: DispenseHistoryFilter & PaginationQuery) {
+    const { patientId, prescriptionId, search, searchPatientIds } = query;
     return this.pharmacyService.getDispenseHistory(
-      { patientId, prescriptionId },
+      { patientId, prescriptionId, search, searchPatientIds },
       query,
     );
+  }
+
+  @Get('dispense/summary')
+  @Roles('PHARMACIST', 'SUPER_ADMIN')
+  getDispenseSummary() {
+    return this.pharmacyService.getDispenseSummary();
   }
 
   @Get('dispense/:id')
