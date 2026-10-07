@@ -60,9 +60,8 @@ export interface FhirCondition {
   note?: Array<{ text?: string }>;
 }
 
-// Diagnoses recorded during a visit are stored as Conditions with this category;
+// The clinical service stores a visit's diagnoses as encounter-diagnosis Conditions;
 // the primary one carries PRIMARY_DIAGNOSIS_NOTE.
-export const ENCOUNTER_DIAGNOSIS = 'encounter-diagnosis';
 export const PRIMARY_DIAGNOSIS_NOTE = 'Primary diagnosis';
 
 export interface FhirAppointment {

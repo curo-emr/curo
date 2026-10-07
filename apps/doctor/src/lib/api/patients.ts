@@ -67,10 +67,6 @@ export async function updatePatient(id: string, data: Record<string, unknown>): 
   await apiClient.patch(`/patients/${id}`, data);
 }
 
-export async function createCondition(patientId: string, data: Record<string, unknown>): Promise<void> {
-  await apiClient.post(`/patients/${patientId}/conditions`, data);
-}
-
 export async function createAllergy(patientId: string, data: Record<string, unknown>): Promise<void> {
   await apiClient.post(`/patients/${patientId}/allergies`, data);
 }
