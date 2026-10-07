@@ -35,6 +35,10 @@ const STATUSES = {
   completed: { tone: "success" },
   cancelled: { tone: "neutral", strikethrough: true },
   no_show: { tone: "error" },
+  // Where a checked-in patient is in the day's flow (with_doctor is above)
+  waiting_nurse: { tone: "warning", label: "Waiting for nurse" },
+  with_nurse: { tone: "teal" },
+  ready_for_doctor: { tone: "success" },
   // Lab orders and prescriptions, as the ordering doctor sees them
   draft: { tone: "neutral" },
   sent_to_lab: { tone: "info" },

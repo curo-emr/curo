@@ -5,6 +5,7 @@ import { Button } from "@curo/web/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { getPatientName } from "@/lib/utils";
 import { StatusBadge } from "@curo/web/ui/status-badge";
+import { orderStatus } from "@/lib/order-status";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
@@ -43,7 +44,7 @@ export function UrgentOrdersList({ orders, patients }: UrgentOrdersListProps) {
                       <Badge variant="outline" className={order.priority === 'stat' ? 'text-status-error-text border-status-error-border bg-status-error-bg' : 'text-status-warning-text border-status-warning-border bg-status-warning-bg'}>
                         {order.priority.toUpperCase()}
                       </Badge>
-                      <StatusBadge status={order.status} />
+                      <StatusBadge status={orderStatus(order)} />
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {getPatientName(order.patientId, patients)}

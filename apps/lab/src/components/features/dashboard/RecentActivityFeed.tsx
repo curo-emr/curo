@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Clock, ArrowRight } from "lucide-react";
 import { getPatientName, formatDate } from "@/lib/utils";
 import { StatusBadge } from "@curo/web/ui/status-badge";
+import { orderStatus } from "@/lib/order-status";
 
 interface RecentActivityFeedProps {
   orders: LabOrder[];
@@ -37,7 +38,7 @@ export function RecentActivityFeed({ orders, patients }: RecentActivityFeedProps
                 </p>
                 <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
               </div>
-              <StatusBadge status={order.status} />
+              <StatusBadge status={orderStatus(order)} />
             </div>
           ))}
         </div>

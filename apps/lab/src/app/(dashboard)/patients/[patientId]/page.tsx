@@ -11,6 +11,7 @@ import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
 import { StatusBadge } from "@curo/web/ui/status-badge";
+import { orderStatus } from "@/lib/order-status";
 import { User, FlaskConical, FileText } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
@@ -83,7 +84,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className="font-mono text-sm font-medium text-slate-900">{order.id.slice(0, 8).toUpperCase()}</span>
-                        <StatusBadge status={order.status} />
+                        <StatusBadge status={orderStatus(order)} />
                         <Badge variant="outline" className={
                           order.priority === 'stat' ? 'text-red-700 border-red-200 bg-red-50' :
                           order.priority === 'urgent' ? 'text-amber-700 border-amber-200 bg-amber-50' :
