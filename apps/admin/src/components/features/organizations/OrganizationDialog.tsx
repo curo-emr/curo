@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -57,10 +57,11 @@ function toInput({ type, name, ...optional }: OrganizationFormInput): Organizati
 export function OrganizationDialog({ open, onOpenChange, organization, onSaved }: OrganizationDialogProps) {
   const isEdit = !!organization;
   const [saving, setSaving] = useState(false);
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<OrganizationFormInput>({
+  const { register, handleSubmit, control, setValue, reset, formState: { errors } } = useForm<OrganizationFormInput>({
     resolver: zodResolver(organizationSchema),
     defaultValues: formValues(organization),
   });
+  const type = useWatch({ control, name: "type" });
 
   useEffect(() => {
     if (open) reset(formValues(organization));
@@ -104,7 +105,7 @@ export function OrganizationDialog({ open, onOpenChange, organization, onSaved }
             </div>
             <div className="space-y-1.5">
               <Label>Type</Label>
-              <Select value={watch("type")} onValueChange={(v) => setValue("type", v as OrganizationFormInput["type"])} disabled={isEdit}>
+              <Select value={type} onValueChange={(v) => setValue("type", v as OrganizationFormInput["type"])} disabled={isEdit}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ORGANIZATION_TYPES.map((t) => <SelectItem key={t} value={t}>{ORGANIZATION_TYPE_LABELS[t]}</SelectItem>)}

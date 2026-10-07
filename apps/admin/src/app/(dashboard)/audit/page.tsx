@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useServerPagination } from "@curo/web/hooks";
 import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +11,6 @@ import {
 import { Pagination } from "@/components/ui/pagination";
 import { getAuditLogsPaginated } from "@/lib/api/audit";
 import { format, parseISO } from "date-fns";
-import type { AuditEntry } from "@/types";
 
 const actionClass: Record<string, string> = {
   CREATE: "bg-status-success-bg text-status-success-text border-status-success-border",
@@ -20,33 +19,9 @@ const actionClass: Record<string, string> = {
 };
 
 export default function AuditPage() {
-  const [logs, setLogs] = useState<AuditEntry[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => { setPage(1); }, [pageSize]);
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await getAuditLogsPaginated({ page, pageSize });
-      setLogs(result.items);
-      setTotal(result.total);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load audit log.");
-      setLogs([]);
-      setTotal(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, pageSize]);
-
-  useEffect(() => { load(); }, [load]);
+  const { items: logs, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
+    (page, pageSize) => getAuditLogsPaginated({ page, pageSize }),
+  );
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -67,8 +42,8 @@ export default function AuditPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-10"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />Loading audit log…</TableCell></TableRow>
-              ) : error ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-destructive py-10">{error}</TableCell></TableRow>
+              ) : isError ? (
+                <TableRow><TableCell colSpan={5} className="text-center text-destructive py-10">Failed to load audit log.</TableCell></TableRow>
               ) : logs.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-10">No audit entries yet.</TableCell></TableRow>
               ) : (

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useServerPagination } from "@curo/web/hooks";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
 import { Loader2 } from "lucide-react";
-import { QCLog, LabInstrument, LabStaff, QCStatus } from "@/types";
+import { LabInstrument, LabStaff, QCStatus } from "@/types";
 import { formatDate, getStaffName } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { getQCLogsPaginated } from "@/lib/api/lab";
@@ -32,41 +33,16 @@ interface QCLogTableProps {
 export function QCLogTable({ instruments, staff }: QCLogTableProps) {
   const [instrumentFilter, setInstrumentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-
-  const [logs, setLogs] = useState<QCLog[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPage(1);
-  }, [instrumentFilter, statusFilter, pageSize]);
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await getQCLogsPaginated({
+  const { items: logs, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
+    (page, pageSize) =>
+      getQCLogsPaginated({
         page,
         pageSize,
         instrumentId: instrumentFilter === "all" ? undefined : instrumentFilter,
         status: statusFilter === "all" ? undefined : (statusFilter as QCStatus),
-      });
-      setLogs(result.items);
-      setTotal(result.total);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load QC records.");
-      setLogs([]);
-      setTotal(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, pageSize, instrumentFilter, statusFilter]);
-
-  useEffect(() => { load(); }, [load]);
+      }),
+    [instrumentFilter, statusFilter],
+  );
 
   const getInstrumentName = (id: string) => instruments.find(i => i.id === id)?.name || id;
 
@@ -122,9 +98,9 @@ export function QCLogTable({ instruments, staff }: QCLogTableProps) {
                   Loading QC records…
                 </TableCell>
               </TableRow>
-            ) : error ? (
+            ) : isError ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-32 text-center text-destructive">{error}</TableCell>
+                <TableCell colSpan={8} className="h-32 text-center text-destructive">Failed to load QC records.</TableCell>
               </TableRow>
             ) : logs.length > 0 ? (
               logs.map(log => {

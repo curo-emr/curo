@@ -1,0 +1,25 @@
+{
+  "name": "@curo/web",
+  "version": "1.0.0",
+  "description": "Shared code for the Curo portals. Shipped as TypeScript source; each portal compiles it through Next's transpilePackages",
+  "private": true,
+  "license": "UNLICENSED",
+  "exports": {
+    "./hooks": "./src/hooks/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "typescript": "^5"
+  }
+}
