@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -30,7 +30,8 @@ export class UpdateUserDto {
   @IsString()
   licenseNumber?: string;
 
+  /** Where they work; which kinds of organization depend on the role. */
   @IsOptional()
-  @IsString()
+  @IsUUID()
   organizationId?: string;
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { USER_ROLES } from "@/lib/constants";
+import { USER_ROLES, WORKPLACE_REQUIRED } from "@/lib/constants";
 
 export const createUserSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -12,6 +12,10 @@ export const createUserSchema = z.object({
   specialization: z.string().optional(),
   qualification: z.string().optional(),
   licenseNumber: z.string().optional(),
+  organizationId: z.string().optional(),
+}).refine((u) => u.organizationId || !WORKPLACE_REQUIRED.includes(u.role), {
+  message: "Choose where they work",
+  path: ["organizationId"],
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;

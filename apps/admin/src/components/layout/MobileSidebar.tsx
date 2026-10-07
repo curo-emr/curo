@@ -5,24 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { ROUTES } from "@/lib/constants";
-import {
-  LayoutDashboard,
-  Users,
-  Wallet,
-  ScrollText,
-  Settings,
-  Activity,
-  X,
-} from "lucide-react";
-
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", href: ROUTES.DASHBOARD },
-  { icon: Users, label: "Users", href: ROUTES.USERS },
-  { icon: Wallet, label: "Income", href: ROUTES.INCOME },
-  { icon: ScrollText, label: "Audit Log", href: ROUTES.AUDIT },
-  { icon: Settings, label: "Settings", href: ROUTES.SETTINGS },
-];
+import { Activity, X } from "lucide-react";
+import { NAV_ITEMS } from "./nav-items";
 
 export function MobileSidebar() {
   const pathname = usePathname();
@@ -61,7 +45,7 @@ export function MobileSidebar() {
         </div>
 
         <nav className="flex-1 space-y-1 px-4 py-4">
-          {navItems.map((item) => {
+          {NAV_ITEMS.map((item) => {
             const isActive = pathname.startsWith(item.href);
             return (
               <Link

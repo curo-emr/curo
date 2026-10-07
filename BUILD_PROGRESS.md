@@ -1287,3 +1287,27 @@ Branch `fix/low-stock-per-drug` (stacked on `feat/low-stock-alerts`).
 - **Pharmacy portal:** the dashboard's Low Stock card and "Low Stock Items" tile read `/stock/alerts`
   rather than filtering the first 100 batches in the browser; inventory shows `usableQuantity` and the
   server's `low`. Removed the unused `MedicationList` and `isLowStock`, which held the per-batch rule.
+
+## Organizations managed in the admin portal ✅ DONE — 2026-10-07
+
+Branch `feat/manage-organizations`. First of two parts of "several pharmacies" (the second,
+`feat/pharmacy-scoping`, limits stock, dispensing and alerts to the pharmacist's pharmacy).
+
+- **Auth service** owns `organizations`:
+  - New: `GET /organizations/:id`, `POST /organizations`, `PATCH /organizations/:id`
+    (SUPER_ADMIN only). The list now takes `?includeInactive=true`.
+  - Organizations are deactivated rather than deleted, because stock, lab catalogs and staff refer
+    to them. `type` (`OrganizationType`: clinic | hospital | pharmacy | laboratory) is fixed once
+    created.
+  - Changes are audited through `AuditTrail` (`src/audit/audit-trail.ts`), which `AdminService`
+    now uses too.
+- **Workplaces** (`src/organization/workplace.ts`): which kinds of organization each role works at.
+  - Pharmacists work at a pharmacy and *must* have one; lab staff work at a laboratory; doctors,
+    nurses and receptionists work at a clinic or hospital.
+  - The super admin and patients have none.
+  - `POST/PATCH /auth/users` rejects an unknown, inactive or wrong-kind organization (400).
+- **Admin portal:**
+  - New Organizations page (list with type filter, create/edit dialog, deactivate/reactivate).
+  - Workplace picker on New User (required for pharmacists) and a Workplace card on the user page.
+  - The two sidebars share `nav-items.ts`.
+- **Not changed:** `POST /auth/staff` (no portal calls it) still creates staff without a workplace.

@@ -5,12 +5,16 @@ import { AdminService } from './admin.service';
 import { AuthModule } from '../auth/auth.module';
 import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
-import { Patient, AuditLog } from '@curo/shared/database';
+import { Patient } from '@curo/shared/database';
+import { AuditTrailModule } from '../audit/audit-trail';
+import { OrganizationModule } from '../organization/organization.module';
 
 @Module({
   imports: [
     AuthModule, // provides JwtModule + JwtStrategy used by the guards
-    TypeOrmModule.forFeature([User, Practitioner, Patient, AuditLog]),
+    AuditTrailModule,
+    OrganizationModule,
+    TypeOrmModule.forFeature([User, Practitioner, Patient]),
   ],
   controllers: [AdminController],
   providers: [AdminService],
