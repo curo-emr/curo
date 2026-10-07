@@ -6,7 +6,8 @@
  * be a query error; `escapeLike` makes free text literal inside an ILIKE pattern.
  */
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** A comma-separated param as its trimmed, non-empty values: `"a, b,,c"` → `['a', 'b', 'c']`. */
 export function parseList(param?: string | string[]): string[] {
