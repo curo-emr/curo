@@ -1,12 +1,11 @@
-import { UserRole } from '@curo/shared/enums';
+import { Notification } from '@curo/shared/database';
+import { NotificationEventType, UserRole } from '@curo/shared/enums';
 import {
   startService,
   type ServiceUnderTest,
   type TestActor,
 } from '@curo/testing';
 import { AppModule } from '../src/app.module';
-import { Notification } from '../src/entities/notification.entity';
-import { NotificationEventType } from '../src/enums';
 
 describe('Notifications', () => {
   let svc: ServiceUnderTest;
@@ -17,22 +16,15 @@ describe('Notifications', () => {
 
   afterAll(() => svc.close());
 
-  const notice = (recipient: TestActor, overrides: object = {}) => ({
-    recipientId: recipient.sub,
-    eventType: NotificationEventType.LAB_RESULTS_READY,
-    title: 'Results ready',
-    message: 'Full blood count is ready to review',
-    ...overrides,
-  });
-
-  /** Sends `recipient` a notification and returns its id. */
+  /** Puts a notification in `recipient`'s inbox, as a service raising an event does, and returns its id. */
   async function notify(recipient: TestActor): Promise<string> {
-    const res = await svc.api
-      .post('/notifications')
-      .set(svc.as(UserRole.LAB_STAFF).headers)
-      .send(notice(recipient))
-      .expect(201);
-    return (res.body as { id: string }).id;
+    const { id } = await svc.db.getRepository(Notification).save({
+      recipientId: recipient.sub,
+      eventType: NotificationEventType.LAB_RESULTS_READY,
+      title: 'Results ready',
+      message: 'Full blood count is ready to review',
+    });
+    return id;
   }
 
   const inboxOf = async (user: TestActor) =>
@@ -49,6 +41,26 @@ describe('Notifications', () => {
     svc.db.getRepository(Notification).findBy({ recipientId: user.sub });
 
   describe('POST /notifications', () => {
+    it('does not exist: no user can send a notification, whatever their role', async () => {
+      const doctor = svc.as(UserRole.DOCTOR);
+
+      for (const role of [UserRole.LAB_STAFF, UserRole.SUPER_ADMIN])
+        await svc.api
+          .post('/notifications')
+          .set(svc.as(role).headers)
+          .send({
+            recipientId: doctor.sub,
+            eventType: NotificationEventType.LAB_RESULTS_READY,
+            title: 'Results ready',
+            message: 'Call 0771234567 about your results',
+          })
+          .expect(404);
+
+      await expect(savedFor(doctor)).resolves.toEqual([]);
+    });
+  });
+
+  describe('reading and marking', () => {
     it('delivers a notification, unread, to its recipient', async () => {
       const doctor = svc.as(UserRole.DOCTOR);
 
@@ -59,40 +71,6 @@ describe('Notifications', () => {
       ]);
     });
 
-    it('rejects a notification without a title or with an unknown event type', async () => {
-      const doctor = svc.as(UserRole.DOCTOR);
-      const sender = svc.as(UserRole.LAB_STAFF);
-
-      for (const body of [
-        notice(doctor, { title: '' }),
-        notice(doctor, { eventType: 'party' }),
-        notice(doctor, { recipientId: undefined }),
-      ])
-        await svc.api
-          .post('/notifications')
-          .set(sender.headers)
-          .send(body)
-          .expect(400);
-
-      await expect(savedFor(doctor)).resolves.toEqual([]);
-    });
-
-    it("ignores fields the sender doesn't set, such as isRead", async () => {
-      const doctor = svc.as(UserRole.DOCTOR);
-
-      await svc.api
-        .post('/notifications')
-        .set(svc.as(UserRole.LAB_STAFF).headers)
-        .send(notice(doctor, { isRead: true }))
-        .expect(201);
-
-      await expect(savedFor(doctor)).resolves.toEqual([
-        expect.objectContaining({ isRead: false }),
-      ]);
-    });
-  });
-
-  describe('reading and marking', () => {
     it('shows users only their own notifications and count', async () => {
       const doctor = svc.as(UserRole.DOCTOR);
       const nurse = svc.as(UserRole.NURSE);

@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification } from '../entities/notification.entity';
-import { CreateNotificationDto } from './dto/create-notification.dto';
+import { Notification } from '@curo/shared/database';
 import { parsePagination, type PaginationQuery } from '@curo/shared/fhir';
 
 @Injectable()
@@ -11,11 +10,6 @@ export class NotificationService {
     @InjectRepository(Notification)
     private notificationsRepo: Repository<Notification>,
   ) {}
-
-  async create(dto: CreateNotificationDto): Promise<Notification> {
-    const notification = this.notificationsRepo.create(dto);
-    return this.notificationsRepo.save(notification);
-  }
 
   async getForUser(
     userId: string,

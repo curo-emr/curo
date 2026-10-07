@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationController } from './notification.controller';
 import { NotificationService } from './notification.service';
-import { Notification } from '../entities/notification.entity';
+import { Notification } from '@curo/shared/database';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Notification])],
