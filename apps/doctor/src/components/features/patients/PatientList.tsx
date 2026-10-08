@@ -29,7 +29,7 @@ export function PatientList() {
   const [pageSize, setPageSize] = useState(25);
 
   const [patients, setPatients] = useState<Patient[] | null>(null);
-  const [allergies, setAllergies] = useState<Record<string, Allergy[]>>({});
+  const [allergies, setAllergies] = useState<Record<string, Allergy[] | null>>({});
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +48,7 @@ export function PatientList() {
         gender: sexFilter === "all" ? undefined : sexFilter,
       });
       // Allergies live on a separate endpoint — fetch only for the current page.
-      const perPatient = await Promise.all(result.items.map(p => getAllergies(p.id).catch(() => [] as Allergy[])));
+      const perPatient = await Promise.all(result.items.map(p => getAllergies(p.id).catch(() => null)));
       if (!active) return;
       setAllergies(Object.fromEntries(result.items.map((p, i) => [p.id, perPatient[i]])));
       setPatients(result.items);
@@ -113,7 +113,7 @@ export function PatientList() {
               </TableRow>
             ) : (
               patients.map(p => {
-                const list = allergies[p.id] ?? [];
+                const list = allergies[p.id];
                 return (
                   <TableRow key={p.id} className="group cursor-pointer" onClick={() => router.push(ROUTES.PATIENT(p.id))}>
                     <TableCell className="pl-5">
@@ -128,7 +128,9 @@ export function PatientList() {
                     <TableCell className="text-muted-foreground">{formatAgeSex(p.dob, p.sex)}</TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">{p.phone || "—"}</TableCell>
                     <TableCell>
-                      {list.length > 0 ? (
+                      {list === null ? (
+                        <span className="text-xs font-medium text-status-warning-text">Couldn&apos;t load</span>
+                      ) : list.length > 0 ? (
                         <span className="inline-flex max-w-48 items-center gap-1 truncate rounded-full border border-status-error-border bg-status-error-bg px-2 py-0.5 text-xs font-medium text-status-error-text"
                           title={list.map(a => a.substance).join(", ")}>
                           <AlertTriangle className="h-3 w-3 shrink-0" /> <span className="truncate">{list.map(a => a.substance).join(", ")}</span>

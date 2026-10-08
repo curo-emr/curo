@@ -13,7 +13,7 @@ import { VitalsTrendCharts } from "./VitalsTrendCharts";
 interface Props {
   patient: Patient;
   encounters: Encounter[];
-  allergies: Allergy[];
+  allergies: Allergy[] | null;
   problems: Problem[];
   labOrders: LabOrder[];
   prescriptions: Prescription[];

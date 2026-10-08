@@ -29,6 +29,8 @@ export default function HealthRecordsPage() {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Empty lists would read as "no known allergies", so a failed load gets its own state.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     getMyProfile().then(async pt => {
@@ -41,10 +43,13 @@ export default function HealthRecordsPage() {
       setAllergies(alg);
       setProblems(probs);
       setPrescriptions(rxs);
-    }).catch(console.error).finally(() => setIsLoading(false));
+    }).catch(() => setLoadFailed(true)).finally(() => setIsLoading(false));
   }, []);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+  if (loadFailed) {
+    return <EmptyState icon={ShieldAlert} title="Couldn't load your health records" description="Check your connection and try again." className="min-h-[50vh]" />;
+  }
 
   const activeProblems = problems.filter(p => p.status === "active");
   const resolvedProblems = problems.filter(p => p.status !== "active");

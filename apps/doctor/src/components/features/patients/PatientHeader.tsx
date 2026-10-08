@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Droplet, Pencil, Phone, Play, RotateCcw, ShieldCheck, Contact } from "lucide-react";
+import { Droplet, Pencil, Phone, Play, RotateCcw, Contact } from "lucide-react";
 import type { Allergy, Appointment, Patient } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { Card } from "@curo/web/ui/card";
@@ -11,10 +11,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@curo/web/ui/popover";
 import { ROUTES } from "@/lib/constants";
 import { formatAgeSex, formatDate, formatTime } from "@/lib/utils";
 import { getVisitAction, visitHref } from "@/lib/visit";
+import { AllergyChips } from "./AllergyChips";
 
 interface PatientHeaderProps {
   patient: Patient;
-  allergies: Allergy[];
+  allergies: Allergy[] | null;
   /** The patient's open appointment today, if any. */
   todaysAppointment: Appointment | null;
   hasDraft: boolean;
@@ -44,20 +45,7 @@ export function PatientHeader({ patient, allergies, todaysAppointment, hasDraft 
             {patient.bloodType && <Meta label="Blood"><Droplet className="inline h-3.5 w-3.5 text-status-error-text" /> {patient.bloodType}</Meta>}
             {patient.phone && <Meta label="Phone"><Phone className="inline h-3.5 w-3.5" /> {patient.phone}</Meta>}
           </dl>
-          {allergies.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="mr-1 inline-flex items-center gap-1 text-xs font-semibold text-status-error-text">
-                <AlertTriangle className="h-3.5 w-3.5" /> Allergies
-              </span>
-              {allergies.map(a => (
-                <span key={a.id} className="rounded-full border border-status-error-border bg-status-error-bg px-2 py-px text-xs font-medium text-status-error-text">
-                  {a.substance}{a.reaction ? ` · ${a.reaction}` : ""}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" /> No known allergies</p>
-          )}
+          <AllergyChips allergies={allergies} className="pt-1" />
           {patient.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {patient.tags.map(tag => <span key={tag} className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">{tag}</span>)}
