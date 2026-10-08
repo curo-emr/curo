@@ -3,7 +3,8 @@ import { AllergyIntolerance } from '../entities/allergy-intolerance.entity';
 
 // Roles that receive a minimized patient projection (data minimization).
 // Pharmacy & lab only need identity for dispensing / specimen labeling — not
-// NIC, blood type, contact, address, insurance, or emergency contact.
+// NIC, blood type, contact, address, insurance, emergency contact, nationality,
+// occupation or tags.
 const MINIMIZED_ROLES = new Set(['PHARMACIST', 'LAB_STAFF']);
 
 export function toFhirPatient(p: Patient, role?: string) {
@@ -96,13 +97,34 @@ export function toFhirPatient(p: Patient, role?: string) {
       : [],
     extension: [
       { url: 'urn:curo:bloodType', valueString: p.bloodType },
+      p.nationality && {
+        url: 'urn:curo:nationality',
+        valueString: p.nationality,
+      },
+      p.occupation && { url: 'urn:curo:occupation', valueString: p.occupation },
+      ...(p.tags ?? []).map((tag) => ({
+        url: 'urn:curo:tag',
+        valueString: tag,
+      })),
       p.insuranceProvider && {
         url: 'urn:curo:insurance',
         extension: [
           { url: 'provider', valueString: p.insuranceProvider },
           { url: 'policyNumber', valueString: p.insurancePolicyNumber },
           { url: 'groupNumber', valueString: p.insuranceGroupNumber },
-        ],
+          p.insuranceExpiryDate && {
+            url: 'expiryDate',
+            valueDate: p.insuranceExpiryDate,
+          },
+          p.insuranceHolderName && {
+            url: 'holderName',
+            valueString: p.insuranceHolderName,
+          },
+          p.insuranceRelationship && {
+            url: 'relationship',
+            valueString: p.insuranceRelationship,
+          },
+        ].filter(Boolean),
       },
     ].filter(Boolean),
   };

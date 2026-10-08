@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { Patient, Condition, Observation } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import { generatePatientCode, generatePhn } from '@curo/shared/identifiers';
@@ -20,7 +20,12 @@ import {
 import { AllergyIntolerance } from '../entities/allergy-intolerance.entity';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
-import { CreateAllergyDto } from './dto/create-allergy.dto';
+import {
+  AllergyUpdateDto,
+  CreateAllergyDto,
+  UpdateAllergyDto,
+} from './dto/create-allergy.dto';
+import { allergyColumns, isCurrentAllergy } from './allergy-records';
 import { CreateConditionDto } from './dto/create-condition.dto';
 import {
   toFhirPatient,
@@ -28,7 +33,13 @@ import {
   toFhirCondition,
   toFhirObservation,
 } from './fhir.mapper';
-import type { AuthUser } from '@curo/shared/auth';
+import { actorId, type AuthUser } from '@curo/shared/auth';
+
+// Who may change or retire an allergy once recorded; anyone who records them may add one.
+const ALLERGY_EDITORS = new Set<string>([
+  UserRole.DOCTOR,
+  UserRole.SUPER_ADMIN,
+]);
 
 @Injectable()
 export class PatientService implements OnModuleInit {
@@ -43,6 +54,7 @@ export class PatientService implements OnModuleInit {
     private conditionsRepo: Repository<Condition>,
     @InjectRepository(Observation)
     private observationsRepo: Repository<Observation>,
+    private dataSource: DataSource,
   ) {}
 
   private async generateUniquePhn(): Promise<string> {
@@ -78,7 +90,9 @@ export class PatientService implements OnModuleInit {
     }
   }
 
-  async create(dto: CreatePatientDto) {
+  /** Registers a patient, with any allergies recorded by `recorderId`, in one transaction. */
+  async create(dto: CreatePatientDto, recorderId: string) {
+    const { allergies = [], ...fields } = dto;
     // Generate unique patient code
     let patientCode: string;
     let exists: boolean;
@@ -91,13 +105,13 @@ export class PatientService implements OnModuleInit {
     const personalHealthNumber =
       dto.personalHealthNumber || (await this.generateUniquePhn());
 
-    const patient = this.patientsRepo.create({
-      ...dto,
-      patientCode,
-      personalHealthNumber,
+    return this.dataSource.transaction(async (em) => {
+      const saved = await em.save(
+        em.create(Patient, { ...fields, patientCode, personalHealthNumber }),
+      );
+      await this.addAllergies(em, saved.id, allergies, recorderId);
+      return toFhirPatient(saved);
     });
-    const saved = await this.patientsRepo.save(patient);
-    return toFhirPatient(saved);
   }
 
   async findAll(
@@ -176,21 +190,33 @@ export class PatientService implements OnModuleInit {
     return toFhirPatient(patient, requestingUser.role);
   }
 
+  /** Updates the patient and their allergies together: a failed allergy change saves nothing. */
   async update(
     id: string,
     dto: UpdatePatientDto,
-    requestingUser: Pick<AuthUser, 'role'>,
+    requestingUser: Pick<AuthUser, 'role' | 'userId' | 'practitionerId'>,
   ) {
     if (requestingUser.role === UserRole.PATIENT) {
       throw new ForbiddenException(
         'Patients cannot update records via this endpoint',
       );
     }
-    const patient = await this.patientsRepo.findOne({ where: { id } });
-    if (!patient) throw new NotFoundException(`Patient ${id} not found`);
-    Object.assign(patient, dto);
-    const saved = await this.patientsRepo.save(patient);
-    return toFhirPatient(saved);
+    const { newAllergies = [], allergyUpdates = [], ...fields } = dto;
+    if (allergyUpdates.length && !ALLERGY_EDITORS.has(requestingUser.role)) {
+      throw new ForbiddenException(
+        'Only doctors can change or retire a recorded allergy',
+      );
+    }
+
+    return this.dataSource.transaction(async (em) => {
+      const patient = await em.findOne(Patient, { where: { id } });
+      if (!patient) throw new NotFoundException(`Patient ${id} not found`);
+      Object.assign(patient, fields);
+      const saved = await em.save(patient);
+      await this.addAllergies(em, id, newAllergies, actorId(requestingUser));
+      await this.changeAllergies(em, id, allergyUpdates);
+      return toFhirPatient(saved);
+    });
   }
 
   async findByCode(code: string, role?: string) {
@@ -209,39 +235,89 @@ export class PatientService implements OnModuleInit {
     return toFhirPatient(patient);
   }
 
-  // Allergies
+  // Allergies: the patient's current ones; retired ones stay on record but aren't listed.
   async getAllergies(patientId: string) {
     const allergies = await this.allergiesRepo.find({ where: { patientId } });
-    return allergies.map(toFhirAllergy);
+    return allergies.filter(isCurrentAllergy).map(toFhirAllergy);
   }
 
   async getAllergiesForPatients(patientIds: string[]) {
     const allergies = await this.allergiesRepo.find({
       where: { patientId: In(patientIds) },
     });
-    return allergies.map(toFhirAllergy);
+    return allergies.filter(isCurrentAllergy).map(toFhirAllergy);
   }
 
   async addAllergy(
     patientId: string,
     dto: CreateAllergyDto,
-    practitionerId: string,
+    recorderId: string,
   ) {
-    const patient = await this.patientsRepo.findOne({
-      where: { id: patientId },
+    return this.dataSource.transaction(async (em) => {
+      if (!(await em.exists(Patient, { where: { id: patientId } }))) {
+        throw new NotFoundException(`Patient ${patientId} not found`);
+      }
+      const [saved] = await this.addAllergies(em, patientId, [dto], recorderId);
+      return toFhirAllergy(saved);
     });
-    if (!patient) throw new NotFoundException(`Patient ${patientId} not found`);
-    const allergy = this.allergiesRepo.create({
-      ...dto,
-      patientId,
-      practitionerId,
-    });
-    const saved = await this.allergiesRepo.save(allergy);
-    return toFhirAllergy(saved);
   }
 
-  async deleteAllergy(allergyId: string): Promise<void> {
-    await this.allergiesRepo.delete(allergyId);
+  /** Changes one recorded allergy; clinicalStatus "inactive" retires it. */
+  async updateAllergy(
+    patientId: string,
+    allergyId: string,
+    dto: UpdateAllergyDto,
+  ) {
+    return this.dataSource.transaction(async (em) => {
+      const [saved] = await this.changeAllergies(em, patientId, [
+        { ...dto, id: allergyId },
+      ]);
+      return toFhirAllergy(saved);
+    });
+  }
+
+  private addAllergies(
+    em: EntityManager,
+    patientId: string,
+    dtos: CreateAllergyDto[],
+    recorderId: string,
+  ) {
+    return em.save(
+      dtos.map((dto) =>
+        em.create(AllergyIntolerance, {
+          clinicalStatus: 'active',
+          ...allergyColumns(dto),
+          patientId,
+          practitionerId: recorderId,
+        }),
+      ),
+    );
+  }
+
+  /**
+   * Applies changes to the patient's allergies, keeping who recorded them. One
+   * that isn't this patient's is a 404, which undoes the whole transaction.
+   */
+  private async changeAllergies(
+    em: EntityManager,
+    patientId: string,
+    updates: AllergyUpdateDto[],
+  ) {
+    if (!updates.length) return [];
+    const recorded = await em.find(AllergyIntolerance, {
+      where: { patientId, id: In(updates.map((u) => u.id)) },
+    });
+    return em.save(
+      updates.map((update) => {
+        const allergy = recorded.find((a) => a.id === update.id);
+        if (!allergy) {
+          throw new NotFoundException(
+            `Allergy ${update.id} not found for patient ${patientId}`,
+          );
+        }
+        return Object.assign(allergy, allergyColumns(update, allergy));
+      }),
+    );
   }
 
   // Conditions

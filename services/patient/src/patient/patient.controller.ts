@@ -9,11 +9,12 @@ import {
   Query,
   UseGuards,
   Header,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { PatientService } from './patient.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
-import { CreateAllergyDto } from './dto/create-allergy.dto';
+import { CreateAllergyDto, UpdateAllergyDto } from './dto/create-allergy.dto';
 import { CreateConditionDto } from './dto/create-condition.dto';
 import {
   actorId,
@@ -34,8 +35,8 @@ export class PatientController {
   @Post()
   @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  create(@Body() dto: CreatePatientDto) {
-    return this.patientService.create(dto);
+  create(@Body() dto: CreatePatientDto, @CurrentUser() user: AuthUser) {
+    return this.patientService.create(dto, actorId(user));
   }
 
   @Get()
@@ -132,8 +133,9 @@ export class PatientController {
     return this.patientService.getAllergies(id);
   }
 
+  // Reception records the allergies a patient reports; only doctors change or retire them.
   @Post(':id/allergies')
-  @Roles('DOCTOR', 'SUPER_ADMIN')
+  @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   addAllergy(
     @Param('id') id: string,
@@ -141,6 +143,17 @@ export class PatientController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.patientService.addAllergy(id, dto, actorId(user));
+  }
+
+  @Patch(':id/allergies/:allergyId')
+  @Roles('DOCTOR', 'SUPER_ADMIN')
+  @Header('Content-Type', 'application/fhir+json')
+  updateAllergy(
+    @Param('id') id: string,
+    @Param('allergyId', ParseUUIDPipe) allergyId: string,
+    @Body() dto: UpdateAllergyDto,
+  ) {
+    return this.patientService.updateAllergy(id, allergyId, dto);
   }
 
   // Conditions

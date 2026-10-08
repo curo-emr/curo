@@ -81,6 +81,16 @@ export class Patient {
   bloodType: string;
 
   @Column({ nullable: true })
+  nationality: string;
+
+  @Column({ nullable: true })
+  occupation: string;
+
+  /** Free labels the clinic adds, such as "Diabetic" or "Wheelchair user". */
+  @Column('text', { array: true, default: () => "'{}'" })
+  tags: string[];
+
+  @Column({ nullable: true })
   emergencyContactName: string;
 
   @Column({ nullable: true })
@@ -97,6 +107,16 @@ export class Patient {
 
   @Column({ nullable: true })
   insuranceGroupNumber: string;
+
+  @Column({ type: 'date', nullable: true })
+  insuranceExpiryDate: string;
+
+  @Column({ nullable: true })
+  insuranceHolderName: string;
+
+  /** The patient's relationship to the policy holder: self, spouse, child or other. */
+  @Column({ nullable: true })
+  insuranceRelationship: string;
 
   @Column({ nullable: true })
   photo: string;

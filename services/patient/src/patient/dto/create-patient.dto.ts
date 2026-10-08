@@ -1,11 +1,24 @@
+import { Type } from 'class-transformer';
 import {
+  IsArray,
+  IsDateString,
   IsEmail,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
+  ValidateNested,
 } from 'class-validator';
 import { Gender, MaritalStatus } from '@curo/shared/enums';
+import { CreateAllergyDto } from './create-allergy.dto';
+
+export const INSURANCE_RELATIONSHIPS = [
+  'self',
+  'spouse',
+  'child',
+  'other',
+] as const;
 
 export class CreatePatientDto {
   @IsNotEmpty()
@@ -83,6 +96,19 @@ export class CreatePatientDto {
 
   @IsOptional()
   @IsString()
+  nationality?: string;
+
+  @IsOptional()
+  @IsString()
+  occupation?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @IsOptional()
+  @IsString()
   emergencyContactName?: string;
 
   @IsOptional()
@@ -104,4 +130,22 @@ export class CreatePatientDto {
   @IsOptional()
   @IsString()
   insuranceGroupNumber?: string;
+
+  @IsOptional()
+  @IsDateString()
+  insuranceExpiryDate?: string;
+
+  @IsOptional()
+  @IsString()
+  insuranceHolderName?: string;
+
+  @IsOptional()
+  @IsIn(INSURANCE_RELATIONSHIPS)
+  insuranceRelationship?: (typeof INSURANCE_RELATIONSHIPS)[number];
+
+  /** Allergies to record with the new patient, saved in the same transaction. */
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => CreateAllergyDto)
+  allergies?: CreateAllergyDto[];
 }
