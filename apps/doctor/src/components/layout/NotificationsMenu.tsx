@@ -1,49 +1,35 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Bell, CheckCheck } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@curo/web/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@curo/web/ui/popover";
 import { Skeleton } from "@curo/web/ui/skeleton";
 import { cn, formatRelative } from "@/lib/utils";
-import {
-  getNotificationCount, getNotifications, markAllNotificationsRead, markNotificationRead,
-  type AppNotification,
-} from "@/lib/api/notifications";
+import { markAllNotificationsRead, markNotificationRead } from "@/lib/api/notifications";
+import { notificationQueries } from "@/lib/queries";
 
 export function NotificationsMenu() {
-  const [count, setCount] = useState(0);
-  const [items, setItems] = useState<AppNotification[] | null>(null);
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const count = useQuery(notificationQueries.unreadCount()).data ?? 0;
+  // Loaded when the menu opens; the last list shows while a fresh one loads.
+  const items = useQuery({ ...notificationQueries.latest(), enabled: open });
 
-  const refreshCount = useCallback(() => { getNotificationCount().then(setCount); }, []);
-
-  useEffect(() => {
-    refreshCount();
-    const interval = setInterval(refreshCount, 30_000);
-    return () => clearInterval(interval);
-  }, [refreshCount]);
-
-  const onOpenChange = (open: boolean) => {
-    if (!open) return;
-    setItems(null);
-    getNotifications().then(setItems).catch(() => setItems([]));
-  };
-
-  const markRead = async (n: AppNotification) => {
-    if (n.isRead) return;
-    setItems(prev => prev?.map(i => (i.id === n.id ? { ...i, isRead: true } : i)) ?? prev);
-    setCount(c => Math.max(0, c - 1));
-    await markNotificationRead(n.id).catch(refreshCount);
-  };
-
-  const markAll = async () => {
-    setItems(prev => prev?.map(i => ({ ...i, isRead: true })) ?? prev);
-    setCount(0);
-    await markAllNotificationsRead().catch(refreshCount);
-  };
+  // Marks one notification read (or all, with no id) at once; the server's answer then replaces the guess.
+  const markRead = useMutation({
+    mutationFn: (id?: string) => (id ? markNotificationRead(id) : markAllNotificationsRead()),
+    onMutate: id => {
+      queryClient.setQueryData(notificationQueries.latest().queryKey, prev =>
+        prev?.map(n => (!id || n.id === id ? { ...n, isRead: true } : n)));
+      queryClient.setQueryData(notificationQueries.unreadCount().queryKey, c => (id ? Math.max(0, (c ?? 0) - 1) : 0));
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: notificationQueries.all }),
+  });
 
   return (
-    <Popover onOpenChange={onOpenChange}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground" aria-label="Notifications">
           <Bell className="h-5 w-5" />
@@ -58,24 +44,26 @@ export function NotificationsMenu() {
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <p className="text-sm font-semibold">Notifications</p>
           {count > 0 && (
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={markAll}>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => markRead.mutate(undefined)}>
               <CheckCheck className="h-3.5 w-3.5" /> Mark all read
             </Button>
           )}
         </div>
         <div className="max-h-96 overflow-y-auto">
-          {items === null ? (
+          {!items.data && items.isError ? (
+            <p className="px-4 py-10 text-center text-sm text-muted-foreground">Couldn&apos;t load notifications.</p>
+          ) : !items.data ? (
             <div className="p-4 space-y-3">
               {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
             </div>
-          ) : items.length === 0 ? (
+          ) : items.data.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-muted-foreground">You&apos;re all caught up.</p>
           ) : (
-            items.map(n => (
+            items.data.map(n => (
               <button
                 key={n.id}
                 type="button"
-                onClick={() => markRead(n)}
+                onClick={() => { if (!n.isRead) markRead.mutate(n.id); }}
                 className={cn("flex w-full gap-3 px-4 py-3 text-left border-b last:border-0 hover:bg-muted/60 transition-colors", !n.isRead && "bg-primary/[0.03]")}
               >
                 <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", n.isRead ? "bg-transparent" : "bg-primary")} />
