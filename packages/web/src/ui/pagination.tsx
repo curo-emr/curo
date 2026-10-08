@@ -4,7 +4,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "./button";
-import { cn } from "./utils";
+import { cn } from "cn";
 
 export interface PaginationProps {
   page: number;

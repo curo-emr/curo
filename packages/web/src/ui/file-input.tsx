@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { UploadCloud, FileText, X } from "lucide-react";
-import { cn } from "./utils";
+import { cn } from "cn";
 
 interface FileInputProps {
   value: File | null;

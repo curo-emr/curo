@@ -1,7 +1,6 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-/** Joins class names, letting later Tailwind classes override earlier ones. */
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+/**
+ * Joins class names, letting later Tailwind classes override earlier ones.
+ * The components in this folder import it from "cn" directly, as shadcn ships
+ * them; portals import it from here.
+ */
+export { cn } from "cn";

@@ -1,6 +1,6 @@
 import { formatStatus } from "../format";
 import { Badge } from "./badge";
-import { cn } from "./utils";
+import { cn } from "cn";
 
 // Each tone is a bg/text/border triplet from the status palette in styles.css.
 const TONES = {
