@@ -1,3 +1,4 @@
+import { BMI_CATEGORY_LABELS, bmiCategory, calculateBMI, type BMICategory } from "@curo/web/clinical";
 import type { Vitals } from "@/types";
 
 // ─── Vital-sign catalogue ────────────────────────────────────────────────────
@@ -73,16 +74,18 @@ export function isPlausible(field: VitalField, value: number): boolean {
 
 // ─── BMI ────────────────────────────────────────────────────────────────────
 
-export function calculateBMI(heightCm?: number, weightKg?: number): number | null {
-  if (!heightCm || !weightKg) return null;
-  return Number((weightKg / (heightCm / 100) ** 2).toFixed(1));
-}
+export { calculateBMI };
+
+const BMI_LEVELS: Record<BMICategory, VitalLevel> = {
+  underweight: "alert",
+  healthy: "normal",
+  overweight: "alert",
+  obese: "critical",
+};
 
 export function assessBMI(bmi: number): VitalAssessment {
-  if (bmi < 18.5) return { level: "alert", label: "Underweight" };
-  if (bmi < 25) return { level: "normal", label: "Healthy" };
-  if (bmi < 30) return { level: "alert", label: "Overweight" };
-  return { level: "critical", label: "Obese" };
+  const category = bmiCategory(bmi);
+  return { level: BMI_LEVELS[category], label: BMI_CATEGORY_LABELS[category] };
 }
 
 // ─── Form input ─────────────────────────────────────────────────────────────

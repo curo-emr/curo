@@ -1,20 +1,7 @@
 import type { Vitals } from "@/types"
 
 export { cn } from "@curo/web/ui/utils";
-
-export function calculateBMI(heightCm: number, weightKg: number): number {
-  if (!heightCm || !weightKg) return 0;
-  const heightM = heightCm / 100;
-  return Number((weightKg / (heightM * heightM)).toFixed(1));
-}
-
-export type BMICategory = 'normal' | 'overweight' | 'obese';
-
-export function getBMICategory(bmi: number): BMICategory {
-  if (bmi >= 30) return 'obese';
-  if (bmi >= 25) return 'overweight';
-  return 'normal';
-}
+export { calculateBMI } from "@curo/web/clinical";
 
 // Vitals fields that should be recorded as new observations: filled in and
 // different from what was already recorded (e.g. by the nurse at triage).
@@ -48,13 +35,6 @@ export function calculateAge(dobStr: string): number {
 export function getTodayString(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
-/**
- * Look up a patient's full name by ID.
- */
-export function getPatientName(id: string, patients: { id: string; name: { full: string } }[]): string {
-  return patients.find(p => p.id === id)?.name.full || "Unknown Patient";
 }
 
 /**

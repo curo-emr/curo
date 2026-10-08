@@ -1,18 +1,5 @@
 export { cn } from "@curo/web/ui/utils";
-
-export function calculateBMI(heightCm: number, weightKg: number): number {
-  if (!heightCm || !weightKg) return 0;
-  const heightM = heightCm / 100;
-  return Number((weightKg / (heightM * heightM)).toFixed(1));
-}
-
-export type BMICategory = 'normal' | 'overweight' | 'obese';
-
-export function getBMICategory(bmi: number): BMICategory {
-  if (bmi >= 30) return 'obese';
-  if (bmi >= 25) return 'overweight';
-  return 'normal';
-}
+export { getDoctorName } from "@curo/web/format";
 
 export function formatDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -43,10 +30,6 @@ export function calculateAge(dobStr: string): number {
 export function getTodayString(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
-export function getDoctorName(id: string, doctors: { id: string; name: { full: string } }[]): string {
-  return doctors.find(d => d.id === id)?.name.full || "Unknown Doctor";
 }
 
 export function getTestName(testId: string, catalog: { id: string; name: string; code: string }[]): string {

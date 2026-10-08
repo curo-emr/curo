@@ -2,7 +2,8 @@
 
 import { HeartPulse, UserCheck } from "lucide-react";
 import type { Vitals } from "@/types";
-import { calculateBMI, cn, getBMICategory } from "@/lib/utils";
+import { BMI_CATEGORY_LABELS, bmiCategory, calculateBMI, type BMICategory } from "@curo/web/clinical";
+import { cn } from "@/lib/utils";
 import { SectionCard } from "@curo/web/ui/section-card";
 
 type VitalKey = keyof Vitals;
@@ -29,15 +30,16 @@ interface VitalsPanelProps {
   recorded?: RecordedVitals | null;
 }
 
-const BMI_STYLES = {
-  normal: "bg-status-success-bg text-status-success-text",
+const BMI_STYLES: Record<BMICategory, string> = {
+  underweight: "bg-status-warning-bg text-status-warning-text",
+  healthy: "bg-status-success-bg text-status-success-text",
   overweight: "bg-status-warning-bg text-status-warning-text",
   obese: "bg-status-error-bg text-status-error-text",
 };
 
 export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
-  const bmi = vitals.heightCm && vitals.weightKg ? calculateBMI(vitals.heightCm, vitals.weightKg) : null;
-  const bmiCategory = bmi ? getBMICategory(bmi) : null;
+  const bmi = calculateBMI(vitals.heightCm, vitals.weightKg);
+  const category = bmi ? bmiCategory(bmi) : null;
   const recordedTime = recorded?.recordedAt
     ? new Date(recorded.recordedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
     : null;
@@ -104,9 +106,9 @@ export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
         </div>
         <div className="flex items-center justify-between border-t pt-3 text-sm">
           <span className="text-muted-foreground">BMI</span>
-          {bmi && bmiCategory ? (
-            <span className={cn("rounded-full px-2.5 py-0.5 text-sm font-medium tabular-nums", BMI_STYLES[bmiCategory])}>
-              {bmi} <span className="text-xs font-normal capitalize opacity-80">· {bmiCategory}</span>
+          {bmi && category ? (
+            <span className={cn("rounded-full px-2.5 py-0.5 text-sm font-medium tabular-nums", BMI_STYLES[category])}>
+              {bmi} <span className="text-xs font-normal opacity-80">· {BMI_CATEGORY_LABELS[category]}</span>
             </span>
           ) : (
             <span className="text-muted-foreground">—</span>
