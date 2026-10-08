@@ -57,7 +57,7 @@ export default function LoginPage() {
             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             <Input
               id="email"
-              placeholder="nurse@curo.health"
+              placeholder="nurse@curo.test"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

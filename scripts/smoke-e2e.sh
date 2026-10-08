@@ -77,14 +77,14 @@ echo >&2
 # 0. AUTH — login one user per role
 # ---------------------------------------------------------------------------
 echo "-- auth / login --" >&2
-ADMIN_R=$(login admin@curo.health Admin@12345)
-DOC_R=$(login dr.priya@curo.health Doctor@123)
-RECEP_R=$(login chamali@curo.health Recept@123)
-PHARM_R=$(login kasun.pharma@curo.health Pharma@123)
-LAB_R=$(login tharindi.lab@curo.health LabStaff@123)
-LAB2_R=$(login rukshan.lab@curo.health LabStaff@123)  # works at the other lab
+ADMIN_R=$(login admin@curo.test Admin@12345)
+DOC_R=$(login dr.priya@curo.test Doctor@123)
+RECEP_R=$(login chamali@curo.test Recept@123)
+PHARM_R=$(login kasun.pharma@curo.test Pharma@123)
+LAB_R=$(login tharindi.lab@curo.test LabStaff@123)
+LAB2_R=$(login rukshan.lab@curo.test LabStaff@123)  # works at the other lab
 PAT_R=$(login samantha@email.com Patient@123)
-NURSE_R=$(login nimasha@curo.health Nurse@123)
+NURSE_R=$(login nimasha@curo.test Nurse@123)
 
 ADMIN=$(jq -r .accessToken <<<"$ADMIN_R")
 DOC=$(jq -r .accessToken <<<"$DOC_R")
@@ -113,7 +113,7 @@ done
 req "any"   200 GET  /auth/profile "" "$DOC"
 req "any"   200 GET  "/auth/practitioners?role=DOCTOR" "" "$RECEP" >/dev/null
 req "admin" 200 GET  "/auth/users?role=DOCTOR" "" "$ADMIN" >/dev/null
-req "admin" 201 POST /auth/users "{\"email\":\"smoke.$RANDOM@curo.health\",\"password\":\"Smoke@123\",\"role\":\"RECEPTIONIST\",\"firstName\":\"Smoke\",\"lastName\":\"Test\"}" "$ADMIN" >/dev/null
+req "admin" 201 POST /auth/users "{\"email\":\"smoke.$RANDOM@curo.test\",\"password\":\"Smoke@123\",\"role\":\"RECEPTIONIST\",\"firstName\":\"Smoke\",\"lastName\":\"Test\"}" "$ADMIN" >/dev/null
 
 # ---------------------------------------------------------------------------
 # 1. PATIENT registration (receptionist)
