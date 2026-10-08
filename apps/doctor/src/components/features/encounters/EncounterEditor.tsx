@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Check, CloudCheck, FileSignature, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import type { Allergy, Lab, LabTestCatalogItem, Medication, Patient, Problem } from "@/types";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Lab, LabTestCatalogItem, Medication, Patient } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { Card } from "@curo/web/ui/card";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
@@ -30,12 +31,10 @@ import { VitalsPanel, type RecordedVitals } from "./sections/VitalsPanel";
 import { PatientContext } from "./PatientContext";
 import { emptyVisit, signVisit, type VisitDraft } from "./visit";
 import { apiErrorMessage } from "@curo/web/api";
+import { invalidateAfterVisit } from "@/lib/queries";
 
 interface Props {
   patient: Patient;
-  allergies: Allergy[] | null;
-  problems: Problem[];
-  recentMedications: string[];
   appointmentId?: string;
   /** Shown in the prescription search before the doctor types. */
   medicationSuggestions: Medication[];
@@ -46,9 +45,10 @@ interface Props {
 type StoredDraft = VisitDraft & { savedAt?: string };
 
 export function EncounterEditor({
-  patient, allergies, problems, recentMedications, appointmentId, medicationSuggestions, labTestsCatalog, labs,
+  patient, appointmentId, medicationSuggestions, labTestsCatalog, labs,
 }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const draftKey = visitDraftKey(user?.id ?? "anon", patient.id, appointmentId);
 
@@ -153,6 +153,7 @@ export function EncounterEditor({
       });
       signed.current = true;
       removeDraft(draftKey);
+      void invalidateAfterVisit(queryClient, patient.id);
       toast.success("Visit signed", {
         description: `${patient.name.full}${visit.prescriptions.length ? ` · ${visit.prescriptions.length} Rx sent to pharmacy` : ""}${visit.labTests.length ? ` · ${visit.labTests.length} lab test${visit.labTests.length > 1 ? "s" : ""} ordered` : ""}`,
         action: { label: "View summary", onClick: () => router.push(ROUTES.ENCOUNTER(patient.id, encounterId)) },
@@ -184,7 +185,7 @@ export function EncounterEditor({
               <span className="font-mono text-xs text-muted-foreground">{patient.mrn}</span>
               {patient.bloodType && <span className="text-xs text-muted-foreground">Blood {patient.bloodType}</span>}
             </div>
-            <AllergyChips allergies={allergies} />
+            <AllergyChips patientId={patient.id} />
           </div>
           <div className="flex items-center gap-3">
             {savedAt && (
@@ -216,7 +217,7 @@ export function EncounterEditor({
             prescriptions={visit.prescriptions}
             onChange={v => update("prescriptions", v)}
             suggestions={medicationSuggestions}
-            allergies={allergies}
+            patientId={patient.id}
           />
           <LabOrderForm
             tests={visit.labTests}
@@ -231,7 +232,7 @@ export function EncounterEditor({
         </div>
         <aside className="space-y-6">
           <VitalsPanel vitals={visit.vitals} onChange={v => update("vitals", v)} recorded={triage} />
-          <PatientContext patientId={patient.id} problems={problems} recentMedications={recentMedications} />
+          <PatientContext patientId={patient.id} />
         </aside>
       </div>
 

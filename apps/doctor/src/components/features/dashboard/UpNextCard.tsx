@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Clock, Coffee, Play, RotateCcw } from "lucide-react";
-import type { Allergy, Appointment, Patient } from "@/types";
+import type { Appointment, Patient } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { Card } from "@curo/web/ui/card";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
 import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
 import { AllergyChips } from "@/components/features/patients/AllergyChips";
-import { getAllergies } from "@/lib/api/patients";
 import { ROUTES } from "@/lib/constants";
 import { formatAgeSex, formatTime } from "@/lib/utils";
 import { getVisitAction, type VisitAction } from "@/lib/visit";
@@ -23,21 +21,6 @@ interface Props {
 
 // The one patient the doctor should see now, with the action front and centre.
 export function UpNextCard({ appointment, patient, hasDraft, nextUpcoming }: Props) {
-  // Tagged with the patient they belong to, so the card never shows the previous patient's
-  // allergies while the next patient's load. null = they couldn't be loaded.
-  const [loaded, setLoaded] = useState<{ patientId: string; allergies: Allergy[] | null }>();
-  const patientId = appointment?.patientId;
-  const allergies = loaded && loaded.patientId === patientId ? loaded.allergies : undefined;
-
-  useEffect(() => {
-    if (!patientId) return;
-    let active = true;
-    getAllergies(patientId)
-      .catch(() => null)
-      .then(a => { if (active) setLoaded({ patientId, allergies: a }); });
-    return () => { active = false; };
-  }, [patientId]);
-
   if (!appointment) {
     return (
       <Card className="flex-row items-center gap-4 p-6">
@@ -76,7 +59,7 @@ export function UpNextCard({ appointment, patient, hasDraft, nextUpcoming }: Pro
             <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {formatTime(appointment.time)}</span>
           </p>
           {appointment.reason && <p className="text-sm text-foreground">{appointment.reason}</p>}
-          {allergies !== undefined && <AllergyChips allergies={allergies} className="pt-1" />}
+          <AllergyChips patientId={appointment.patientId} className="pt-1" />
         </div>
         <Button asChild size="lg" className="shrink-0 h-11 px-6 text-base shadow-sm">
           <Link href={action.href}>

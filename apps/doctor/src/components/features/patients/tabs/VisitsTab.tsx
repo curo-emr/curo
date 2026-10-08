@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronRight, History } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { QueryContent } from "@curo/web/query";
 import type { Encounter, Problem } from "@/types";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { EmptyState } from "@curo/web/ui/empty-state";
@@ -7,6 +11,7 @@ import { StatusBadge } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { encounterDiagnoses } from "@/lib/clinical";
+import { patientQueries } from "@/lib/queries";
 
 export function VisitListItem({ encounter: e, problems, href }: { encounter: Encounter; problems: Problem[]; href: string }) {
   const diagnoses = encounterDiagnoses(problems, e.id);
@@ -36,18 +41,23 @@ export function VisitListItem({ encounter: e, problems, href }: { encounter: Enc
   );
 }
 
-export function VisitsTab({ patientId, encounters, problems }: { patientId: string; encounters: Encounter[]; problems: Problem[] }) {
+export function VisitsTab({ patientId }: { patientId: string }) {
+  const encounters = useQuery(patientQueries.encounters(patientId));
+  // Only labels each visit with its diagnoses: without them the visits still show.
+  const problems = useQuery(patientQueries.conditions(patientId)).data ?? [];
   return (
-    <SectionCard icon={History} title="Visit history" count={encounters.length} noPadding>
-      {encounters.length === 0 ? (
-        <EmptyState icon={History} title="No visits yet" description="Signed visits will appear here." />
-      ) : (
-        <ul className="divide-y">
-          {encounters.map(e => (
-            <li key={e.id}><VisitListItem encounter={e} problems={problems} href={ROUTES.ENCOUNTER(patientId, e.id)} /></li>
-          ))}
-        </ul>
-      )}
+    <SectionCard icon={History} title="Visit history" count={encounters.data?.length} noPadding>
+      <QueryContent query={encounters} what="visits">
+        {list => list.length === 0 ? (
+          <EmptyState icon={History} title="No visits yet" description="Signed visits will appear here." />
+        ) : (
+          <ul className="divide-y">
+            {list.map(e => (
+              <li key={e.id}><VisitListItem encounter={e} problems={problems} href={ROUTES.ENCOUNTER(patientId, e.id)} /></li>
+            ))}
+          </ul>
+        )}
+      </QueryContent>
     </SectionCard>
   );
 }

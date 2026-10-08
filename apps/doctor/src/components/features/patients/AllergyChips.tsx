@@ -1,17 +1,24 @@
+"use client";
+
 import { AlertTriangle, ShieldAlert, ShieldCheck } from "lucide-react";
-import type { Allergy } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import { dataOrNull } from "@curo/web/query";
 import { cn } from "@/lib/utils";
+import { patientQueries } from "@/lib/queries";
 
-export const ALLERGIES_UNAVAILABLE = "Allergies couldn't be loaded. Check with the patient before prescribing.";
+const ALLERGIES_UNAVAILABLE = "Allergies couldn't be loaded. Check with the patient before prescribing.";
 
-interface AllergyChipsProps {
-  /** null when they couldn't be loaded, which must never read as "no known allergies". */
-  allergies: Allergy[] | null;
-  className?: string;
-}
+/**
+ * The patient's allergies; null when they couldn't be loaded, which must never
+ * read as "no known allergies"; undefined while they load.
+ */
+export const usePatientAllergies = (patientId: string) => dataOrNull(useQuery(patientQueries.allergies(patientId)));
 
 // The patient's allergies as chips, or a line saying there are none or that they couldn't be loaded.
-export function AllergyChips({ allergies, className }: AllergyChipsProps) {
+export function AllergyChips({ patientId, className }: { patientId: string; className?: string }) {
+  const allergies = usePatientAllergies(patientId);
+
+  if (allergies === undefined) return null;
   if (allergies === null) {
     return (
       <p className={cn("flex items-center gap-1.5 text-xs font-medium text-status-warning-text", className)}>

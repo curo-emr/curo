@@ -8,9 +8,12 @@ import { Skeleton } from "../ui/skeleton";
 /**
  * A query's data where a failed load must not look empty, such as allergies:
  * the data when there is some (kept even if a later refresh failed), null when
- * it couldn't be loaded, undefined while the first load is pending.
+ * it couldn't be loaded, undefined while the first load is pending. Only for
+ * data that is never null itself, or the two would be confused.
  */
-export function dataOrNull<T>(query: Pick<UseQueryResult<T>, "data" | "isError">): T | null | undefined {
+export function dataOrNull<T extends NonNullable<unknown>>(
+  query: Pick<UseQueryResult<T>, "data" | "isError">,
+): T | null | undefined {
   if (query.data !== undefined) return query.data;
   return query.isError ? null : undefined;
 }
@@ -28,13 +31,15 @@ interface QueryContentProps<T> {
   what: string;
   /** Shown only for the first load: a background refresh keeps showing the data. */
   loading?: ReactNode;
+  /** In place of the default LoadError, for spaces too small for it. */
+  error?: ReactNode;
   children: (data: T) => ReactNode;
 }
 
 /** Renders a section from its query: a skeleton, then the data, or a load error with "Try again". */
-export function QueryContent<T>({ query, what, loading = <DefaultLoading />, children }: QueryContentProps<T>) {
-  const data = dataOrNull(query);
-  if (data === undefined) return loading;
-  if (data === null) return <LoadError what={what} onRetry={() => void query.refetch()} retrying={query.isFetching} />;
-  return children(data);
+export function QueryContent<T>({ query, what, loading = <DefaultLoading />, error, children }: QueryContentProps<T>) {
+  // Data first: a refresh that failed keeps showing what was loaded.
+  if (query.data !== undefined) return children(query.data);
+  if (query.isError) return error ?? <LoadError what={what} onRetry={() => void query.refetch()} retrying={query.isFetching} />;
+  return loading;
 }

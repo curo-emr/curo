@@ -1,71 +1,49 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { use } from "react";
 import { useSearchParams } from "next/navigation";
 import { UserX } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { QueryContent } from "@curo/web/query";
 import { EncounterEditor } from "@/components/features/encounters/EncounterEditor";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
-import { getPatientById, getAllergies, getConditions } from "@/lib/api/patients";
-import { getPrescriptionsByPatient } from "@/lib/api/clinical";
-import { searchMedications } from "@/lib/api/medications";
-import { getLabTestCatalog } from "@/lib/api/catalog";
-import { getLabs } from "@/lib/api/labs";
-import { recentMedicationNames } from "@/lib/clinical";
-import { findTodaysAppointment } from "@/lib/visit";
-import type { Allergy, Lab, LabTestCatalogItem, Medication, Patient, Problem } from "@/types";
-
-interface VisitContext {
-  patient: Patient | null;
-  allergies: Allergy[] | null;
-  problems: Problem[];
-  recentMedications: string[];
-  appointmentId?: string;
-  medicationSuggestions: Medication[];
-  labTests: LabTestCatalogItem[];
-  labs: Lab[];
-}
+import { appointmentQueries, catalogQueries, patientQueries } from "@/lib/queries";
 
 export default function NewVisitPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = use(params);
   const appointmentParam = useSearchParams().get("appointmentId") ?? undefined;
-  const [ctx, setCtx] = useState<VisitContext | null>(null);
+  const patient = useQuery(patientQueries.detail(patientId));
+  // Started from the chart? Attach the visit to the patient's open appointment today.
+  // Read fresh once, then kept: the draft and the queue updates are keyed by it.
+  const todays = useQuery({
+    ...appointmentQueries.todaysFor(patientId),
+    enabled: !appointmentParam,
+    refetchOnMount: "always",
+    staleTime: Infinity,
+  });
+  // Pickers: if one fails it stays empty, and the rest of the visit still works.
+  const medicationSuggestions = useQuery(catalogQueries.medicationSuggestions()).data ?? [];
+  const labTests = useQuery(catalogQueries.labTests()).data ?? [];
+  const labs = useQuery(catalogQueries.labs()).data ?? [];
 
-  useEffect(() => {
-    Promise.all([
-      getPatientById(patientId),
-      getAllergies(patientId).catch(() => null),
-      getConditions(patientId).catch(() => []),
-      getPrescriptionsByPatient(patientId).catch(() => []),
-      // Offered before the doctor types; typing searches the whole catalog.
-      searchMedications("", 6).catch(() => []),
-      getLabTestCatalog().catch(() => []),
-      getLabs().catch(() => []),
-      // Started from the chart? Attach the visit to the patient's open appointment today.
-      appointmentParam ? Promise.resolve(null) : findTodaysAppointment(patientId),
-    ])
-      .then(([patient, allergies, problems, rxs, medicationSuggestions, labTests, labs, todays]) =>
-        setCtx({
-          patient, allergies, problems, medicationSuggestions, labTests, labs,
-          recentMedications: recentMedicationNames(rxs),
-          appointmentId: appointmentParam ?? todays?.id,
-        }))
-      .catch(() => setCtx({ patient: null, allergies: null, problems: [], recentMedications: [], medicationSuggestions: [], labTests: [], labs: [] }));
-  }, [patientId, appointmentParam]);
-
-  if (!ctx) return <PageSkeleton />;
-  if (!ctx.patient) return <EmptyState icon={UserX} title="Patient not found" className="min-h-[50vh]" />;
+  // The editor reads its autosaved draft once, keyed by the appointment, so it
+  // waits for that. Later refreshes of the patient never unmount it.
+  if (!appointmentParam && !todays.isFetchedAfterMount) return <PageSkeleton />;
 
   return (
-    <EncounterEditor
-      patient={ctx.patient}
-      allergies={ctx.allergies}
-      problems={ctx.problems}
-      recentMedications={ctx.recentMedications}
-      appointmentId={ctx.appointmentId}
-      medicationSuggestions={ctx.medicationSuggestions}
-      labTestsCatalog={ctx.labTests}
-      labs={ctx.labs}
-    />
+    <QueryContent query={patient} what="this patient" loading={<PageSkeleton />}>
+      {p => p ? (
+        <EncounterEditor
+          patient={p}
+          appointmentId={appointmentParam ?? todays.data?.id}
+          medicationSuggestions={medicationSuggestions}
+          labTestsCatalog={labTests}
+          labs={labs}
+        />
+      ) : (
+        <EmptyState icon={UserX} title="Patient not found" className="min-h-[50vh]" />
+      )}
+    </QueryContent>
   );
 }

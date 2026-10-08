@@ -1,20 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, ChevronRight, Search, Users } from "lucide-react";
-import type { Allergy, Patient } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import { useDebouncedValue } from "@curo/web/hooks";
 import { Card } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
 import { Skeleton } from "@curo/web/ui/skeleton";
 import { EmptyState } from "@curo/web/ui/empty-state";
+import { LoadError } from "@curo/web/ui/load-error";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
 import { Pagination } from "@curo/web/ui/pagination";
 import { ToggleGroup, ToggleGroupItem } from "@curo/web/ui/toggle-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
 import { ROUTES } from "@/lib/constants";
 import { formatAgeSex, formatDate } from "@/lib/utils";
-import { getPatientsPaginated, getAllergies } from "@/lib/api/patients";
+import { patientQueries } from "@/lib/queries";
+import { usePatientAllergies } from "./AllergyChips";
 
 type SexFilter = "all" | "male" | "female" | "other";
 
@@ -23,46 +26,21 @@ export function PatientList() {
   const initialQuery = useSearchParams().get("q") || "";
 
   const [query, setQuery] = useState(initialQuery);
-  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [sexFilter, setSexFilter] = useState<SexFilter>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  const [patients, setPatients] = useState<Patient[] | null>(null);
-  const [allergies, setAllergies] = useState<Record<string, Allergy[] | null>>({});
-  const [total, setTotal] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  // The search waits until typing pauses, so each keystroke doesn't hit the backend.
+  const search = useDebouncedValue(query);
+  const result = useQuery(patientQueries.page({
+    page, pageSize,
+    search: search || undefined,
+    gender: sexFilter === "all" ? undefined : sexFilter,
+  }));
+  const patients = result.data?.items;
 
-  // Debounce the search box so each keystroke doesn't hit the backend; a new search starts at page 1.
-  useEffect(() => {
-    const t = setTimeout(() => { setDebouncedQuery(query); setPage(1); }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const result = await getPatientsPaginated({
-        page, pageSize,
-        search: debouncedQuery || undefined,
-        gender: sexFilter === "all" ? undefined : sexFilter,
-      });
-      // Allergies live on a separate endpoint — fetch only for the current page.
-      const perPatient = await Promise.all(result.items.map(p => getAllergies(p.id).catch(() => null)));
-      if (!active) return;
-      setAllergies(Object.fromEntries(result.items.map((p, i) => [p.id, perPatient[i]])));
-      setPatients(result.items);
-      setTotal(result.total);
-      setError(null);
-    })().catch(() => {
-      if (!active) return;
-      setError("Couldn't load patients. Check your connection and try again.");
-      setPatients([]);
-      setTotal(0);
-    });
-    return () => { active = false; };
-  }, [page, pageSize, debouncedQuery, sexFilter]);
-
+  // A new search or filter starts at page 1.
+  const changeQuery = (value: string) => { setQuery(value); setPage(1); };
   const changeSex = (value: string) => { if (value) { setSexFilter(value as SexFilter); setPage(1); } };
   const changePageSize = (size: number) => { setPageSize(size); setPage(1); };
 
@@ -75,7 +53,7 @@ export function PatientList() {
             placeholder="Search by name, MRN, phone or NIC…"
             className="h-10 bg-card pl-9"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => changeQuery(e.target.value)}
           />
         </div>
         <ToggleGroup type="single" variant="outline" value={sexFilter} onValueChange={changeSex} className="bg-card">
@@ -99,7 +77,13 @@ export function PatientList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {patients === null ? (
+            {!patients && result.isError ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={6}>
+                  <LoadError what="patients" onRetry={() => void result.refetch()} retrying={result.isFetching} />
+                </TableCell>
+              </TableRow>
+            ) : !patients ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell colSpan={6} className="px-5"><Skeleton className="h-9 w-full" /></TableCell>
@@ -108,48 +92,48 @@ export function PatientList() {
             ) : patients.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={6}>
-                  <EmptyState icon={Users} title={error ?? "No patients found"} description={error ? undefined : "Try a different name, MRN or phone number."} />
+                  <EmptyState icon={Users} title="No patients found" description="Try a different name, MRN or phone number." />
                 </TableCell>
               </TableRow>
             ) : (
-              patients.map(p => {
-                const list = allergies[p.id];
-                return (
-                  <TableRow key={p.id} className="group cursor-pointer" onClick={() => router.push(ROUTES.PATIENT(p.id))}>
-                    <TableCell className="pl-5">
-                      <div className="flex items-center gap-3">
-                        <PatientAvatar name={p.name.full} size="sm" />
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-foreground group-hover:text-primary">{p.name.full}</p>
-                          <p className="font-mono text-xs text-muted-foreground">{p.mrn}</p>
-                        </div>
+              patients.map(p => (
+                <TableRow key={p.id} className="group cursor-pointer" onClick={() => router.push(ROUTES.PATIENT(p.id))}>
+                  <TableCell className="pl-5">
+                    <div className="flex items-center gap-3">
+                      <PatientAvatar name={p.name.full} size="sm" />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-foreground group-hover:text-primary">{p.name.full}</p>
+                        <p className="font-mono text-xs text-muted-foreground">{p.mrn}</p>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{formatAgeSex(p.dob, p.sex)}</TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">{p.phone || "—"}</TableCell>
-                    <TableCell>
-                      {list === null ? (
-                        <span className="text-xs font-medium text-status-warning-text">Couldn&apos;t load</span>
-                      ) : list.length > 0 ? (
-                        <span className="inline-flex max-w-48 items-center gap-1 truncate rounded-full border border-status-error-border bg-status-error-bg px-2 py-0.5 text-xs font-medium text-status-error-text"
-                          title={list.map(a => a.substance).join(", ")}>
-                          <AlertTriangle className="h-3 w-3 shrink-0" /> <span className="truncate">{list.map(a => a.substance).join(", ")}</span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">None known</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">{formatDate(p.updatedAt)}</TableCell>
-                    <TableCell className="pr-4"><ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" /></TableCell>
-                  </TableRow>
-                );
-              })
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{formatAgeSex(p.dob, p.sex)}</TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">{p.phone || "—"}</TableCell>
+                  <TableCell><AllergyCell patientId={p.id} /></TableCell>
+                  <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">{formatDate(p.updatedAt)}</TableCell>
+                  <TableCell className="pr-4"><ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" /></TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
       </Card>
 
-      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} onPageSizeChange={changePageSize} />
+      <Pagination page={page} pageSize={pageSize} total={result.data?.total ?? 0} onPageChange={setPage} onPageSizeChange={changePageSize} />
     </div>
+  );
+}
+
+// The same allergies query as the chart, so opening the patient shows them at once.
+function AllergyCell({ patientId }: { patientId: string }) {
+  const allergies = usePatientAllergies(patientId);
+  if (allergies === undefined) return <Skeleton className="h-5 w-20" />;
+  if (allergies === null) return <span className="text-xs font-medium text-status-warning-text">Couldn&apos;t load</span>;
+  if (allergies.length === 0) return <span className="text-xs text-muted-foreground">None known</span>;
+  const names = allergies.map(a => a.substance).join(", ");
+  return (
+    <span className="inline-flex max-w-48 items-center gap-1 truncate rounded-full border border-status-error-border bg-status-error-bg px-2 py-0.5 text-xs font-medium text-status-error-text" title={names}>
+      <AlertTriangle className="h-3 w-3 shrink-0" /> <span className="truncate">{names}</span>
+    </span>
   );
 }
