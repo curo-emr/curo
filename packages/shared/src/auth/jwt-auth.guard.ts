@@ -50,7 +50,9 @@ export function toAuthUser(payload: JwtPayload): AuthUser {
 }
 
 /** Who to record as the actor: the practitioner for staff, otherwise the user. */
-export function actorId(user: AuthUser): string {
+export function actorId(
+  user: Pick<AuthUser, 'practitionerId' | 'userId'>,
+): string {
   return user.practitionerId ?? user.userId;
 }
 
