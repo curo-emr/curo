@@ -1,4 +1,5 @@
 export { cn } from "@curo/web/ui/utils";
+export { getPatientName, getStaffName } from "@curo/web/format";
 
 export function formatDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -23,18 +24,10 @@ export function getTodayString(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-export function getPatientName(id: string, patients: { id: string; name: { full: string } }[]): string {
-  return patients.find(p => p.id === id)?.name.full || "Unknown Patient";
-}
-
 export function getPatientMeta(id: string, patients: { id: string; dob: string; sex: string }[]): { age: number; sex: string } | null {
   const p = patients.find(pat => pat.id === id);
   if (!p) return null;
   return { age: calculateAge(p.dob), sex: p.sex };
-}
-
-export function getStaffName(id: string, staff: { id: string; name: { full: string } }[]): string {
-  return staff.find(s => s.id === id)?.name.full || "Unknown Staff";
 }
 
 export function getResultFlagColor(flag: string): string {

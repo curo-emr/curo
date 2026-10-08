@@ -1,4 +1,5 @@
 export { cn } from "@curo/web/ui/utils";
+export { getPatientName, getStaffName } from "@curo/web/format";
 
 export function formatDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -37,10 +38,6 @@ export function calculateAge(dobStr: string): number {
   return age;
 }
 
-export function getPatientName(id: string, patients: { id: string; name: { full: string } }[]): string {
-  return patients.find(p => p.id === id)?.name.full || "Unknown Patient";
-}
-
 export function getPatientMeta(id: string, patients: { id: string; dob: string; sex: string }[]): { age: number; sex: string } | null {
   const p = patients.find(pat => pat.id === id);
   if (!p) return null;
@@ -50,10 +47,6 @@ export function getPatientMeta(id: string, patients: { id: string; dob: string; 
 export function getMedicationName(id: string, medications: { id: string; genericName: string; brandName: string }[]): string {
   const med = medications.find(m => m.id === id);
   return med ? `${med.genericName} (${med.brandName})` : id;
-}
-
-export function getStaffName(id: string, staff: { id: string; name: { full: string } }[]): string {
-  return staff.find(s => s.id === id)?.name.full || "Unknown Staff";
 }
 
 export function getPriorityColor(priority: string): string {
