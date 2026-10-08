@@ -1,4 +1,4 @@
-import { apiClient } from '@curo/web/api';
+import { apiClient, nullIfNotFound } from '@curo/web/api';
 import type { Encounter } from '@/types';
 import { mapFhirEncounter, type FhirEncounter } from './mappers';
 import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
@@ -8,13 +8,10 @@ export async function getEncountersByPatient(patientId: string): Promise<Encount
   return unwrapBundle(res.data).resources.map(mapFhirEncounter);
 }
 
+// null when there is no such encounter; any other failure throws.
 export async function getEncounterById(id: string): Promise<Encounter | null> {
-  try {
-    const res = await apiClient.get<FhirEncounter>(`/encounters/${id}`);
-    return mapFhirEncounter(res.data);
-  } catch {
-    return null;
-  }
+  const res = await nullIfNotFound(apiClient.get<FhirEncounter>(`/encounters/${id}`));
+  return res && mapFhirEncounter(res.data);
 }
 
 // A signed visit, as the clinical service's POST /encounters/visit takes it.
