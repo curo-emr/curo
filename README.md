@@ -23,7 +23,7 @@ packages/testing/    @curo/testing — harness for the backends' API tests (dev 
 packages/web/        @curo/web — code used by more than one portal
 database/            migrations, seed, and the image that runs them
 scripts/             smoke tests, docker helpers
-docs/  plan/         API docs, test credentials, design plans
+docs/                API docs, test credentials, manual testing guide
 ```
 
 ## Run everything (Docker)
