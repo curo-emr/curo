@@ -2,7 +2,7 @@
 # One-shot image for database tooling. Compose runs it twice:
 #   curo-migrate: npm run db:migrate   (before the backends start)
 #   curo-seed:    npm run seed         (dev data, after migrations)
-FROM node:22-alpine
+FROM node:24-alpine
 # native modules (bcrypt) need build tools
 RUN apk add --no-cache python3 make g++
 WORKDIR /app

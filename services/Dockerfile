@@ -4,7 +4,7 @@
 # root (the service needs packages/shared); pick the service with SERVICE:
 #   docker build -f services/Dockerfile --build-arg SERVICE=auth .
 
-ARG NODE_IMAGE=node:22-alpine
+ARG NODE_IMAGE=node:24-alpine
 ARG NPM_REGISTRY=https://registry.npmjs.org/
 ARG NPM_FLAGS="--no-audit --no-fund --fetch-timeout=120000 --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000"
 
