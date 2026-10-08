@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Droplet, Pencil, Phone, Play, RotateCcw, Contact } from "lucide-react";
-import type { Allergy, Appointment, Patient } from "@/types";
+import type { Appointment, Patient } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { Card } from "@curo/web/ui/card";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
@@ -15,13 +15,12 @@ import { AllergyChips } from "./AllergyChips";
 
 interface PatientHeaderProps {
   patient: Patient;
-  allergies: Allergy[] | null;
   /** The patient's open appointment today, if any. */
   todaysAppointment: Appointment | null;
   hasDraft: boolean;
 }
 
-export function PatientHeader({ patient, allergies, todaysAppointment, hasDraft }: PatientHeaderProps) {
+export function PatientHeader({ patient, todaysAppointment, hasDraft }: PatientHeaderProps) {
   // Today's appointment decides start vs resume; without one the doctor can still see a walk-in.
   const action = (todaysAppointment && getVisitAction(todaysAppointment, hasDraft)) ?? {
     kind: hasDraft ? "resume" : "start",
@@ -45,7 +44,7 @@ export function PatientHeader({ patient, allergies, todaysAppointment, hasDraft 
             {patient.bloodType && <Meta label="Blood"><Droplet className="inline h-3.5 w-3.5 text-status-error-text" /> {patient.bloodType}</Meta>}
             {patient.phone && <Meta label="Phone"><Phone className="inline h-3.5 w-3.5" /> {patient.phone}</Meta>}
           </dl>
-          <AllergyChips allergies={allergies} className="pt-1" />
+          <AllergyChips patientId={patient.id} className="pt-1" />
           {patient.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {patient.tags.map(tag => <span key={tag} className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">{tag}</span>)}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { QueryProvider } from "@curo/web/query";
 import { Toaster } from "sonner";
 
 const outfitSans = Outfit({
@@ -27,10 +28,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${outfitSans.variable} ${geistMono.variable}`}>
       <body className="antialiased h-screen overflow-hidden flex bg-surface" suppressHydrationWarning>
-        <AuthProvider>
-          {children}
-          <Toaster position="top-right" richColors />
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            {children}
+            <Toaster position="top-right" richColors />
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

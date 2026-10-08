@@ -9,6 +9,7 @@ import { SectionCard } from "@curo/web/ui/section-card";
 import { SearchCombobox } from "@/components/ui/SearchCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
 import { searchMedications } from "@/lib/api/medications";
+import { usePatientAllergies } from "@/components/features/patients/AllergyChips";
 import { FREQUENCIES, routeForForm, suggestQuantity } from "../visit";
 
 interface PrescriptionFormProps {
@@ -16,8 +17,7 @@ interface PrescriptionFormProps {
   onChange: (items: PrescriptionItem[]) => void;
   /** Shown before the doctor types; typing searches the whole catalog. */
   suggestions: Medication[];
-  /** null when they couldn't be loaded: the allergy check can't run, so the doctor is told. */
-  allergies: Allergy[] | null;
+  patientId: string;
 }
 
 const newItem = (displayName: string, med?: Medication): PrescriptionItem => ({
@@ -34,10 +34,12 @@ const newItem = (displayName: string, med?: Medication): PrescriptionItem => ({
 });
 
 // Allergy whose substance appears in the drug name, e.g. "Penicillin" in "Penicillin V 250mg".
-const allergyConflict = (name: string, allergies: Allergy[] | null) =>
+const allergyConflict = (name: string, allergies: Allergy[] | null | undefined) =>
   allergies?.find(a => a.substance && name.toLowerCase().includes(a.substance.toLowerCase()));
 
-export function PrescriptionForm({ prescriptions, onChange, suggestions, allergies }: PrescriptionFormProps) {
+export function PrescriptionForm({ prescriptions, onChange, suggestions, patientId }: PrescriptionFormProps) {
+  // null when they couldn't be loaded: the allergy check can't run, so the doctor is told.
+  const allergies = usePatientAllergies(patientId);
   const update = (id: string, patch: Partial<PrescriptionItem>) =>
     onChange(prescriptions.map(p => {
       if (p.id !== id) return p;

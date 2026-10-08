@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { LoadError } from "@curo/web/ui/load-error";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { UpNextCard } from "@/components/features/dashboard/UpNextCard";
 import { QueueList } from "@/components/features/dashboard/QueueList";
 import { NeedsAttention } from "@/components/features/dashboard/NeedsAttention";
-import { getAppointments } from "@/lib/api/appointments";
-import { getOpenTasks } from "@/lib/api/tasks";
-import { getRecentLabResults } from "@/lib/api/clinical";
-import { getPatientsByIds } from "@/lib/api/patients";
+import { appointmentQueries, labResultQueries, patientQueries } from "@/lib/queries";
 import { getTodayString } from "@/lib/utils";
 import { QUEUE_GROUPS, getQueueGroup, hasDraft, visitDraftKey, type QueueGroup } from "@/lib/visit";
-import type { Appointment, LabOrder, Patient, Task } from "@/types";
+import type { Appointment, LabOrder } from "@/types";
+
+// One empty list for "not loaded yet", so the memo below doesn't recompute on every render.
+const NONE: never[] = [];
 
 function greeting() {
   const h = new Date().getHours();
@@ -22,31 +24,14 @@ function greeting() {
 
 export default function TodayPage() {
   const { user } = useAuth();
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [patients, setPatients] = useState<Record<string, Patient>>({});
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
   const practitionerId = user?.practitionerId;
 
-  useEffect(() => {
-    const today = getTodayString();
-    Promise.all([
-      getAppointments({ date: today }),
-      getOpenTasks().catch(() => [] as Task[]),
-      practitionerId ? getRecentLabResults(practitionerId).catch(() => [] as LabOrder[]) : Promise.resolve([]),
-    ])
-      .then(async ([appts, openTasks, labs]) => {
-        const todays = appts.filter(a => a.date === today).sort((a, b) => a.time.localeCompare(b.time));
-        setAppointments(todays);
-        setTasks(openTasks);
-        setLabOrders(labs);
-        setPatients(await getPatientsByIds([...todays.map(a => a.patientId), ...labs.map(l => l.patientId)]));
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [practitionerId]);
+  const today = useQuery(appointmentQueries.day(getTodayString()));
+  const labs = useQuery(labResultQueries.recent(practitionerId));
+  const appointments: Appointment[] = today.data ?? NONE;
+  const labOrders: LabOrder[] = labs.data ?? NONE;
+  // One lookup names everyone on the queue and in the lab results.
+  const patients = useQuery(patientQueries.byIds([...appointments, ...labOrders].map(x => x.patientId))).data ?? {};
 
   // Appointments with an autosaved, unsigned visit in this browser.
   const draftIds = useMemo(
@@ -54,7 +39,11 @@ export default function TodayPage() {
     [appointments, user],
   );
 
-  if (isLoading) return <PageSkeleton />;
+  if (!today.data) {
+    return today.isError
+      ? <LoadError what="today's appointments" onRetry={() => void today.refetch()} retrying={today.isFetching} className="min-h-[50vh]" />
+      : <PageSkeleton />;
+  }
 
   const count = (g: QueueGroup) => appointments.filter(a => getQueueGroup(a) === g).length;
   const upNext = appointments.find(a => getQueueGroup(a) === "consultation") ?? appointments.find(a => getQueueGroup(a) === "ready") ?? null;
@@ -87,7 +76,7 @@ export default function TodayPage() {
           />
           <QueueList appointments={appointments} patients={patients} draftIds={draftIds} />
         </div>
-        <NeedsAttention tasks={tasks} labOrders={labOrders} patients={patients} />
+        <NeedsAttention practitionerId={practitionerId} patients={patients} />
       </div>
     </div>
   );

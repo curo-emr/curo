@@ -1,7 +1,9 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { Allergy, Encounter, LabOrder, Patient, Prescription, Problem, Vitals } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import type { Patient } from "@/types";
+import { patientQueries } from "@/lib/queries";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
 import { SummaryTab } from "./tabs/SummaryTab";
 import { VisitsTab } from "./tabs/VisitsTab";
@@ -10,20 +12,14 @@ import { LabsTab } from "./tabs/LabsTab";
 import { DocumentsTab } from "../documents/DocumentsTab";
 import { VitalsTrendCharts } from "./VitalsTrendCharts";
 
-interface Props {
-  patient: Patient;
-  encounters: Encounter[];
-  allergies: Allergy[] | null;
-  problems: Problem[];
-  labOrders: LabOrder[];
-  prescriptions: Prescription[];
-  latestVitals: { vitals: Partial<Vitals>; recordedAt: string | null };
-}
 
 const TABS = ["summary", "visits", "medications", "labs", "documents", "trends"] as const;
 type Tab = (typeof TABS)[number];
 
-export function PatientChartTabs({ patient, encounters, allergies, problems, labOrders, prescriptions, latestVitals }: Props) {
+export function PatientChartTabs({ patient }: { patient: Patient }) {
+  // The same queries the tabs use, so the counts cost no extra requests.
+  const visits = useQuery(patientQueries.encounters(patient.id)).data?.length ?? 0;
+  const labs = useQuery(patientQueries.labOrders(patient.id)).data?.length ?? 0;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -40,26 +36,25 @@ export function PatientChartTabs({ patient, encounters, allergies, problems, lab
       <div className="overflow-x-auto border-b">
         <TabsList variant="line" className="h-11 gap-4 px-1">
           <TabsTrigger value="summary" className="flex-none px-1">Summary</TabsTrigger>
-          <TabsTrigger value="visits" className="flex-none px-1">Visits{count(encounters.length)}</TabsTrigger>
+          <TabsTrigger value="visits" className="flex-none px-1">Visits{count(visits)}</TabsTrigger>
           <TabsTrigger value="medications" className="flex-none px-1">Medications</TabsTrigger>
-          <TabsTrigger value="labs" className="flex-none px-1">Labs{count(labOrders.length)}</TabsTrigger>
+          <TabsTrigger value="labs" className="flex-none px-1">Labs{count(labs)}</TabsTrigger>
           <TabsTrigger value="documents" className="flex-none px-1">Documents</TabsTrigger>
           <TabsTrigger value="trends" className="flex-none px-1">Trends</TabsTrigger>
         </TabsList>
       </div>
 
       <TabsContent value="summary">
-        <SummaryTab patient={patient} allergies={allergies} problems={problems} encounters={encounters}
-          prescriptions={prescriptions} latestVitals={latestVitals} onShowTab={setTab} />
+        <SummaryTab patient={patient} onShowTab={setTab} />
       </TabsContent>
       <TabsContent value="visits">
-        <VisitsTab patientId={patient.id} encounters={encounters} problems={problems} />
+        <VisitsTab patientId={patient.id} />
       </TabsContent>
       <TabsContent value="medications">
-        <MedicationsTab prescriptions={prescriptions} patient={patient} />
+        <MedicationsTab patient={patient} />
       </TabsContent>
       <TabsContent value="labs">
-        <LabsTab labOrders={labOrders} />
+        <LabsTab patientId={patient.id} />
       </TabsContent>
       <TabsContent value="documents">
         <DocumentsTab patientId={patient.id} />

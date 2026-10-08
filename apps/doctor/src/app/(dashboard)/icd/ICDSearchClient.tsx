@@ -1,36 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useDebouncedValue } from "@curo/web/hooks";
+import { LoadError } from "@curo/web/ui/load-error";
 import { Search, Stethoscope } from "lucide-react";
-import type { ICD10 } from "@/types";
 import { Card } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
 import { Skeleton } from "@curo/web/ui/skeleton";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { Pagination } from "@curo/web/ui/pagination";
-import { getICD10Paginated } from "@/lib/api/icd";
+import { catalogQueries } from "@/lib/queries";
 
 export function ICDSearchClient() {
   const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [data, setData] = useState<{ items: ICD10[]; total: number } | null>(null);
-  const [error, setError] = useState(false);
-
-  // A new search starts back at page 1.
-  useEffect(() => {
-    const t = setTimeout(() => { setDebouncedQuery(query); setPage(1); }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  useEffect(() => {
-    let active = true;
-    getICD10Paginated({ page, pageSize, search: debouncedQuery || undefined })
-      .then(r => { if (active) { setData({ items: r.items, total: r.total }); setError(false); } })
-      .catch(() => { if (active) { setData({ items: [], total: 0 }); setError(true); } });
-    return () => { active = false; };
-  }, [page, pageSize, debouncedQuery]);
+  // The search waits until typing pauses.
+  const debouncedQuery = useDebouncedValue(query);
+  const result = useQuery(catalogQueries.icd10({ page, pageSize, search: debouncedQuery || undefined }));
+  const data = result.data;
 
   const total = data?.total ?? 0;
 
@@ -42,7 +31,8 @@ export function ICDSearchClient() {
           <Input
             aria-label="Search ICD-10"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            // A new search starts at page 1.
+            onChange={e => { setQuery(e.target.value); setPage(1); }}
             placeholder="e.g. J45, asthma, chest pain…"
             className="h-12 bg-card pl-11 text-base"
             autoComplete="off"
@@ -55,10 +45,12 @@ export function ICDSearchClient() {
       </div>
 
       <Card className="gap-0 py-0">
-        {data === null ? (
+        {!data && result.isError ? (
+          <LoadError what="ICD-10 codes" onRetry={() => void result.refetch()} retrying={result.isFetching} />
+        ) : !data ? (
           <div className="space-y-3 p-5">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
         ) : data.items.length === 0 ? (
-          <EmptyState icon={Stethoscope} title={error ? "Couldn't load ICD-10 codes" : "No matching diagnoses"} description={error ? undefined : "Try a different term or code."} />
+          <EmptyState icon={Stethoscope} title="No matching diagnoses" description="Try a different term or code." />
         ) : (
           <ul className="divide-y">
             {data.items.map(icd => (

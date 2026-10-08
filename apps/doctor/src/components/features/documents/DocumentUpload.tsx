@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { Upload, Loader2 } from "lucide-react";
 import { Button } from "@curo/web/ui/button";
 import { Label } from "@curo/web/ui/label";
@@ -15,6 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@curo/web/ui/select";
 import { uploadDocument } from "@/lib/api/documents";
+import { patientQueries } from "@/lib/queries";
 
 const DOCUMENT_TYPES: { value: string; label: string }[] = [
   { value: "referral-letter", label: "Referral letter" },
@@ -28,10 +30,10 @@ const DOCUMENT_TYPES: { value: string; label: string }[] = [
 interface Props {
   patientId: string;
   encounterId?: string;
-  onUploaded?: () => void;
 }
 
-export function DocumentUpload({ patientId, encounterId, onUploaded }: Props) {
+export function DocumentUpload({ patientId, encounterId }: Props) {
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState<string>("referral-letter");
@@ -55,7 +57,7 @@ export function DocumentUpload({ patientId, encounterId, onUploaded }: Props) {
       toast.success("Document uploaded.");
       setOpen(false);
       reset();
-      onUploaded?.();
+      void queryClient.invalidateQueries({ queryKey: patientQueries.documents(patientId).queryKey });
     } catch (err) {
       console.error(err);
       toast.error("Upload failed. Please try again.");

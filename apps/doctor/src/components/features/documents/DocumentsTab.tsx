@@ -1,34 +1,22 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
 import { FileText } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { QueryContent } from "@curo/web/query";
 import { SectionCard } from "@curo/web/ui/section-card";
-import { Skeleton } from "@curo/web/ui/skeleton";
 import { DocumentUpload } from "./DocumentUpload";
 import { DocumentsList } from "./DocumentsList";
-import { getDocumentsByPatient, type DocumentRef } from "@/lib/api/documents";
+import { patientQueries } from "@/lib/queries";
 
 export function DocumentsTab({ patientId }: { patientId: string }) {
-  const [documents, setDocuments] = useState<DocumentRef[] | null>(null);
-
-  const load = useCallback(
-    () => getDocumentsByPatient(patientId).then(setDocuments).catch(() => setDocuments([])),
-    [patientId],
-  );
-
-  useEffect(() => { load(); }, [load]);
+  const documents = useQuery(patientQueries.documents(patientId));
 
   return (
-    <SectionCard icon={FileText} title="Documents" count={documents?.length} noPadding
-      headerRight={<DocumentUpload patientId={patientId} onUploaded={load} />}>
-      {documents === null ? (
-        <div className="space-y-3 p-5">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
-      ) : (
-        <DocumentsList documents={documents} />
-      )}
+    <SectionCard icon={FileText} title="Documents" count={documents.data?.length} noPadding
+      headerRight={<DocumentUpload patientId={patientId} />}>
+      <QueryContent query={documents} what="documents">
+        {list => <DocumentsList documents={list} />}
+      </QueryContent>
     </SectionCard>
   );
 }
