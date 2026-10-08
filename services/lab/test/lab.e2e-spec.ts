@@ -714,13 +714,19 @@ describe('Lab specimens and results', () => {
         ...fields,
       });
 
-    /** An instrument in `labId`, with one passing QC run on it. */
+    /**
+     * An instrument in `labId`, with one passing QC run on it from a day ago, so
+     * a run a test adds is always the control's latest. Saved in the same
+     * millisecond, the two would tie and either could count as latest.
+     */
     async function instrumentAt(labId: string) {
       const instrument = await svc.db.getRepository(LabInstrument).save({
         organizationId: labId,
         name: `Sysmex XN-550 ${randomUUID()}`,
       });
-      const qcLog = await runQc(instrument.id);
+      const qcLog = await runQc(instrument.id, {
+        performedAt: new Date(Date.now() - 24 * 60 * 60_000),
+      });
       return { instrument, qcLog };
     }
 

@@ -28,9 +28,12 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   return res.data.accessToken;
 }
 
+// A full page load, not a router push: this runs outside React, and the reload
+// drops every piece of the expired session's state. Replacing the history entry
+// keeps Back from returning to a page that would only fail again.
 function signOut() {
   clearSession();
-  window.location.href = "/login";
+  window.location.replace("/login");
 }
 
 apiClient.interceptors.response.use(
