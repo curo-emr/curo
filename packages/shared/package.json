@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Shared kernel for Curo EMR backends: auth guards, cross-service entities, enums and DTOs, FHIR helpers, patient identifiers, system notifications, env secrets, health check and service bootstrap",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-or-later",
   "exports": {
     "./auth": {
       "types": "./dist/auth/index.d.ts",

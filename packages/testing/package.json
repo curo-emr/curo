@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Harness for the Curo backends' API tests: a Jest preset that runs each service against a freshly migrated test database, plus a helper that boots a service in-process and signs users in",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-or-later",
   "exports": {
     ".": "./src/index.ts",
     "./jest-preset": "./jest-preset.js"
