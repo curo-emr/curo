@@ -11,6 +11,7 @@
     "./fhir": "./src/fhir/index.ts",
     "./format": "./src/format/index.ts",
     "./hooks": "./src/hooks/index.ts",
+    "./notifications": "./src/notifications/index.ts",
     "./patients": "./src/patients/index.ts",
     "./print": "./src/print/index.ts",
     "./query": "./src/query/index.ts",

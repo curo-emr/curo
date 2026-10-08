@@ -7,7 +7,7 @@ import { Input } from "@curo/web/ui/input";
 import { Button } from "@curo/web/ui/button";
 import { useAuth } from "@curo/web/auth";
 import { useSidebar } from "@curo/web/ui/sidebar-context";
-import { NotificationsMenu } from "./NotificationsMenu";
+import { NotificationsMenu } from "@curo/web/notifications";
 import { WorkplaceBadge } from "./WorkplaceBadge";
 
 export function Topbar() {

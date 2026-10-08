@@ -1,28 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { Search, Bell, LogOut, User, Menu } from "lucide-react";
+import { useState } from "react";
+import { Search, LogOut, User, Menu } from "lucide-react";
 import { Input } from "@curo/web/ui/input";
 import { Button } from "@curo/web/ui/button";
 import { useAuth } from "@curo/web/auth";
 import { useSidebar } from "@curo/web/ui/sidebar-context";
-import { getNotificationCount } from "@/lib/api/notifications";
+import { NotificationsMenu } from "@curo/web/notifications";
 import { WorkplaceBadge } from "./WorkplaceBadge";
 
 export function Topbar() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [unreadCount, setUnreadCount] = useState(0);
   const { user, logout } = useAuth();
   const { toggle } = useSidebar();
-
-  useEffect(() => {
-    if (!user) return;
-    getNotificationCount().then(setUnreadCount);
-    const interval = setInterval(() => getNotificationCount().then(setUnreadCount), 30_000);
-    return () => clearInterval(interval);
-  }, [user]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,14 +51,7 @@ export function Topbar() {
             {user?.name || "Lab Technician"}
           </span>
         </div>
-        <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-white flex items-center justify-center font-medium">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </Button>
+        <NotificationsMenu />
         <Button variant="ghost" size="icon" onClick={logout} title="Log out" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
           <LogOut className="h-5 w-5" />
         </Button>
