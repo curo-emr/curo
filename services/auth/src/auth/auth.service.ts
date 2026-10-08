@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
 import { LoginDto } from './dto/login.dto';
+import { LoginAttempts } from './login-attempts';
 import {
   jwtSecret,
   jwtRefreshSecret,
@@ -30,16 +31,23 @@ export class AuthService {
     @InjectRepository(Practitioner)
     private practitionersRepo: Repository<Practitioner>,
     private jwtService: JwtService,
+    private loginAttempts: LoginAttempts,
   ) {}
 
-  async login(dto: LoginDto) {
+  /** Signs in from `ip`, the client's address; repeated failures are refused for a while (LoginAttempts). */
+  async login(dto: LoginDto, ip: string) {
+    this.loginAttempts.assertAllowed(dto.email, ip);
+
     const user = await this.usersRepo.findOne({ where: { email: dto.email } });
-    if (!user || !user.isActive)
+    const valid =
+      !!user?.isActive &&
+      (await bcrypt.compare(dto.password, user.passwordHash));
+    if (!user || !valid) {
+      this.loginAttempts.recordFailure(dto.email, ip);
       throw new UnauthorizedException('Invalid credentials');
+    }
 
-    const valid = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!valid) throw new UnauthorizedException('Invalid credentials');
-
+    this.loginAttempts.recordSuccess(dto.email);
     return this.issueTokens(user);
   }
 
