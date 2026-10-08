@@ -201,7 +201,8 @@ shadcn/ui primitives are the exception: they all live here, so the portals look 
   its `statusLabel()` (and `statusClassName()` to look like the badge), not their own text.
 - `npm run ui:add -w @curo/web -- <component>` adds a shadcn/ui component to
   `packages/web/src/ui`. It runs `shadcn add`, then fixes the `import { cn } from "cn"`
-  that the radix-vega registry ships, pointing it at `"./utils"`.
+  that the radix-vega registry ships, pointing it at `"./utils"`, and removes the `cn`
+  package that shadcn installs alongside.
 
 
 ## Contributing
