@@ -14,8 +14,28 @@ permissions:
   contents: read
 
 jobs:
+  # What to check: a pull request checks what it changes, anything else checks
+  # everything. The rules are in .github/scripts/ci-scope.sh.
+  scope:
+    name: Scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.scope.outputs.backend }}
+      frontend: ${{ steps.scope.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: scope
+        run: .github/scripts/ci-scope.sh
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+
   backend:
     name: Backends
+    needs: scope
+    if: needs.scope.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -53,20 +73,15 @@ jobs:
 
   frontend:
     name: Frontend (${{ matrix.workspace }})
+    needs: scope
+    if: needs.scope.outputs.frontend != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        workspace:
-          - apps/admin
-          - apps/doctor
-          - apps/lab
-          - apps/nurse
-          - apps/patient
-          - apps/pharmacy
-          - apps/receptionist
-          - packages/web
+        # Each portal, and @curo/web, that the change can affect.
+        workspace: ${{ fromJSON(needs.scope.outputs.frontend) }}
     env:
       NEXT_PUBLIC_API_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: 1

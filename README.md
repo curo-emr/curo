@@ -135,7 +135,12 @@ To change the schema:
 
 Branch naming and the pull request process are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-[CI](.github/workflows/ci.yml) runs on every PR and on pushes to `main` and release branches:
+[CI](.github/workflows/ci.yml) runs on every PR and on pushes to `main` and release branches.
+A PR runs only the jobs its changes can affect: a portal is built when it or `@curo/web`
+changes, and the Backends job runs for `services/`, `packages/` and `database/`. Changes to
+the lockfile, Node version or CI run everything, and so does every push. The rules are in
+[ci-scope.sh](.github/scripts/ci-scope.sh); `BASE=origin/main .github/scripts/ci-scope.sh` shows
+what a branch would run. The secret scan always runs.
 
 | Job | Checks | Run it locally |
 |---|---|---|
