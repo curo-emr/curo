@@ -1,4 +1,6 @@
-import type { Patient, Allergy, Problem, Appointment, QueueStage } from '@/types';
+import type { Patient, Problem, Appointment, QueueStage } from '@/types';
+
+export { mapFhirAllergy, type FhirAllergy } from '@curo/web/fhir';
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
 
@@ -29,18 +31,6 @@ export interface FhirPatient {
     valueString?: string;
     valueCode?: string;
   }>;
-}
-
-export interface FhirAllergy {
-  resourceType: 'AllergyIntolerance';
-  id: string;
-  meta?: { lastUpdated?: string };
-  patient?: { reference?: string };
-  code?: { text?: string; coding?: Array<{ display?: string }> };
-  reaction?: Array<{ manifestation?: Array<{ text?: string }> }>;
-  criticality?: string;
-  note?: Array<{ text?: string }>;
-  recordedDate?: string;
 }
 
 export interface FhirCondition {
@@ -143,26 +133,6 @@ export function mapFhirPatient(fhir: FhirPatient): Patient {
     registeredAt: fhir.meta?.lastUpdated ?? '',
     createdAt: fhir.meta?.lastUpdated ?? '',
     updatedAt: fhir.meta?.lastUpdated ?? '',
-  };
-}
-
-export function mapFhirAllergy(fhir: FhirAllergy): Allergy {
-  const patientRef = fhir.patient?.reference?.split('/')?.[1] ?? '';
-  const substance = fhir.code?.text ?? fhir.code?.coding?.[0]?.display ?? '';
-  const reaction = fhir.reaction?.[0]?.manifestation?.[0]?.text ?? '';
-  const severityMap: Record<string, Allergy['severity']> = {
-    low: 'mild', moderate: 'moderate', high: 'severe', unable_to_assess: 'mild',
-  };
-  const severity = severityMap[fhir.criticality ?? 'low'] ?? 'mild';
-
-  return {
-    id: fhir.id,
-    patientId: patientRef,
-    substance,
-    reaction,
-    severity,
-    notes: fhir.note?.[0]?.text ?? '',
-    recordedAt: fhir.recordedDate ?? fhir.meta?.lastUpdated ?? '',
   };
 }
 

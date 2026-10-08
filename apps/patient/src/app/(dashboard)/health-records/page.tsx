@@ -91,9 +91,11 @@ export default function HealthRecordsPage() {
                         <p className="font-semibold text-sm text-foreground">{allergy.substance}</p>
                         <SeverityBadge severity={allergy.severity} />
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-medium">Reaction:</span> {allergy.reaction}
-                      </p>
+                      {allergy.reaction && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Reaction:</span> {allergy.reaction}
+                        </p>
+                      )}
                       {allergy.notes && (
                         <p className="text-xs text-muted-foreground mt-1">{allergy.notes}</p>
                       )}

@@ -15,8 +15,6 @@ export const ROUTES = {
   SETTINGS: "/settings",
 } as const;
 
-export const MARITAL_STATUS = ["single", "married", "divorced", "widowed", "other"] as const;
-
 // Appointment statuses
 export const APPOINTMENT_STATUS = {
   SCHEDULED: "scheduled",

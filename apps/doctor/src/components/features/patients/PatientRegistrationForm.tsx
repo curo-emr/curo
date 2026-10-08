@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,7 +13,8 @@ import {
 } from "@/lib/validations/patient";
 import { registerPatient } from "@/lib/actions/patient-actions";
 import { patientQueries } from "@/lib/queries";
-import { ROUTES, MARITAL_STATUS } from "@/lib/constants";
+import { ROUTES } from "@/lib/constants";
+import { MARITAL_STATUSES, type MaritalStatus } from "@curo/web/fhir";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
@@ -25,7 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@curo/web/ui/select";
-import { Loader2, ChevronDown, Plus, Trash2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
+import { AllergyFields } from "./AllergyFields";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -35,13 +37,7 @@ export function PatientRegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insuranceOpen, setInsuranceOpen] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    control,
-    formState: { errors },
-  } = useForm<PatientRegistrationFormValues, unknown, PatientRegistrationInput>({
+  const form = useForm<PatientRegistrationFormValues, unknown, PatientRegistrationInput>({
     resolver: zodResolver(patientRegistrationSchema),
     defaultValues: {
       nic: "",
@@ -74,14 +70,16 @@ export function PatientRegistrationForm() {
       allergies: [],
     },
   });
-  const [sex, bloodType, maritalStatus, insuranceRelationship, allergies] = useWatch({
+  const {
+    register,
+    handleSubmit,
+    setValue,
     control,
-    name: ["sex", "bloodType", "maritalStatus", "insuranceRelationship", "allergies"],
-  });
-
-  const { fields: allergyFields, append: appendAllergy, remove: removeAllergy } = useFieldArray({
+    formState: { errors },
+  } = form;
+  const [sex, bloodType, maritalStatus, insuranceRelationship] = useWatch({
     control,
-    name: "allergies",
+    name: ["sex", "bloodType", "maritalStatus", "insuranceRelationship"],
   });
 
   const onSubmit = async (data: PatientRegistrationInput) => {
@@ -113,12 +111,15 @@ export function PatientRegistrationForm() {
         <CardContent className="px-5 pb-5 pt-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="nic">NIC / Passport *</Label>
+              <Label htmlFor="nic">NIC / Passport</Label>
               <Input
                 id="nic"
                 {...register("nic")}
                 placeholder="e.g. 200012345678"
               />
+              <p className="text-xs text-muted-foreground">
+                Optional — leave blank for minors. A Personal Health Number is generated automatically.
+              </p>
               {errors.nic && (
                 <p className="text-xs text-status-error-text">{errors.nic.message}</p>
               )}
@@ -203,11 +204,11 @@ export function PatientRegistrationForm() {
             <div className="space-y-1.5">
               <Label>Marital Status</Label>
               <Select
-                value={maritalStatus || "single"}
+                value={maritalStatus ?? ""}
                 onValueChange={(val) =>
                   setValue(
                     "maritalStatus",
-                    val as (typeof MARITAL_STATUS)[number],
+                    val as MaritalStatus,
                     { shouldValidate: true }
                   )
                 }
@@ -216,7 +217,7 @@ export function PatientRegistrationForm() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {MARITAL_STATUS.map((ms) => (
+                  {MARITAL_STATUSES.map((ms) => (
                     <SelectItem key={ms} value={ms}>
                       {ms.charAt(0).toUpperCase() + ms.slice(1)}
                     </SelectItem>
@@ -444,78 +445,7 @@ export function PatientRegistrationForm() {
         )}
       </Card>
 
-      {/* Allergies */}
-      <Card className="gap-0">
-        <CardHeader className="px-5 pt-4 pb-1">
-          <div className="flex items-center justify-between w-full">
-            <CardTitle className="text-sm font-semibold">Allergies</CardTitle>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => appendAllergy({ substance: "", reaction: "", severity: "mild", notes: "" })}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Add Allergy
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="px-5 pb-5 pt-3">
-          {allergyFields.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No allergies recorded. Click &apos;Add Allergy&apos; to add one.</p>
-          ) : (
-            <div className="space-y-3">
-              {allergyFields.map((field, index) => (
-                <div key={field.id} className="border rounded-md p-3 bg-muted/20 relative">
-                  <button
-                    type="button"
-                    onClick={() => removeAllergy(index)}
-                    className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-6">
-                    <div className="space-y-1.5">
-                      <Label>Substance *</Label>
-                      <Input {...register(`allergies.${index}.substance`)} placeholder="e.g. Penicillin" />
-                      {errors.allergies?.[index]?.substance && (
-                        <p className="text-xs text-status-error-text">{errors.allergies[index].substance?.message}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Reaction *</Label>
-                      <Input {...register(`allergies.${index}.reaction`)} placeholder="e.g. Rash, Anaphylaxis" />
-                      {errors.allergies?.[index]?.reaction && (
-                        <p className="text-xs text-status-error-text">{errors.allergies[index].reaction?.message}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Severity</Label>
-                      <Select
-                        value={allergies?.[index]?.severity || "mild"}
-                        onValueChange={(val) => setValue(`allergies.${index}.severity`, val as "mild" | "moderate" | "severe")}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select severity" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="mild">Mild</SelectItem>
-                          <SelectItem value="moderate">Moderate</SelectItem>
-                          <SelectItem value="severe">Severe</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Notes</Label>
-                      <Input {...register(`allergies.${index}.notes`)} placeholder="Additional notes (optional)" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <AllergyFields form={form} />
 
       {/* Tags */}
       <Card className="gap-0">

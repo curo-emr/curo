@@ -46,15 +46,6 @@ export const VISIT_TYPES = [
   "Procedure",
 ] as const;
 
-// Marital status options
-export const MARITAL_STATUS = [
-  "single",
-  "married",
-  "divorced",
-  "widowed",
-  "other",
-] as const;
-
 // Priority levels
 export const PRIORITY = {
   ROUTINE: "routine",

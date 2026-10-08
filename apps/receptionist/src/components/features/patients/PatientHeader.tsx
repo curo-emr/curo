@@ -131,7 +131,7 @@ export function PatientHeader({ patient, allergies }: PatientHeaderProps) {
             </h4>
             <p className="text-sm text-status-error-text mt-0.5">
               {allergies
-                .map((a) => `${a.substance} (${a.reaction})`)
+                .map((a) => (a.reaction ? `${a.substance} (${a.reaction})` : a.substance))
                 .join(", ")}
             </p>
           </div>

@@ -1,6 +1,8 @@
 import { apiClient, apiErrorMessage } from "@curo/web/api";
+import { allergyChanges, patientBody, registrationBody } from "@curo/web/patients";
 import { mapFhirPatient, type FhirPatient } from "@/lib/api/mappers";
 import { patientRegistrationSchema, type PatientRegistrationInput } from "@/lib/validations/patient";
+import type { Allergy } from "@/types";
 
 export async function registerPatient(data: PatientRegistrationInput) {
   const parsed = patientRegistrationSchema.safeParse(data);
@@ -8,33 +10,8 @@ export async function registerPatient(data: PatientRegistrationInput) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
 
-  const v = parsed.data;
-
-  const payload = {
-    firstName: v.firstName,
-    lastName: v.lastName,
-    nic: v.nic,
-    birthDate: v.dob,
-    gender: v.sex,
-    phone: v.phone,
-    email: v.email || undefined,
-    bloodType: v.bloodType || undefined,
-    nationality: v.nationality || undefined,
-    maritalStatus: v.maritalStatus || undefined,
-    occupation: v.occupation || undefined,
-    addressLine1: v.addressLine1,
-    addressLine2: v.addressLine2 || undefined,
-    city: v.city,
-    state: v.district || undefined,
-    postalCode: v.postalCode || undefined,
-    country: v.country || "Sri Lanka",
-    emergencyContactName: v.emergencyContactName,
-    emergencyContactRelationship: v.emergencyContactRelationship,
-    emergencyContactPhone: v.emergencyContactPhone,
-  };
-
   try {
-    const res = await apiClient.post<FhirPatient>("/patients", payload);
+    const res = await apiClient.post<FhirPatient>("/patients", registrationBody(parsed.data));
     const patient = mapFhirPatient(res.data);
     return { success: true, patientId: patient.id, patientCode: patient.mrn };
   } catch (err) {
@@ -43,9 +20,11 @@ export async function registerPatient(data: PatientRegistrationInput) {
   }
 }
 
+/** Saves an edit. A recorded allergy that `data` no longer lists is retired. */
 export async function updatePatientDemographics(
   patientId: string,
-  data: PatientRegistrationInput
+  data: PatientRegistrationInput,
+  recordedAllergies: Allergy[],
 ) {
   const parsed = patientRegistrationSchema.safeParse(data);
   if (!parsed.success) {
@@ -53,32 +32,8 @@ export async function updatePatientDemographics(
   }
 
   const v = parsed.data;
-
-  const payload = {
-    firstName: v.firstName,
-    lastName: v.lastName,
-    nic: v.nic,
-    birthDate: v.dob,
-    gender: v.sex,
-    phone: v.phone,
-    email: v.email || undefined,
-    bloodType: v.bloodType || undefined,
-    nationality: v.nationality || undefined,
-    maritalStatus: v.maritalStatus || undefined,
-    occupation: v.occupation || undefined,
-    addressLine1: v.addressLine1,
-    addressLine2: v.addressLine2 || undefined,
-    city: v.city,
-    state: v.district || undefined,
-    postalCode: v.postalCode || undefined,
-    country: v.country || "Sri Lanka",
-    emergencyContactName: v.emergencyContactName,
-    emergencyContactRelationship: v.emergencyContactRelationship,
-    emergencyContactPhone: v.emergencyContactPhone,
-  };
-
   try {
-    await apiClient.patch(`/patients/${patientId}`, payload);
+    await apiClient.patch(`/patients/${patientId}`, { ...patientBody(v), ...allergyChanges(recordedAllergies, v.allergies) });
     return { success: true };
   } catch (err) {
     const msg = apiErrorMessage(err, "Failed to update patient");

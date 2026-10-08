@@ -42,15 +42,7 @@ export interface Patient {
   updatedAt: string;
 }
 
-export interface Allergy {
-  id: string;
-  patientId: string;
-  substance: string;
-  reaction: string;
-  severity: 'mild' | 'moderate' | 'severe';
-  notes: string;
-  recordedAt: string;
-}
+export type { Allergy } from '@curo/web/fhir';
 
 export interface Problem {
   id: string;
