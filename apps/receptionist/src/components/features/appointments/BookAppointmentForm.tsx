@@ -161,12 +161,7 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
         toast.success("Appointment booked successfully");
         router.push(ROUTES.APPOINTMENTS);
       } else {
-        const err = (result as { success: false; error?: string | Record<string, string[]> }).error;
-        const errorMsg =
-          typeof err === "string"
-            ? err
-            : Object.values(err || {}).flat().join(", ");
-        toast.error(errorMsg || "Failed to book appointment");
+        toast.error(result.error || "Failed to book appointment");
       }
     });
   };
