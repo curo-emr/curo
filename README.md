@@ -200,8 +200,9 @@ shadcn/ui primitives are the exception: they all live here, so the portals look 
   type-check until it is added there. Filters, tabs and pickers that name a status use
   its `statusLabel()` (and `statusClassName()` to look like the badge), not their own text.
 - `npm run ui:add -w @curo/web -- <component>` adds a shadcn/ui component to
-  `packages/web/src/ui`. It runs `shadcn add`, then fixes the `import { cn } from "cn"`
-  that the radix-vega registry ships, pointing it at `"./utils"`.
+  `packages/web/src/ui`, exactly as shadcn ships it. Components import `cn` from shadcn's
+  [`cn`](https://github.com/shadcn-ui/cn) package (Tailwind class merging, in place of
+  clsx + tailwind-merge); portals import it from `@curo/web/ui/utils`.
 
 
 ## Contributing

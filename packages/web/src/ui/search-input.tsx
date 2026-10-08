@@ -1,6 +1,6 @@
 import { Search } from "lucide-react";
 import { Input } from "./input";
-import { cn } from "./utils";
+import { cn } from "cn";
 
 interface SearchInputProps {
   value: string;

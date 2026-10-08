@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "../utils";
+import { cn } from "cn";
 import type { CalendarEvent, CalendarEventColor } from "./types";
 import {
   formatDateStr,
