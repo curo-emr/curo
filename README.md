@@ -142,6 +142,9 @@ the lockfile, Node version or CI run everything, and so does every push. The rul
 [ci-scope.sh](.github/scripts/ci-scope.sh); `BASE=origin/main .github/scripts/ci-scope.sh` shows
 what a branch would run. The secret scan always runs.
 
+`main` only takes changes through pull requests, and only once the `CI` job passes. That job
+sums up the others: it fails when any of them fails, and a skipped job counts as passing.
+
 | Job | Checks | Run it locally |
 |---|---|---|
 | Backends | build `@curo/shared` + every service, lint, unit tests, API tests, type-check every workspace (tests included) and `database/`, then on an empty Postgres: migrate, check for entity drift, seed | `npm ci && npm run build && npm run lint && npm test && npm run test:e2e && npm run typecheck`, then `npm run db:migrate && npm run db:check` |
