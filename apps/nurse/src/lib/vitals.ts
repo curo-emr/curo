@@ -1,4 +1,5 @@
 import { BMI_CATEGORY_LABELS, bmiCategory, calculateBMI, type BMICategory } from "@curo/web/clinical";
+import { toneClass } from "@curo/web/ui/status-badge";
 import type { Vitals } from "@/types";
 
 // ─── Vital-sign catalogue ────────────────────────────────────────────────────
@@ -122,17 +123,17 @@ export function changedVitalKeys(current: Partial<Vitals>, recorded: Partial<Vit
 
 export const LEVEL_STYLES: Record<VitalLevel, { pill: string; tile: string; marker: string }> = {
   normal: {
-    pill: "bg-status-success-bg text-status-success-text border-status-success-border",
+    pill: toneClass("success"),
     tile: "",
     marker: "bg-status-success-text",
   },
   alert: {
-    pill: "bg-status-warning-bg text-status-warning-text border-status-warning-border",
+    pill: toneClass("warning"),
     tile: "border-status-warning-border bg-status-warning-bg/35",
     marker: "bg-status-warning-text",
   },
   critical: {
-    pill: "bg-status-error-bg text-status-error-text border-status-error-border",
+    pill: toneClass("error"),
     tile: "border-status-error-border bg-status-error-bg/40",
     marker: "bg-status-error-text",
   },

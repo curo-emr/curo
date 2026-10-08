@@ -17,10 +17,3 @@ export const STAGE_META: Record<QueueStage, { label: string; color: string }> = 
   with_doctor: { label: "With doctor", color: "bg-primary" },
   done: { label: "Done", color: "bg-slate-300" },
 };
-
-// Minutes a patient has been waiting → badge colour (green → amber after 15m → red after 30m).
-export function waitBadgeClass(minutes: number): string {
-  if (minutes > 30) return "bg-status-error-bg text-status-error-text border-status-error-border";
-  if (minutes > 15) return "bg-status-warning-bg text-status-warning-text border-status-warning-border";
-  return "bg-status-success-bg text-status-success-text border-status-success-border";
-}

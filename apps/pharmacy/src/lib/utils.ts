@@ -49,47 +49,6 @@ export function getMedicationName(id: string, medications: { id: string; generic
   return med ? `${med.genericName} (${med.brandName})` : id;
 }
 
-export function getPriorityColor(priority: string): string {
-  switch (priority) {
-    case 'stat': return 'text-status-error-text bg-status-error-bg border-status-error-border';
-    case 'urgent': return 'text-status-warning-text bg-status-warning-bg border-status-warning-border';
-    case 'routine': return 'text-muted-foreground bg-muted border';
-    default: return 'text-muted-foreground bg-muted border';
-  }
-}
-
-export function getPrescriptionStatusColor(status: string): string {
-  switch (status) {
-    case 'pending': return 'text-status-warning-text bg-status-warning-bg border-status-warning-border';
-    case 'processing': return 'text-status-info-text bg-status-info-bg border-status-info-border';
-    case 'dispensed': return 'text-status-success-text bg-status-success-bg border-status-success-border';
-    case 'partially_dispensed': return 'text-status-purple-text bg-status-purple-bg border-status-purple-border';
-    case 'on_hold': return 'text-status-teal-text bg-status-teal-bg border-status-teal-border';
-    case 'cancelled': return 'text-status-error-text bg-status-error-bg border-status-error-border';
-    case 'expired': return 'text-status-neutral-text bg-status-neutral-bg border-status-neutral-border';
-    default: return 'text-muted-foreground bg-muted border';
-  }
-}
-
-export function getStockLevelColor(current: number, reorderLevel: number): string {
-  const ratio = current / reorderLevel;
-  if (ratio <= 0.5) return 'text-status-error-text';
-  if (ratio <= 1) return 'text-status-warning-text';
-  return 'text-status-success-text';
-}
-
-export function getTransactionTypeColor(type: string): string {
-  switch (type) {
-    case 'purchase': return 'text-status-success-text bg-status-success-bg';
-    case 'dispensed': return 'text-status-info-text bg-status-info-bg';
-    case 'return': return 'text-status-teal-text bg-status-teal-bg';
-    case 'adjustment': return 'text-status-warning-text bg-status-warning-bg';
-    case 'expired': return 'text-status-error-text bg-status-error-bg';
-    case 'damaged': return 'text-status-error-text bg-status-error-bg';
-    default: return 'text-muted-foreground bg-muted';
-  }
-}
-
 export function formatCurrency(amount: number): string {
   return `Rs. ${amount.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

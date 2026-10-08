@@ -30,17 +30,6 @@ export function getPatientMeta(id: string, patients: { id: string; dob: string; 
   return { age: calculateAge(p.dob), sex: p.sex };
 }
 
-export function getResultFlagColor(flag: string): string {
-  switch (flag) {
-    case 'normal': return 'text-status-success-text bg-status-success-bg';
-    case 'low': return 'text-status-info-text bg-status-info-bg';
-    case 'high': return 'text-status-warning-text bg-status-warning-bg';
-    case 'critical': return 'text-status-error-text bg-status-error-bg';
-    case 'abnormal': return 'text-status-purple-text bg-status-purple-bg';
-    default: return 'text-foreground bg-muted';
-  }
-}
-
 export function getResultFlagLabel(flag: string): string {
   switch (flag) {
     case 'normal': return 'Normal';
@@ -49,28 +38,6 @@ export function getResultFlagLabel(flag: string): string {
     case 'critical': return 'Critical';
     case 'abnormal': return 'Abnormal';
     default: return flag;
-  }
-}
-
-export function getPriorityColor(priority: string): string {
-  switch (priority) {
-    case 'stat': return 'text-status-error-text bg-status-error-bg border-status-error-border';
-    case 'urgent': return 'text-status-warning-text bg-status-warning-bg border-status-warning-border';
-    case 'routine': return 'text-muted-foreground bg-muted border';
-    default: return 'text-muted-foreground bg-muted border';
-  }
-}
-
-export function getOrderStatusColor(status: string): string {
-  switch (status) {
-    case 'received': return 'text-status-info-text bg-status-info-bg border-status-info-border';
-    case 'collected': return 'text-status-teal-text bg-status-teal-bg border-status-teal-border';
-    case 'processing': return 'text-status-info-text bg-status-info-bg border-status-info-border';
-    case 'resulted': return 'text-status-purple-text bg-status-purple-bg border-status-purple-border';
-    case 'verified': return 'text-status-success-text bg-status-success-bg border-status-success-border';
-    case 'dispatched': return 'text-status-success-text bg-status-success-bg border-status-success-border';
-    case 'rejected': return 'text-status-error-text bg-status-error-bg border-status-error-border';
-    default: return 'text-muted-foreground bg-muted border';
   }
 }
 

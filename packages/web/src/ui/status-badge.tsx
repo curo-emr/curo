@@ -1,20 +1,12 @@
 import { formatStatus } from "../format";
 import { Badge } from "./badge";
 import { cn } from "cn";
+import { TONES, type Tone } from "./tones";
 
-// Each tone is a bg/text/border triplet from the status palette in styles.css.
-const TONES = {
-  neutral: "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
-  info: "bg-status-info-bg text-status-info-text border-status-info-border",
-  teal: "bg-status-teal-bg text-status-teal-text border-status-teal-border",
-  success: "bg-status-success-bg text-status-success-text border-status-success-border",
-  warning: "bg-status-warning-bg text-status-warning-text border-status-warning-border",
-  error: "bg-status-error-bg text-status-error-text border-status-error-border",
-  purple: "bg-status-purple-bg text-status-purple-text border-status-purple-border",
-} as const;
+export { toneClass, waitTone, type Tone } from "./tones";
 
 interface StatusStyle {
-  tone: keyof typeof TONES;
+  tone: Tone;
   /** Defaults to the status in sentence case: `not_arrived` → "Not arrived". */
   label?: string;
   /** For states that ended without happening, such as a cancelled appointment. */
