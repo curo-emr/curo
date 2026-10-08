@@ -17,3 +17,6 @@ npm-debug.log*
 
 # Agent tooling
 /skills-lock.json
+# Written by `next dev` in each portal
+/apps/*/AGENTS.md
+/apps/*/CLAUDE.md
