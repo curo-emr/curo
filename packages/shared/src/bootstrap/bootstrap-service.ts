@@ -9,11 +9,20 @@ export interface ServiceInfo {
   defaultPort: number;
 }
 
+interface ExpressSettings {
+  set(setting: string, value: unknown): unknown;
+}
+
 /**
  * The request handling every Curo backend shares: validation pipes, CORS and
  * `/health`. The API tests apply it too, so they see what production sees.
  */
 export function configureApp(app: INestApplication): void {
+  // Requests arrive through the API gateway, which sets X-Forwarded-For to the
+  // client's address, so trust that one hop: req.ip is then the client's.
+  // (Every service runs on Express; this is its app.set.)
+  const express = app.getHttpAdapter().getInstance() as ExpressSettings;
+  express.set('trust proxy', 1);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors();
   registerHealthCheck(app);

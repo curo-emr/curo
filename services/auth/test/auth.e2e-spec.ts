@@ -5,6 +5,7 @@ import { startService, type ServiceUnderTest } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { User } from '../src/entities/user.entity';
 import { Practitioner } from '../src/entities/practitioner.entity';
+import { LOGIN_LIMITS } from '../src/auth/login-attempts';
 import { signedIn } from './signed-in';
 
 interface Tokens {
@@ -79,6 +80,18 @@ describe('Sign-in', () => {
 
     expect(unknown.status).toBe(401);
     expect(unknown.body).toEqual(wrong.body);
+  });
+
+  it('refuses an account after repeated wrong passwords, even with the right one', async () => {
+    const staff = await onboard();
+    for (let i = 0; i < LOGIN_LIMITS.perAccount; i++) {
+      await login(staff.email, 'not-the-password').expect(401);
+    }
+
+    const res = await login(staff.email, PASSWORD).expect(429);
+    expect((res.body as { message: string }).message).toMatch(
+      /^Too many failed sign-in attempts/,
+    );
   });
 
   it('refuses a deactivated account', async () => {

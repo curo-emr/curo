@@ -16,6 +16,13 @@ for (const target of SERVICE_TARGETS) {
       target,
       changeOrigin: true,
       on: {
+        // The services read the client's IP from X-Forwarded-For (login rate
+        // limiting, for one). Replace any value the client sent with the address
+        // that actually connected, so a client can't pose as another IP.
+        proxyReq: (proxyReq, req) => {
+          if (req.socket.remoteAddress)
+            proxyReq.setHeader('x-forwarded-for', req.socket.remoteAddress);
+        },
         error: (err, _req, res) => {
           // A failed WebSocket upgrade hands over the raw socket.
           if (res instanceof Socket) return void res.destroy();
