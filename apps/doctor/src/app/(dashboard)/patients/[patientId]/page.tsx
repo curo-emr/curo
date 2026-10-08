@@ -14,7 +14,7 @@ import type { Allergy, Appointment, Encounter, LabOrder, Patient, Prescription, 
 
 interface Chart {
   patient: Patient | null;
-  allergies: Allergy[];
+  allergies: Allergy[] | null;
   problems: Problem[];
   encounters: Encounter[];
   labOrders: LabOrder[];
@@ -32,7 +32,7 @@ export default function PatientChartPage({ params }: { params: Promise<{ patient
     const none = <T,>(fallback: T) => () => fallback;
     Promise.all([
       getPatientById(patientId),
-      getAllergies(patientId).catch(none<Allergy[]>([])),
+      getAllergies(patientId).catch(none(null)),
       getConditions(patientId).catch(none<Problem[]>([])),
       getEncountersByPatient(patientId).catch(none<Encounter[]>([])),
       getLabOrdersByPatient(patientId).catch(none<LabOrder[]>([])),

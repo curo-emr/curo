@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Check, CloudCheck, FileSignature, Loader2, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, CloudCheck, FileSignature, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Allergy, Lab, LabTestCatalogItem, Medication, Patient, Problem } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { Card } from "@curo/web/ui/card";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
+import { AllergyChips } from "@/components/features/patients/AllergyChips";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -32,7 +33,7 @@ import { apiErrorMessage } from "@curo/web/api";
 
 interface Props {
   patient: Patient;
-  allergies: Allergy[];
+  allergies: Allergy[] | null;
   problems: Problem[];
   recentMedications: string[];
   appointmentId?: string;
@@ -183,18 +184,7 @@ export function EncounterEditor({
               <span className="font-mono text-xs text-muted-foreground">{patient.mrn}</span>
               {patient.bloodType && <span className="text-xs text-muted-foreground">Blood {patient.bloodType}</span>}
             </div>
-            {allergies.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <AlertTriangle className="h-3.5 w-3.5 text-status-error-text" />
-                {allergies.map(a => (
-                  <span key={a.id} className="rounded-full border border-status-error-border bg-status-error-bg px-2 py-px text-xs font-medium text-status-error-text">
-                    {a.substance}{a.reaction ? ` · ${a.reaction}` : ""}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" /> No known allergies</p>
-            )}
+            <AllergyChips allergies={allergies} />
           </div>
           <div className="flex items-center gap-3">
             {savedAt && (

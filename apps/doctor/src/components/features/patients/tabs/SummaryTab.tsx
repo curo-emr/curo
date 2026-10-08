@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronRight, ClipboardList, HeartPulse, History, Pill } from "lucide-react";
+import { AlertTriangle, ChevronRight, ShieldAlert, ClipboardList, HeartPulse, History, Pill } from "lucide-react";
 import type { Allergy, Encounter, Patient, Prescription, Problem, Vitals } from "@/types";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { EmptyState } from "@curo/web/ui/empty-state";
@@ -7,10 +7,11 @@ import { ROUTES } from "@/lib/constants";
 import { calculateBMI, formatDate, formatRelative } from "@/lib/utils";
 import { recentPrescriptionItems, uniqueActiveProblems } from "@/lib/clinical";
 import { VisitListItem } from "./VisitsTab";
+import { ALLERGIES_UNAVAILABLE } from "../AllergyChips";
 
 interface SummaryTabProps {
   patient: Patient;
-  allergies: Allergy[];
+  allergies: Allergy[] | null;
   problems: Problem[];
   encounters: Encounter[];
   prescriptions: Prescription[];
@@ -57,8 +58,10 @@ export function SummaryTab({ patient, allergies, problems, encounters, prescript
         )}
       </SectionCard>
 
-      <SectionCard icon={AlertTriangle} iconClassName="text-status-error-text" title="Allergies" count={allergies.length} noPadding>
-        {allergies.length === 0 ? (
+      <SectionCard icon={AlertTriangle} iconClassName="text-status-error-text" title="Allergies" count={allergies?.length} noPadding>
+        {allergies === null ? (
+          <EmptyState icon={ShieldAlert} title={ALLERGIES_UNAVAILABLE} className="py-8" />
+        ) : allergies.length === 0 ? (
           <EmptyState title="No known allergies" className="py-8" />
         ) : (
           <ul className="divide-y">

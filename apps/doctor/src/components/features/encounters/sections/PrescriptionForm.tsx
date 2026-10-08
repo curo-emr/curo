@@ -16,7 +16,8 @@ interface PrescriptionFormProps {
   onChange: (items: PrescriptionItem[]) => void;
   /** Shown before the doctor types; typing searches the whole catalog. */
   suggestions: Medication[];
-  allergies: Allergy[];
+  /** null when they couldn't be loaded: the allergy check can't run, so the doctor is told. */
+  allergies: Allergy[] | null;
 }
 
 const newItem = (displayName: string, med?: Medication): PrescriptionItem => ({
@@ -33,8 +34,8 @@ const newItem = (displayName: string, med?: Medication): PrescriptionItem => ({
 });
 
 // Allergy whose substance appears in the drug name, e.g. "Penicillin" in "Penicillin V 250mg".
-const allergyConflict = (name: string, allergies: Allergy[]) =>
-  allergies.find(a => a.substance && name.toLowerCase().includes(a.substance.toLowerCase()));
+const allergyConflict = (name: string, allergies: Allergy[] | null) =>
+  allergies?.find(a => a.substance && name.toLowerCase().includes(a.substance.toLowerCase()));
 
 export function PrescriptionForm({ prescriptions, onChange, suggestions, allergies }: PrescriptionFormProps) {
   const update = (id: string, patch: Partial<PrescriptionItem>) =>
@@ -52,6 +53,11 @@ export function PrescriptionForm({ prescriptions, onChange, suggestions, allergi
     <SectionCard id="prescriptions" icon={Pill} iconClassName="text-clinical-rx" title="Prescriptions" count={prescriptions.length}
       description="Sent to the pharmacy when you sign the visit">
       <div className="space-y-3">
+        {allergies === null && (
+          <p className="flex items-center gap-2 rounded-md border border-status-warning-border bg-status-warning-bg px-2.5 py-1.5 text-xs font-medium text-status-warning-text">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> The allergy check is off because the patient&apos;s allergies couldn&apos;t be loaded. Confirm allergies with the patient.
+          </p>
+        )}
         <SearchCombobox<Medication>
           placeholder="Add a medication…"
           search={searchMedications}

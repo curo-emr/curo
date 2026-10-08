@@ -17,7 +17,7 @@ import type { Allergy, Lab, LabTestCatalogItem, Medication, Patient, Problem } f
 
 interface VisitContext {
   patient: Patient | null;
-  allergies: Allergy[];
+  allergies: Allergy[] | null;
   problems: Problem[];
   recentMedications: string[];
   appointmentId?: string;
@@ -34,7 +34,7 @@ export default function NewVisitPage({ params }: { params: Promise<{ patientId: 
   useEffect(() => {
     Promise.all([
       getPatientById(patientId),
-      getAllergies(patientId).catch(() => []),
+      getAllergies(patientId).catch(() => null),
       getConditions(patientId).catch(() => []),
       getPrescriptionsByPatient(patientId).catch(() => []),
       // Offered before the doctor types; typing searches the whole catalog.
@@ -50,7 +50,7 @@ export default function NewVisitPage({ params }: { params: Promise<{ patientId: 
           recentMedications: recentMedicationNames(rxs),
           appointmentId: appointmentParam ?? todays?.id,
         }))
-      .catch(() => setCtx({ patient: null, allergies: [], problems: [], recentMedications: [], medicationSuggestions: [], labTests: [], labs: [] }));
+      .catch(() => setCtx({ patient: null, allergies: null, problems: [], recentMedications: [], medicationSuggestions: [], labTests: [], labs: [] }));
   }, [patientId, appointmentParam]);
 
   if (!ctx) return <PageSkeleton />;
