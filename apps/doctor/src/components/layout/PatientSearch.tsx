@@ -1,23 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useDebouncedValue } from "@curo/web/hooks";
 import { useRouter } from "next/navigation";
 import { Loader2, Search } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@curo/web/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@curo/web/ui/dialog";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
-import { getPatients } from "@/lib/api/patients";
+import { patientQueries } from "@/lib/queries";
 import { ROUTES } from "@/lib/constants";
 import { formatAgeSex } from "@/lib/utils";
-import type { Patient } from "@/types";
 
 // Global patient finder (⌘K / Ctrl+K). Picking a result opens the chart directly.
 export function PatientSearch() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(false);
+  // The search waits until typing pauses.
+  const text = useDebouncedValue(query.trim(), 200);
+  const search = useQuery({ ...patientQueries.search(text), enabled: !!text });
+  const results = search.data?.slice(0, 8) ?? [];
+  const loading = search.isFetching || text !== query.trim();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -30,23 +34,9 @@ export function PatientSearch() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  useEffect(() => {
-    const q = query.trim();
-    if (!q) return;
-    let active = true;
-    const t = setTimeout(() => {
-      setLoading(true);
-      getPatients(q)
-        .then(r => { if (active) setResults(r.slice(0, 8)); })
-        .catch(() => { if (active) setResults([]); })
-        .finally(() => { if (active) setLoading(false); });
-    }, 200);
-    return () => { active = false; clearTimeout(t); };
-  }, [query]);
-
   const onOpenChange = (next: boolean) => {
     setOpen(next);
-    if (!next) { setQuery(""); setResults([]); }
+    if (!next) setQuery("");
   };
 
   const go = (id: string) => {
@@ -85,7 +75,10 @@ export function PatientSearch() {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Searching…
                 </div>
               )}
-              {hasQuery && !loading && <CommandEmpty>No patients found.</CommandEmpty>}
+              {hasQuery && !loading && search.isError && (
+                <p className="py-8 text-center text-sm text-muted-foreground">Couldn&apos;t search patients. Check your connection and try again.</p>
+              )}
+              {hasQuery && !loading && !search.isError && <CommandEmpty>No patients found.</CommandEmpty>}
               {hasQuery && results.length > 0 && (
                 <CommandGroup heading="Patients">
                   {results.map(p => (

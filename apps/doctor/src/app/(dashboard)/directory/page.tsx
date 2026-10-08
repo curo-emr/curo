@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { LoadError } from "@curo/web/ui/load-error";
 import { FlaskConical, Pill, Search } from "lucide-react";
 import { Card } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
@@ -10,10 +12,8 @@ import { PageHeader } from "@curo/web/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
-import {
-  getOrganizations, getPharmacyStock, getLabCatalog,
-  type Organization, type PharmacyStockItem, type LabCatalogTest,
-} from "@/lib/api/directory";
+import type { PharmacyStockItem, LabCatalogTest } from "@/lib/api/directory";
+import { directoryQueries } from "@/lib/queries";
 
 export default function DirectoryPage() {
   return (
@@ -29,7 +29,7 @@ export default function DirectoryPage() {
             orgType="pharmacy"
             orgLabel="pharmacy"
             searchPlaceholder="Search drugs…"
-            load={getPharmacyStock}
+            catalog={directoryQueries.pharmacyStock}
             matches={(s, q) => `${s.medicationName} ${s.genericName ?? ""}`.toLowerCase().includes(q)}
             emptyIcon={Pill}
             columns={[
@@ -49,7 +49,7 @@ export default function DirectoryPage() {
             orgType="laboratory"
             orgLabel="lab"
             searchPlaceholder="Search tests…"
-            load={getLabCatalog}
+            catalog={directoryQueries.labCatalog}
             matches={(t, q) => `${t.name} ${t.code}`.toLowerCase().includes(q)}
             emptyIcon={FlaskConical}
             columns={[
@@ -75,45 +75,37 @@ interface CatalogPanelProps<T> {
   orgType: "pharmacy" | "laboratory";
   orgLabel: string;
   searchPlaceholder: string;
-  load: (orgId: string) => Promise<T[]>;
+  /** The query for one organisation's catalog. */
+  catalog: (orgId: string) => UseQueryOptions<T[], Error, T[], string[]>;
   matches: (item: T, query: string) => boolean;
   columns: Column<T>[];
   emptyIcon: typeof Pill;
 }
 
 // Pick an organisation, then browse/search its catalog.
-function CatalogPanel<T extends { id: string }>({ orgType, orgLabel, searchPlaceholder, load, matches, columns, emptyIcon }: CatalogPanelProps<T>) {
-  const [orgs, setOrgs] = useState<Organization[]>([]);
-  const [selected, setSelected] = useState("");
-  const [items, setItems] = useState<T[] | null>(null);
+function CatalogPanel<T extends { id: string }>({ orgType, orgLabel, searchPlaceholder, catalog, matches, columns, emptyIcon }: CatalogPanelProps<T>) {
+  const orgs = useQuery(directoryQueries.organizations(orgType));
+  const [chosen, setChosen] = useState("");
+  // The first organisation until the doctor picks one.
+  const selected = chosen || orgs.data?.[0]?.id || "";
+  const items = useQuery({ ...catalog(selected), enabled: !!selected });
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    getOrganizations(orgType)
-      .then(o => { setOrgs(o); if (o[0]) setSelected(o[0].id); else setItems([]); })
-      .catch(() => setItems([]));
-  }, [orgType]);
-
-  useEffect(() => {
-    if (!selected) return;
-    let active = true;
-    load(selected).then(r => { if (active) setItems(r); }).catch(() => { if (active) setItems([]); });
-    return () => { active = false; };
-  }, [selected, load]);
-
-  const choose = (id: string) => { setItems(null); setSelected(id); };
+  const failed = orgs.isError || items.isError;
+  const noOrgs = !!orgs.data && !selected;
 
   const filtered = useMemo(() => {
+    // No organisations of this kind means an empty list, not one still loading.
+    const loaded = noOrgs ? [] : items.data;
     const q = query.toLowerCase().trim();
-    return !items ? null : q ? items.filter(i => matches(i, q)) : items;
-  }, [items, query, matches]);
+    return !loaded ? null : q ? loaded.filter(i => matches(i, q)) : loaded;
+  }, [noOrgs, items.data, query, matches]);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Select value={selected} onValueChange={choose}>
+        <Select value={selected} onValueChange={setChosen}>
           <SelectTrigger className="h-10 bg-card sm:w-72"><SelectValue placeholder={`Select a ${orgLabel}`} /></SelectTrigger>
-          <SelectContent>{orgs.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
+          <SelectContent>{orgs.data?.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
         </Select>
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -129,7 +121,13 @@ function CatalogPanel<T extends { id: string }>({ orgType, orgLabel, searchPlace
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered === null ? (
+            {filtered === null && failed ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={columns.length}>
+                  <LoadError what={`the ${orgLabel} catalog`} onRetry={() => void (orgs.isError ? orgs.refetch() : items.refetch())} />
+                </TableCell>
+              </TableRow>
+            ) : filtered === null ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}><TableCell colSpan={columns.length} className="px-5"><Skeleton className="h-6 w-full" /></TableCell></TableRow>
               ))

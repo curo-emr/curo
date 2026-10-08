@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   patientRegistrationSchema,
   type PatientRegistrationInput, type PatientRegistrationFormValues,
 } from "@/lib/validations/patient";
 import { registerPatient } from "@/lib/actions/patient-actions";
+import { patientQueries } from "@/lib/queries";
 import { ROUTES, MARITAL_STATUS } from "@/lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
@@ -29,6 +31,7 @@ const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 export function PatientRegistrationForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insuranceOpen, setInsuranceOpen] = useState(false);
 
@@ -86,6 +89,8 @@ export function PatientRegistrationForm() {
     try {
       const result = await registerPatient(data);
       if (result.success && result.patientId) {
+        // The register and searches now include the new patient.
+        void queryClient.invalidateQueries({ queryKey: patientQueries.all });
         toast.success("Patient registered successfully");
         router.push(ROUTES.PATIENT(result.patientId));
       } else {

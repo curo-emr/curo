@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { LoadError } from "@curo/web/ui/load-error";
 import { CalendarDays } from "lucide-react";
 import type { Appointment, Patient } from "@/types";
 import { Card } from "@curo/web/ui/card";
@@ -9,8 +11,7 @@ import { PageHeader } from "@curo/web/ui/page-header";
 import { AppointmentRow } from "@/components/features/visits/AppointmentRow";
 import { CuroCalendar, calendarRange, formatDateStr, getRelativeDayLabel, type CalendarEvent, type CalendarEventColor } from "@curo/web/ui/curo-calendar";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
-import { getAppointments } from "@/lib/api/appointments";
-import { getPatientsByIds } from "@/lib/api/patients";
+import { appointmentQueries, patientQueries } from "@/lib/queries";
 import { getQueueGroup, type QueueGroup } from "@/lib/visit";
 
 const GROUP_COLOR: Record<QueueGroup, CalendarEventColor> = {
@@ -21,23 +22,19 @@ const GROUP_COLOR: Record<QueueGroup, CalendarEventColor> = {
   done: "green",
 };
 
+// Stable "nothing yet" values, so the memo below doesn't recompute on every render.
+const NONE: Appointment[] = [];
+const NO_PATIENTS: Record<string, Patient> = {};
+
 export function ScheduleClient() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [month, setMonth] = useState<Date>(() => new Date());
 
   // The doctor's appointments on the month's grid, and their patients, loaded per month.
   const { from, to } = calendarRange(month);
-  const [loaded, setLoaded] = useState<{ appointments: Appointment[]; patients: Record<string, Patient> }>();
-  useEffect(() => {
-    let current = true;
-    getAppointments({ from, to })
-      .then(async appointments => ({ appointments, patients: await getPatientsByIds(appointments.map(a => a.patientId)) }))
-      .catch(() => ({ appointments: [], patients: {} }))
-      .then(data => { if (current) setLoaded(data); });
-    return () => { current = false; };
-  }, [from, to]);
-  const appointments = useMemo(() => loaded?.appointments ?? [], [loaded]);
-  const patients = useMemo(() => loaded?.patients ?? {}, [loaded]);
+  const range = useQuery(appointmentQueries.range(from, to));
+  const appointments = range.data ?? NONE;
+  const patients = useQuery(patientQueries.byIds(appointments.map(a => a.patientId))).data ?? NO_PATIENTS;
 
   const events: CalendarEvent[] = useMemo(
     () => appointments.map(a => ({
@@ -50,7 +47,11 @@ export function ScheduleClient() {
     [appointments, patients],
   );
 
-  if (!loaded) return <PageSkeleton side={false} />;
+  if (!range.data) {
+    return range.isError
+      ? <LoadError what="the schedule" onRetry={() => void range.refetch()} retrying={range.isFetching} className="min-h-[50vh]" />
+      : <PageSkeleton side={false} />;
+  }
 
   const dateStr = formatDateStr(selectedDate);
   const daily = appointments.filter(a => a.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));

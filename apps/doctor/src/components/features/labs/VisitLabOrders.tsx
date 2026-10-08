@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { FileText, FlaskConical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import type { Lab, LabOrder, LabReport, LabResultValue } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import { QueryContent } from "@curo/web/query";
+import type { LabOrder, LabReport, LabResultValue } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { SectionCard } from "@curo/web/ui/section-card";
@@ -11,35 +13,46 @@ import { StatusBadge, type Status } from "@curo/web/ui/status-badge";
 import { openDocument, type DocumentRef } from "@/lib/api/documents";
 import { openPdf } from "@/lib/api/labs";
 import { cn, formatDate } from "@/lib/utils";
+import { catalogQueries, patientQueries, visitQueries } from "@/lib/queries";
 
-interface Props {
-  orders: LabOrder[];
-  /** The visit's lab reports, from every lab. */
-  reports: LabReport[];
-  /** Report files the labs uploaded for the visit's orders. */
-  files: DocumentRef[];
-  labs: Lab[];
+/** The visit's lab orders, each with its lab, its report and any files the lab uploaded. */
+export function useVisitLabOrders(patientId: string, encounterId: string) {
+  return useQuery({
+    ...patientQueries.labOrders(patientId),
+    select: (orders: LabOrder[]) => orders.filter(o => o.encounterId === encounterId),
+  });
 }
 
-/** A visit's lab tests: where each went, how far it has got, and what the lab reported. */
-export function VisitLabOrders({ orders, reports, files, labs }: Props) {
+export function VisitLabOrders({ patientId, encounterId }: { patientId: string; encounterId: string }) {
+  const orders = useVisitLabOrders(patientId, encounterId);
+  const reports = useQuery(visitQueries.labReports(patientId, encounterId));
+  // Labs only name the orders and files only add downloads, so the orders show without them.
+  const labs = useQuery(catalogQueries.labs(true)).data ?? [];
+  const files = useQuery(patientQueries.documents(patientId)).data ?? [];
+
   return (
-    <SectionCard icon={FlaskConical} iconClassName="text-clinical-lab" title="Lab orders" count={orders.length} noPadding>
-      {orders.length === 0 ? (
-        <EmptyState title="No lab orders" className="py-6" />
-      ) : (
-        <ul className="divide-y">
-          {orders.map(order => (
-            <LabOrderRow
-              key={order.id}
-              order={order}
-              labName={labs.find(l => l.id === order.labId)?.name ?? "Lab not recorded"}
-              report={reports.find(r => r.orderId === order.id)}
-              files={files.filter(f => f.relatedResourceId === order.id)}
-            />
-          ))}
-        </ul>
-      )}
+    <SectionCard icon={FlaskConical} iconClassName="text-clinical-lab" title="Lab orders" count={orders.data?.length} noPadding>
+      <QueryContent query={orders} what="lab orders">
+        {list => list.length === 0 ? (
+          <EmptyState title="No lab orders" className="py-6" />
+        ) : (
+          <QueryContent query={reports} what="lab results">
+            {visitReports => (
+              <ul className="divide-y">
+                {list.map(order => (
+                  <LabOrderRow
+                    key={order.id}
+                    order={order}
+                    labName={labs.find(l => l.id === order.labId)?.name ?? "Lab not recorded"}
+                    report={visitReports.find(r => r.orderId === order.id)}
+                    files={files.filter(f => f.type === "lab-report" && f.relatedResourceId === order.id)}
+                  />
+                ))}
+              </ul>
+            )}
+          </QueryContent>
+        )}
+      </QueryContent>
     </SectionCard>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Info, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@curo/web/ui/button";
@@ -8,18 +8,14 @@ import { Skeleton } from "@curo/web/ui/skeleton";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { PatientAvatar } from "@/components/ui/PatientAvatar";
 import { SectionCard } from "@curo/web/ui/section-card";
-import { getPractitioners, type Practitioner } from "@/lib/api/practitioners";
+import { practitionerQueries } from "@/lib/queries";
 
 export default function AccountPage() {
   const { user, logout } = useAuth();
-  const [me, setMe] = useState<Practitioner | null | undefined>(undefined);
-
-  useEffect(() => {
-    if (!user?.practitionerId) return;
-    getPractitioners("DOCTOR")
-      .then(list => setMe(list.find(p => p.id === user.practitionerId) ?? null))
-      .catch(() => setMe(null));
-  }, [user?.practitionerId]);
+  // The doctor's own practitioner record; the session's name and email fill in until it loads, or if it can't.
+  const doctors = useQuery({ ...practitionerQueries.byRole("DOCTOR"), enabled: !!user?.practitionerId });
+  const me = doctors.data?.find(p => p.id === user?.practitionerId);
+  const loading = doctors.isPending && !!user?.practitionerId;
 
   const fields = [
     { label: "Full name", value: me ? `Dr. ${me.name.full}` : user?.name },
@@ -42,7 +38,7 @@ export default function AccountPage() {
               <div key={f.label}>
                 <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
                 <dd className="mt-0.5 text-sm text-foreground">
-                  {me === undefined && !f.value ? <Skeleton className="h-5 w-32" /> : f.value || "—"}
+                  {loading && !f.value ? <Skeleton className="h-5 w-32" /> : f.value || "—"}
                 </dd>
               </div>
             ))}

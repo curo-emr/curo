@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   patientRegistrationSchema,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/validations/patient";
 import { updatePatientDemographics } from "@/lib/actions/patient-actions";
 import { ROUTES, MARITAL_STATUS } from "@/lib/constants";
+import { patientQueries } from "@/lib/queries";
 import { Patient, Allergy } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
@@ -35,6 +37,7 @@ interface PatientEditFormProps {
 
 export function PatientEditForm({ patient, existingAllergies }: PatientEditFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insuranceOpen, setInsuranceOpen] = useState(!!patient.insurance);
 
@@ -98,6 +101,8 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
     try {
       const result = await updatePatientDemographics(patient.id, data);
       if (result.success) {
+        // Every list and lookup that names the patient, not just their record.
+        void queryClient.invalidateQueries({ queryKey: patientQueries.all });
         toast.success("Patient demographics updated successfully");
         router.push(ROUTES.PATIENT(patient.id));
       } else {

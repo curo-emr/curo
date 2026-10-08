@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { LoadError } from "@curo/web/ui/load-error";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
   ReferenceArea, Dot,
@@ -9,7 +11,8 @@ import { format, parseISO } from "date-fns";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
-import { getObservationTrends, type TrendPoint } from "@/lib/api/clinical";
+import type { TrendPoint } from "@/lib/api/clinical";
+import { patientQueries } from "@/lib/queries";
 
 // Standard clinical reference ranges used for high/low flagging.
 interface Metric {
@@ -60,6 +63,8 @@ const CODE_RANGE: Record<string, { low: number; high: number }> = {
 };
 
 const ALL_CODES = METRICS.flatMap((m) => m.codes.map((c) => c.code));
+// A stable "nothing yet", so the memo below doesn't recompute on every render.
+const NO_POINTS: TrendPoint[] = [];
 
 function flagOf(code: string, value: number): "high" | "low" | "normal" {
   const r = CODE_RANGE[code];
@@ -70,22 +75,18 @@ function flagOf(code: string, value: number): "high" | "low" | "normal" {
 }
 
 export function VitalsTrendCharts({ patientId }: { patientId: string }) {
-  const [points, setPoints] = useState<TrendPoint[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    getObservationTrends(patientId, ALL_CODES)
-      .then(setPoints)
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [patientId]);
+  const trends = useQuery(patientQueries.trends(patientId, ALL_CODES));
+  const points = trends.data ?? NO_POINTS;
 
   const abnormal = useMemo(
     () => points.filter((p) => flagOf(p.code, p.value) !== "normal"),
     [points],
   );
 
-  if (isLoading) {
+  if (!trends.data && trends.isError) {
+    return <LoadError what="vitals trends" onRetry={() => void trends.refetch()} retrying={trends.isFetching} />;
+  }
+  if (!trends.data) {
     return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
 
