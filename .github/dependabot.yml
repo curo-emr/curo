@@ -1,5 +1,10 @@
-# Weekly dependency updates. Minor and patch bumps arrive as one grouped PR per
-# ecosystem; each major bump gets its own PR, since those can break the build.
+# Weekly dependency updates. Dependabot puts each update in the first group that
+# matches it:
+# - Package families that only work at matching versions move together, majors
+#   included, so a family never arrives half-upgraded across several PRs.
+# - Every other minor and patch bump arrives in one grouped PR per ecosystem;
+#   other majors get a PR each, since those can break the build.
+# A 0.x package's "minor" bump can be breaking too: read its changelog.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -10,6 +15,12 @@ updates:
       prefix: chore
       include: scope
     groups:
+      nestjs:
+        patterns: ["@nestjs/*"]
+      nextjs:
+        patterns: [next, "@next/*", eslint-config-next]
+      react:
+        patterns: [react, react-dom, "@types/react", "@types/react-dom"]
       minor-and-patch:
         update-types: [minor, patch]
 
