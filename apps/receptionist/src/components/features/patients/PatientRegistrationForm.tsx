@@ -201,7 +201,7 @@ export function PatientRegistrationForm() {
             <div className="space-y-1.5">
               <Label>Marital Status</Label>
               <Select
-                value={maritalStatus || "single"}
+                value={maritalStatus ?? ""}
                 onValueChange={(val) =>
                   setValue(
                     "maritalStatus",

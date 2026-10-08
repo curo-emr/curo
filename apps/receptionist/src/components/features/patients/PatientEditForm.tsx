@@ -50,7 +50,7 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
       sex: patient.sex,
       bloodType: patient.bloodType || "",
       nationality: patient.nationality || "Sri Lankan",
-      maritalStatus: patient.maritalStatus || "single",
+      maritalStatus: patient.maritalStatus,
       occupation: patient.occupation || "",
       phone: patient.phone,
       email: patient.email || "",
@@ -200,7 +200,7 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
             <div className="space-y-1.5">
               <Label>Marital Status</Label>
               <Select
-                value={maritalStatus || "single"}
+                value={maritalStatus ?? ""}
                 onValueChange={(val) =>
                   setValue(
                     "maritalStatus",

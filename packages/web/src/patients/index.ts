@@ -24,7 +24,7 @@ export interface PatientFormValues {
   sex: "male" | "female" | "other";
   bloodType: string;
   nationality: string;
-  maritalStatus: MaritalStatus;
+  maritalStatus?: MaritalStatus;
   occupation: string;
   phone: string;
   email?: string;
@@ -90,7 +90,7 @@ export function patientBody(v: PatientFormValues) {
     email: orNull(v.email),
     bloodType: orNull(v.bloodType),
     nationality: orNull(v.nationality),
-    maritalStatus: maritalStatusCode(v.maritalStatus),
+    maritalStatus: v.maritalStatus ? maritalStatusCode(v.maritalStatus) : null,
     occupation: orNull(v.occupation),
     addressLine1: v.addressLine1,
     addressLine2: orNull(v.addressLine2),

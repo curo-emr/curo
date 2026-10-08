@@ -42,6 +42,9 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insuranceOpen, setInsuranceOpen] = useState(!!patient.insurance);
+  // The allergies the form started from. Saving diffs against these, not the live
+  // list, so an allergy someone adds while this form is open isn't retired.
+  const [recordedAllergies] = useState(existingAllergies);
 
   const form = useForm<PatientRegistrationFormValues, unknown, PatientRegistrationInput>({
     resolver: zodResolver(patientRegistrationSchema),
@@ -53,7 +56,7 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
       sex: patient.sex,
       bloodType: patient.bloodType || "",
       nationality: patient.nationality || "Sri Lankan",
-      maritalStatus: patient.maritalStatus || "single",
+      maritalStatus: patient.maritalStatus,
       occupation: patient.occupation || "",
       phone: patient.phone,
       email: patient.email || "",
@@ -74,7 +77,7 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
       insuranceHolderName: patient.insurance?.holderName || "",
       insuranceRelationship: patient.insurance?.relationship || "self",
       tags: patient.tags.join(", "),
-      allergies: existingAllergies.map(({ id, substance, reaction, severity, notes }) => ({
+      allergies: recordedAllergies.map(({ id, substance, reaction, severity, notes }) => ({
         id, substance, reaction, severity, notes,
       })),
     },
@@ -94,7 +97,7 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
   const onSubmit = async (data: PatientRegistrationInput) => {
     setIsSubmitting(true);
     try {
-      const result = await updatePatientDemographics(patient.id, data, existingAllergies);
+      const result = await updatePatientDemographics(patient.id, data, recordedAllergies);
       if (result.success) {
         // Every list and lookup that names the patient, not just their record.
         void queryClient.invalidateQueries({ queryKey: patientQueries.all });
@@ -206,7 +209,7 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
             <div className="space-y-1.5">
               <Label>Marital Status</Label>
               <Select
-                value={maritalStatus || "single"}
+                value={maritalStatus ?? ""}
                 onValueChange={(val) =>
                   setValue(
                     "maritalStatus",

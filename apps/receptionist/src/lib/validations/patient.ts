@@ -23,7 +23,7 @@ export const patientRegistrationSchema = z.object({
   sex: z.enum(["male", "female", "other"], { error: "Sex is required" }),
   bloodType: z.string().optional().default(""),
   nationality: z.string().optional().default("Sri Lankan"),
-  maritalStatus: z.enum(MARITAL_STATUSES).optional().default("single"),
+  maritalStatus: z.enum(MARITAL_STATUSES).optional(),
   occupation: z.string().optional().default(""),
   phone: z.string().min(1, "Phone number is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),

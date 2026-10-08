@@ -88,6 +88,10 @@ describe("patientBody", () => {
     expect(patientBody(form({ maritalStatus: "other" })).maritalStatus).toBe("UNK");
   });
 
+  it("leaves an unknown marital status unset rather than guessing one", () => {
+    expect(patientBody(form({ maritalStatus: undefined })).maritalStatus).toBeNull();
+  });
+
   it("clears blank optional fields with null, so an edit can empty them", () => {
     const body = patientBody(form({ occupation: "  ", email: "" }));
     expect(body.occupation).toBeNull();
@@ -164,6 +168,10 @@ describe("allergyChanges", () => {
   it("clears a reaction that was removed", () => {
     const entry = { ...entryFor(penicillin), reaction: "" };
     expect(allergyChanges([penicillin], [entry]).allergyUpdates).toEqual([{ id: "a1", reaction: "" }]);
+  });
+
+  it("leaves alone an allergy it wasn't given as recorded", () => {
+    expect(allergyChanges([], [entryFor(penicillin)])).toEqual({ newAllergies: [], allergyUpdates: [] });
   });
 
   it("retires a recorded allergy the form no longer lists", () => {
