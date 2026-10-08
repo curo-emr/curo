@@ -70,3 +70,6 @@ export function paginationParams(params?: PaginationParams): Record<string, unkn
   if (params.search != null && params.search !== "") out.search = params.search;
   return out;
 }
+
+export * from "./allergy";
+export * from "./patient";

@@ -1,4 +1,5 @@
 import { apiClient, apiErrorMessage } from "@curo/web/api";
+import { newAllergy, patientBody, registrationBody } from "@curo/web/patients";
 import { mapFhirPatient, type FhirPatient } from "@/lib/api/mappers";
 import { patientRegistrationSchema, type PatientRegistrationInput } from "@/lib/validations/patient";
 
@@ -8,32 +9,8 @@ export async function registerPatient(data: PatientRegistrationInput) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
 
-  const v = parsed.data;
-  const payload = {
-    firstName: v.firstName,
-    lastName: v.lastName,
-    nic: v.nic || undefined,
-    birthDate: v.dob,
-    gender: v.sex,
-    phone: v.phone,
-    email: v.email || undefined,
-    bloodType: v.bloodType || undefined,
-    nationality: v.nationality || undefined,
-    maritalStatus: v.maritalStatus || undefined,
-    occupation: v.occupation || undefined,
-    addressLine1: v.addressLine1,
-    addressLine2: v.addressLine2 || undefined,
-    city: v.city,
-    state: v.district || undefined,
-    postalCode: v.postalCode || undefined,
-    country: v.country || "Sri Lanka",
-    emergencyContactName: v.emergencyContactName,
-    emergencyContactRelationship: v.emergencyContactRelationship,
-    emergencyContactPhone: v.emergencyContactPhone,
-  };
-
   try {
-    const res = await apiClient.post<FhirPatient>("/patients", payload);
+    const res = await apiClient.post<FhirPatient>("/patients", registrationBody(parsed.data));
     const patient = mapFhirPatient(res.data);
     return { success: true, patientId: patient.id, patientCode: patient.mrn, phn: patient.phn };
   } catch (err) {
@@ -42,34 +19,16 @@ export async function registerPatient(data: PatientRegistrationInput) {
   }
 }
 
-export async function updatePatientDemographics(
-  patientId: string,
-  data: PatientRegistrationInput
-) {
+/** Saves an edit. Reception can only add allergies, so `data.allergies` holds just the new ones. */
+export async function updatePatientDemographics(patientId: string, data: PatientRegistrationInput) {
   const parsed = patientRegistrationSchema.safeParse(data);
   if (!parsed.success) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
 
   const v = parsed.data;
-  const payload = {
-    firstName: v.firstName,
-    lastName: v.lastName,
-    nic: v.nic || undefined,
-    birthDate: v.dob,
-    gender: v.sex,
-    phone: v.phone,
-    email: v.email || undefined,
-    city: v.city,
-    addressLine1: v.addressLine1,
-    country: v.country || "Sri Lanka",
-    emergencyContactName: v.emergencyContactName,
-    emergencyContactRelationship: v.emergencyContactRelationship,
-    emergencyContactPhone: v.emergencyContactPhone,
-  };
-
   try {
-    await apiClient.patch(`/patients/${patientId}`, payload);
+    await apiClient.patch(`/patients/${patientId}`, { ...patientBody(v), newAllergies: v.allergies.map(newAllergy) });
     return { success: true };
   } catch (err) {
     const msg = apiErrorMessage(err, "Failed to update patient");

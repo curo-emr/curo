@@ -1,7 +1,10 @@
+import { mapFhirPatientDetails, type FhirExtension, type FhirPatientDetails } from '@curo/web/fhir';
 import type {
-  Patient, Allergy, Problem, Appointment, Encounter, Prescription,
+  Patient, Problem, Appointment, Encounter, Prescription,
   LabOrder, Task, QueueStage,
 } from '@/types';
+
+export { mapFhirAllergy, type FhirAllergy } from '@curo/web/fhir';
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
 
@@ -27,23 +30,8 @@ export interface FhirPatient {
     telecom?: Array<{ system: string; value: string }>;
     relationship?: Array<{ text?: string }>;
   }>;
-  extension?: Array<{
-    url: string;
-    valueString?: string;
-    valueCode?: string;
-  }>;
-}
-
-export interface FhirAllergy {
-  resourceType: 'AllergyIntolerance';
-  id: string;
-  meta?: { lastUpdated?: string };
-  patient?: { reference?: string };
-  code?: { text?: string; coding?: Array<{ display?: string }> };
-  reaction?: Array<{ manifestation?: Array<{ text?: string }> }>;
-  criticality?: string;
-  note?: Array<{ text?: string }>;
-  recordedDate?: string;
+  maritalStatus?: FhirPatientDetails['maritalStatus'];
+  extension?: FhirExtension[];
 }
 
 export interface FhirCondition {
@@ -171,11 +159,6 @@ export function mapFhirPatient(fhir: FhirPatient): Patient {
   const email = fhir.telecom?.find(t => t.system === 'email')?.value ?? '';
 
   const addr = fhir.address?.[0];
-  const ext = fhir.extension ?? [];
-  const bloodType = ext.find(e => e.url === 'urn:curo:bloodType')?.valueString ?? '';
-  const nationality = ext.find(e => e.url === 'urn:curo:nationality')?.valueString ?? '';
-  const occupation = ext.find(e => e.url === 'urn:curo:occupation')?.valueString ?? '';
-  const maritalStatus = (ext.find(e => e.url === 'urn:curo:maritalStatus')?.valueString ?? 'single') as Patient['maritalStatus'];
 
   const emergencyContact = fhir.contact?.[0];
   const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
@@ -192,10 +175,7 @@ export function mapFhirPatient(fhir: FhirPatient): Patient {
     },
     dob: fhir.birthDate ?? '',
     sex: (fhir.gender as Patient['sex']) ?? 'other',
-    bloodType,
-    nationality,
-    maritalStatus: maritalStatus ?? 'single',
-    occupation,
+    ...mapFhirPatientDetails(fhir),
     phone,
     email,
     address: {
@@ -211,35 +191,13 @@ export function mapFhirPatient(fhir: FhirPatient): Patient {
       relationship: emergencyContact?.relationship?.[0]?.text ?? '',
       phone: emergencyContact?.telecom?.[0]?.value ?? '',
     },
-    insurance: null,
     allergies: [],
     problemList: [],
     currentMedications: [],
-    tags: [],
     registeredBy: '',
     registeredAt: fhir.meta?.lastUpdated ?? '',
     createdAt: fhir.meta?.lastUpdated ?? '',
     updatedAt: fhir.meta?.lastUpdated ?? '',
-  };
-}
-
-export function mapFhirAllergy(fhir: FhirAllergy): Allergy {
-  const patientRef = fhir.patient?.reference?.split('/')?.[1] ?? '';
-  const substance = fhir.code?.text ?? fhir.code?.coding?.[0]?.display ?? '';
-  const reaction = fhir.reaction?.[0]?.manifestation?.[0]?.text ?? '';
-  const severityMap: Record<string, Allergy['severity']> = {
-    low: 'mild', moderate: 'moderate', high: 'severe', unable_to_assess: 'mild',
-  };
-  const severity = severityMap[fhir.criticality ?? 'low'] ?? 'mild';
-
-  return {
-    id: fhir.id,
-    patientId: patientRef,
-    substance,
-    reaction,
-    severity,
-    notes: fhir.note?.[0]?.text ?? '',
-    recordedAt: fhir.recordedDate ?? fhir.meta?.lastUpdated ?? '',
   };
 }
 

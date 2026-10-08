@@ -1,3 +1,7 @@
+import type { Insurance, MaritalStatus } from '@curo/web/fhir';
+
+export type { Allergy, Insurance } from '@curo/web/fhir';
+
 export interface Name {
   first: string;
   last: string;
@@ -17,15 +21,6 @@ export interface EmergencyContact {
   name: string;
   relationship: string;
   phone: string;
-}
-
-export interface Insurance {
-  provider: string;
-  policyNumber: string;
-  groupNumber: string;
-  expiryDate: string;
-  holderName: string;
-  relationship: "self" | "spouse" | "child" | "other";
 }
 
 export interface Patient {
@@ -48,19 +43,9 @@ export interface Patient {
   updatedAt: string;
   nic?: string;
   nationality?: string;
-  maritalStatus?: "single" | "married" | "divorced" | "widowed" | "other";
+  maritalStatus?: MaritalStatus;
   occupation?: string;
   insurance?: Insurance | null;
-}
-
-export interface Allergy {
-  id: string;
-  patientId: string;
-  substance: string;
-  reaction: string;
-  severity: 'mild' | 'moderate' | 'severe';
-  notes: string;
-  recordedAt: string;
 }
 
 export interface Problem {

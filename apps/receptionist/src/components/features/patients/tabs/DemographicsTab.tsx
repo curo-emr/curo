@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Patient } from "@/types";
 import { ROUTES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
+import { formatStatus } from "@curo/web/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
@@ -63,13 +64,7 @@ export function DemographicsTab({ patient }: DemographicsTabProps) {
             />
             <InfoRow label="Blood Type" value={patient.bloodType} />
             <InfoRow label="Nationality" value={patient.nationality} />
-            <InfoRow
-              label="Marital Status"
-              value={
-                patient.maritalStatus.charAt(0).toUpperCase() +
-                patient.maritalStatus.slice(1)
-              }
-            />
+            <InfoRow label="Marital Status" value={formatStatus(patient.maritalStatus ?? "")} />
             <InfoRow label="Occupation" value={patient.occupation} />
           </div>
         </CardContent>
