@@ -71,6 +71,10 @@ so there is nothing to build first; Next compiles it with the portal.
 
 ## Tests
 
+The backends' tests need Node 24.9 or later (`.nvmrc` pins Node 24). NestJS ships as ES
+modules, and only from that version can Jest `require()` them; `.npmrc` turns on the
+VM modules API that Jest uses for this, for every npm script.
+
 | Script | Runs | Needs |
 |---|---|---|
 | `npm test` | unit tests (`src/**/*.spec.ts`): pure logic such as queue moves, PHN check digits, FEFO dispensing | nothing |

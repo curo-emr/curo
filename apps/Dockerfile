@@ -6,7 +6,7 @@
 #   docker build -f apps/Dockerfile --build-arg APP=doctor .
 # The listening port comes from PORT at runtime (set per portal in docker-compose.yml).
 
-ARG NODE_IMAGE=node:22-alpine
+ARG NODE_IMAGE=node:24-alpine
 ARG NPM_REGISTRY=https://registry.npmjs.org/
 ARG NPM_FLAGS="--no-audit --no-fund --fetch-timeout=120000 --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000"
 
