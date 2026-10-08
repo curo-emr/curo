@@ -14,6 +14,8 @@
     "sourceMap": true,
     "incremental": true,
     "skipLibCheck": true,
+    "types": ["node", "jest"],
+    "strict": false,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": true,
