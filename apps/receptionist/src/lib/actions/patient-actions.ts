@@ -1,10 +1,12 @@
 import { apiClient, apiErrorMessage } from "@curo/web/api";
-import { newAllergy, patientBody, registrationBody } from "@curo/web/patients";
+import {
+  newAllergy, patientBody, patientFormSchema, registrationBody,
+  type PatientFormValues,
+} from "@curo/web/patients";
 import { mapFhirPatient, type FhirPatient } from "@/lib/api/mappers";
-import { patientRegistrationSchema, type PatientRegistrationInput } from "@/lib/validations/patient";
 
-export async function registerPatient(data: PatientRegistrationInput) {
-  const parsed = patientRegistrationSchema.safeParse(data);
+export async function registerPatient(data: PatientFormValues) {
+  const parsed = patientFormSchema.safeParse(data);
   if (!parsed.success) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
@@ -20,8 +22,8 @@ export async function registerPatient(data: PatientRegistrationInput) {
 }
 
 /** Saves an edit. Reception can only add allergies, so `data.allergies` holds just the new ones. */
-export async function updatePatientDemographics(patientId: string, data: PatientRegistrationInput) {
-  const parsed = patientRegistrationSchema.safeParse(data);
+export async function updatePatientDemographics(patientId: string, data: PatientFormValues) {
+  const parsed = patientFormSchema.safeParse(data);
   if (!parsed.success) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }

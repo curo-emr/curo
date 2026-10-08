@@ -1,5 +1,6 @@
+import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
-import { ALLERGY_SEVERITIES, INSURANCE_RELATIONSHIPS, MARITAL_STATUSES } from "@curo/web/fhir";
+import { ALLERGY_SEVERITIES, INSURANCE_RELATIONSHIPS, MARITAL_STATUSES } from "../fhir";
 
 const allergyEntrySchema = z.object({
   /** Set for an allergy already on record. */
@@ -12,9 +13,8 @@ const allergyEntrySchema = z.object({
   notes: z.string().optional().default(""),
 });
 
-export type AllergyEntryInput = z.infer<typeof allergyEntrySchema>;
-
-export const patientRegistrationSchema = z.object({
+/** The doctor and reception portals' patient form, shared by registration and edit. */
+export const patientFormSchema = z.object({
   // NIC is optional: minors have no NIC. The Personal Health Number is the unique ID.
   nic: z.string().optional().default(""),
   firstName: z.string().min(1, "First name is required"),
@@ -42,10 +42,16 @@ export const patientRegistrationSchema = z.object({
   insuranceExpiryDate: z.string().optional().default(""),
   insuranceHolderName: z.string().optional().default(""),
   insuranceRelationship: z.enum(INSURANCE_RELATIONSHIPS).optional().default("self"),
+  /** Comma-separated. */
   tags: z.string().optional().default(""),
   allergies: z.array(allergyEntrySchema).optional().default([]),
 });
 
-// What the form holds (defaults not yet applied) vs. what a valid submit produces.
-export type PatientRegistrationFormValues = z.input<typeof patientRegistrationSchema>;
-export type PatientRegistrationInput = z.infer<typeof patientRegistrationSchema>;
+/** What a patient form holds while it's edited, before the schema fills in defaults. */
+export type PatientFormInput = z.input<typeof patientFormSchema>;
+/** What a patient form produces on a valid submit. */
+export type PatientFormValues = z.infer<typeof patientFormSchema>;
+/** One row of a patient form's allergy list. */
+export type AllergyEntry = z.infer<typeof allergyEntrySchema>;
+
+export type PatientForm = UseFormReturn<PatientFormInput, unknown, PatientFormValues>;

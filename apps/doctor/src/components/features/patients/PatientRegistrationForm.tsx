@@ -8,9 +8,9 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
-  patientRegistrationSchema,
-  type PatientRegistrationInput, type PatientRegistrationFormValues,
-} from "@/lib/validations/patient";
+  patientFormSchema,
+  type PatientFormValues, type PatientFormInput,
+} from "@curo/web/patients";
 import { registerPatient } from "@/lib/actions/patient-actions";
 import { patientQueries } from "@/lib/queries";
 import { ROUTES } from "@/lib/constants";
@@ -37,8 +37,8 @@ export function PatientRegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insuranceOpen, setInsuranceOpen] = useState(false);
 
-  const form = useForm<PatientRegistrationFormValues, unknown, PatientRegistrationInput>({
-    resolver: zodResolver(patientRegistrationSchema),
+  const form = useForm<PatientFormInput, unknown, PatientFormValues>({
+    resolver: zodResolver(patientFormSchema),
     defaultValues: {
       nic: "",
       firstName: "",
@@ -82,7 +82,7 @@ export function PatientRegistrationForm() {
     name: ["sex", "bloodType", "maritalStatus", "insuranceRelationship"],
   });
 
-  const onSubmit = async (data: PatientRegistrationInput) => {
+  const onSubmit = async (data: PatientFormValues) => {
     setIsSubmitting(true);
     try {
       const result = await registerPatient(data);

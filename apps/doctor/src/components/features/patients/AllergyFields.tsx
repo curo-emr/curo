@@ -1,6 +1,6 @@
 "use client";
 
-import { useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
+import { useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
 import { ALLERGY_SEVERITIES, type AllergySeverity } from "@curo/web/fhir";
 import { formatStatus } from "@curo/web/format";
@@ -9,9 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
-import type { PatientRegistrationFormValues, PatientRegistrationInput } from "@/lib/validations/patient";
-
-type PatientForm = UseFormReturn<PatientRegistrationFormValues, unknown, PatientRegistrationInput>;
+import type { PatientForm } from "@curo/web/patients";
 
 /** The patient forms' allergy list. A recorded allergy removed here is retired when the form is saved. */
 export function AllergyFields({ form }: { form: PatientForm }) {
