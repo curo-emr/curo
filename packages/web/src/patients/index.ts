@@ -1,52 +1,7 @@
-import {
-  maritalStatusCode,
-  type Allergy,
-  type AllergySeverity,
-  type InsuranceRelationship,
-  type MaritalStatus,
-} from "../fhir";
+import { maritalStatusCode, type Allergy, type AllergySeverity } from "../fhir";
+import type { AllergyEntry, PatientFormValues } from "./schema";
 
-/** One row of a patient form's allergy list. `id` is set for an allergy already on record. */
-export interface AllergyEntry {
-  id?: string;
-  substance: string;
-  reaction: string;
-  severity: AllergySeverity;
-  notes: string;
-}
-
-/** What the doctor and reception portals' patient forms produce on submit. */
-export interface PatientFormValues {
-  nic?: string;
-  firstName: string;
-  lastName: string;
-  dob: string;
-  sex: "male" | "female" | "other";
-  bloodType: string;
-  nationality: string;
-  maritalStatus?: MaritalStatus;
-  occupation: string;
-  phone: string;
-  email?: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  district: string;
-  postalCode: string;
-  country: string;
-  emergencyContactName: string;
-  emergencyContactRelationship: string;
-  emergencyContactPhone: string;
-  insuranceProvider: string;
-  insurancePolicyNumber: string;
-  insuranceGroupNumber: string;
-  insuranceExpiryDate: string;
-  insuranceHolderName: string;
-  insuranceRelationship: InsuranceRelationship;
-  /** Comma-separated. */
-  tags: string;
-  allergies: AllergyEntry[];
-}
+export * from "./schema";
 
 /** An allergy as `POST /patients` and `PATCH /patients/:id` take it. */
 export interface NewAllergyBody {

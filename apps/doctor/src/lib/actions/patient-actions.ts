@@ -1,11 +1,13 @@
 import { apiClient, apiErrorMessage } from "@curo/web/api";
-import { allergyChanges, patientBody, registrationBody } from "@curo/web/patients";
+import {
+  allergyChanges, patientBody, patientFormSchema, registrationBody,
+  type PatientFormValues,
+} from "@curo/web/patients";
 import { mapFhirPatient, type FhirPatient } from "@/lib/api/mappers";
-import { patientRegistrationSchema, type PatientRegistrationInput } from "@/lib/validations/patient";
 import type { Allergy } from "@/types";
 
-export async function registerPatient(data: PatientRegistrationInput) {
-  const parsed = patientRegistrationSchema.safeParse(data);
+export async function registerPatient(data: PatientFormValues) {
+  const parsed = patientFormSchema.safeParse(data);
   if (!parsed.success) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
@@ -23,10 +25,10 @@ export async function registerPatient(data: PatientRegistrationInput) {
 /** Saves an edit. A recorded allergy that `data` no longer lists is retired. */
 export async function updatePatientDemographics(
   patientId: string,
-  data: PatientRegistrationInput,
+  data: PatientFormValues,
   recordedAllergies: Allergy[],
 ) {
-  const parsed = patientRegistrationSchema.safeParse(data);
+  const parsed = patientFormSchema.safeParse(data);
   if (!parsed.success) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
