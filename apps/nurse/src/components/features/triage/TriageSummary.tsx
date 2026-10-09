@@ -4,7 +4,7 @@ import { Button } from "@curo/web/ui/button";
 import { cn } from "@/lib/utils";
 import {
   LEVEL_STYLES, VITAL_FIELD, VITAL_FIELDS, assessBMI, assessVital, calculateBMI, worstLevel,
-  type VitalAssessment,
+  type VitalAssessment, type VitalField,
 } from "@/lib/vitals";
 
 interface TriageSummaryProps {
@@ -12,6 +12,8 @@ interface TriageSummaryProps {
   doctorName: string;
   saving: boolean;
   readOnly: boolean;
+  /** Mark readings outside the adult ranges. Off for children. */
+  flagRanges: boolean;
   canSave: boolean;
   returnLabel: string;
   onSave: () => void;
@@ -24,13 +26,14 @@ interface Row {
   assessment: VitalAssessment | null;
 }
 
-function summaryRows(v: Partial<Vitals>): Row[] {
+function summaryRows(v: Partial<Vitals>, flagRanges: boolean): Row[] {
+  const assess = (f: VitalField, value?: number) => (flagRanges ? assessVital(f, value) : null);
   const one = (key: keyof Vitals, label: string): Row => {
     const f = VITAL_FIELD[key];
-    return { label, value: v[key] !== undefined ? `${v[key]} ${f.unit}` : null, assessment: assessVital(f, v[key]) };
+    return { label, value: v[key] !== undefined ? `${v[key]} ${f.unit}` : null, assessment: assess(f, v[key]) };
   };
   const bmi = calculateBMI(v.heightCm, v.weightKg);
-  const bp = [assessVital(VITAL_FIELD.bpSystolic, v.bpSystolic), assessVital(VITAL_FIELD.bpDiastolic, v.bpDiastolic)];
+  const bp = [assess(VITAL_FIELD.bpSystolic, v.bpSystolic), assess(VITAL_FIELD.bpDiastolic, v.bpDiastolic)];
   const bpLevel = worstLevel(bp);
   return [
     {
@@ -44,13 +47,13 @@ function summaryRows(v: Partial<Vitals>): Row[] {
     one("respirationRpm", "Respiration"),
     one("heightCm", "Height"),
     one("weightKg", "Weight"),
-    { label: "BMI", value: bmi ? String(bmi) : null, assessment: bmi ? assessBMI(bmi) : null },
+    { label: "BMI", value: bmi ? String(bmi) : null, assessment: bmi && flagRanges ? assessBMI(bmi) : null },
   ];
 }
 
 // Right rail: everything the doctor will see, then the send action.
-export function TriageSummary({ values, doctorName, saving, readOnly, canSave, returnLabel, onSave, onReturn }: TriageSummaryProps) {
-  const rows = summaryRows(values);
+export function TriageSummary({ values, doctorName, saving, readOnly, flagRanges, canSave, returnLabel, onSave, onReturn }: TriageSummaryProps) {
+  const rows = summaryRows(values, flagRanges);
   const recorded = VITAL_FIELDS.filter(f => values[f.key] !== undefined).length;
   const flagged = rows.filter(r => r.assessment && r.assessment.level !== "normal").length;
 

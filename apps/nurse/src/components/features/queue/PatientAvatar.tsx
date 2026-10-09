@@ -1,4 +1,5 @@
-import { cn, initials } from "@/lib/utils";
+import { getInitials } from "@curo/web/format";
+import { cn } from "@/lib/utils";
 
 export function PatientAvatar({ name, className }: { name: string; className?: string }) {
   return (
@@ -9,7 +10,7 @@ export function PatientAvatar({ name, className }: { name: string; className?: s
         className,
       )}
     >
-      {initials(name) || "?"}
+      {getInitials(name) || "?"}
     </div>
   );
 }

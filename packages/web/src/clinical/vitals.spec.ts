@@ -1,4 +1,4 @@
-import { VITAL_FIELD, assessVital, isPlausible, worstLevel } from "./index";
+import { VITAL_FIELD, adultRangesApply, assessVital, isPlausible, worstLevel } from "./index";
 
 describe("assessVital", () => {
   it("is normal inside the reference band, edges included", () => {
@@ -32,5 +32,25 @@ describe("isPlausible", () => {
   it("rejects typos far outside what a body can read", () => {
     expect(isPlausible(VITAL_FIELD.temperatureC, 37)).toBe(true);
     expect(isPlausible(VITAL_FIELD.temperatureC, 370)).toBe(false);
+  });
+});
+
+describe("adultRangesApply", () => {
+  const today = new Date(2026, 9, 9); // 9 October 2026
+
+  it("applies from the eighteenth birthday", () => {
+    expect(adultRangesApply("2008-10-09", today)).toBe(true);
+    expect(adultRangesApply("1972-03-14", today)).toBe(true);
+  });
+
+  it("doesn't apply to children, even the day before they turn eighteen", () => {
+    expect(adultRangesApply("2008-10-10", today)).toBe(false);
+    expect(adultRangesApply("2019-06-01", today)).toBe(false);
+  });
+
+  it("doesn't apply without a usable date of birth", () => {
+    expect(adultRangesApply(undefined, today)).toBe(false);
+    expect(adultRangesApply("", today)).toBe(false);
+    expect(adultRangesApply("unknown", today)).toBe(false);
   });
 });

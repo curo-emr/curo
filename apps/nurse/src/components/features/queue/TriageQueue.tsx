@@ -13,7 +13,7 @@ import { PageHeader } from "@curo/web/ui/page-header";
 import { QueueRow, patientName } from "./QueueRow";
 import { useTodayQueue, type QueueEntry } from "@/lib/hooks/useTodayQueue";
 import { useTriageActions } from "@/lib/hooks/useTriageActions";
-import { TRIAGE_STAGES, STAGE_META } from "@/lib/queue";
+import { TRIAGE_STAGES, nextForTriage, stageDotClass } from "@/lib/queue";
 import { ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,7 @@ export function TriageQueue() {
   const [showSent, setShowSent] = useState(false);
 
   const visible = entries.filter(e => matches(e, query));
+  const next = nextForTriage(visible);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -83,7 +84,7 @@ export function TriageQueue() {
             <Card key={stage} className="shadow-sm border">
               <CardHeader className="bg-muted/50 border-b py-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <span className={cn("h-2 w-2 rounded-full", STAGE_META[stage].color)} />
+                  <span className={cn("h-2 w-2 rounded-full", stageDotClass(stage))} />
                   {title}
                   <Badge variant="secondary" className="font-mono tabular-nums">{items.length}</Badge>
                 </CardTitle>
@@ -106,6 +107,7 @@ export function TriageQueue() {
                         key={entry.appointment.id}
                         entry={entry}
                         pending={pendingId === entry.appointment.id}
+                        primary={entry === next}
                         onOpen={() => openTriage(entry.appointment)}
                         onSkip={() => skipToDoctor(entry.appointment, patientName(entry))}
                       />

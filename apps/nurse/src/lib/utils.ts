@@ -35,10 +35,6 @@ export function minutesSince(iso: string | null): number {
   return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
 }
 
-export function initials(fullName: string): string {
-  return fullName.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-}
-
 // Personal Health Number, grouped for reading aloud: 202612345678 → "2026 1234 5678"
 export function formatPhn(phn: string): string {
   return phn ? phn.replace(/(\d{4})(?=\d)/g, '$1 ') : '';

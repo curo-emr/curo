@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Activity, Droplets, HeartPulse, Info, Loader2, Ruler, Thermometer, UserX, Wind } from "lucide-react";
+import { Activity, ArrowLeft, Baby, Droplets, HeartPulse, Info, Loader2, Ruler, Thermometer, UserX, Wind } from "lucide-react";
 import type { Allergy, Appointment, Patient, Problem, QueueStage, Vitals } from "@/types";
 import { Card } from "@curo/web/ui/card";
 import { EmptyState } from "@curo/web/ui/empty-state";
@@ -17,7 +17,7 @@ import { apiErrorMessage } from "@curo/web/api";
 import { ROUTES } from "@/lib/constants";
 import { TRIAGE_STAGES } from "@/lib/queue";
 import {
-  VITAL_FIELD, assessBMI, calculateBMI, changedVitalKeys, parseDraft, toDraft, type VitalsDraft,
+  VITAL_FIELD, ADULT_FROM_AGE, adultRangesApply, assessBMI, calculateBMI, changedVitalKeys, parseDraft, toDraft, type VitalsDraft,
 } from "@/lib/vitals";
 import { PatientBanner } from "./PatientBanner";
 import { VitalTile } from "./VitalTile";
@@ -97,6 +97,8 @@ export function TriageWorkspace({ appointmentId }: { appointmentId: string }) {
   const changed = changedVitalKeys(values, recorded);
   const canSave = invalid.length === 0 && (changed.length > 0 || hasRecorded);
   const bmi = calculateBMI(values.heightCm, values.weightKg);
+  // Adult ranges would mislabel a child's normal readings, so children's aren't flagged.
+  const flagRanges = adultRangesApply(patient.dob);
 
   const setField = (key: keyof Vitals, raw: string) => setDraft(d => ({ ...d, [key]: raw }));
   const backToQueue = () => router.push(ROUTES.TRIAGE_QUEUE);
@@ -134,10 +136,15 @@ export function TriageWorkspace({ appointmentId }: { appointmentId: string }) {
     backToQueue();
   };
 
-  const tileProps = { draft, values, invalid, previous: context.previous ?? {}, disabled: readOnly || saving, onChange: setField };
+  const tileProps = { draft, values, invalid, previous: context.previous ?? {}, disabled: readOnly || saving, flagRanges, onChange: setField };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-10">
+      {/* Only navigates: "Return to queue" below also puts the patient back in the waiting room. */}
+      <Link href={ROUTES.TRIAGE_QUEUE} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Triage queue
+      </Link>
+
       <PatientBanner
         patient={patient}
         appointment={appointment}
@@ -150,6 +157,15 @@ export function TriageWorkspace({ appointmentId }: { appointmentId: string }) {
         <p className="flex items-center gap-2 rounded-lg border border-status-warning-border bg-status-warning-bg px-4 py-3 text-sm text-status-warning-text">
           <Info className="h-4 w-4 shrink-0" />
           Earlier readings couldn&apos;t be loaded, so none are shown for comparison.
+        </p>
+      )}
+
+      {!flagRanges && (
+        <p className="flex items-center gap-2 rounded-lg border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+          <Baby className="h-4 w-4 shrink-0" />
+          {patient.dob
+            ? `Readings aren't flagged for patients under ${ADULT_FROM_AGE}: the adult ranges don't apply to children.`
+            : "Readings aren't flagged: without a date of birth, the adult ranges can't be checked."}
         </p>
       )}
 
@@ -189,6 +205,7 @@ export function TriageWorkspace({ appointmentId }: { appointmentId: string }) {
           doctorName={doctorName}
           saving={saving}
           readOnly={readOnly}
+          flagRanges={flagRanges}
           canSave={canSave}
           returnLabel={readOnly ? "Back to triage queue" : changed.length > 0 ? "Discard changes and return" : "Return to queue"}
           onSave={handleSave}
