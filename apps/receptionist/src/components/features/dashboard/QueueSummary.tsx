@@ -2,7 +2,8 @@ import { Clock, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { getPatientName, getDoctorName } from "@/lib/utils";
-import { isAwaitingDoctor, minutesInStage, waitBadgeClass } from "@/lib/queue";
+import { toneClass, waitTone } from "@curo/web/ui/status-badge";
+import { isAwaitingDoctor, minutesInStage } from "@/lib/queue";
 import type { Appointment, Patient, Doctor } from "@/types";
 
 interface QueueSummaryProps {
@@ -48,7 +49,7 @@ export function QueueSummary({ appointments, patients, doctors }: QueueSummaryPr
                     <span className="font-medium text-sm text-foreground">
                       {getPatientName(apt.patientId, patients)}
                     </span>
-                    <Badge variant="outline" className={waitBadgeClass(waitMinutes)}>
+                    <Badge variant="outline" className={toneClass(waitTone(waitMinutes))}>
                       <Clock className="h-3 w-3 mr-1" />
                       {waitMinutes} min
                     </Badge>

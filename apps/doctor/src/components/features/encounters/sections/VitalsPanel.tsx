@@ -5,6 +5,7 @@ import type { Vitals } from "@/types";
 import { BMI_CATEGORY_LABELS, bmiCategory, calculateBMI, type BMICategory } from "@curo/web/clinical";
 import { cn } from "@/lib/utils";
 import { SectionCard } from "@curo/web/ui/section-card";
+import { toneClass, type Tone } from "@curo/web/ui/status-badge";
 
 type VitalKey = keyof Vitals;
 
@@ -30,11 +31,11 @@ interface VitalsPanelProps {
   recorded?: RecordedVitals | null;
 }
 
-const BMI_STYLES: Record<BMICategory, string> = {
-  underweight: "bg-status-warning-bg text-status-warning-text",
-  healthy: "bg-status-success-bg text-status-success-text",
-  overweight: "bg-status-warning-bg text-status-warning-text",
-  obese: "bg-status-error-bg text-status-error-text",
+const BMI_TONES: Record<BMICategory, Tone> = {
+  underweight: "warning",
+  healthy: "success",
+  overweight: "warning",
+  obese: "error",
 };
 
 export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
@@ -107,7 +108,7 @@ export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
         <div className="flex items-center justify-between border-t pt-3 text-sm">
           <span className="text-muted-foreground">BMI</span>
           {bmi && category ? (
-            <span className={cn("rounded-full px-2.5 py-0.5 text-sm font-medium tabular-nums", BMI_STYLES[category])}>
+            <span className={cn("rounded-full px-2.5 py-0.5 text-sm font-medium tabular-nums", toneClass(BMI_TONES[category]))}>
               {bmi} <span className="text-xs font-normal opacity-80">· {BMI_CATEGORY_LABELS[category]}</span>
             </span>
           ) : (

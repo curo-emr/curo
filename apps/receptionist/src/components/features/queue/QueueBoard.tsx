@@ -16,7 +16,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn, getPatientName, getDoctorName, formatTime } from "@/lib/utils";
-import { QUEUE_STAGES, minutesInStage, waitBadgeClass } from "@/lib/queue";
+import { toneClass, waitTone } from "@curo/web/ui/status-badge";
+import { QUEUE_STAGES, minutesInStage } from "@/lib/queue";
 import { sendToDoctor, completeVisit } from "@/lib/actions/checkin-actions";
 import { toast } from "sonner";
 
@@ -122,7 +123,7 @@ export function QueueBoard({ appointments, patients, doctors, onChange }: QueueB
                           </p>
                         </div>
                         {stage !== "done" && (
-                          <Badge variant="outline" className={cn("text-xs shrink-0", waitBadgeClass(minutes))}>
+                          <Badge variant="outline" className={cn("text-xs shrink-0", toneClass(waitTone(minutes)))}>
                             {minutes}m
                           </Badge>
                         )}

@@ -2,7 +2,7 @@ import { ArrowRight, Clock, Loader2, Stethoscope } from "lucide-react";
 import { Button } from "@curo/web/ui/button";
 import { Badge } from "@curo/web/ui/badge";
 import { calculateAge, cn, formatPhn, formatTime, minutesSince } from "@/lib/utils";
-import { waitBadgeClass } from "@/lib/queue";
+import { toneClass, waitTone } from "@curo/web/ui/status-badge";
 import type { QueueEntry } from "@/lib/hooks/useTodayQueue";
 import { PatientAvatar } from "./PatientAvatar";
 
@@ -58,7 +58,7 @@ export function QueueRow({ entry, pending, onOpen, onSkip }: QueueRowProps) {
       <div className="flex shrink-0 items-center gap-2 sm:justify-end">
         <Badge
           variant="outline"
-          className={cn("font-mono tabular-nums", sent ? "bg-muted text-muted-foreground border-border" : waitBadgeClass(minutes))}
+          className={cn("font-mono tabular-nums", sent ? "bg-muted text-muted-foreground border-border" : toneClass(waitTone(minutes)))}
           title={sent ? "Time since vitals were sent" : "Time waiting in this stage"}
         >
           {sent ? `sent ${minutes}m ago` : `${minutes}m`}
