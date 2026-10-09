@@ -75,3 +75,19 @@ export function worstLevel(assessments: (VitalAssessment | null)[]): VitalLevel 
 export function isPlausible(field: VitalField, value: number): boolean {
   return value >= field.plausible[0] && value <= field.plausible[1];
 }
+
+// ─── Who the ranges fit ─────────────────────────────────────────────────────
+
+/** The age from which the adult ranges above apply. */
+export const ADULT_FROM_AGE = 18;
+
+/**
+ * Whether a patient's readings can be judged against the adult ranges. A child's normal
+ * values depend on their age, and an unknown date of birth can't be checked, so neither is flagged.
+ */
+export function adultRangesApply(dob: string | null | undefined, on: Date = new Date()): boolean {
+  const [year, month, day] = (dob ?? "").split("-").map(Number);
+  if (!year || !month || !day) return false;
+  // Local midnight on the eighteenth birthday ("YYYY-MM-DD" is read as a calendar date, not UTC).
+  return on >= new Date(year + ADULT_FROM_AGE, month - 1, day);
+}

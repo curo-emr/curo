@@ -1,11 +1,11 @@
-import { BMI_CATEGORY_LABELS, VITAL_FIELDS, bmiCategory, calculateBMI, isPlausible, type BMICategory, type VitalLevel, type VitalAssessment } from "@curo/web/clinical";
+import { BMI_CATEGORY_LABELS, VITAL_FIELDS, bmiCategory, calculateBMI, isPlausible, type BMICategory, type VitalField, type VitalLevel, type VitalAssessment } from "@curo/web/clinical";
 import { toneClass } from "@curo/web/ui/status-badge";
 import type { Vitals } from "@/types";
 
 // The vital-sign catalogue and its adult ranges live in @curo/web/clinical, so a
 // reading is flagged the same way here and in the doctor's visit.
 export {
-  VITAL_FIELDS, VITAL_FIELD, assessVital, worstLevel, isPlausible,
+  VITAL_FIELDS, VITAL_FIELD, ADULT_FROM_AGE, adultRangesApply, assessVital, worstLevel, isPlausible,
   type VitalField, type VitalLevel, type VitalAssessment,
 } from "@curo/web/clinical";
 
@@ -23,6 +23,14 @@ const BMI_LEVELS: Record<BMICategory, VitalLevel> = {
 export function assessBMI(bmi: number): VitalAssessment {
   const category = bmiCategory(bmi);
   return { level: BMI_LEVELS[category], label: BMI_CATEGORY_LABELS[category] };
+}
+
+// ─── Display ────────────────────────────────────────────────────────────────
+
+/** A stored reading at the precision it's entered with: 36.67 °C reads "36.7", 170.0 cm reads "170". */
+export function formatReading(field: VitalField, value: number): string {
+  const decimals = (String(field.step).split(".")[1] ?? "").length;
+  return String(Number(value.toFixed(decimals)));
 }
 
 // ─── Form input ─────────────────────────────────────────────────────────────

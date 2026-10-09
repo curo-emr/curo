@@ -18,7 +18,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/lib/constants";
 import { formatRelative } from "@curo/web/format";
-import { calculateAge, formatAgeSex } from "@/lib/utils";
+import { formatAgeSex } from "@/lib/utils";
+import { adultRangesApply } from "@curo/web/clinical";
 import { readDraft, removeDraft, visitDraftKey, writeDraft } from "@/lib/visit";
 import { getVitalsByAppointment } from "@/lib/api/clinical";
 import { updateQueueStage } from "@/lib/api/appointments";
@@ -244,7 +245,7 @@ export function EncounterEditor({
             vitals={visit.vitals}
             onChange={v => update("vitals", v)}
             recorded={triage}
-            flagAbnormal={!!patient.dob && calculateAge(patient.dob) >= 18}
+            flagAbnormal={adultRangesApply(patient.dob)}
           />
           <PatientContext patientId={patient.id} />
         </aside>

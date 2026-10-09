@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Vitals } from "@/types";
 import { Badge } from "@curo/web/ui/badge";
 import { cn } from "@/lib/utils";
-import { LEVEL_STYLES, assessVital, worstLevel, type VitalAssessment, type VitalField, type VitalsDraft } from "@/lib/vitals";
+import { LEVEL_STYLES, assessVital, formatReading, worstLevel, type VitalAssessment, type VitalField, type VitalsDraft } from "@/lib/vitals";
 import { VitalGauge } from "./VitalGauge";
 
 interface VitalTileProps {
@@ -14,6 +14,8 @@ interface VitalTileProps {
   invalid: (keyof Vitals)[];
   previous: Partial<Vitals>;
   disabled?: boolean;
+  /** Judge readings against the adult ranges: pills, tile colour and gauges. Off for children. */
+  flagRanges: boolean;
   onChange: (key: keyof Vitals, raw: string) => void;
   separator?: string;               // e.g. "/" between systolic and diastolic
   assessment?: VitalAssessment | null; // overrides the per-field assessment (BMI on the body tile)
@@ -23,19 +25,22 @@ interface VitalTileProps {
 
 // One monitor-style readout: big numerals, a status pill and a range gauge per field.
 export function VitalTile({
-  title, icon: Icon, fields, draft, values, invalid, previous, disabled, onChange,
+  title, icon: Icon, fields, draft, values, invalid, previous, disabled, flagRanges, onChange,
   separator, assessment, className, children,
 }: VitalTileProps) {
-  const assessments = fields.map(f => assessVital(f, values[f.key]));
-  const level = assessment !== undefined ? assessment?.level ?? null : worstLevel(assessments);
-  const pill = assessment !== undefined
-    ? assessment
-    : assessments.find(a => a?.level === level) ?? null;
+  const assessments = fields.map(f => (flagRanges ? assessVital(f, values[f.key]) : null));
+  const level = !flagRanges ? null : assessment !== undefined ? assessment?.level ?? null : worstLevel(assessments);
+  const pill = !flagRanges
+    ? null
+    : assessment !== undefined
+      ? assessment
+      : assessments.find(a => a?.level === level) ?? null;
+  const shown = (f: VitalField) => (previous[f.key] === undefined ? "—" : formatReading(f, previous[f.key]!));
   const previousText = fields.every(f => previous[f.key] === undefined)
     ? null
     : separator
-      ? `${fields.map(f => previous[f.key] ?? "—").join(` ${separator} `)} ${fields[0].unit}`
-      : fields.map(f => `${previous[f.key] ?? "—"} ${f.unit}`).join(" · ");
+      ? `${fields.map(shown).join(` ${separator} `)} ${fields[0].unit}`
+      : fields.map(f => `${shown(f)} ${f.unit}`).join(" · ");
 
   return (
     <section
@@ -108,11 +113,13 @@ export function VitalTile({
 
       {children}
 
-      <div className="mt-4 space-y-3">
-        {fields.map((field, i) => (
-          <VitalGauge key={field.key} field={field} value={values[field.key]} assessment={assessments[i]} />
-        ))}
-      </div>
+      {flagRanges && (
+        <div className="mt-4 space-y-3">
+          {fields.map((field, i) => (
+            <VitalGauge key={field.key} field={field} value={values[field.key]} assessment={assessments[i]} />
+          ))}
+        </div>
+      )}
 
       {previousText && (
         <p className="mt-3 text-xs text-muted-foreground">
