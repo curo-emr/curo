@@ -65,6 +65,10 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
+  /* --- Brand panel (sign-in screens) --- */
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-ink-foreground: var(--brand-ink-foreground);
+
   /* --- Sidebar --- */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -240,13 +244,18 @@
   --clinical-lab: oklch(0.5 0.15 300);
   --clinical-vitals: oklch(0.55 0.18 15);
 
-  /* --- Sidebar (not modified by design system) --- */
-  --sidebar: oklch(0.987 0.002 197.1);
-  --sidebar-foreground: oklch(0.148 0.004 228.8);
-  --sidebar-primary: oklch(0.546 0.245 262.881);
+  /* --- Brand panel: the deep navy beside the sign-in form --- */
+  --brand-ink: oklch(0.2 0.06 264);
+  --brand-ink-foreground: oklch(0.97 0.014 254.604);
+
+  /* --- Sidebar (the app shell in @curo/web/shell) ---
+   * A light rail beside the canvas; the current page is tinted with sidebar-primary. */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.32 0.012 230);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.963 0.002 197.1);
-  --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
+  --sidebar-accent: oklch(0.965 0.005 247);
+  --sidebar-accent-foreground: oklch(0.148 0.004 228.8);
   --sidebar-border: oklch(0.925 0.005 214.3);
   --sidebar-ring: oklch(0.723 0.014 214.4);
 }
@@ -342,6 +351,10 @@
   --clinical-rx: oklch(0.7 0.12 155);
   --clinical-lab: oklch(0.7 0.12 300);
   --clinical-vitals: oklch(0.75 0.14 15);
+
+  /* --- Brand panel --- */
+  --brand-ink: oklch(0.2 0.06 264);
+  --brand-ink-foreground: oklch(0.97 0.014 254.604);
 
   /* --- Sidebar --- */
   --sidebar: oklch(0.218 0.008 223.9);

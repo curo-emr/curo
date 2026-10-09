@@ -1,5 +1,6 @@
 import { type LucideIcon } from "lucide-react";
 import { cn } from "cn";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./empty";
 
 interface EmptyStateProps {
   icon?: LucideIcon;
@@ -9,17 +10,20 @@ interface EmptyStateProps {
   className?: string;
 }
 
+// "Nothing here yet" for a list or card, sized to sit inside a card. Built on shadcn's Empty.
 export function EmptyState({ icon: Icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={cn("py-10 px-4 flex flex-col items-center justify-center text-center", className)}>
-      {Icon && (
-        <div className="mb-3 rounded-full bg-muted p-3">
-          <Icon className="h-5 w-5 text-muted-foreground" />
-        </div>
-      )}
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      {description && <p className="mt-1 text-sm text-muted-foreground max-w-sm">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
-    </div>
+    <Empty className={cn("gap-3 px-4 py-10", className)}>
+      <EmptyHeader className="gap-1">
+        {Icon && (
+          <EmptyMedia variant="icon" className="mb-2 size-10 rounded-full text-muted-foreground">
+            <Icon className="size-5" />
+          </EmptyMedia>
+        )}
+        <EmptyTitle className="text-sm">{title}</EmptyTitle>
+        {description && <EmptyDescription>{description}</EmptyDescription>}
+      </EmptyHeader>
+      {action && <EmptyContent>{action}</EmptyContent>}
+    </Empty>
   );
 }
