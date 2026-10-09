@@ -20,6 +20,7 @@ import {
 } from '@curo/shared/enums';
 import { actorId, type AuthUser } from '@curo/shared/auth';
 import { notifyPractitioner } from '@curo/shared/notifications';
+import { clinicDate } from '@curo/shared/config';
 import {
   escapeLike,
   parseList,
@@ -671,7 +672,7 @@ export class LabService {
     instrument.status = status;
     if (notes) instrument.notes = notes;
     if (status === InstrumentStatus.MAINTENANCE)
-      instrument.lastMaintenanceDate = new Date().toISOString().split('T')[0];
+      instrument.lastMaintenanceDate = clinicDate();
     return this.instrumentsRepo.save(instrument);
   }
 

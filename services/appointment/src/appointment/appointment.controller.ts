@@ -24,6 +24,7 @@ import {
   type AuthUser,
 } from '@curo/shared/auth';
 import type { PaginationQuery } from '@curo/shared/fhir';
+import { clinicDate } from '@curo/shared/config';
 
 @Controller('appointments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -70,7 +71,7 @@ export class AppointmentController {
   ) {
     return this.appointmentService.getDoctorSchedule(
       practitionerId,
-      date || new Date().toISOString().split('T')[0],
+      date || clinicDate(),
     );
   }
 

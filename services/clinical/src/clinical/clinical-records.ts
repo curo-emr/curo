@@ -14,6 +14,7 @@ import {
   ServiceRequestStatus,
 } from '@curo/shared/enums';
 import { assertActiveLab, labSampleUrl } from '@curo/shared/lab';
+import { clinicDate } from '@curo/shared/config';
 import type { Encounter } from '../entities/encounter.entity';
 import { EncounterStatus } from '../enums';
 import type { CreateEncounterDto } from './dto/create-encounter.dto';
@@ -85,7 +86,7 @@ export function newDiagnosis(
     display: diagnosis.display,
     clinicalStatus: ConditionClinicalStatus.ACTIVE,
     category: ENCOUNTER_DIAGNOSIS,
-    onsetDate: new Date().toISOString().slice(0, 10),
+    onsetDate: clinicDate(),
     note: diagnosis.isPrimary ? PRIMARY_DIAGNOSIS_NOTE : undefined,
   };
 }

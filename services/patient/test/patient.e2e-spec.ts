@@ -496,9 +496,10 @@ describe('Patient records', () => {
           .getRepository(Patient)
           .update((res.body as { id: string }).id, { createdAt: date });
       };
-      await registeredOn(new Date(2031, 2, 5, 0, 0));
-      await registeredOn(new Date(2031, 2, 6, 23, 59));
-      await registeredOn(new Date(2031, 2, 7, 0, 0));
+      // Days are the clinic's (Asia/Colombo by default), whatever the server's zone.
+      await registeredOn(new Date('2031-03-05T00:00:00+05:30'));
+      await registeredOn(new Date('2031-03-06T23:59:00+05:30'));
+      await registeredOn(new Date('2031-03-07T00:00:00+05:30'));
 
       const res = await svc.api
         .get('/patients')

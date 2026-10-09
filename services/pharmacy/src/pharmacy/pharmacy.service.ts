@@ -13,6 +13,7 @@ import {
 } from '@curo/shared/enums';
 import type { AuthUser } from '@curo/shared/auth';
 import { notifyRole } from '@curo/shared/notifications';
+import { clinicDate } from '@curo/shared/config';
 import {
   escapeLike,
   parseList,
@@ -51,8 +52,8 @@ interface StockDraw {
 
 const roundMoney = (amount: number) => Math.round(amount * 100) / 100;
 
-/** Today as an ISO date (YYYY-MM-DD), the form `expiryDate` is stored in. */
-const isoToday = () => new Date().toISOString().slice(0, 10);
+/** Today on the clinic's calendar (YYYY-MM-DD), the form `expiryDate` is stored in. */
+const isoToday = () => clinicDate();
 
 /** Optional filters for GET /dispense. */
 export interface DispenseHistoryFilter {

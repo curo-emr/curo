@@ -30,6 +30,11 @@ x-jwt-env: &jwt-env
   JWT_EXPIRES_IN: 15m
   JWT_REFRESH_EXPIRES_IN: 7d
 
+# The clinic's calendar: whole-day filters, "today" and income by day use it.
+# The containers themselves stay on UTC (see packages/shared/src/config/clinic-time.ts).
+x-clinic-env: &clinic-env
+  CLINIC_TIME_ZONE: ${CLINIC_TIME_ZONE:-Asia/Colombo}
+
 x-backend-build: &backend-build
   context: .
   dockerfile: services/Dockerfile
@@ -108,7 +113,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "3001"
-      <<: [*db-env, *jwt-env]
+      <<: [*db-env, *jwt-env, *clinic-env]
     depends_on: *needs-migrated-db
     healthcheck: *backend-healthcheck
 
@@ -121,7 +126,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "3002"
-      <<: [*db-env, *jwt-env]
+      <<: [*db-env, *jwt-env, *clinic-env]
     depends_on: *needs-migrated-db
     healthcheck: *backend-healthcheck
 
@@ -135,7 +140,7 @@ services:
     environment:
       PORT: "3003"
       CURRENCY: ${CURRENCY:-LKR}
-      <<: [*db-env, *jwt-env]
+      <<: [*db-env, *jwt-env, *clinic-env]
     depends_on: *needs-migrated-db
     healthcheck: *backend-healthcheck
 
@@ -148,7 +153,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "3004"
-      <<: [*db-env, *jwt-env]
+      <<: [*db-env, *jwt-env, *clinic-env]
     depends_on: *needs-migrated-db
     healthcheck: *backend-healthcheck
 
@@ -161,7 +166,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "3005"
-      <<: [*db-env, *jwt-env]
+      <<: [*db-env, *jwt-env, *clinic-env]
     depends_on: *needs-migrated-db
     healthcheck: *backend-healthcheck
 
@@ -174,7 +179,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "3006"
-      <<: [*db-env, *jwt-env]
+      <<: [*db-env, *jwt-env, *clinic-env]
     depends_on: *needs-migrated-db
     healthcheck: *backend-healthcheck
 
@@ -193,7 +198,7 @@ services:
       MINIO_ACCESS_KEY: *minio-access-key
       MINIO_SECRET_KEY: *minio-secret-key
       MINIO_BUCKET: curo-documents
-      <<: [*db-env, *jwt-env]
+      <<: [*db-env, *jwt-env, *clinic-env]
     depends_on:
       <<: *needs-migrated-db
       minio:
@@ -209,7 +214,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "3007"
-      <<: [*db-env, *jwt-env]
+      <<: [*db-env, *jwt-env, *clinic-env]
     depends_on: *needs-migrated-db
     healthcheck: *backend-healthcheck
 
@@ -222,7 +227,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "3008"
-      <<: [*db-env, *jwt-env]
+      <<: [*db-env, *jwt-env, *clinic-env]
     depends_on: *needs-migrated-db
     healthcheck: *backend-healthcheck
 
