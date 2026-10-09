@@ -20,3 +20,6 @@ export const BMI_CATEGORY_LABELS: Record<BMICategory, string> = {
   overweight: "Overweight",
   obese: "Obese",
 };
+
+
+export * from "./vitals";
