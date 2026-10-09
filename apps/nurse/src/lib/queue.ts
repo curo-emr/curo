@@ -2,8 +2,6 @@ import type { QueueStage } from "@/types";
 
 // Patient flow as the nurse station sees it (appointments.queueStage).
 
-export const QUEUE_POLL_MS = 15_000;
-
 export const FLOW_STAGES: QueueStage[] = ["waiting_nurse", "with_nurse", "ready_for_doctor", "with_doctor", "done"];
 
 // The nurse's own work: waiting, in triage, and triaged but not yet seen (vitals still editable).

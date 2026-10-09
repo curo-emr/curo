@@ -26,7 +26,7 @@ function greeting(): string {
 
 export default function DashboardPage() {
   const { entries, status, refresh } = useTodayQueue(FLOW_STAGES);
-  const { openTriage, skipToDoctor, pendingId } = useTriageActions(refresh);
+  const { openTriage, skipToDoctor, pendingId } = useTriageActions();
   const me = useCurrentPractitioner();
 
   const counts = Object.fromEntries(

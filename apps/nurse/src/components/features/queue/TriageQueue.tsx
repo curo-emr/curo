@@ -32,7 +32,7 @@ function matches(entry: QueueEntry, query: string): boolean {
 export function TriageQueue() {
   const query = useSearchParams().get("q")?.trim() ?? "";
   const { entries, status, updatedAt, refresh } = useTodayQueue(TRIAGE_STAGES);
-  const { openTriage, skipToDoctor, pendingId } = useTriageActions(refresh);
+  const { openTriage, skipToDoctor, pendingId } = useTriageActions();
   const [showSent, setShowSent] = useState(false);
 
   const visible = entries.filter(e => matches(e, query));
