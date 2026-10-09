@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Search, LogOut, User, Menu } from "lucide-react";
+import { Search, LogOut, User, Menu, FlaskConical } from "lucide-react";
 import { Input } from "@curo/web/ui/input";
 import { Button } from "@curo/web/ui/button";
 import { useAuth } from "@curo/web/auth";
 import { useSidebar } from "@curo/web/ui/sidebar-context";
 import { NotificationsMenu } from "@curo/web/notifications";
-import { WorkplaceBadge } from "./WorkplaceBadge";
+import { WorkplaceBadge } from "@curo/web/workplace";
 
 export function Topbar() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export function Topbar() {
         </form>
       </div>
       <div className="flex min-w-0 items-center gap-4 ml-4">
-        <WorkplaceBadge />
+        <WorkplaceBadge icon={FlaskConical} kind="lab" />
         <div className="flex items-center gap-2 mr-4 border-r pr-4">
           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
             <User className="h-4 w-4 text-primary" />

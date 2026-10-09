@@ -15,6 +15,7 @@
     "./patients": "./src/patients/index.ts",
     "./print": "./src/print/index.ts",
     "./query": "./src/query/index.ts",
+    "./workplace": "./src/workplace/index.ts",
     "./styles.css": "./src/styles.css",
     "./ui/curo-calendar": "./src/ui/curo-calendar/index.ts",
     "./ui/utils": "./src/ui/utils.ts",
