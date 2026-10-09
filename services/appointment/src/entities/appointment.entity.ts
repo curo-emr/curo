@@ -5,10 +5,22 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  Exclusion,
 } from 'typeorm';
 import { AppointmentStatus } from '../enums';
 
+/**
+ * A doctor can't have two live appointments at overlapping times. The database
+ * enforces it, so two desks booking the same slot at once can't both succeed.
+ * Cancelled, no-show and wait-listed appointments don't hold their slot.
+ */
+export const NO_DOUBLE_BOOKING = 'appointments_no_double_booking';
+
 @Entity('appointments')
+@Exclusion(
+  NO_DOUBLE_BOOKING,
+  `USING gist ("practitionerId" WITH =, tsrange("start", "end") WITH &&) WHERE (status NOT IN ('cancelled', 'noshow', 'waitlist'))`,
+)
 export class Appointment {
   @PrimaryGeneratedColumn('uuid')
   id: string;

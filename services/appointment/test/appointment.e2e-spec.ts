@@ -24,20 +24,28 @@ describe('Appointments and the patient queue', () => {
 
   afterAll(() => svc.close());
 
-  /** Books a 15-minute appointment with `doctor` and returns its id. */
-  async function book(): Promise<string> {
-    const start = new Date(Date.now() + 3_600_000);
-    const res = await svc.api
+  /** Asks for an appointment with `practitionerId` from `start`, lasting `minutes`. */
+  const bookAt = (practitionerId: string, start: Date, minutes = 15) =>
+    svc.api
       .post('/appointments')
       .set(receptionist.headers)
       .send({
         patientId: randomUUID(),
-        practitionerId: doctor.practitionerId,
+        practitionerId,
         start: start.toISOString(),
-        end: new Date(start.getTime() + 15 * 60_000).toISOString(),
+        end: new Date(start.getTime() + minutes * 60_000).toISOString(),
         reasonCode: 'Fever',
-      })
-      .expect(201);
+      });
+
+  // Each booking takes the doctor's next free 15 minutes, as a doctor can't be double-booked.
+  let slotsTaken = 0;
+
+  /** Books a 15-minute appointment with `doctor` and returns its id. */
+  async function book(): Promise<string> {
+    const start = new Date(Date.now() + 3_600_000 + slotsTaken++ * 15 * 60_000);
+    const res = await bookAt(doctor.practitionerId as string, start).expect(
+      201,
+    );
     return (res.body as { id: string }).id;
   }
 
@@ -136,12 +144,53 @@ describe('Appointments and the patient queue', () => {
     });
   });
 
+  describe('double booking', () => {
+    const at = (hour: number, minute = 0) => new Date(2031, 0, 6, hour, minute);
+
+    it("refuses a time that overlaps the doctor's other appointment, not another doctor's or the next slot", async () => {
+      const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
+      await bookAt(dr, at(9), 30).expect(201);
+
+      const clash = await bookAt(dr, at(9, 15), 30).expect(409);
+      expect((clash.body as { message: string }).message).toMatch(
+        /already has an appointment/,
+      );
+      await bookAt(
+        svc.as(UserRole.DOCTOR).practitionerId as string,
+        at(9, 15),
+      ).expect(201);
+      await bookAt(dr, at(9, 30)).expect(201);
+    });
+
+    it('frees a cancelled slot, and refuses to re-book the cancelled one over its replacement', async () => {
+      const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
+      const first = await bookAt(dr, at(10)).expect(201);
+      const firstId = (first.body as { id: string }).id;
+      await setStatus(firstId, AppointmentStatus.CANCELLED).expect(200);
+
+      await bookAt(dr, at(10)).expect(201);
+
+      await setStatus(firstId, AppointmentStatus.BOOKED).expect(409);
+      await expect(saved(firstId)).resolves.toMatchObject({
+        status: AppointmentStatus.CANCELLED,
+      });
+    });
+
+    it('refuses an appointment that ends before it starts', async () => {
+      const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
+      await bookAt(dr, at(11), -15).expect(400);
+    });
+  });
+
   it("doesn't let a nurse book an appointment", async () => {
     await svc.api.post('/appointments').set(nurse.headers).send({}).expect(403);
   });
 
   describe('GET /appointments', () => {
-    /** An appointment for `patientId` starting at `start`, saved as given. */
+    /**
+     * An appointment for `patientId` starting at `start`, saved as given. Each has a
+     * doctor of its own, so fixtures at the same time don't count as double booking.
+     */
     const saveAppointment = (
       patientId: string,
       start: Date,
@@ -149,7 +198,7 @@ describe('Appointments and the patient queue', () => {
     ) =>
       svc.db.getRepository(Appointment).save({
         patientId,
-        practitionerId: doctor.practitionerId as string,
+        practitionerId: randomUUID(),
         start,
         end: new Date(start.getTime() + 15 * 60_000),
         status,
