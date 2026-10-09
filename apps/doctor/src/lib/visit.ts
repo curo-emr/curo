@@ -10,6 +10,8 @@ import { getAppointments } from "@/lib/api/appointments";
 const CLOSED_STATUSES: Appointment["status"][] = ["completed", "cancelled", "no_show"];
 
 export const isClosed = (a: Appointment) => CLOSED_STATUSES.includes(a.status) || a.queueStage === "done";
+/** Closed without a visit: cancelled, or the patient never came. Not someone the doctor saw. */
+export const isMissed = (a: Appointment) => a.status === "cancelled" || a.status === "no_show";
 export const isInConsultation = (a: Appointment) =>
   !isClosed(a) && (a.queueStage === "with_doctor" || a.status === "in_progress");
 

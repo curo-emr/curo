@@ -12,7 +12,7 @@ import { QueueList } from "@/components/features/dashboard/QueueList";
 import { NeedsAttention } from "@/components/features/dashboard/NeedsAttention";
 import { appointmentQueries, labResultQueries, patientQueries } from "@/lib/queries";
 import { getTodayString } from "@/lib/utils";
-import { getQueueGroup, hasDraft, visitDraftKey } from "@/lib/visit";
+import { getQueueGroup, hasDraft, isMissed, visitDraftKey } from "@/lib/visit";
 import type { Appointment, LabOrder } from "@/types";
 
 // One empty list for "not loaded yet", so the memo below doesn't recompute on every render.
@@ -57,7 +57,7 @@ export default function TodayPage() {
         description={`${dateLabel} · ${appointments.length} appointment${appointments.length === 1 ? "" : "s"} today`}
       />
 
-      {appointments.length > 0 && <DayOverview appointments={appointments} />}
+      {appointments.some(a => !isMissed(a)) && <DayOverview appointments={appointments} />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
