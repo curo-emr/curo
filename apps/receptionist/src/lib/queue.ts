@@ -3,8 +3,6 @@ import { calculateWaitTime } from "@/lib/utils";
 
 // Patient-flow queue (appointments.queueStage) — shared by the dashboard and the queue board.
 
-export const QUEUE_POLL_MS = 15_000;
-
 export const QUEUE_STAGES: QueueStage[] = ["waiting_nurse", "with_nurse", "ready_for_doctor", "with_doctor", "done"];
 
 // Checked in but not yet seen by the doctor.

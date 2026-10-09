@@ -11,7 +11,8 @@ import { AlertTriangle, Phone, Edit, CalendarPlus, Shield, ChevronDown, ChevronU
 
 interface PatientHeaderProps {
   patient: Patient;
-  allergies: Allergy[];
+  /** Null when they couldn't be loaded, which must never read as none; undefined while they load. */
+  allergies: Allergy[] | null | undefined;
 }
 
 export function PatientHeader({ patient, allergies }: PatientHeaderProps) {
@@ -122,7 +123,13 @@ export function PatientHeader({ patient, allergies }: PatientHeaderProps) {
       </div>
 
       {/* Allergy Alert Banner */}
-      {allergies.length > 0 && (
+      {allergies === null && (
+        <div className="mt-6 p-4 bg-status-warning-bg border border-status-warning-border rounded-md flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-status-warning-text shrink-0 mt-0.5" />
+          <p className="text-sm font-semibold text-status-warning-text">Allergies couldn&apos;t be loaded</p>
+        </div>
+      )}
+      {allergies && allergies.length > 0 && (
         <div className="mt-6 p-4 bg-status-error-bg border border-status-error-border rounded-md flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-status-error-text shrink-0 mt-0.5" />
           <div>

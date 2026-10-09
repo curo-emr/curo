@@ -1,4 +1,4 @@
-import { apiClient, getByIds } from '@curo/web/api';
+import { apiClient, getByIds, nullIfNotFound } from '@curo/web/api';
 import type { Patient, Allergy, Problem } from '@/types';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, type FhirPatient, type FhirAllergy, type FhirCondition } from './mappers';
 import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
@@ -29,21 +29,8 @@ export async function getPatientsPaginated(params: PaginationParams = {}): Promi
 }
 
 export async function getPatientById(id: string): Promise<Patient | null> {
-  try {
-    const res = await apiClient.get<FhirPatient>(`/patients/${id}`);
-    return mapFhirPatient(res.data);
-  } catch {
-    return null;
-  }
-}
-
-export async function getPatientByCode(code: string): Promise<Patient | null> {
-  try {
-    const res = await apiClient.get<FhirPatient>(`/patients/code/${code}`);
-    return mapFhirPatient(res.data);
-  } catch {
-    return null;
-  }
+  const res = await nullIfNotFound(apiClient.get<FhirPatient>(`/patients/${id}`));
+  return res && mapFhirPatient(res.data);
 }
 
 export async function getAllergies(patientId: string): Promise<Allergy[]> {

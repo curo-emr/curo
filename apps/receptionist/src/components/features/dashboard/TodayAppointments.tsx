@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import Link from "next/link";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
@@ -13,15 +14,16 @@ import { checkInPatient, sendToDoctor, completeVisit } from "@/lib/actions/check
 import { getPatientName, getPatientMeta, getDoctorName, formatTime } from "@/lib/utils";
 import { ROUTES, APPOINTMENT_STATUS } from "@/lib/constants";
 import type { Appointment, Patient, Doctor } from "@/types";
+import { invalidateAppointments } from "@/lib/queries";
 
 interface TodayAppointmentsProps {
   appointments: Appointment[];
   patients: Patient[];
   doctors: Doctor[];
-  onChange: () => void;
 }
 
-export function TodayAppointments({ appointments, patients, doctors, onChange }: TodayAppointmentsProps) {
+export function TodayAppointments({ appointments, patients, doctors }: TodayAppointmentsProps) {
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
 
   // Run a check-in action, report it, and let the page re-fetch so stats and the queue summary stay in sync.
@@ -35,7 +37,7 @@ export function TodayAppointments({ appointments, patients, doctors, onChange }:
       const result = await action(appointmentId);
       if (result.success) {
         toast.success(successMessage);
-        onChange();
+        void invalidateAppointments(queryClient);
       } else {
         toast.error(result.error || failureMessage);
       }
