@@ -23,6 +23,7 @@ import { User, Stethoscope, CalendarDays, FileText, Loader2, Check, MapPin } fro
 import Link from "next/link";
 import { cn, formatTime, getTodayString } from "@/lib/utils";
 import { ROUTES, VISIT_TYPES } from "@/lib/constants";
+import { isMissed } from "@/lib/queue";
 import { bookNewAppointment } from "@/lib/actions/appointment-actions";
 import { toast } from "sonner";
 import { appointmentQueries, invalidateAppointments, patientQueries } from "@/lib/queries";
@@ -109,7 +110,8 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
     enabled: !!selectedDoctorId && !!selectedDate,
   });
   const bookedSlots = useMemo(
-    () => new Set(schedule.data?.filter((a) => a.status !== "cancelled").map((a) => a.time)),
+    // Cancelled and no-show appointments free their slot, as on the server.
+    () => new Set(schedule.data?.filter((a) => !isMissed(a)).map((a) => a.time)),
     [schedule.data],
   );
 
@@ -144,6 +146,8 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
         router.push(ROUTES.APPOINTMENTS);
       } else {
         toast.error(result.error || "Failed to book appointment");
+        // Someone may have just taken the slot: show the doctor's day as it is now.
+        void invalidateAppointments(queryClient);
       }
     });
   };

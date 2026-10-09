@@ -1,11 +1,13 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
-import { Appointment } from '../entities/appointment.entity';
+import { Repository, Between, QueryFailedError } from 'typeorm';
+import { Appointment, NO_DOUBLE_BOOKING } from '../entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { UserRole } from '@curo/shared/enums';
@@ -68,6 +70,11 @@ export interface AppointmentFilters {
 const isAppointmentStatus = (value: string): value is AppointmentStatus =>
   (Object.values(AppointmentStatus) as string[]).includes(value);
 
+/** Whether a save failed because the doctor is already booked at that time. */
+const isDoubleBooking = (err: unknown) =>
+  err instanceof QueryFailedError &&
+  (err.driverError as { constraint?: string }).constraint === NO_DOUBLE_BOOKING;
+
 @Injectable()
 export class AppointmentService {
   constructor(
@@ -76,13 +83,27 @@ export class AppointmentService {
   ) {}
 
   async create(dto: CreateAppointmentDto) {
-    const appointment = this.appointmentsRepo.create({
-      ...dto,
-      start: new Date(dto.start),
-      end: new Date(dto.end),
-    });
-    const saved = await this.appointmentsRepo.save(appointment);
-    return toFhirAppointment(saved);
+    const start = new Date(dto.start);
+    const end = new Date(dto.end);
+    if (end <= start) {
+      throw new BadRequestException('An appointment must end after it starts');
+    }
+    const appointment = this.appointmentsRepo.create({ ...dto, start, end });
+    return toFhirAppointment(await this.save(appointment));
+  }
+
+  /** Saves a booking, turning a clash with the doctor's other appointments into a 409. */
+  private async save(appointment: Appointment) {
+    try {
+      return await this.appointmentsRepo.save(appointment);
+    } catch (err) {
+      if (isDoubleBooking(err)) {
+        throw new ConflictException(
+          'The doctor already has an appointment at this time. Pick another time.',
+        );
+      }
+      throw err;
+    }
   }
 
   /**
@@ -164,8 +185,8 @@ export class AppointmentService {
       if (stage !== undefined) a.queueStage = stage;
     }
     Object.assign(a, dto);
-    const saved = await this.appointmentsRepo.save(a);
-    return toFhirAppointment(saved);
+    // Re-booking a cancelled appointment takes its slot back, so it can clash too.
+    return toFhirAppointment(await this.save(a));
   }
 
   async updateQueueStage(
