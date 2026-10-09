@@ -1,20 +1,11 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@curo/web/auth";
-import { getPractitioners, type Practitioner } from "@/lib/api/practitioners";
+import type { Practitioner } from "@/lib/api/practitioners";
+import { practitionerQueries } from "@/lib/queries";
 
 // The signed-in nurse's practitioner record (name, qualification) — null until loaded.
 export function useCurrentPractitioner(): Practitioner | null {
   const { user } = useAuth();
-  const [practitioner, setPractitioner] = useState<Practitioner | null>(null);
-
-  useEffect(() => {
-    if (!user?.practitionerId) return;
-    let active = true;
-    getPractitioners(user.role)
-      .then(list => { if (active) setPractitioner(list.find(p => p.id === user.practitionerId) ?? null); })
-      .catch(() => {});
-    return () => { active = false; };
-  }, [user?.practitionerId, user?.role]);
-
-  return practitioner;
+  const staff = useQuery({ ...practitionerQueries.byRole(user?.role ?? ""), enabled: !!user?.practitionerId });
+  return staff.data?.find(p => p.id === user?.practitionerId) ?? null;
 }

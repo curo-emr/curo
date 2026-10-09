@@ -29,7 +29,7 @@ interface TriageContext {
   doctor?: Practitioner;
   allergies: Allergy[] | null;
   conditions: Problem[] | null;
-  previous: Partial<Vitals>;   // latest reading of each vital, any visit
+  previous: Partial<Vitals> | null;   // latest reading of each vital, any visit; null if it couldn't be loaded
   recorded: Partial<Vitals>;   // already recorded for this visit (re-opened triage)
 }
 
@@ -40,7 +40,7 @@ async function loadTriage(appointmentId: string): Promise<TriageContext> {
     getPatientById(patientId),
     getAllergies(patientId).catch(() => null),
     getConditions(patientId).catch(() => null),
-    getLatestVitals(patientId).catch(() => ({})),
+    getLatestVitals(patientId).catch(() => null),
     getVisitVitals(appointmentId),
     getPractitioners("DOCTOR").catch(() => []),
   ]);
@@ -124,12 +124,17 @@ export function TriageWorkspace({ appointmentId }: { appointmentId: string }) {
   const handleReturn = async () => {
     if (!readOnly) {
       const stage: QueueStage = hasRecorded ? "ready_for_doctor" : "waiting_nurse";
-      await updateQueueStage(appointment.id, stage).catch(() => {});
+      try {
+        await updateQueueStage(appointment.id, stage);
+      } catch (err) {
+        toast.error(apiErrorMessage(err, `${patient.name.first} couldn't be returned to the queue. Try again.`));
+        return;
+      }
     }
     backToQueue();
   };
 
-  const tileProps = { draft, values, invalid, previous: context.previous, disabled: readOnly || saving, onChange: setField };
+  const tileProps = { draft, values, invalid, previous: context.previous ?? {}, disabled: readOnly || saving, onChange: setField };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-10">
@@ -140,6 +145,13 @@ export function TriageWorkspace({ appointmentId }: { appointmentId: string }) {
         allergies={context.allergies}
         conditions={context.conditions}
       />
+
+      {context.previous === null && (
+        <p className="flex items-center gap-2 rounded-lg border border-status-warning-border bg-status-warning-bg px-4 py-3 text-sm text-status-warning-text">
+          <Info className="h-4 w-4 shrink-0" />
+          Earlier readings couldn&apos;t be loaded, so none are shown for comparison.
+        </p>
+      )}
 
       {readOnly && (
         <p className="flex items-center gap-2 rounded-lg border border-status-info-border bg-status-info-bg px-4 py-3 text-sm text-status-info-text">

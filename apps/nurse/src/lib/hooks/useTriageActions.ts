@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Appointment } from "@/types";
 import { updateQueueStage } from "@/lib/api/appointments";
 import { ROUTES } from "@/lib/constants";
+import { invalidateQueue } from "@/lib/queries";
 import { apiErrorMessage } from "@curo/web/api";
 
 // Queue actions shared by the dashboard and the triage queue.
-export function useTriageActions(onChange?: () => void) {
+export function useTriageActions() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const refreshQueue = () => void invalidateQueue(queryClient);
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   const run = async (appointment: Appointment, action: () => Promise<void>) => {
@@ -17,7 +21,7 @@ export function useTriageActions(onChange?: () => void) {
       await action();
     } catch (err) {
       toast.error(apiErrorMessage(err, "Could not update the queue. Refresh and try again."));
-      onChange?.();
+      refreshQueue();
     } finally {
       setPendingId(null);
     }
@@ -34,7 +38,7 @@ export function useTriageActions(onChange?: () => void) {
     run(appointment, async () => {
       await updateQueueStage(appointment.id, "ready_for_doctor");
       toast.success(`${patientName} sent to the doctor without triage`);
-      onChange?.();
+      refreshQueue();
     });
 
   return { openTriage, skipToDoctor, pendingId };
