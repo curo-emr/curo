@@ -1,25 +1,23 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { use } from "react";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pill, ClipboardList, ArrowLeft } from "lucide-react";
+import { apiErrorMessage } from "@curo/web/api";
+import { formatStatus } from "@curo/web/format";
+import { QueryContent, allOf, dataOrNull } from "@curo/web/query";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { PatientSummaryCard } from "@/components/features/patients/PatientSummaryCard";
 import { DispenseRecordCard } from "@/components/features/dispensing/DispenseRecordCard";
-import Link from "next/link";
 import { formatDate } from "@/lib/utils";
-import { formatStatus } from "@curo/web/format";
 import { ROUTES } from "@/lib/constants";
-import { getPatientById, getAllergies } from "@/lib/api/patients";
-import {
-  getPrescription,
-  getDispensingRecordsByPrescription,
-  dispense,
-  type DispenseRecord,
-} from "@/lib/api/pharmacy";
-import { apiErrorMessage } from "@curo/web/api";
-import type { Allergy, Patient, Prescription, PrescriptionItem } from "@/types";
+import { dispense } from "@/lib/api/pharmacy";
+import { invalidateAfterDispense, patientQueries, prescriptionQueries } from "@/lib/queries";
+import type { Prescription, PrescriptionItem } from "@/types";
 
 // Only active prescriptions (mapped to "sent_to_pharmacy") can be dispensed.
 const DISPENSABLE_STATUS = "sent_to_pharmacy";
@@ -37,53 +35,34 @@ function medicationDetails(item: PrescriptionItem): [string, string][] {
 
 export default function PrescriptionDetailPage({ params }: { params: Promise<{ prescriptionId: string }> }) {
   const { prescriptionId } = use(params);
-  const [prescription, setPrescription] = useState<Prescription | null>(null);
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [allergies, setAllergies] = useState<Allergy[]>([]);
-  const [dispensingRecords, setDispensingRecords] = useState<DispenseRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDispensing, setIsDispensing] = useState(false);
-  const [dispenseError, setDispenseError] = useState<string | null>(null);
+  const prescription = useQuery(prescriptionQueries.detail(prescriptionId));
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const rx = await getPrescription(prescriptionId);
-        const [pt, alg, records] = await Promise.all([
-          getPatientById(rx.patientId),
-          getAllergies(rx.patientId),
-          getDispensingRecordsByPrescription(prescriptionId),
-        ]);
-        setPrescription(rx);
-        setPatient(pt);
-        setAllergies(alg);
-        setDispensingRecords(records);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadData();
-  }, [prescriptionId]);
+  return (
+    <QueryContent query={prescription} what="this prescription">
+      {rx => {
+        if (!rx) notFound();
+        return <PrescriptionDetail prescription={rx} />;
+      }}
+    </QueryContent>
+  );
+}
 
-  const handleDispense = async () => {
-    setIsDispensing(true);
-    setDispenseError(null);
-    try {
-      const record = await dispense(prescriptionId);
-      setDispensingRecords(prev => [record, ...prev]);
-      setPrescription(prev => prev && { ...prev, status: "completed" });
-    } catch (err: unknown) {
-      setDispenseError(apiErrorMessage(err, "Failed to dispense prescription."));
-    } finally {
-      setIsDispensing(false);
-    }
-  };
+function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
+  const queryClient = useQueryClient();
+  const { patientId } = prescription;
+  const patient = useQuery(patientQueries.detail(patientId));
+  const allergiesQuery = useQuery(patientQueries.allergies(patientId));
+  const allergies = dataOrNull(allergiesQuery);
+  const records = useQuery(prescriptionQueries.dispensing(prescription.id));
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-  // Never offer a dispense without the patient and allergies on screen.
-  if (!prescription || !patient) return <div className="p-8 text-center text-slate-500">Could not load this prescription.</div>;
+  const dispenseRx = useMutation({
+    mutationFn: () => dispense(prescription.id),
+    onSuccess: () => invalidateAfterDispense(queryClient, patientId),
+  });
+
+  // Never dispense without the patient and their allergies on screen.
+  const checks = allOf(patient, allergiesQuery);
+  const checked = !!patient.data && !!allergies;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -94,14 +73,16 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ p
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Prescription Details</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <span className="font-mono">{prescriptionId.slice(0, 8).toUpperCase()}</span>
+            <span className="font-mono">{prescription.id.slice(0, 8).toUpperCase()}</span>
             <StatusBadge status={prescription.status} />
             <span>Prescribed {formatDate(prescription.createdAt)}</span>
           </div>
         </div>
       </div>
 
-      <PatientSummaryCard patient={patient} allergies={allergies} />
+      <QueryContent query={patient} what="the patient">
+        {p => (p ? <PatientSummaryCard patient={p} allergies={allergies} /> : <p className="text-sm text-muted-foreground">This prescription&apos;s patient wasn&apos;t found.</p>)}
+      </QueryContent>
 
       <Card className="shadow-sm border">
         <CardHeader className="bg-muted/50 border-b">
@@ -132,29 +113,43 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ p
         </CardContent>
         <div className="border-t p-4 space-y-3">
           {prescription.status === DISPENSABLE_STATUS ? (
-            <Button onClick={handleDispense} disabled={isDispensing} className="bg-green-600 hover:bg-green-700">
-              {isDispensing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Dispensing...</> : "Dispense Prescription"}
-            </Button>
+            <>
+              <Button onClick={() => dispenseRx.mutate()} disabled={!checked || dispenseRx.isPending} className="bg-green-600 hover:bg-green-700">
+                {dispenseRx.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Dispensing...</> : "Dispense Prescription"}
+              </Button>
+              {!checked && checks.isError && (
+                <p className="text-sm text-status-error-text">
+                  The patient&apos;s record or allergies couldn&apos;t be loaded, so this can&apos;t be dispensed until they are.{" "}
+                  <button type="button" className="font-medium underline" onClick={() => void checks.refetch()}>
+                    Try again
+                  </button>
+                </p>
+              )}
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">
               This prescription is {formatStatus(prescription.status).toLowerCase()} and can&apos;t be dispensed.
             </p>
           )}
-          {dispenseError && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{dispenseError}</div>
+          {dispenseRx.isError && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+              {apiErrorMessage(dispenseRx.error, "Failed to dispense prescription.")}
+            </div>
           )}
         </div>
       </Card>
 
-      {dispensingRecords.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
-            <ClipboardList className="h-4 w-4 text-purple-600" />
-            Dispensing History
-          </h2>
-          {dispensingRecords.map(record => <DispenseRecordCard key={record.id} record={record} />)}
-        </section>
-      )}
+      <QueryContent query={records} what="the dispensing history" loading={null}>
+        {list => list.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+              <ClipboardList className="h-4 w-4 text-purple-600" />
+              Dispensing History
+            </h2>
+            {list.map(record => <DispenseRecordCard key={record.id} record={record} />)}
+          </section>
+        )}
+      </QueryContent>
     </div>
   );
 }

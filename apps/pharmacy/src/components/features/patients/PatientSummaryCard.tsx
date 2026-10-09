@@ -1,4 +1,5 @@
 import { User, AlertTriangle } from "lucide-react";
+import { Skeleton } from "@curo/web/ui/skeleton";
 import { Card, CardContent } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { calculateAge, formatAllergies } from "@/lib/utils";
@@ -6,7 +7,8 @@ import type { Allergy, Patient } from "@/types";
 
 interface PatientSummaryCardProps {
   patient: Patient;
-  allergies: Allergy[];
+  /** Null when they couldn't be loaded, which must never read as none; undefined while they load. */
+  allergies: Allergy[] | null | undefined;
 }
 
 // Pharmacy sees only the identity needed for dispensing — no NIC, blood type,
@@ -28,19 +30,24 @@ export function PatientSummaryCard({ patient, allergies }: PatientSummaryCardPro
             <div className="text-sm text-slate-500">
               {calculateAge(patient.dob)}y / {patient.sex.charAt(0).toUpperCase()}{patient.sex.slice(1)}
             </div>
-            {allergies.length > 0 ? (
-              <div className="flex items-center gap-2 mt-2">
-                <AlertTriangle className="h-4 w-4 text-status-error-text" />
-                <span className="text-sm font-medium text-status-error-text">
-                  Allergies: {formatAllergies(allergies)}
-                </span>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground mt-2">No recorded allergies</p>
-            )}
+            <AllergyLine allergies={allergies} />
           </div>
         </div>
       </CardContent>
     </Card>
   );
 }
+
+function AllergyLine({ allergies }: Pick<PatientSummaryCardProps, "allergies">) {
+  if (allergies === undefined) return <Skeleton className="h-5 w-48 mt-2" />;
+  if (allergies === null) return <AllergyWarning>Allergies couldn&apos;t be loaded</AllergyWarning>;
+  if (allergies.length === 0) return <p className="text-sm text-muted-foreground mt-2">No recorded allergies</p>;
+  return <AllergyWarning>Allergies: {formatAllergies(allergies)}</AllergyWarning>;
+}
+
+const AllergyWarning = ({ children }: { children: React.ReactNode }) => (
+  <p className="flex items-center gap-2 mt-2 text-sm font-medium text-status-error-text">
+    <AlertTriangle className="h-4 w-4 shrink-0" />
+    {children}
+  </p>
+);

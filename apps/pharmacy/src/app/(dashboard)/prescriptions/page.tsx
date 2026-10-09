@@ -1,27 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { QueryContent } from "@curo/web/query";
 import { PrescriptionTable } from "@/components/features/prescriptions/PrescriptionTable";
-import { getPendingPrescriptions } from "@/lib/api/pharmacy";
-import { getPatientsByIds } from "@/lib/api/patients";
-import type { Prescription, Patient } from "@/types";
+import { patientQueries, prescriptionQueries } from "@/lib/queries";
+import type { Patient } from "@/types";
+
+// One empty list for "not loaded yet", so the table's memo doesn't recompute on every render.
+const NONE: Patient[] = [];
 
 export default function PrescriptionsPage() {
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    getPendingPrescriptions()
-      .then(async (rxs) => {
-        const pts = await getPatientsByIds(rxs.map(rx => rx.patientId));
-        setPrescriptions(rxs);
-        setPatients(pts);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
+  const prescriptions = useQuery(prescriptionQueries.pending());
+  const patients = useQuery(patientQueries.byIds((prescriptions.data ?? []).map(rx => rx.patientId))).data ?? NONE;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -30,11 +20,9 @@ export default function PrescriptionsPage() {
         <p className="text-sm text-muted-foreground">View and manage incoming e-prescriptions</p>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
-      ) : (
-        <PrescriptionTable prescriptions={prescriptions} patients={patients} />
-      )}
+      <QueryContent query={prescriptions} what="prescriptions">
+        {rxs => <PrescriptionTable prescriptions={rxs} patients={patients} />}
+      </QueryContent>
     </div>
   );
 }
