@@ -1,36 +1,46 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, TrendingUp, Clock, Pill, XCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { TrendingUp, Clock, Pill, XCircle } from "lucide-react";
+import { QueryContent, allOf } from "@curo/web/query";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { formatStatus } from "@curo/web/format";
-import { getPendingPrescriptions, getDispenseSummary, getStock, type DispenseSummary, type StockItem } from "@/lib/api/pharmacy";
+import { dispensingQueries, prescriptionQueries, stockQueries } from "@/lib/queries";
+import type { DispenseSummary, StockItem } from "@/lib/api/pharmacy";
 import type { Prescription } from "@/types";
 
 export default function ReportsPage() {
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [medications, setMedications] = useState<StockItem[]>([]);
-  const [dispensing, setDispensing] = useState<DispenseSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const reports = allOf(
+    useQuery(prescriptionQueries.pending()),
+    useQuery(stockQueries.batches()),
+    useQuery(dispensingQueries.summary()),
+  );
 
-  useEffect(() => {
-    Promise.all([getPendingPrescriptions(), getStock(), getDispenseSummary()])
-      .then(([rxs, meds, summary]) => { setPrescriptions(rxs); setMedications(meds); setDispensing(summary); })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
+  return (
+    <QueryContent query={reports} what="the reports">
+      {([prescriptions, medications, dispensing]) => (
+        <Reports prescriptions={prescriptions} medications={medications} dispensing={dispensing} />
+      )}
+    </QueryContent>
+  );
+}
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+interface ReportsProps {
+  prescriptions: Prescription[];
+  medications: StockItem[];
+  dispensing: DispenseSummary;
+}
 
+function Reports({ prescriptions, medications, dispensing }: ReportsProps) {
   const totalPrescriptions = prescriptions.length;
   const cancelledCount = prescriptions.filter(p => p.status === 'cancelled').length;
   const cancellationRate = totalPrescriptions > 0 ? ((cancelledCount / totalPrescriptions) * 100).toFixed(1) : '0';
 
-  const totalRevenue = dispensing?.revenue ?? 0;
+  const totalRevenue = dispensing.revenue;
 
   // The ten medications dispensed most, as [name, units].
-  const topMeds = (dispensing?.topMedications ?? []).map(m => [m.name, m.quantity] as const);
+  const topMeds = dispensing.topMedications.map(m => [m.name, m.quantity] as const);
 
   const maxMedCount = topMeds.length > 0 ? topMeds[0][1] : 1;
 

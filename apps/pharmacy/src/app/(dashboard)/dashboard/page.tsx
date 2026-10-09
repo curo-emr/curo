@@ -1,45 +1,49 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, Users, Pill } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Users, Pill } from "lucide-react";
+import { QueryContent, allOf } from "@curo/web/query";
 import { PharmacyDashboardStats } from "@/components/features/dashboard/PharmacyDashboardStats";
 import { PendingPrescriptionsList } from "@/components/features/dashboard/PendingPrescriptionsList";
 import { RecentDispensingFeed } from "@/components/features/dashboard/RecentDispensingFeed";
 import { LowStockAlerts } from "@/components/features/dashboard/LowStockAlerts";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
-import {
-  getPendingPrescriptions, getDispensingRecordsPage, getStock, getLowStockAlerts,
-  type StockItem, type DispenseRecord, type GroupedStock,
-} from "@/lib/api/pharmacy";
-import { getPatientsByIds } from "@/lib/api/patients";
-import type { Prescription, Patient } from "@/types";
+import { dispensingQueries, patientQueries, prescriptionQueries, stockQueries } from "@/lib/queries";
+import type { DispenseRecord, GroupedStock, StockItem } from "@/lib/api/pharmacy";
+import type { Patient, Prescription } from "@/types";
 
 const RECENT_LIMIT = 8;
+// One empty list for "not loaded yet", so the lists' memos don't recompute on every render.
+const NO_PATIENTS: Patient[] = [];
 
 export default function DashboardPage() {
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [medications, setMedications] = useState<StockItem[]>([]);
-  const [lowStock, setLowStock] = useState<GroupedStock[]>([]);
-  const [dispensingRecords, setDispensingRecords] = useState<DispenseRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const dashboard = allOf(
+    useQuery(prescriptionQueries.pending()),
+    useQuery(stockQueries.batches()),
+    useQuery(stockQueries.lowStock()),
+    useQuery(dispensingQueries.recent(RECENT_LIMIT)),
+  );
 
-  useEffect(() => {
-    Promise.all([getPendingPrescriptions(), getStock(), getLowStockAlerts(), getDispensingRecordsPage({ page: 1, pageSize: RECENT_LIMIT })])
-      .then(async ([rxs, meds, low, { items: records }]) => {
-        const pts = await getPatientsByIds([...rxs.map(rx => rx.patientId), ...records.map(r => r.patientId)]);
-        setPrescriptions(rxs);
-        setPatients(pts);
-        setMedications(meds);
-        setLowStock(low);
-        setDispensingRecords(records);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
+  return (
+    <QueryContent query={dashboard} what="the dashboard">
+      {([prescriptions, medications, lowStock, dispensingRecords]) => (
+        <Dashboard prescriptions={prescriptions} medications={medications} lowStock={lowStock} dispensingRecords={dispensingRecords} />
+      )}
+    </QueryContent>
+  );
+}
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+interface DashboardProps {
+  prescriptions: Prescription[];
+  medications: StockItem[];
+  lowStock: GroupedStock[];
+  dispensingRecords: DispenseRecord[];
+}
+
+function Dashboard({ prescriptions, medications, lowStock, dispensingRecords }: DashboardProps) {
+  // One lookup names everyone in the pending list and the dispensing feed.
+  const patients = useQuery(patientQueries.byIds([...prescriptions, ...dispensingRecords].map(x => x.patientId))).data ?? NO_PATIENTS;
 
   const today = new Date();
   const dateHeading = today.toLocaleDateString('en-US', {

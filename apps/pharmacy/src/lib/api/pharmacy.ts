@@ -1,4 +1,4 @@
-import { apiClient, getAllPages } from '@curo/web/api';
+import { apiClient, getAllPages, nullIfNotFound } from '@curo/web/api';
 import {
   mapFhirMedicationDispense,
   mapFhirMedicationRequest,
@@ -16,9 +16,9 @@ export async function getPendingPrescriptions(): Promise<Prescription[]> {
   return res.data.map(mapFhirMedicationRequest);
 }
 
-export async function getPrescription(id: string): Promise<Prescription> {
-  const res = await apiClient.get<FhirMedicationRequest>(`/prescriptions/${id}`);
-  return mapFhirMedicationRequest(res.data);
+export async function getPrescription(id: string): Promise<Prescription | null> {
+  const res = await nullIfNotFound(apiClient.get<FhirMedicationRequest>(`/prescriptions/${id}`));
+  return res && mapFhirMedicationRequest(res.data);
 }
 
 export async function getPrescriptionsByPatient(patientId: string): Promise<Prescription[]> {
