@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { LoadError } from "@curo/web/ui/load-error";
 import { toast } from "sonner";
 import { Building2, Loader2, Plus } from "lucide-react";
 import { Badge } from "@curo/web/ui/badge";
@@ -13,7 +15,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@curo/web/ui/table";
-import { getOrganizations, updateOrganization } from "@/lib/api/organizations";
+import { updateOrganization } from "@/lib/api/organizations";
+import { organizationQueries } from "@/lib/queries";
 import { apiErrorMessage } from "@curo/web/api";
 import { ORGANIZATION_TYPES, ORGANIZATION_TYPE_LABELS } from "@/lib/constants";
 import type { Organization } from "@/types";
@@ -22,26 +25,23 @@ import { OrganizationDialog } from "./OrganizationDialog";
 const byName = (a: Organization, b: Organization) => a.name.localeCompare(b.name);
 
 export function OrganizationList() {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const list = useQuery(organizationQueries.list(true));
   const [typeFilter, setTypeFilter] = useState("all");
   // undefined: dialog closed; null: creating; an organization: editing it.
   const [editing, setEditing] = useState<Organization | null | undefined>(undefined);
 
-  useEffect(() => {
-    getOrganizations({ includeInactive: true })
-      .then(setOrganizations)
-      .catch((err) => toast.error(apiErrorMessage(err, "Failed to load organizations")))
-      .finally(() => setIsLoading(false));
-  }, []);
-
   const shown = useMemo(
-    () => organizations.filter((o) => typeFilter === "all" || o.type === typeFilter),
-    [organizations, typeFilter],
+    () => (list.data ?? []).filter((o) => typeFilter === "all" || o.type === typeFilter),
+    [list.data, typeFilter],
   );
 
-  const upsert = (saved: Organization) =>
-    setOrganizations((prev) => [...prev.filter((o) => o.id !== saved.id), saved].sort(byName));
+  // Shown at once here; every organization list (such as the workplace pickers) then reloads.
+  const upsert = (saved: Organization) => {
+    queryClient.setQueryData(organizationQueries.list(true).queryKey, (prev) =>
+      [...(prev ?? []).filter((o) => o.id !== saved.id), saved].sort(byName));
+    void queryClient.invalidateQueries({ queryKey: organizationQueries.all });
+  };
 
   const toggleActive = async (org: Organization) => {
     try {
@@ -70,7 +70,9 @@ export function OrganizationList() {
       </Select>
 
       <div className="bg-white rounded-md border overflow-x-auto shadow-sm">
-        {isLoading ? (
+        {!list.data && list.isError ? (
+          <LoadError what="organizations" onRetry={() => void list.refetch()} retrying={list.isFetching} />
+        ) : !list.data ? (
           <div className="py-10 text-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />Loading organizations…</div>
         ) : shown.length === 0 ? (
           <EmptyState icon={Building2} title="No organizations" description="Add a pharmacy before assigning pharmacists to it." action={<Button variant="outline" size="sm" onClick={() => setEditing(null)}>Add Organization</Button>} />

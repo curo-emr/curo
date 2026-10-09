@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useState, use } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, ArrowLeft, KeyRound, ShieldCheck, ShieldOff } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -13,8 +14,10 @@ import { Label } from "@curo/web/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@curo/web/ui/dialog";
-import { getUser, updateUser, resetUserPassword } from "@/lib/api/users";
-import { correctPayment, getPaymentTotals, getPaymentsPage } from "@/lib/api/payments";
+import { updateUser, resetUserPassword } from "@/lib/api/users";
+import { correctPayment, getPaymentsPage } from "@/lib/api/payments";
+import { paymentQueries, userQueries } from "@/lib/queries";
+import { QueryContent } from "@curo/web/query";
 import { ROUTES, ROLE_LABELS, WORKPLACE_TYPES, type UserRole } from "@/lib/constants";
 import { WorkplaceSelect } from "@/components/features/organizations/WorkplaceSelect";
 import { format, parseISO } from "date-fns";
@@ -30,20 +33,20 @@ function money(amount: number, currency = "LKR") {
 
 export default function UserDetailPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params);
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const user = useQuery(userQueries.detail(userId));
 
-  const load = () => {
-    getUser(userId)
-      .then(setUser)
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  };
+  return (
+    <QueryContent query={user} what="this user">
+      {u => (u ? <UserDetail user={u} /> : <p className="text-muted-foreground">User not found.</p>)}
+    </QueryContent>
+  );
+}
 
-  useEffect(load, [userId]);
+function UserDetail({ user }: { user: AdminUser }) {
+  const queryClient = useQueryClient();
+  const setUser = (updated: AdminUser) => queryClient.setQueryData(userQueries.detail(user.id).queryKey, updated);
 
   const toggleActive = async () => {
-    if (!user) return;
     try {
       const updated = await updateUser(user.id, { isActive: !user.isActive });
       setUser(updated);
@@ -54,7 +57,6 @@ export default function UserDetailPage({ params }: { params: Promise<{ userId: s
   };
 
   const changeWorkplace = async (organizationId: string) => {
-    if (!user) return;
     try {
       setUser(await updateUser(user.id, { organizationId }));
       toast.success("Workplace changed", { description: "Takes effect at their next sign-in, or within 15 minutes." });
@@ -62,13 +64,6 @@ export default function UserDetailPage({ params }: { params: Promise<{ userId: s
       toast.error(apiErrorMessage(err, "Failed to change workplace"));
     }
   };
-
-  if (isLoading) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>;
-  }
-  if (!user) {
-    return <p className="text-muted-foreground">User not found.</p>;
-  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -126,14 +121,12 @@ function CollectedIncome({ practitionerId }: { practitionerId: string }) {
   const payments = items.map((p) => corrected[p.id] ?? p);
 
   // The total over every payment they took, read again after each correction.
-  const [totalIncome, setTotalIncome] = useState<number | null>(null);
-  useEffect(() => {
-    let current = true;
-    getPaymentTotals(practitionerId)
-      .then((totals) => { if (current) setTotalIncome(totals.total); })
-      .catch(console.error);
-    return () => { current = false; };
-  }, [practitionerId, corrected]);
+  const queryClient = useQueryClient();
+  const totalIncome = useQuery(paymentQueries.totals(practitionerId)).data?.total ?? null;
+  const onCorrected = (payment: Payment) => {
+    setCorrected((prev) => ({ ...prev, [payment.id]: payment }));
+    void queryClient.invalidateQueries({ queryKey: paymentQueries.all });
+  };
 
   return (
     <Card className="shadow-sm border">
@@ -157,7 +150,7 @@ function CollectedIncome({ practitionerId }: { practitionerId: string }) {
                 {/* Left out of the total above, which counts paid payments only. */}
                 {p.status && p.status !== "paid" && <StatusBadge status={p.status} />}
                 <span className="font-medium">{money(Number(p.amount), p.currency)}</span>
-                <EditPaymentDialog payment={p} onSaved={(np) => setCorrected((prev) => ({ ...prev, [np.id]: np }))} />
+                <EditPaymentDialog payment={p} onSaved={onCorrected} />
               </div>
             </div>
           ))

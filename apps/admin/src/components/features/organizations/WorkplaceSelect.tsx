@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Label } from "@curo/web/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@curo/web/ui/select";
-import { getOrganizations } from "@/lib/api/organizations";
+import { organizationQueries } from "@/lib/queries";
 import { ORGANIZATION_TYPE_LABELS, WORKPLACE_REQUIRED, WORKPLACE_TYPES, type UserRole } from "@/lib/constants";
 import type { Organization } from "@/types";
+
+const NONE: Organization[] = [];
 
 interface WorkplaceSelectProps {
   role: UserRole;
@@ -19,16 +21,15 @@ interface WorkplaceSelectProps {
 
 /** Picks the organization a staff member works at, from the kinds their role works at. */
 export function WorkplaceSelect({ role, value, onChange, disabled, error }: WorkplaceSelectProps) {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const organizations = useQuery(organizationQueries.list());
   const types = WORKPLACE_TYPES[role] ?? [];
 
-  useEffect(() => {
-    getOrganizations().then(setOrganizations).catch(console.error);
-  }, []);
-
   if (!types.length) return null;
-  const options = organizations.filter((o) => types.includes(o.type));
+  const options = (organizations.data ?? NONE).filter((o) => types.includes(o.type));
   const kinds = types.map((t) => ORGANIZATION_TYPE_LABELS[t].toLowerCase()).join(" or ");
+  const placeholder = !organizations.data
+    ? (organizations.isError ? `Couldn't load the ${kinds} list` : "Loading…")
+    : options.length ? `Choose a ${kinds}` : `No active ${kinds} yet`;
 
   return (
     <div className="space-y-1.5">
@@ -36,7 +37,7 @@ export function WorkplaceSelect({ role, value, onChange, disabled, error }: Work
         Workplace {WORKPLACE_REQUIRED.includes(role) ? "" : <span className="text-muted-foreground font-normal">(optional)</span>}
       </Label>
       <Select value={value ?? ""} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger><SelectValue placeholder={options.length ? `Choose a ${kinds}` : `No active ${kinds} yet`} /></SelectTrigger>
+        <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
         <SelectContent>
           {options.map((o) => (
             <SelectItem key={o.id} value={o.id}>{o.name}{o.city ? ` · ${o.city}` : ""}</SelectItem>
