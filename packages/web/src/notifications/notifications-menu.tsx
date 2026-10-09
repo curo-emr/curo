@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@curo/web/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@curo/web/ui/popover";
-import { Skeleton } from "@curo/web/ui/skeleton";
-import { cn, formatRelative } from "@/lib/utils";
-import { markAllNotificationsRead, markNotificationRead } from "@/lib/api/notifications";
-import { notificationQueries } from "@/lib/queries";
+import { Button } from "../ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Skeleton } from "../ui/skeleton";
+import { formatRelative } from "../format";
+import { cn } from "../ui/utils";
+import { markAllNotificationsRead, markNotificationRead } from "./api";
+import { notificationQueries } from "./queries";
 
 export function NotificationsMenu() {
   const queryClient = useQueryClient();

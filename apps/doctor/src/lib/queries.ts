@@ -1,9 +1,9 @@
 import { keepPreviousData, queryOptions, type QueryClient } from "@tanstack/react-query";
+import { POLL_INBOX_MS, POLL_QUEUE_MS } from "@curo/web/query";
 import { getAllergies, getConditions, getPatientById, getPatients, getPatientsByIds, getPatientsPaginated } from "@/lib/api/patients";
 import { getAppointments } from "@/lib/api/appointments";
 import { getLabCatalog, getOrganizations, getPharmacyStock } from "@/lib/api/directory";
 import { getPractitioners } from "@/lib/api/practitioners";
-import { getNotificationCount, getNotifications } from "@/lib/api/notifications";
 import { getOpenTasks } from "@/lib/api/tasks";
 import { getEncounterById, getEncountersByPatient } from "@/lib/api/encounters";
 import {
@@ -21,11 +21,6 @@ import type { Appointment } from "@/types";
 // Every query the portal makes, keyed so that one invalidation refreshes everything
 // a write changes: ["patients", id] covers all of that patient's record, and
 // ["appointments"] every queue and schedule.
-
-// How often live lists refresh while the tab is visible (Doc 03 C3): queues
-// move fast; the inbox and what needs attention less so.
-const POLL_QUEUE_MS = 15_000;
-const POLL_INBOX_MS = 30_000;
 
 const byDate = <T,>(key: (item: T) => string) => (items: T[]) => [...items].sort((a, b) => key(b).localeCompare(key(a)));
 
@@ -164,19 +159,6 @@ export const labResultQueries = {
     queryKey: ["lab-results", practitionerId ?? null],
     queryFn: () => (practitionerId ? getRecentLabResults(practitionerId) : []),
     refetchInterval: POLL_INBOX_MS,
-  }),
-};
-
-export const notificationQueries = {
-  all: ["notifications"] as const,
-  unreadCount: () => queryOptions({
-    queryKey: [...notificationQueries.all, "count"],
-    queryFn: getNotificationCount,
-    refetchInterval: POLL_INBOX_MS,
-  }),
-  latest: () => queryOptions({
-    queryKey: [...notificationQueries.all, "latest"],
-    queryFn: () => getNotifications(),
   }),
 };
 

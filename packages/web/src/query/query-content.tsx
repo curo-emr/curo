@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { UseQueryResult } from "@tanstack/react-query";
 import { LoadError } from "../ui/load-error";
 import { Skeleton } from "../ui/skeleton";
+import type { Loadable } from "./all-of";
 
 /**
  * A query's data where a failed load must not look empty, such as allergies:
@@ -12,7 +12,7 @@ import { Skeleton } from "../ui/skeleton";
  * data that is never null itself, or the two would be confused.
  */
 export function dataOrNull<T extends NonNullable<unknown>>(
-  query: Pick<UseQueryResult<T>, "data" | "isError">,
+  query: Pick<Loadable<T>, "data" | "isError">,
 ): T | null | undefined {
   if (query.data !== undefined) return query.data;
   return query.isError ? null : undefined;
@@ -26,7 +26,8 @@ const DefaultLoading = () => (
 );
 
 interface QueryContentProps<T> {
-  query: UseQueryResult<T>;
+  /** One query, or several as one with allOf. */
+  query: Loadable<T>;
   /** Names what failed, as in "Couldn't load visits". */
   what: string;
   /** Shown only for the first load: a background refresh keeps showing the data. */

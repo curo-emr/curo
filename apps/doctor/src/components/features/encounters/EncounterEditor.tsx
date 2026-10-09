@@ -17,7 +17,8 @@ import {
 } from "@curo/web/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/lib/constants";
-import { formatAgeSex, formatRelative } from "@/lib/utils";
+import { formatRelative } from "@curo/web/format";
+import { formatAgeSex } from "@/lib/utils";
 import { readDraft, removeDraft, visitDraftKey, writeDraft } from "@/lib/visit";
 import { getVitalsByAppointment } from "@/lib/api/clinical";
 import { updateQueueStage } from "@/lib/api/appointments";
