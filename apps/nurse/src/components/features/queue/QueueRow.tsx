@@ -11,9 +11,11 @@ interface QueueRowProps {
   pending: boolean;
   onOpen: () => void;
   onSkip?: () => void;
+  /** The patient to take next: the only filled button on the screen. */
+  primary?: boolean;
 }
 
-// What the row's main button does at each stage the nurse works with.
+// What the row's button does at each stage the nurse works with.
 const PRIMARY_ACTION = {
   waiting_nurse: "Start triage",
   with_nurse: "Resume triage",
@@ -24,7 +26,7 @@ export function patientName(entry: QueueEntry): string {
   return entry.patient?.name.full ?? "Unknown patient";
 }
 
-export function QueueRow({ entry, pending, onOpen, onSkip }: QueueRowProps) {
+export function QueueRow({ entry, pending, onOpen, onSkip, primary = false }: QueueRowProps) {
   const { appointment, patient, doctor } = entry;
   const stage = appointment.queueStage as keyof typeof PRIMARY_ACTION;
   const minutes = minutesSince(appointment.stageSince);
@@ -68,10 +70,10 @@ export function QueueRow({ entry, pending, onOpen, onSkip }: QueueRowProps) {
             Skip to doctor
           </Button>
         )}
-        <Button size="sm" variant={sent ? "outline" : "default"} onClick={onOpen} disabled={pending} className="min-w-32">
+        <Button size="sm" variant={primary ? "default" : "outline"} onClick={onOpen} disabled={pending} className="min-w-32">
           {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
           {PRIMARY_ACTION[stage] ?? "Open"}
-          {!pending && !sent && <ArrowRight className="h-3.5 w-3.5" />}
+          {!pending && primary && <ArrowRight className="h-3.5 w-3.5" />}
         </Button>
       </div>
     </div>
