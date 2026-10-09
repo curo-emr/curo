@@ -1,4 +1,4 @@
-import { apiClient, getAllPages } from '@curo/web/api';
+import { apiClient, getAllPages, nullIfNotFound } from '@curo/web/api';
 import {
   fhirPrioritiesOf,
   fhirStatusesOf,
@@ -91,12 +91,8 @@ export async function getLabOrderSummary(encounterId?: string): Promise<LabOrder
 }
 
 export async function getLabOrderById(id: string): Promise<LabOrder | null> {
-  try {
-    const res = await apiClient.get<FhirServiceRequest>(`/orders/${id}`);
-    return mapFhirServiceRequest(res.data);
-  } catch {
-    return null;
-  }
+  const res = await nullIfNotFound(apiClient.get<FhirServiceRequest>(`/orders/${id}`));
+  return res && mapFhirServiceRequest(res.data);
 }
 
 export async function getLabOrdersByPatient(patientId: string): Promise<LabOrder[]> {

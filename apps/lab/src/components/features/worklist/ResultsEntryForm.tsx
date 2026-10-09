@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
@@ -15,6 +16,7 @@ import { orderStatus } from "@/lib/order-status";
 import { enterResults, type ResultEntry } from "@/lib/api/lab";
 import { interpret, type Interpretation } from "@/lib/result-flag";
 import { ROUTES } from "@/lib/constants";
+import { invalidateOrder, orderQueries } from "@/lib/queries";
 import { LabReportUpload } from "./LabReportUpload";
 import { FlaskConical, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -38,6 +40,7 @@ const FLAG_BADGE: Record<Interpretation, { label: string; className: string }> =
  */
 export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [entries, setEntries] = useState<ResultEntry[]>(() =>
     order.tests.map(test => ({
       code: test.testId,
@@ -49,7 +52,8 @@ export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
     })),
   );
   const [conclusion, setConclusion] = useState("");
-  const [reportCount, setReportCount] = useState(0);
+  // Uploading a report refreshes this list, so the form knows it can be submitted without typed values.
+  const reportCount = useQuery(orderQueries.reports(order.id)).data?.length ?? 0;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const update = (index: number, field: keyof ResultEntry, value: string) => {
@@ -67,6 +71,7 @@ export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
     setIsSubmitting(true);
     try {
       await enterResults({ orderId: order.id, results: allTyped ? entries : [], conclusion });
+      void invalidateOrder(queryClient, order);
       toast.success("Results submitted. The ordering doctor has been notified.");
       router.push(ROUTES.ORDER(order.id));
     } catch (err) {
@@ -196,8 +201,7 @@ export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
         </CardContent>
       </Card>
 
-      <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId}
-        onReportsChange={setReportCount} />
+      <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId} />
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-4">

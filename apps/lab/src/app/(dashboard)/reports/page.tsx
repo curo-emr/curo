@@ -1,32 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, Clock, FlaskConical, XCircle, TrendingUp } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Clock, FlaskConical, XCircle, TrendingUp } from "lucide-react";
+import { QueryContent } from "@curo/web/query";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { getLabOrderSummary, type LabOrderSummary } from "@/lib/api/lab";
+import { orderQueries } from "@/lib/queries";
+import type { LabOrderSummary } from "@/lib/api/lab";
 
 export default function ReportsPage() {
-  const [summary, setSummary] = useState<LabOrderSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const summary = useQuery(orderQueries.summary());
 
-  useEffect(() => {
-    getLabOrderSummary()
-      .then(setSummary)
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
+  return (
+    <QueryContent query={summary} what="the reports">
+      {data => <Reports summary={data} />}
+    </QueryContent>
+  );
+}
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-
-  const totalOrders = summary?.total ?? 0;
+function Reports({ summary }: { summary: LabOrderSummary }) {
+  const totalOrders = summary.total;
   // No lab order status means rejected, so this reads 0, as it always has.
   const rejectedOrders = 0;
   const rejectionRate = totalOrders > 0 ? ((rejectedOrders / totalOrders) * 100).toFixed(1) : '0';
 
-  const topTests = summary?.topTests ?? [];
+  const topTests = summary.topTests;
   const maxTestCount = topTests.length > 0 ? topTests[0].count : 1;
 
-  const statusEntries = Object.entries(summary?.byStatus ?? {});
+  const statusEntries = Object.entries(summary.byStatus);
   const maxStatusCount = Math.max(...statusEntries.map(([, v]) => v), 1);
 
   const statusColors: Record<string, string> = {
@@ -39,7 +39,7 @@ export default function ReportsPage() {
     rejected: 'bg-red-500',
   };
 
-  const deptEntries = Object.entries(summary?.byPriority ?? {});
+  const deptEntries = Object.entries(summary.byPriority);
   const maxDeptCount = Math.max(...deptEntries.map(([, v]) => v), 1);
 
   const mostOrderedTest = topTests[0]?.display ?? 'N/A';

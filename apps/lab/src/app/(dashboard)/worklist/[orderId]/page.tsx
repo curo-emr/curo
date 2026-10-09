@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { use } from "react";
+import { notFound } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { apiErrorMessage } from "@curo/web/api";
+import { QueryContent, allOf } from "@curo/web/query";
 import { Loader2, User, FlaskConical, Clock, ArrowLeft, CheckCircle2, QrCode, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
@@ -10,55 +15,57 @@ import { orderStatus } from "@/lib/order-status";
 import Link from "next/link";
 import { calculateAge, formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
-import { getLabOrderById, getLabResultsByOrder, getLabTestCatalog, receiveOrder } from "@/lib/api/lab";
-import { getPatientById } from "@/lib/api/patients";
+import { receiveOrder, type LabResult } from "@/lib/api/lab";
+import { invalidateOrder, labQueries, orderQueries, patientQueries } from "@/lib/queries";
+import type { LabOrder, LabTestCatalogItem, Patient } from "@/types";
 import { printOnly } from "@curo/web/print";
 import { LabReportUpload } from "@/components/features/worklist/LabReportUpload";
 
-type OrderDetails = NonNullable<Awaited<ReturnType<typeof loadOrderDetails>>>;
-
-// Everything the page shows for one order; null when there is no such order.
-async function loadOrderDetails(orderId: string) {
-  const order = await getLabOrderById(orderId);
-  if (!order) return null;
-  const [patient, testCatalog, results] = await Promise.all([
-    getPatientById(order.patientId),
-    getLabTestCatalog(),
-    getLabResultsByOrder(orderId),
-  ]);
-  return { order, patient, testCatalog, results };
-}
-
 export default function OrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params);
-  const [details, setDetails] = useState<OrderDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isReceiving, setIsReceiving] = useState(false);
+  const order = useQuery(orderQueries.detail(orderId));
 
-  useEffect(() => {
-    let current = true;
-    loadOrderDetails(orderId)
-      .then((loaded) => { if (current) setDetails(loaded); })
-      .catch(console.error)
-      .finally(() => { if (current) setIsLoading(false); });
-    return () => { current = false; };
-  }, [orderId]);
+  return (
+    <QueryContent query={order} what="this order">
+      {o => {
+        if (!o) notFound();
+        return <OrderDetails order={o} />;
+      }}
+    </QueryContent>
+  );
+}
 
-  const handleReceive = async () => {
-    setIsReceiving(true);
-    try {
-      await receiveOrder(orderId);
-      setDetails(await loadOrderDetails(orderId));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsReceiving(false);
-    }
-  };
+function OrderDetails({ order }: { order: LabOrder }) {
+  const details = allOf(
+    useQuery(patientQueries.detail(order.patientId)),
+    useQuery(labQueries.catalog()),
+    useQuery(orderQueries.results(order.id)),
+  );
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-  if (!details?.patient) return <div className="p-8 text-center text-slate-500">Order not found.</div>;
-  const { order, patient, testCatalog, results } = details;
+  return (
+    <QueryContent query={details} what="this order">
+      {([patient, testCatalog, results]) => {
+        if (!patient) notFound();
+        return <OrderView order={order} patient={patient} testCatalog={testCatalog} results={results} />;
+      }}
+    </QueryContent>
+  );
+}
+
+interface OrderViewProps {
+  order: LabOrder;
+  patient: Patient;
+  testCatalog: LabTestCatalogItem[];
+  results: LabResult[];
+}
+
+function OrderView({ order, patient, testCatalog, results }: OrderViewProps) {
+  const queryClient = useQueryClient();
+  const receive = useMutation({
+    mutationFn: () => receiveOrder(order.id),
+    onSuccess: () => invalidateOrder(queryClient, order),
+    onError: err => toast.error(apiErrorMessage(err, "The order couldn't be marked as received.")),
+  });
 
   const age = calculateAge(patient.dob);
 
@@ -79,8 +86,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
         </div>
         <div className="flex items-center gap-2">
           {order.status === 'sent_to_lab' && !order.receivedAt && (
-            <Button onClick={handleReceive} disabled={isReceiving} className="bg-teal-600 hover:bg-teal-700">
-              {isReceiving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Receiving...</> : "Mark as Received"}
+            <Button onClick={() => receive.mutate()} disabled={receive.isPending} className="bg-teal-600 hover:bg-teal-700">
+              {receive.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Receiving...</> : "Mark as Received"}
             </Button>
           )}
           {(order.status === 'sent_to_lab' || order.status === 'draft') && (
