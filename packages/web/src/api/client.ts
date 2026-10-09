@@ -43,6 +43,10 @@ apiClient.interceptors.response.use(
     if (error.response?.status !== 401 || !request || request._retry || typeof window === "undefined") {
       throw error;
     }
+    // A 401 to a request sent without a session, such as signing in with the wrong
+    // password, is the answer itself: there's nothing to refresh, and the sign-in
+    // form shows the error.
+    if (!request.headers.Authorization) throw error;
 
     const refreshToken = getRefreshToken();
     if (!refreshToken) {

@@ -12,14 +12,13 @@ export default function AppointmentsPage() {
   const doctors = useDoctors();
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <PageHeader title="Appointments" description="View and manage all patient appointments">
-        <Link href={ROUTES.NEW_APPOINTMENT}>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <CalendarPlus className="h-4 w-4 mr-2" />
-            Book Appointment
-          </Button>
-        </Link>
+    <div className="space-y-6">
+      <PageHeader title="Appointments" description="Every booking, filtered by day, doctor or status. Change a status or take a payment from its row.">
+        <Button asChild>
+          <Link href={ROUTES.NEW_APPOINTMENT}>
+            <CalendarPlus /> Book appointment
+          </Link>
+        </Button>
       </PageHeader>
 
       <AppointmentList doctors={doctors} />

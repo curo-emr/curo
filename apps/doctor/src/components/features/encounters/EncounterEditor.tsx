@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Lab, LabTestCatalogItem, Medication, Patient } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { Card } from "@curo/web/ui/card";
-import { PatientAvatar } from "@/components/ui/PatientAvatar";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { AllergyChips } from "@/components/features/patients/AllergyChips";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -187,7 +187,7 @@ export function EncounterEditor({
           <ArrowLeft className="h-4 w-4" /> {appointmentId ? "Today" : "Patient chart"}
         </Link>
         <Card className="flex-row flex-wrap items-center gap-4 px-5 py-4">
-          <PatientAvatar name={patient.name.full} size="lg" />
+          <InitialsAvatar name={patient.name.full} size="lg" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h1 className="text-xl font-semibold text-foreground">{patient.name.full}</h1>

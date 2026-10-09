@@ -9,6 +9,7 @@
     "./auth": "./src/auth/index.ts",
     "./clinical": "./src/clinical/index.ts",
     "./fhir": "./src/fhir/index.ts",
+    "./flow": "./src/flow/index.ts",
     "./format": "./src/format/index.ts",
     "./hooks": "./src/hooks/index.ts",
     "./notifications": "./src/notifications/index.ts",

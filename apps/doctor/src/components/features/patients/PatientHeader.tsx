@@ -5,7 +5,7 @@ import { Droplet, Pencil, Phone, Play, RotateCcw, Contact } from "lucide-react";
 import type { Appointment, Patient } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { Card } from "@curo/web/ui/card";
-import { PatientAvatar } from "@/components/ui/PatientAvatar";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
 import { Popover, PopoverContent, PopoverTrigger } from "@curo/web/ui/popover";
 import { ROUTES } from "@/lib/constants";
@@ -31,7 +31,7 @@ export function PatientHeader({ patient, todaysAppointment, hasDraft }: PatientH
   return (
     <Card className="gap-0">
       <div className="flex flex-col gap-5 p-6 md:flex-row md:items-start">
-        <PatientAvatar name={patient.name.full} size="xl" />
+        <InitialsAvatar name={patient.name.full} size="xl" />
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">{patient.name.full}</h1>

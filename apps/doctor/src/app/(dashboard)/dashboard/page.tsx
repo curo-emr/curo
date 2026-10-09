@@ -11,17 +11,13 @@ import { UpNextCard } from "@/components/features/dashboard/UpNextCard";
 import { QueueList } from "@/components/features/dashboard/QueueList";
 import { NeedsAttention } from "@/components/features/dashboard/NeedsAttention";
 import { appointmentQueries, labResultQueries, patientQueries } from "@/lib/queries";
+import { greeting } from "@curo/web/format";
 import { getTodayString } from "@/lib/utils";
 import { getQueueGroup, hasDraft, isMissed, visitDraftKey } from "@/lib/visit";
 import type { Appointment, LabOrder } from "@/types";
 
 // One empty list for "not loaded yet", so the memo below doesn't recompute on every render.
 const NONE: never[] = [];
-
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-}
 
 export default function TodayPage() {
   const { user } = useAuth();

@@ -4,10 +4,13 @@ import { useState } from "react";
 import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import { calculateAge, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { formatAgeSex } from "@curo/web/format";
 import { SearchInput } from "@curo/web/ui/search-input";
-import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
+import { LoadError } from "@curo/web/ui/load-error";
 import { Pagination } from "@curo/web/ui/pagination";
 import {
   Table,
@@ -17,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@curo/web/ui/table";
-import { Eye, Loader2 } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { getPatientsPaginated } from "@/lib/api/patients";
 
 export function PatientList() {
@@ -34,103 +37,70 @@ export function PatientList() {
         <SearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Search by name, NIC, MRN, or phone..."
+          placeholder="Search by name, MRN, NIC or phone…"
           className="flex-1 max-w-md"
         />
       </div>
 
-      <div className="bg-white rounded-md border overflow-hidden shadow-sm">
-        <Table>
-          <TableHeader className="bg-muted">
-            <TableRow>
-              <TableHead>Patient</TableHead>
-              <TableHead>NIC</TableHead>
-              <TableHead>Age / Sex</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Registered</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        {isLoading ? (
+          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 size-5 animate-spin text-primary" /> Loading patients…
+          </div>
+        ) : isError ? (
+          <LoadError what="patients" />
+        ) : patients.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={search ? "No patients match your search" : "No patients registered yet"}
+            description={search ? "Check the spelling, or search by MRN, NIC or phone." : undefined}
+            action={<Button asChild variant="outline" size="sm"><Link href={ROUTES.NEW_PATIENT}>Register patient</Link></Button>}
+          />
+        ) : (
+          <Table>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />
-                  Loading patients…
-                </TableCell>
+                <TableHead>Patient</TableHead>
+                <TableHead>NIC / PHN</TableHead>
+                <TableHead>Age / Sex</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Registered</TableHead>
               </TableRow>
-            ) : isError ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-destructive">Failed to load patients.</TableCell>
-              </TableRow>
-            ) : patients.length > 0 ? (
-              patients.map((patient) => (
-                <TableRow
-                  key={patient.id}
-                  className="hover:bg-muted/50 transition-colors"
-                >
+            </TableHeader>
+            <TableBody>
+              {patients.map((patient) => (
+                <TableRow key={patient.id}>
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-foreground">
-                        {patient.name.full}
+                    <Link href={ROUTES.PATIENT(patient.id)} className="group flex items-center gap-3">
+                      <InitialsAvatar name={patient.name.full} size="sm" />
+                      <span className="min-w-0">
+                        <span className="block font-medium text-foreground group-hover:text-primary">{patient.name.full}</span>
+                        <span className="block font-mono text-xs text-muted-foreground">{patient.mrn}</span>
                       </span>
-                      <Badge
-                        variant="outline"
-                        className="text-xs text-muted-foreground font-mono w-fit mt-0.5"
-                      >
-                        {patient.mrn}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {patient.nic || (patient.phn ? `PHN ${patient.phn}` : "—")}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {calculateAge(patient.dob)}y &bull;{" "}
-                    {patient.sex.charAt(0).toUpperCase()}
-                    {patient.sex.slice(1)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {patient.phone}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {formatDate(patient.registeredAt)}
-                  </TableCell>
-                  <TableCell>
-                    <Link href={ROUTES.PATIENT(patient.id)}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10"
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
                     </Link>
                   </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {patient.nic || (patient.phn ? `PHN ${patient.phn}` : "—")}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{formatAgeSex(patient.dob, patient.sex)}</TableCell>
+                  <TableCell className="text-muted-foreground">{patient.phone}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(patient.registeredAt)}</TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="h-32 text-center text-muted-foreground"
-                >
-                  No patients match your search.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-      />
+      {total > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
     </div>
   );
 }

@@ -18,3 +18,14 @@ export async function nullIfNotFound<T>(request: Promise<T>): Promise<T | null> 
     throw err;
   }
 }
+
+/**
+ * Why signing in failed, for the sign-in form: wrong credentials, the server's own
+ * reason (such as a lockout after too many tries), or no answer at all.
+ */
+export function signInErrorMessage(err: unknown): string {
+  const status = apiErrorStatus(err);
+  if (status === 401) return "Invalid email or password.";
+  if (status === undefined) return "Couldn't reach the server. Check your connection and try again.";
+  return apiErrorMessage(err, "Couldn't sign in. Try again in a moment.");
+}

@@ -8,13 +8,14 @@ import { Button } from "../ui/button";
 import { Field, FieldGroup, FieldLabel } from "../ui/field";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "../ui/input-group";
 import { toneClass } from "../ui/tones";
+import { signInErrorMessage } from "../api/errors";
 
 interface SignInFormProps {
   /** Under "Welcome back", e.g. "Sign in to the doctor portal". */
   subtitle: string;
   emailPlaceholder?: string;
   forgotPasswordHref?: string;
-  /** Signs in and moves on; a rejection shows as wrong credentials. */
+  /** Signs in and moves on; a rejection shows why (wrong credentials, a lockout, no connection). */
   onSignIn: (email: string, password: string) => Promise<void>;
 }
 
@@ -33,8 +34,8 @@ export function SignInForm({ subtitle, emailPlaceholder = "you@curo.test", forgo
     setError(null);
     try {
       await onSignIn(email, password);
-    } catch {
-      setError("Invalid email or password.");
+    } catch (err) {
+      setError(signInErrorMessage(err));
       setPending(false);
     }
   };

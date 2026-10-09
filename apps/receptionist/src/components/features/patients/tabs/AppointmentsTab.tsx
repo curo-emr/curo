@@ -1,9 +1,6 @@
 import { useMemo } from "react";
-import Link from "next/link";
 import { Appointment, Doctor } from "@/types";
-import { ROUTES } from "@/lib/constants";
 import { formatDate, formatTime, getDoctorName } from "@/lib/utils";
-import { Button } from "@curo/web/ui/button";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import {
@@ -14,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@curo/web/ui/table";
-import { CalendarPlus, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 
 interface AppointmentsTabProps {
   appointments: Appointment[];
@@ -36,24 +33,14 @@ export function AppointmentsTab({
       <EmptyState
         icon={Calendar}
         title="No appointments"
-        description="This patient has no appointment records."
-        action={<Button asChild variant="outline" size="sm"><Link href={ROUTES.NEW_APPOINTMENT}>Book New Appointment</Link></Button>}
+        description="Book one with the button above the chart."
       />
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <Link href={ROUTES.NEW_APPOINTMENT}>
-          <Button size="sm" className="bg-primary hover:bg-primary/90">
-            <CalendarPlus className="h-4 w-4 mr-1.5" />
-            Book New Appointment
-          </Button>
-        </Link>
-      </div>
-
-      <div className="bg-white rounded-md border overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <Table>
           <TableHeader className="bg-muted">
             <TableRow>

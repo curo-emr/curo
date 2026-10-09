@@ -5,10 +5,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDebouncedValue } from "@curo/web/hooks";
 import type { Patient, Doctor } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@curo/web/ui/field";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { Input } from "@curo/web/ui/input";
-import { Label } from "@curo/web/ui/label";
+import { SectionCard } from "@curo/web/ui/section-card";
 import { Textarea } from "@curo/web/ui/textarea";
 import {
   Select,
@@ -18,18 +19,9 @@ import {
   SelectValue,
 } from "@curo/web/ui/select";
 import { SearchInput } from "@curo/web/ui/search-input";
-import {
-  User,
-  Stethoscope,
-  CalendarDays,
-  Clock,
-  FileText,
-  Loader2,
-  Check,
-  MapPin,
-} from "lucide-react";
+import { User, Stethoscope, CalendarDays, FileText, Loader2, Check, MapPin } from "lucide-react";
 import Link from "next/link";
-import { cn, formatTime } from "@/lib/utils";
+import { cn, formatTime, getTodayString } from "@/lib/utils";
 import { ROUTES, VISIT_TYPES } from "@/lib/constants";
 import { bookNewAppointment } from "@/lib/actions/appointment-actions";
 import { toast } from "sonner";
@@ -60,6 +52,9 @@ function generateTimeSlots(start: string, end: string, durationMinutes: number):
   return slots;
 }
 
+/** How the desk tells patients apart: MRN, then NIC or PHN when there is one. */
+const patientIds = (p: Patient) => [p.mrn, p.nic ? `NIC ${p.nic}` : p.phn ? `PHN ${p.phn}` : ""].filter(Boolean).join(" · ");
+
 function getDayName(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
   return date.toLocaleDateString("en-US", { weekday: "long" });
@@ -77,8 +72,12 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
   const [picked, setPicked] = useState<Patient | null>();
   const selectedPatient = picked === undefined ? preselected ?? null : picked;
   const selectedPatientId = selectedPatient?.id ?? "";
-  const [selectedDoctorId, setSelectedDoctorId] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
+  // The schedule's "Book this day" can name the doctor and the date; a past date isn't offered.
+  const [selectedDoctorId, setSelectedDoctorId] = useState(() => searchParams.get("doctorId") ?? "");
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const date = searchParams.get("date") ?? "";
+    return date >= getTodayString() ? date : "";
+  });
   const [selectedTime, setSelectedTime] = useState("");
   const [visitType, setVisitType] = useState("");
   const [reason, setReason] = useState("");
@@ -114,15 +113,16 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
     [schedule.data],
   );
 
-  // Check if selected date is a valid day for the doctor
-  const isValidDay = useMemo(() => {
-    if (!selectedDoctor || !selectedDate) return true;
-    const dayName = getDayName(selectedDate);
-    return selectedDoctor.availableDays.includes(dayName);
-  }, [selectedDoctor, selectedDate]);
+  // Whether the doctor works on the chosen day. With no working days on record, any day is offered.
+  const isValidDay =
+    !selectedDoctor || !selectedDate || selectedDoctor.availableDays.length === 0 ||
+    selectedDoctor.availableDays.includes(getDayName(selectedDate));
+
+  // The date picker's `min` stops picking a past day; a typed one is caught here.
+  const complete = !!(selectedPatientId && selectedDoctorId && selectedDate >= getTodayString() && selectedTime && visitType && reason.trim());
 
   const handleSubmit = () => {
-    if (!selectedPatientId || !selectedDoctorId || !selectedDate || !selectedTime || !visitType || !reason) {
+    if (!complete) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -150,150 +150,126 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Section 1: Patient Selection */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <User className="h-5 w-5 text-primary" />
-            Patient Selection
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          {selectedPatient ? (
-            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/15">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold">
-                  {selectedPatient.name.first?.charAt(0)}
-                  {selectedPatient.name.last?.charAt(0)}
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">{selectedPatient.name.full}</p>
-                  <p className="text-sm text-muted-foreground">
-                    MRN: {selectedPatient.mrn} | NIC: {selectedPatient.nic}
-                  </p>
-                </div>
+      {/* overflow-visible: the search results drop down past the card's edge. */}
+      <SectionCard icon={User} iconClassName="text-primary" title="Patient" className="overflow-visible">
+        {selectedPatient ? (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/15 bg-primary/5 p-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <InitialsAvatar name={selectedPatient.name.full} />
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-foreground">{selectedPatient.name.full}</p>
+                <p className="truncate font-mono text-xs text-muted-foreground">{patientIds(selectedPatient)}</p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setPicked(null);
-                  setPatientSearch("");
-                }}
-              >
-                Change
-              </Button>
             </div>
-          ) : (
-            <div className="relative">
-              <SearchInput
-                value={patientSearch}
-                onChange={(val) => {
-                  setPatientSearch(val);
-                  setShowPatientDropdown(true);
-                }}
-                placeholder="Search by patient name, MRN, or NIC..."
-                autoFocus
-              />
-              {showPatientDropdown && filteredPatients.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                  {filteredPatients.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className="w-full text-left px-4 py-3 hover:bg-muted border-b border last:border-b-0 transition-colors"
-                      onClick={() => {
-                        setPicked(p);
-                        setPatientSearch("");
-                        setShowPatientDropdown(false);
-                      }}
-                    >
-                      <p className="font-medium text-foreground">{p.name.full}</p>
-                      <p className="text-xs text-muted-foreground">
-                        MRN: {p.mrn} | NIC: {p.nic}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {showPatientDropdown && matches.isError && !matches.data && (
-                <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg p-4 text-center text-sm text-status-error-text">
-                  Couldn&apos;t search patients. Check your connection and try again.
-                </div>
-              )}
-              {showPatientDropdown && searchDone && filteredPatients.length === 0 && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border rounded-lg shadow-lg p-4 text-center">
-                  <p className="text-sm text-muted-foreground">No patients found.</p>
-                  <Link href={ROUTES.NEW_PATIENT} className="text-sm text-primary hover:underline mt-1 inline-block">
-                    Register new patient
-                  </Link>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPicked(null);
+                setPatientSearch("");
+              }}
+            >
+              Change
+            </Button>
+          </div>
+        ) : (
+          <div className="relative">
+            <SearchInput
+              value={patientSearch}
+              onChange={(val) => {
+                setPatientSearch(val);
+                setShowPatientDropdown(true);
+              }}
+              placeholder="Search by name, MRN, NIC or phone…"
+              autoFocus
+            />
+            {showPatientDropdown && filteredPatients.length > 0 && (
+              <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border bg-popover shadow-lg">
+                {filteredPatients.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted"
+                    onClick={() => {
+                      setPicked(p);
+                      setPatientSearch("");
+                      setShowPatientDropdown(false);
+                    }}
+                  >
+                    <InitialsAvatar name={p.name.full} size="sm" />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-foreground">{p.name.full}</span>
+                      <span className="block truncate font-mono text-xs text-muted-foreground">{patientIds(p)}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {showPatientDropdown && matches.isError && !matches.data && (
+              <div className="absolute z-10 mt-1 w-full rounded-lg border bg-popover p-4 text-center text-sm text-status-error-text shadow-lg">
+                Couldn&apos;t search patients. Check your connection and try again.
+              </div>
+            )}
+            {showPatientDropdown && searchDone && filteredPatients.length === 0 && (
+              <div className="absolute z-10 mt-1 w-full rounded-lg border bg-popover p-4 text-center shadow-lg">
+                <p className="text-sm text-muted-foreground">No patients found.</p>
+                <Link href={ROUTES.NEW_PATIENT} className="mt-1 inline-block text-sm text-primary hover:underline">
+                  Register a new patient
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+      </SectionCard>
 
-      {/* Section 2: Doctor Selection */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Stethoscope className="h-5 w-5 text-primary" />
-            Doctor Selection
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {doctors.map((doc) => (
+      <SectionCard icon={Stethoscope} iconClassName="text-primary" title="Doctor">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {doctors.map((doc) => {
+            const selected = selectedDoctorId === doc.id;
+            return (
               <button
                 key={doc.id}
                 type="button"
+                aria-pressed={selected}
                 className={cn(
-                  "p-4 rounded-lg border-2 text-left transition-all",
-                  selectedDoctorId === doc.id
-                    ? "border-primary bg-primary/10 ring-1 ring-primary/20"
-                    : "border hover:border-muted-foreground hover:bg-muted"
+                  "rounded-lg border p-4 text-left transition-colors",
+                  selected ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:bg-muted",
                 )}
                 onClick={() => {
                   setSelectedDoctorId(doc.id);
                   setSelectedTime("");
                 }}
               >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-foreground">{doc.name.full}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground">Dr. {doc.name.full}</p>
                     <p className="text-sm text-muted-foreground">{doc.specialty}</p>
                   </div>
-                  {selectedDoctorId === doc.id && (
-                    <div className="bg-primary rounded-full p-0.5">
-                      <Check className="h-3.5 w-3.5 text-white" />
-                    </div>
+                  {selected && (
+                    <span className="rounded-full bg-primary p-0.5 text-primary-foreground">
+                      <Check className="size-3.5" />
+                    </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
-                  Room {doc.roomNumber}
-                </div>
+                {doc.roomNumber && (
+                  <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                    <MapPin className="size-3" /> Room {doc.roomNumber}
+                  </p>
+                )}
               </button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            );
+          })}
+        </div>
+      </SectionCard>
 
-      {/* Section 3: Date & Time */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <CalendarDays className="h-5 w-5 text-primary" />
-            Date & Time
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="appointment-date">Appointment Date</Label>
+      <SectionCard icon={CalendarDays} iconClassName="text-primary" title="Date and time">
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="appointment-date">Date</FieldLabel>
             <Input
               id="appointment-date"
               type="date"
+              min={getTodayString()}
               value={selectedDate}
               onChange={(e) => {
                 setSelectedDate(e.target.value);
@@ -301,72 +277,55 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
               }}
               className="max-w-xs"
             />
-            {selectedDoctor && (
-              <p className="text-xs text-muted-foreground">
-                Available days: {selectedDoctor.availableDays.join(", ")}
-              </p>
+            {selectedDoctor && selectedDoctor.availableDays.length > 0 && (
+              <FieldDescription>Dr. {selectedDoctor.name.full} works {selectedDoctor.availableDays.join(", ")}.</FieldDescription>
             )}
-          </div>
+          </Field>
 
           {selectedDate && !isValidDay && selectedDoctor && (
-            <div className="p-3 bg-status-warning-bg border border-status-warning-border rounded-lg text-sm text-status-warning-text">
-              Dr. {selectedDoctor.name.full} is not available on{" "}
-              {getDayName(selectedDate)}s. Please select a different date.
-            </div>
+            <p className="rounded-lg border border-status-warning-border bg-status-warning-bg p-3 text-sm text-status-warning-text">
+              Dr. {selectedDoctor.name.full} doesn&apos;t work on {getDayName(selectedDate)}s. Pick another date.
+            </p>
           )}
 
+          {!selectedDoctor && <p className="text-sm text-muted-foreground">Pick a doctor to see their free times.</p>}
+
           {selectedDate && isValidDay && selectedDoctor && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                Available Time Slots
-              </Label>
+            <Field>
+              <FieldLabel>Time</FieldLabel>
               {timeSlots.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No time slots available. Please select a doctor first.</p>
+                <FieldDescription>Dr. {selectedDoctor.name.full} has no working hours set.</FieldDescription>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
                   {timeSlots.map((slot) => {
                     const isBooked = bookedSlots.has(slot);
-                    const isSelected = selectedTime === slot;
                     return (
                       <Button
                         key={slot}
                         type="button"
-                        variant="outline"
+                        variant={selectedTime === slot ? "default" : "outline"}
                         size="sm"
                         disabled={isBooked}
-                        className={cn(
-                          "h-10 text-sm font-medium transition-all",
-                          isSelected
-                            ? "bg-primary text-white border-primary hover:bg-primary/90 hover:text-white"
-                            : isBooked
-                            ? "bg-muted text-muted-foreground border cursor-not-allowed"
-                            : "bg-white text-foreground border hover:bg-primary/10 hover:border-primary/20"
-                        )}
+                        title={isBooked ? "Already booked" : undefined}
+                        className={cn("h-10 tabular-nums", isBooked && "line-through")}
                         onClick={() => setSelectedTime(slot)}
                       >
-                        {isBooked ? "Booked" : formatTime(slot)}
+                        {formatTime(slot)}
                       </Button>
                     );
                   })}
                 </div>
               )}
-            </div>
+              {timeSlots.length > 0 && <FieldDescription>Crossed-out times are already booked.</FieldDescription>}
+            </Field>
           )}
-        </CardContent>
-      </Card>
+        </FieldGroup>
+      </SectionCard>
 
-      {/* Section 4: Visit Details */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b border">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <FileText className="h-5 w-5 text-primary" />
-            Visit Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="visit-type">Visit Type</Label>
+      <SectionCard icon={FileText} iconClassName="text-primary" title="Visit">
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="visit-type">Visit type</FieldLabel>
             <Select value={visitType} onValueChange={setVisitType}>
               <SelectTrigger id="visit-type" className="max-w-xs">
                 <SelectValue placeholder="Select visit type" />
@@ -379,62 +338,31 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="reason">
-              Reason for Visit <span className="text-status-error-text">*</span>
-            </Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="reason">Reason for the visit</FieldLabel>
             <Textarea
               id="reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Describe the reason for this appointment..."
+              placeholder="What the patient is coming in for"
               rows={3}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes (optional)</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any additional notes..."
-              rows={2}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="notes">Notes for the doctor (optional)</FieldLabel>
+            <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+          </Field>
+        </FieldGroup>
+      </SectionCard>
 
-      {/* Submit */}
       <div className="flex justify-end gap-3 pb-8">
-        <Button
-          variant="outline"
-          onClick={() => router.push(ROUTES.APPOINTMENTS)}
-          disabled={isPending}
-        >
+        <Button variant="outline" onClick={() => router.push(ROUTES.APPOINTMENTS)} disabled={isPending}>
           Cancel
         </Button>
-        <Button
-          className="bg-primary hover:bg-primary/90"
-          onClick={handleSubmit}
-          disabled={
-            isPending ||
-            !selectedPatientId ||
-            !selectedDoctorId ||
-            !selectedDate ||
-            !selectedTime ||
-            !visitType ||
-            !reason
-          }
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Booking...
-            </>
-          ) : (
-            "Book Appointment"
-          )}
+        <Button onClick={handleSubmit} disabled={isPending || !complete}>
+          {isPending && <Loader2 className="animate-spin" />}
+          {isPending ? "Booking…" : "Book appointment"}
         </Button>
       </div>
     </div>

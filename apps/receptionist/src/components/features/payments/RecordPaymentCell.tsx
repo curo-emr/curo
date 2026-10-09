@@ -116,7 +116,7 @@ export function RecordPaymentCell({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={submitting} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={handleSubmit} disabled={submitting}>
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save payment"}
           </Button>
         </DialogFooter>

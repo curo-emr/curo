@@ -15,7 +15,7 @@ export interface QueueEntry {
  * Today's appointments in the given queue stages, joined with their patient and
  * doctor, refreshed while the page is open. A failed refresh keeps the last good data.
  */
-export function useTodayQueue(stages: QueueStage[]) {
+export function useTodayQueue(stages: readonly QueueStage[]) {
   const queue = useQuery(queueQueries.day(getTodayString(), stages));
   const appointments = queue.data;
   const patients = useQuery(patientQueries.byIds((appointments ?? []).map(a => a.patientId))).data;

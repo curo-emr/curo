@@ -2,6 +2,7 @@ import { formatStatus } from "../format";
 import { Badge } from "./badge";
 import { cn } from "cn";
 import { TONES, type Tone } from "./tones";
+import { STAGE_META } from "../flow/stages";
 
 export { toneClass, toneDotClass, waitTone, type Tone } from "./tones";
 
@@ -23,14 +24,14 @@ const STATUSES = {
   checked_in: { tone: "teal" },
   waiting: { tone: "warning" },
   in_progress: { tone: "info" },
-  with_doctor: { tone: "info" },
   completed: { tone: "success" },
   cancelled: { tone: "neutral", strikethrough: true },
   no_show: { tone: "error" },
-  // Where a checked-in patient is in the day's flow (with_doctor is above)
-  waiting_nurse: { tone: "warning", label: "Waiting for nurse" },
-  with_nurse: { tone: "teal" },
-  ready_for_doctor: { tone: "success" },
+  // Where a checked-in patient is in the day's flow: the same colours as every flow bar
+  waiting_nurse: STAGE_META.waiting_nurse,
+  with_nurse: STAGE_META.with_nurse,
+  ready_for_doctor: STAGE_META.ready_for_doctor,
+  with_doctor: STAGE_META.with_doctor,
   // Lab orders and prescriptions, as the ordering doctor sees them
   draft: { tone: "neutral" },
   sent_to_lab: { tone: "info" },

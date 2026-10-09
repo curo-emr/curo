@@ -5,7 +5,7 @@ import { Card } from "@curo/web/ui/card";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { toneClass, waitTone } from "@curo/web/ui/status-badge";
 import type { QueueEntry } from "@/lib/hooks/useTodayQueue";
-import { PatientAvatar } from "@/components/features/queue/PatientAvatar";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { patientName } from "@/components/features/queue/QueueRow";
 import { calculateAge, cn, formatPhn, formatTime, minutesSince } from "@/lib/utils";
 
@@ -41,7 +41,7 @@ export function NextForTriageCard({ entry, pending, onOpen, onSkip, children }: 
   return (
     <Card className="border-primary/25 bg-gradient-to-br from-primary/[0.07] via-card to-card">
       <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
-        <PatientAvatar name={name} className="size-14 bg-primary text-lg text-primary-foreground shadow-sm ring-4 ring-primary/10" />
+        <InitialsAvatar name={name} size="lg" className="bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/10" />
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-primary">

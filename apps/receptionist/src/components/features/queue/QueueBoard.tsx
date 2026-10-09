@@ -1,27 +1,15 @@
 "use client";
 
-import { useTransition } from "react";
 import type { Appointment, Patient, Doctor, QueueStage } from "@/types";
 import { Card, CardContent } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
 import { Badge } from "@curo/web/ui/badge";
-import {
-  Clock,
-  Stethoscope,
-  HeartPulse,
-  ClipboardCheck,
-  CheckCircle2,
-  Hourglass,
-  Loader2,
-  type LucideIcon,
-} from "lucide-react";
-import { cn, getPatientName, getDoctorName, formatTime } from "@/lib/utils";
+import { Clock, Stethoscope, CheckCircle2, Loader2 } from "lucide-react";
+import { FLOW_STAGES, STAGE_META, stageDotClass } from "@curo/web/flow";
 import { toneClass, waitTone } from "@curo/web/ui/status-badge";
-import { QUEUE_STAGES, minutesInStage } from "@/lib/queue";
-import { sendToDoctor, completeVisit } from "@/lib/actions/checkin-actions";
-import { invalidateAppointments } from "@/lib/queries";
-import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { cn, getPatientName, getDoctorName, formatTime } from "@/lib/utils";
+import { minutesInStage } from "@/lib/queue";
+import { useFrontDeskActions } from "@/lib/hooks/useFrontDeskActions";
 
 interface QueueBoardProps {
   appointments: Appointment[];
@@ -29,133 +17,74 @@ interface QueueBoardProps {
   doctors: Doctor[];
 }
 
-const COLUMNS: Record<QueueStage, { title: string; icon: LucideIcon; accent: string; count: string; border: string; empty: string }> = {
-  waiting_nurse: {
-    title: "Waiting for Nurse", icon: Hourglass, accent: "text-status-warning-text",
-    count: "bg-status-warning-bg text-status-warning-text", border: "border-l-status-warning-text",
-    empty: "No one waiting for triage",
-  },
-  with_nurse: {
-    title: "With Nurse", icon: HeartPulse, accent: "text-status-teal-text",
-    count: "bg-status-teal-bg text-status-teal-text", border: "border-l-status-teal-text",
-    empty: "No one in triage",
-  },
-  ready_for_doctor: {
-    title: "Ready for Doctor", icon: ClipboardCheck, accent: "text-status-success-text",
-    count: "bg-status-success-bg text-status-success-text", border: "border-l-status-success-text",
-    empty: "No one ready yet",
-  },
-  with_doctor: {
-    title: "With doctor", icon: Stethoscope, accent: "text-primary",
-    count: "bg-primary/15 text-primary", border: "border-l-primary",
-    empty: "No consultations in progress",
-  },
-  done: {
-    title: "Done", icon: CheckCircle2, accent: "text-muted-foreground",
-    count: "bg-muted text-muted-foreground", border: "border-l-border",
-    empty: "No completed visits today",
-  },
+const EMPTY: Record<QueueStage, string> = {
+  waiting_nurse: "No one waiting for triage",
+  with_nurse: "No one in triage",
+  ready_for_doctor: "No one ready yet",
+  with_doctor: "No consultations in progress",
+  done: "No finished visits yet",
 };
 
+// Today's checked-in patients, one column per stage, in the same colours as every flow bar.
 export function QueueBoard({ appointments, patients, doctors }: QueueBoardProps) {
-  const queryClient = useQueryClient();
-  const [isPending, startTransition] = useTransition();
-
-  const runAction = (
-    action: (id: string) => Promise<{ success: boolean; error?: string }>,
-    appointmentId: string,
-    successMessage: string,
-  ) => {
-    startTransition(async () => {
-      const result = await action(appointmentId);
-      if (result.success) {
-        toast.success(successMessage);
-        void invalidateAppointments(queryClient);
-      } else {
-        toast.error(result.error || "Action failed");
-      }
-    });
-  };
+  const { skipNurse, complete, pendingId } = useFrontDeskActions();
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5">
-      {QUEUE_STAGES.map((stage) => {
-        const column = COLUMNS[stage];
-        const Icon = column.icon;
-        const items = appointments.filter((a) => a.queueStage === stage);
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-5">
+      {FLOW_STAGES.map(stage => {
+        const meta = STAGE_META[stage];
+        const items = appointments.filter(a => a.queueStage === stage);
 
         return (
-          <section key={stage} className="space-y-3 min-w-0">
+          <section key={stage} className="min-w-0 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Icon className={cn("h-4 w-4", column.accent)} />
-                {column.title}
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <span className={cn("size-2 rounded-full", stageDotClass(meta))} />
+                {meta.label}
               </h2>
-              <Badge variant="secondary" className={column.count}>
-                {items.length}
-              </Badge>
+              <Badge variant="secondary" className="font-mono tabular-nums">{items.length}</Badge>
             </div>
 
             {items.length === 0 ? (
-              <Card className="shadow-none border border-dashed bg-transparent">
-                <CardContent className="p-5 text-center text-muted-foreground text-xs">
-                  {column.empty}
-                </CardContent>
+              <Card className="border-dashed bg-transparent shadow-none">
+                <CardContent className="p-5 text-center text-xs text-muted-foreground">{EMPTY[stage]}</CardContent>
               </Card>
             ) : (
-              items.map((apt) => {
+              items.map(apt => {
                 const minutes = minutesInStage(apt);
+                const name = getPatientName(apt.patientId, patients);
+                const pending = pendingId === apt.id;
                 return (
-                  <Card
-                    key={apt.id}
-                    className={cn(
-                      "shadow-sm border border-l-4 transition-all hover:shadow-md",
-                      column.border,
-                      stage === "done" && "opacity-75",
-                    )}
-                  >
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-foreground truncate">
-                            {getPatientName(apt.patientId, patients)}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {getDoctorName(apt.doctorId, doctors)}
-                          </p>
-                        </div>
+                  <Card key={apt.id} className={cn("shadow-sm", stage === "done" && "opacity-75")}>
+                    <CardContent className="space-y-3 p-4">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-foreground" title={name}>{name}</p>
+                        <p className="truncate text-xs text-muted-foreground">Dr. {getDoctorName(apt.doctorId, doctors)}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="size-3" /> {formatTime(apt.time)}
+                        </span>
                         {stage !== "done" && (
-                          <Badge variant="outline" className={cn("text-xs shrink-0", toneClass(waitTone(minutes)))}>
+                          <Badge
+                            variant="outline"
+                            title="Minutes at this stage"
+                            className={cn("font-mono tabular-nums", toneClass(waitTone(minutes)))}
+                          >
                             {minutes}m
                           </Badge>
                         )}
                       </div>
-                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        Appointment {formatTime(apt.time)}
-                      </p>
 
                       {stage === "waiting_nurse" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => runAction(sendToDoctor, apt.id, "Patient sent directly to the doctor")}
-                          disabled={isPending}
-                        >
-                          {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Stethoscope className="h-3 w-3" />}
-                          Skip nurse — send to doctor
+                        <Button size="sm" variant="outline" className="w-full" onClick={() => skipNurse(apt, name)} disabled={pending}>
+                          {pending ? <Loader2 className="animate-spin" /> : <Stethoscope />}
+                          Skip nurse, send to doctor
                         </Button>
                       )}
                       {stage === "with_doctor" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full border-status-success-border text-status-success-text hover:bg-status-success-bg"
-                          onClick={() => runAction(completeVisit, apt.id, "Visit completed")}
-                          disabled={isPending}
-                        >
-                          {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                        <Button size="sm" variant="outline" className="w-full" onClick={() => complete(apt, name)} disabled={pending}>
+                          {pending ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
                           Mark complete
                         </Button>
                       )}

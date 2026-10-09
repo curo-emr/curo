@@ -18,10 +18,10 @@ export default function QueuePage() {
   const doctors = useDoctors();
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto">
+    <div className="space-y-6">
       <PageHeader
-        title="Queue Board"
-        description="Today's patient flow — from check-in through nurse triage to the doctor. Updates automatically."
+        title="Queue board"
+        description="Today's checked-in patients, from triage to the doctor. It updates by itself."
       />
 
       <QueryContent query={queue} what="the queue">

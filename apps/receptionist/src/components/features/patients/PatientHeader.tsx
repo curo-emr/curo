@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Patient, Allergy } from "@/types";
 import { ROUTES } from "@/lib/constants";
-import { calculateAge } from "@/lib/utils";
+import { formatAgeSex } from "@curo/web/format";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
 import { AlertTriangle, Phone, Edit, CalendarPlus, Shield, ChevronDown, ChevronUp } from "lucide-react";
@@ -17,26 +18,16 @@ interface PatientHeaderProps {
 
 export function PatientHeader({ patient, allergies }: PatientHeaderProps) {
   const [showEmergencyContact, setShowEmergencyContact] = useState(false);
-  const age = calculateAge(patient.dob);
-
-  const initials =
-    (patient.name.first?.[0] || "") + (patient.name.last?.[0] || "");
-
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-6">
+    <div className="rounded-xl border bg-card p-6 shadow-sm">
       <div className="flex flex-col md:flex-row gap-6 items-start justify-between">
         <div className="flex gap-6 items-start">
-          {/* Avatar */}
-          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border-4 border-white shadow-sm">
-            <span className="text-2xl font-bold text-primary">
-              {initials.toUpperCase()}
-            </span>
-          </div>
+          <InitialsAvatar name={patient.name.full} size="xl" />
 
           <div className="space-y-1">
             {/* Name + MRN */}
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-3xl font-bold text-foreground">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                 {patient.name.full}
               </h1>
               <Badge
@@ -64,11 +55,7 @@ export function PatientHeader({ patient, allergies }: PatientHeaderProps) {
                   <span className="text-border">|</span>
                 </>
               )}
-              <span>
-                {patient.sex.charAt(0).toUpperCase() + patient.sex.slice(1)}
-              </span>
-              <span className="text-border">|</span>
-              <span>{age}y</span>
+              <span>{formatAgeSex(patient.dob, patient.sex)}</span>
               {patient.bloodType && (
                 <>
                   <span className="text-border">|</span>
@@ -106,19 +93,17 @@ export function PatientHeader({ patient, allergies }: PatientHeaderProps) {
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-3 shrink-0">
-          <Link href={ROUTES.PATIENT_EDIT(patient.id)}>
-            <Button variant="outline" className="shadow-sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Demographics
-            </Button>
-          </Link>
-          <Link href={`${ROUTES.NEW_APPOINTMENT}?patientId=${patient.id}`}>
-            <Button className="bg-primary hover:bg-primary/90 shadow-sm">
-              <CalendarPlus className="h-4 w-4 mr-2" />
-              Book Appointment
-            </Button>
-          </Link>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Button asChild variant="outline">
+            <Link href={ROUTES.PATIENT_EDIT(patient.id)}>
+              <Edit /> Edit details
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href={`${ROUTES.NEW_APPOINTMENT}?patientId=${patient.id}`}>
+              <CalendarPlus /> Book appointment
+            </Link>
+          </Button>
         </div>
       </div>
 

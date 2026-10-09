@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@curo/web/ui/table";
 import { EmptyState } from "@curo/web/ui/empty-state";
+import { LoadError } from "@curo/web/ui/load-error";
 import { Pagination } from "@curo/web/ui/pagination";
 import { Calendar, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -136,10 +137,10 @@ export function AppointmentList({ doctors }: AppointmentListProps) {
             <div className="flex-1">
               <Select value={doctorFilter} onValueChange={setDoctorFilter}>
                 <SelectTrigger className="bg-muted border">
-                  <SelectValue placeholder="All Doctors" />
+                  <SelectValue placeholder="All doctors" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Doctors</SelectItem>
+                  <SelectItem value="all">All doctors</SelectItem>
                   {doctors.map((doc) => (
                     <SelectItem key={doc.id} value={doc.id}>
                       {doc.name.full}
@@ -186,19 +187,19 @@ export function AppointmentList({ doctors }: AppointmentListProps) {
       </p>
 
       {/* Appointments Table */}
-      <div className="bg-white rounded-md border overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : isError ? (
-          <p className="h-32 flex items-center justify-center text-sm text-destructive">Failed to load appointments.</p>
+          <LoadError what="appointments" />
         ) : appointments.length === 0 ? (
           <EmptyState
             icon={Calendar}
             title="No appointments found"
             description="Try changing the filters or book a new appointment."
-            action={<Button asChild variant="outline" size="sm"><Link href={ROUTES.NEW_APPOINTMENT}>Book Appointment</Link></Button>}
+            action={<Button asChild variant="outline" size="sm"><Link href={ROUTES.NEW_APPOINTMENT}>Book appointment</Link></Button>}
           />
         ) : (
           <Table>

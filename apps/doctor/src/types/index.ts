@@ -1,6 +1,9 @@
 import type { Insurance, MaritalStatus } from '@curo/web/fhir';
+import type { QueueStage } from '@curo/web/flow';
 
 export type { Allergy, Insurance } from '@curo/web/fhir';
+// Where a checked-in patient is in the day's flow (nurse triage → doctor).
+export type { QueueStage };
 
 export interface Name {
   first: string;
@@ -60,9 +63,6 @@ export interface Problem {
   category: string;
   isPrimary: boolean;
 }
-
-// Where a checked-in patient is in the day's flow (nurse triage → doctor).
-export type QueueStage = 'waiting_nurse' | 'with_nurse' | 'ready_for_doctor' | 'with_doctor' | 'done';
 
 export interface Appointment {
   id: string;
