@@ -9,6 +9,15 @@ export enum AppointmentStatus {
   WAITLIST = 'waitlist',
 }
 
+// What an appointment is for, stored in appointments.serviceType. The portals
+// show these as labels (VISIT_TYPES in @curo/web/appointments); keep the two in step.
+export enum VisitType {
+  CONSULTATION = 'consultation',
+  FOLLOW_UP = 'follow_up',
+  PROCEDURE = 'procedure',
+  EMERGENCY = 'emergency',
+}
+
 // Where a checked-in patient is in the day's flow (appointments.queueStage).
 // Both nurse stages are optional: reception can bypass straight to the doctor.
 export enum QueueStage {

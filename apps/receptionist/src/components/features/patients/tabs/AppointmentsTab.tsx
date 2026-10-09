@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@curo/web/ui/table";
 import { Calendar } from "lucide-react";
+import { visitTypeLabel } from "@curo/web/appointments";
 
 interface AppointmentsTabProps {
   appointments: Appointment[];
@@ -68,7 +69,7 @@ export function AppointmentsTab({
                   {getDoctorName(appt.doctorId, doctors)}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {appt.visitType}
+                  {visitTypeLabel(appt.visitType)}
                 </TableCell>
                 <TableCell className="text-muted-foreground max-w-[200px] truncate">
                   {appt.reason || "-"}

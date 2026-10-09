@@ -814,7 +814,7 @@ async function seed() {
     const [appt] = await db.query<IdRow[]>(
       `
       INSERT INTO appointments (id, "patientId", "practitionerId", status, start, "end", description, "serviceType", "slotNumber")
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 'General Consultation', $7)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 'consultation', $7)
       RETURNING id
     `,
       [
@@ -910,7 +910,7 @@ async function seed() {
     const [appt] = await db.query<IdRow[]>(
       `
       INSERT INTO appointments (id, "patientId", "practitionerId", status, "queueStage", start, "end", description, "serviceType", "reasonCode")
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 'General Consultation', 'Review visit')
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 'follow_up', 'Review visit')
       RETURNING id
     `,
       [
@@ -981,7 +981,7 @@ async function seed() {
     const [enc] = await db.query<IdRow[]>(
       `
       INSERT INTO encounters (id, "patientId", "practitionerId", "appointmentId", status, "classCode", "serviceType", "periodStart", "periodEnd")
-      VALUES (gen_random_uuid(), $1, $2, $3, 'completed', 'AMB', 'General Consultation', $4, $5)
+      VALUES (gen_random_uuid(), $1, $2, $3, 'completed', 'AMB', 'consultation', $4, $5)
       RETURNING id
     `,
       [

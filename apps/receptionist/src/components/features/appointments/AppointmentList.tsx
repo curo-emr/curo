@@ -42,6 +42,7 @@ import { getMyPaymentsForAppointments, type Payment } from "@/lib/api/payments";
 import { getAppointmentsPage } from "@/lib/api/appointments";
 import { getPatientsByIds } from "@/lib/api/patients";
 import { toast } from "sonner";
+import { visitTypeLabel } from "@curo/web/appointments";
 
 type AppointmentStatus = 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
 
@@ -238,7 +239,7 @@ export function AppointmentList({ doctors }: AppointmentListProps) {
                     <TableCell className="text-muted-foreground">
                       {getDoctorName(apt.doctorId, doctors)}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{apt.visitType}</TableCell>
+                    <TableCell className="text-muted-foreground">{visitTypeLabel(apt.visitType)}</TableCell>
                     <TableCell className="text-muted-foreground max-w-[200px] truncate">
                       {apt.reason}
                     </TableCell>

@@ -21,6 +21,7 @@ import {
 import { CalendarCheck, UserCheck, CheckCircle2, XCircle, Ban, UserPlus, Clock } from "lucide-react";
 import { cn, getTodayString } from "@/lib/utils";
 import { APPOINTMENT_STATUS } from "@/lib/constants";
+import { visitTypeLabel } from "@curo/web/appointments";
 
 interface ReportsDashboardProps {
   doctors: Doctor[];
@@ -125,7 +126,7 @@ export function ReportsDashboard({ doctors }: ReportsDashboardProps) {
   const visitTypeStats = useMemo(() => {
     const map: Record<string, number> = {};
     filteredAppointments.forEach((a) => {
-      const type = a.visitType || "Not set";
+      const type = visitTypeLabel(a.visitType);
       map[type] = (map[type] ?? 0) + 1;
     });
     return Object.entries(map)

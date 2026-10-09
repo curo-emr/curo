@@ -36,16 +36,6 @@ export const VISIT_STATUS = {
   CANCELLED: "cancelled",
 } as const;
 
-// Visit types
-export const VISIT_TYPES = [
-  "OPD",
-  "Follow-up",
-  "Review",
-  "Emergency",
-  "Consultation",
-  "Procedure",
-] as const;
-
 // Priority levels
 export const PRIORITY = {
   ROUTINE: "routine",

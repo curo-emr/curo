@@ -10,6 +10,7 @@ import { StatusBadge } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { cn, formatAgeSex, formatTime } from "@/lib/utils";
 import { getQueueGroup, getVisitAction, isClosed } from "@/lib/visit";
+import { visitTypeLabel } from "@curo/web/appointments";
 
 interface Props {
   appointment: Appointment;
@@ -42,7 +43,7 @@ export function AppointmentRow({ appointment: a, patient, hasDraft = false, show
             <span className="rounded-full bg-status-warning-bg px-1.5 py-px text-[11px] font-medium text-status-warning-text">Draft</span>
           )}
         </div>
-        <p className="truncate text-sm text-muted-foreground">{a.reason || a.visitType}</p>
+        <p className="truncate text-sm text-muted-foreground">{a.reason || (a.visitType && visitTypeLabel(a.visitType))}</p>
       </div>
       <div className="hidden sm:block shrink-0">
         {closed ? <StatusBadge status={a.status === "arrived" ? "completed" : a.status} /> : showStage && <QueueStageBadge stage={a.queueStage} />}
