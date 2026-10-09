@@ -1,6 +1,7 @@
 import type { Appointment } from "@/types";
 import { Card } from "@curo/web/ui/card";
 import { toneDotClass } from "@curo/web/ui/status-badge";
+import { StackedBar } from "@curo/web/ui/stacked-bar";
 import { cn } from "@/lib/utils";
 import { QUEUE_GROUPS, getQueueGroup, isMissed, type QueueGroup } from "@/lib/visit";
 
@@ -36,19 +37,14 @@ export function DayOverview({ appointments }: { appointments: Appointment[] }) {
           ))}
         </ul>
       </div>
-      <div
-        role="img"
-        aria-label={QUEUE_GROUPS.map(g => `${counts[g.id]} ${g.label.toLowerCase()}`).join(", ")}
-        className="flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-muted"
-      >
-        {BAR_ORDER.filter(id => counts[id] > 0).map(id => (
-          <div
-            key={id}
-            className={cn("h-full first:rounded-l-full last:rounded-r-full", toneDotClass(groups[id].tone), id === "upcoming" && "opacity-30")}
-            style={{ width: `${(counts[id] / total) * 100}%` }}
-          />
-        ))}
-      </div>
+      <StackedBar
+        segments={BAR_ORDER.map(id => ({
+          label: groups[id].label,
+          count: counts[id],
+          tone: groups[id].tone,
+          faded: id === "upcoming",
+        }))}
+      />
     </Card>
   );
 }
