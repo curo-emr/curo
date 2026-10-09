@@ -6,6 +6,7 @@
   "license": "AGPL-3.0-or-later",
   "exports": {
     "./api": "./src/api/index.ts",
+    "./appointments": "./src/appointments/index.ts",
     "./auth": "./src/auth/index.ts",
     "./clinical": "./src/clinical/index.ts",
     "./fhir": "./src/fhir/index.ts",

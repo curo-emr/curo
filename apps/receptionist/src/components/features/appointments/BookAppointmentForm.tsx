@@ -22,8 +22,9 @@ import { SearchInput } from "@curo/web/ui/search-input";
 import { User, Stethoscope, CalendarDays, FileText, Loader2, Check, MapPin } from "lucide-react";
 import Link from "next/link";
 import { cn, formatTime, getTodayString } from "@/lib/utils";
-import { ROUTES, VISIT_TYPES } from "@/lib/constants";
+import { ROUTES } from "@/lib/constants";
 import { isMissed } from "@/lib/queue";
+import { VISIT_TYPES, type VisitType } from "@curo/web/appointments";
 import { bookNewAppointment } from "@/lib/actions/appointment-actions";
 import { toast } from "sonner";
 import { appointmentQueries, invalidateAppointments, patientQueries } from "@/lib/queries";
@@ -80,7 +81,7 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
     return date >= getTodayString() ? date : "";
   });
   const [selectedTime, setSelectedTime] = useState("");
-  const [visitType, setVisitType] = useState("");
+  const [visitType, setVisitType] = useState<VisitType | "">("");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
@@ -124,7 +125,7 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
   const complete = !!(selectedPatientId && selectedDoctorId && selectedDate >= getTodayString() && selectedTime && visitType && reason.trim());
 
   const handleSubmit = () => {
-    if (!complete) {
+    if (!complete || !visitType) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -330,14 +331,14 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="visit-type">Visit type</FieldLabel>
-            <Select value={visitType} onValueChange={setVisitType}>
+            <Select value={visitType} onValueChange={(v) => setVisitType(VISIT_TYPES.find((t) => t.code === v)?.code ?? "")}>
               <SelectTrigger id="visit-type" className="max-w-xs">
                 <SelectValue placeholder="Select visit type" />
               </SelectTrigger>
               <SelectContent>
                 {VISIT_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
+                  <SelectItem key={type.code} value={type.code}>
+                    {type.label}
                   </SelectItem>
                 ))}
               </SelectContent>

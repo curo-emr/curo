@@ -13,6 +13,7 @@ import { PageHeader } from "@curo/web/ui/page-header";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import type { Doctor } from "@/lib/api/patient-portal";
 import type { Appointment } from "@/types";
+import { visitTypeLabel } from "@curo/web/appointments";
 
 export default function AppointmentsPage() {
   const doctors = useDoctors();
@@ -75,7 +76,7 @@ function AppointmentList({ appointments, doctors }: { appointments: Appointment[
                         {getDoctorName(apt.doctorId, doctors)}
                       </p>
                       <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                        <span>{apt.visitType}</span>
+                        <span>{visitTypeLabel(apt.visitType)}</span>
                         {apt.room && (
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" /> {apt.room}
@@ -126,7 +127,7 @@ function AppointmentList({ appointments, doctors }: { appointments: Appointment[
                         <StatusBadge status={apt.status} />
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {getDoctorName(apt.doctorId, doctors)} &middot; {apt.visitType}
+                        {getDoctorName(apt.doctorId, doctors)} &middot; {visitTypeLabel(apt.visitType)}
                       </p>
                     </div>
                   </div>

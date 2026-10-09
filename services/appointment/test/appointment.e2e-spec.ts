@@ -7,7 +7,7 @@ import {
 } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { Appointment } from '../src/entities/appointment.entity';
-import { AppointmentStatus, QueueStage } from '../src/enums';
+import { AppointmentStatus, QueueStage, VisitType } from '../src/enums';
 
 describe('Appointments and the patient queue', () => {
   let svc: ServiceUnderTest;
@@ -34,6 +34,7 @@ describe('Appointments and the patient queue', () => {
         practitionerId,
         start: start.toISOString(),
         end: new Date(start.getTime() + minutes * 60_000).toISOString(),
+        serviceType: VisitType.CONSULTATION,
         reasonCode: 'Fever',
       });
 
@@ -180,6 +181,30 @@ describe('Appointments and the patient queue', () => {
       const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
       await bookAt(dr, at(11), -15).expect(400);
     });
+  });
+
+  it('stores the visit type as one of the codes, and refuses any other or none', async () => {
+    const id = await book();
+    await expect(saved(id)).resolves.toMatchObject({
+      serviceType: VisitType.CONSULTATION,
+    });
+
+    const start = new Date(Date.now() + 86_400_000);
+    const body = {
+      patientId: randomUUID(),
+      practitionerId: doctor.practitionerId,
+      start: start.toISOString(),
+      end: new Date(start.getTime() + 15 * 60_000).toISOString(),
+      reasonCode: 'Fever',
+    };
+    for (const serviceType of ['General Consultation', undefined]) {
+      const res = await svc.api
+        .post('/appointments')
+        .set(receptionist.headers)
+        .send({ ...body, serviceType })
+        .expect(400);
+      expect(JSON.stringify(res.body)).toMatch(/serviceType must be one of/);
+    }
   });
 
   it("doesn't let a nurse book an appointment", async () => {

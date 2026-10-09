@@ -13,6 +13,7 @@ import { QueryContent, allOf } from "@curo/web/query";
 import { MyRecord } from "@/components/features/MyRecord";
 import { myQueries } from "@/lib/queries";
 import type { Patient, Appointment, Allergy, Problem, Prescription, LabOrder } from "@/types";
+import { visitTypeLabel } from "@curo/web/appointments";
 
 export default function DashboardPage() {
   return <MyRecord>{patient => <Dashboard patient={patient} />}</MyRecord>;
@@ -116,7 +117,7 @@ function Summary({ patient, appointments, allergies, problems, prescriptions, la
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-sm">{apt.reason}</p>
-                            <p className="text-sm text-muted-foreground mt-0.5">{apt.visitType}</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">{visitTypeLabel(apt.visitType)}</p>
                           </div>
                         </div>
                         <StatusBadge status={apt.status} />

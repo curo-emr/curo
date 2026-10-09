@@ -1,4 +1,5 @@
 import {
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -6,6 +7,7 @@ import {
   IsDateString,
   IsNumber,
 } from 'class-validator';
+import { VisitType } from '../../enums';
 
 export class CreateAppointmentDto {
   @IsNotEmpty()
@@ -26,9 +28,11 @@ export class CreateAppointmentDto {
   @IsString()
   description?: string;
 
-  @IsOptional()
-  @IsString()
-  serviceType?: string;
+  /** What the visit is for: one of the clinic's visit types. */
+  @IsEnum(VisitType, {
+    message: `serviceType must be one of: ${Object.values(VisitType).join(', ')}`,
+  })
+  serviceType: VisitType;
 
   @IsOptional()
   @IsString()

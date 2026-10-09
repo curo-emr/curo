@@ -260,7 +260,7 @@ export function mapFhirAppointment(fhir: FhirAppointment): Appointment {
     doctorId: practitionerId,
     patientId,
     reason: fhir.reasonCode?.[0]?.text ?? fhir.description ?? '',
-    visitType: fhir.serviceType?.[0]?.coding?.[0]?.code ?? 'consultation',
+    visitType: fhir.serviceType?.[0]?.coding?.[0]?.code ?? '',
     status: appointmentStatusOf(fhir.status),
     room: '',
     notes: fhir.comment ?? '',

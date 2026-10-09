@@ -32,6 +32,7 @@ import {
 } from "@curo/web/ui/curo-calendar";
 import { appointmentQueries, patientQueries } from "@/lib/queries";
 import type { CalendarEventColor } from "@curo/web/ui/curo-calendar";
+import { visitTypeLabel } from "@curo/web/appointments";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -85,7 +86,7 @@ function AppointmentCard({
             {name}
           </Link>
           <p className="truncate text-xs text-muted-foreground">
-            {[patient && formatAgeSex(patient.dob, patient.sex), apt.visitType].filter(Boolean).join(" · ")}
+            {[patient && formatAgeSex(patient.dob, patient.sex), apt.visitType && visitTypeLabel(apt.visitType)].filter(Boolean).join(" · ")}
           </p>
         </div>
       </div>
