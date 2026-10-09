@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useServerPagination } from "@curo/web/hooks";
 import { Loader2, Wallet, Receipt, TrendingUp } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { format, parseISO } from "date-fns";
+import { LoadError } from "@curo/web/ui/load-error";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { Pagination } from "@curo/web/ui/pagination";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
@@ -16,7 +18,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@curo/web/ui/table";
-import { getIncomeSummary, getMyPaymentsPage, type IncomeSummary } from "@/lib/api/payments";
+import { getMyPaymentsPage } from "@/lib/api/payments";
+import { paymentQueries } from "@/lib/queries";
 
 type Period = "day" | "week" | "month";
 
@@ -38,25 +41,8 @@ function bucketLabel(iso: string, period: Period) {
 
 export default function IncomePage() {
   const [period, setPeriod] = useState<Period>("day");
-  const [summary, setSummary] = useState<IncomeSummary | null>(null);
-  // The period whose data is on screen; any other value means a fetch is in flight.
-  const [loadedPeriod, setLoadedPeriod] = useState<Period | null>(null);
-  const isLoading = loadedPeriod !== period;
-
-  useEffect(() => {
-    let cancelled = false;
-    getIncomeSummary(period)
-      .then((s) => {
-        if (!cancelled) setSummary(s);
-      })
-      .catch(console.error)
-      .finally(() => {
-        if (!cancelled) setLoadedPeriod(period);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [period]);
+  const income = useQuery(paymentQueries.income(period));
+  const summary = income.data;
 
   const chartData = useMemo(
     () => (summary?.buckets ?? []).map((b) => ({ label: bucketLabel(b.bucket, period), total: b.total })),
@@ -85,8 +71,10 @@ export default function IncomePage() {
         </Select>
       </PageHeader>
 
-      {isLoading ? (
-        <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>
+      {!summary ? (
+        income.isError
+          ? <LoadError what="income" onRetry={() => void income.refetch()} retrying={income.isFetching} />
+          : <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -95,7 +83,7 @@ export default function IncomePage() {
                 <div className="h-11 w-11 rounded-full bg-status-success-bg text-status-success-text flex items-center justify-center"><Wallet className="h-5 w-5" /></div>
                 <div>
                   <p className="text-xs text-muted-foreground">Total income</p>
-                  <p className="text-xl font-bold text-foreground">{formatMoney(summary?.total ?? 0, currency)}</p>
+                  <p className="text-xl font-bold text-foreground">{formatMoney(summary.total, currency)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -104,7 +92,7 @@ export default function IncomePage() {
                 <div className="h-11 w-11 rounded-full bg-status-info-bg text-status-info-text flex items-center justify-center"><Receipt className="h-5 w-5" /></div>
                 <div>
                   <p className="text-xs text-muted-foreground">Payments collected</p>
-                  <p className="text-xl font-bold text-foreground">{summary?.count ?? 0}</p>
+                  <p className="text-xl font-bold text-foreground">{summary.count}</p>
                 </div>
               </CardContent>
             </Card>

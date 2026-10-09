@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { LoadError } from "@curo/web/ui/load-error";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -38,8 +40,7 @@ import {
   formatDateStr,
   getRelativeDayLabel,
 } from "@curo/web/ui/curo-calendar";
-import { getAppointments } from "@/lib/api/appointments";
-import { getPatientsByIds } from "@/lib/api/patients";
+import { appointmentQueries, invalidateAppointments, patientQueries } from "@/lib/queries";
 import type { CalendarEventColor } from "@curo/web/ui/curo-calendar";
 
 // ---------------------------------------------------------------------------
@@ -90,6 +91,7 @@ function AppointmentCard({
   const borderColor = STATUS_BORDER[apt.status] ?? "border-l-slate-200";
 
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isCheckingIn, startCheckIn] = useTransition();
 
   // Check-in queues the patient for nurse triage (backend), then shows the queue board.
@@ -100,6 +102,7 @@ function AppointmentCard({
         toast.error(result.error || "Failed to check in patient");
         return;
       }
+      void invalidateAppointments(queryClient);
       toast.success(`${name} checked in — waiting for nurse triage`);
       router.push(ROUTES.QUEUE);
     });
@@ -279,6 +282,10 @@ interface Props {
   doctors: Doctor[];
 }
 
+// Empty lists for "not loaded yet", so the memos below don't recompute on every render.
+const NO_APPOINTMENTS: Appointment[] = [];
+const NO_PATIENTS: Patient[] = [];
+
 export function ScheduleClient({ doctors }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [month, setMonth] = useState<Date>(() => new Date());
@@ -286,24 +293,9 @@ export function ScheduleClient({ doctors }: Props) {
 
   // The appointments on the month's grid, and their patients, loaded per month.
   const { from, to } = calendarRange(month);
-  const [loaded, setLoaded] = useState<{ appointments: Appointment[]; patients: Patient[] }>();
-  useEffect(() => {
-    let current = true;
-    getAppointments({ from, to })
-      .then(async (appointments) => {
-        const patients = await getPatientsByIds(appointments.map((a) => a.patientId));
-        if (current) setLoaded({ appointments, patients });
-      })
-      .catch((error: unknown) => {
-        console.error(error);
-        toast.error("Could not load the schedule");
-      });
-    return () => {
-      current = false;
-    };
-  }, [from, to]);
-  const appointments = useMemo(() => loaded?.appointments ?? [], [loaded]);
-  const patients = useMemo(() => loaded?.patients ?? [], [loaded]);
+  const range = useQuery(appointmentQueries.range(from, to));
+  const appointments = range.data ?? NO_APPOINTMENTS;
+  const patients = useQuery(patientQueries.byIds(appointments.map((a) => a.patientId))).data ?? NO_PATIENTS;
 
   const selectedDateStr = formatDateStr(selectedDate);
 
@@ -366,6 +358,10 @@ export function ScheduleClient({ doctors }: Props) {
           </Link>
         </div>
       </div>
+
+      {!range.data && range.isError && (
+        <LoadError what="the schedule" onRetry={() => void range.refetch()} retrying={range.isFetching} />
+      )}
 
       {/* ── Full-width calendar ── */}
       <CuroCalendar

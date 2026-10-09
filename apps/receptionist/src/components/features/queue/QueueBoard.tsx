@@ -19,13 +19,14 @@ import { cn, getPatientName, getDoctorName, formatTime } from "@/lib/utils";
 import { toneClass, waitTone } from "@curo/web/ui/status-badge";
 import { QUEUE_STAGES, minutesInStage } from "@/lib/queue";
 import { sendToDoctor, completeVisit } from "@/lib/actions/checkin-actions";
+import { invalidateAppointments } from "@/lib/queries";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface QueueBoardProps {
   appointments: Appointment[];
   patients: Patient[];
   doctors: Doctor[];
-  onChange: () => void; // re-fetch after an action
 }
 
 const COLUMNS: Record<QueueStage, { title: string; icon: LucideIcon; accent: string; count: string; border: string; empty: string }> = {
@@ -56,7 +57,8 @@ const COLUMNS: Record<QueueStage, { title: string; icon: LucideIcon; accent: str
   },
 };
 
-export function QueueBoard({ appointments, patients, doctors, onChange }: QueueBoardProps) {
+export function QueueBoard({ appointments, patients, doctors }: QueueBoardProps) {
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
 
   const runAction = (
@@ -68,7 +70,7 @@ export function QueueBoard({ appointments, patients, doctors, onChange }: QueueB
       const result = await action(appointmentId);
       if (result.success) {
         toast.success(successMessage);
-        onChange();
+        void invalidateAppointments(queryClient);
       } else {
         toast.error(result.error || "Action failed");
       }

@@ -1,52 +1,39 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, Clock, ArrowRight } from "lucide-react";
-import { getTodayString, getPatientName, getDoctorName, formatTime } from "@/lib/utils";
-import { APPOINTMENT_STATUS, ROUTES } from "@/lib/constants";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { Clock, ArrowRight } from "lucide-react";
+import { QueryContent } from "@curo/web/query";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
-import Link from "next/link";
+import { getTodayString, getPatientName, getDoctorName, formatTime } from "@/lib/utils";
+import { APPOINTMENT_STATUS, ROUTES } from "@/lib/constants";
 import { TodayAppointments } from "@/components/features/dashboard/TodayAppointments";
 import { QuickActions } from "@/components/features/dashboard/QuickActions";
 import { QueueSummary } from "@/components/features/dashboard/QueueSummary";
-import { getAppointments } from "@/lib/api/appointments";
-import { isAwaitingDoctor, QUEUE_POLL_MS } from "@/lib/queue";
-import { getPatientsByIds } from "@/lib/api/patients";
-import { usePolling } from "@/lib/hooks/usePolling";
-import { getDoctors } from "@/lib/api/practitioners";
-import type { Appointment, Patient, Doctor } from "@/types";
+import { isAwaitingDoctor } from "@/lib/queue";
+import { useDoctors } from "@/lib/hooks/useDoctors";
+import { appointmentQueries, patientQueries } from "@/lib/queries";
+import type { Appointment, Patient } from "@/types";
+
+const NONE: Patient[] = [];
 
 export default function DashboardPage() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Today's appointments in time order, kept fresh while the dashboard is open.
+  const today = useQuery(appointmentQueries.day(getTodayString()));
 
-  const todayStr = getTodayString();
+  return (
+    <QueryContent query={today} what="today's appointments">
+      {appointments => <Dashboard todaysSchedule={appointments} />}
+    </QueryContent>
+  );
+}
 
-  useEffect(() => {
-    getDoctors().then(setDoctors).catch(console.error);
-  }, []);
+function Dashboard({ todaysSchedule }: { todaysSchedule: Appointment[] }) {
+  const patients = useQuery(patientQueries.byIds(todaysSchedule.map(a => a.patientId))).data ?? NONE;
+  const doctors = useDoctors();
 
-  // Today's appointments + their patients, kept fresh while the dashboard is open.
-  const loadToday = async () => {
-    try {
-      const appts = await getAppointments({ date: todayStr });
-      setAppointments(appts);
-      setPatients(await getPatientsByIds([...new Set(appts.map(a => a.patientId))]));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  usePolling(loadToday, QUEUE_POLL_MS);
-
-  const todaysSchedule = [...appointments].sort((a, b) => a.time.localeCompare(b.time));
-
-  const today = new Date();
-  const dateHeading = today.toLocaleDateString("en-US", {
+  const dateHeading = new Date().toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
@@ -69,14 +56,6 @@ export default function DashboardPage() {
       (a.status === APPOINTMENT_STATUS.SCHEDULED || a.status === APPOINTMENT_STATUS.NOT_ARRIVED))
     .slice(0, 3);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
@@ -97,7 +76,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <TodayAppointments appointments={todaysSchedule} patients={patients} doctors={doctors} onChange={loadToday} />
+          <TodayAppointments appointments={todaysSchedule} patients={patients} doctors={doctors} />
         </div>
 
         <div className="space-y-6">

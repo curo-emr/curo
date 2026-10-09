@@ -1,25 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, CalendarPlus } from "lucide-react";
-import { PageHeader } from "@curo/web/ui/page-header";
-import { AppointmentList } from "@/components/features/appointments/AppointmentList";
-import { Button } from "@curo/web/ui/button";
-import { ROUTES } from "@/lib/constants";
 import Link from "next/link";
-import { getDoctors } from "@/lib/api/practitioners";
-import type { Doctor } from "@/types";
+import { CalendarPlus } from "lucide-react";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { Button } from "@curo/web/ui/button";
+import { AppointmentList } from "@/components/features/appointments/AppointmentList";
+import { ROUTES } from "@/lib/constants";
+import { useDoctors } from "@/lib/hooks/useDoctors";
 
 export default function AppointmentsPage() {
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    getDoctors()
-      .then(setDoctors)
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
+  const doctors = useDoctors();
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -32,13 +22,7 @@ export default function AppointmentsPage() {
         </Link>
       </PageHeader>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center h-48">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
-      ) : (
-        <AppointmentList doctors={doctors} />
-      )}
+      <AppointmentList doctors={doctors} />
     </div>
   );
 }

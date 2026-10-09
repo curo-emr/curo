@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   patientFormSchema,
@@ -12,6 +13,7 @@ import {
 } from "@curo/web/patients";
 import { registerPatient } from "@/lib/actions/patient-actions";
 import { ROUTES } from "@/lib/constants";
+import { patientQueries } from "@/lib/queries";
 import { MARITAL_STATUSES, type MaritalStatus } from "@curo/web/fhir";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
@@ -31,6 +33,7 @@ const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 export function PatientRegistrationForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insuranceOpen, setInsuranceOpen] = useState(false);
 
@@ -84,6 +87,8 @@ export function PatientRegistrationForm() {
     try {
       const result = await registerPatient(data);
       if (result.success && result.patientId) {
+        // Every list and lookup that names the patient, not just their record.
+        void queryClient.invalidateQueries({ queryKey: patientQueries.all });
         toast.success("Patient registered successfully", {
           description: result.phn ? `Personal Health Number: ${result.phn}` : undefined,
         });

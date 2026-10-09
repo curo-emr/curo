@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { getTotal } from "@curo/web/api";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { allOf } from "@curo/web/query";
+import { LoadError } from "@curo/web/ui/load-error";
+import { Skeleton } from "@curo/web/ui/skeleton";
 import type { Appointment, Doctor } from "@/types";
-import { getAppointments } from "@/lib/api/appointments";
+import { appointmentQueries, patientQueries } from "@/lib/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
 import { Badge } from "@curo/web/ui/badge";
@@ -58,28 +61,20 @@ function formatDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Empty data for "not loaded yet", so the memos below don't recompute on every render.
+const NOT_LOADED: [Appointment[], number] = [[], 0];
+
 export function ReportsDashboard({ doctors }: ReportsDashboardProps) {
   const [dateRange, setDateRange] = useState<DateRange>("today");
 
   const { start, end } = useMemo(() => getDateRangeBounds(dateRange), [dateRange]);
 
   // The range's appointments, and how many patients registered in it.
-  const [loaded, setLoaded] = useState<{ appointments: Appointment[]; newRegistrations: number }>();
-  useEffect(() => {
-    let current = true;
-    Promise.all([
-      getAppointments({ from: start, to: end }),
-      getTotal("/patients", { registeredFrom: start, registeredTo: end }),
-    ])
-      .then(([appointments, newRegistrations]) => {
-        if (current) setLoaded({ appointments, newRegistrations });
-      })
-      .catch(console.error);
-    return () => {
-      current = false;
-    };
-  }, [start, end]);
-  const filteredAppointments = useMemo(() => loaded?.appointments ?? [], [loaded]);
+  const report = allOf(
+    useQuery(appointmentQueries.range(start, end)),
+    useQuery(patientQueries.registeredCount(start, end)),
+  );
+  const [filteredAppointments, newRegistrations] = report.data ?? NOT_LOADED;
 
   // Summary stats
   const stats = useMemo(() => {
@@ -100,10 +95,9 @@ export function ReportsDashboard({ doctors }: ReportsDashboardProps) {
     const cancelled = filteredAppointments.filter(
       (a) => a.status === APPOINTMENT_STATUS.CANCELLED
     ).length;
-    const newRegistrations = loaded?.newRegistrations ?? 0;
 
     return { total, checkedIn, completed, noShows, cancelled, newRegistrations };
-  }, [filteredAppointments, loaded]);
+  }, [filteredAppointments, newRegistrations]);
 
   // Appointments by doctor
   const doctorStats = useMemo(() => {
@@ -226,133 +220,141 @@ export function ReportsDashboard({ doctors }: ReportsDashboardProps) {
         ))}
       </div>
 
-      {/* Summary Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        {STAT_CARDS.map((card) => (
-          <Card key={card.label} className="shadow-sm border">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={cn("p-2 rounded-lg", card.bg)}>
-                  <card.icon className={cn("h-5 w-5", card.color)} />
+      {!report.data ? (
+        report.isError
+          ? <LoadError what="the report" onRetry={() => void report.refetch()} retrying={report.isFetching} />
+          : <Skeleton className="h-64 w-full" />
+      ) : (
+        <>
+          {/* Summary Stat Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {STAT_CARDS.map((card) => (
+              <Card key={card.label} className="shadow-sm border">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={cn("p-2 rounded-lg", card.bg)}>
+                      <card.icon className={cn("h-5 w-5", card.color)} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{card.value}</p>
+                      <p className="text-xs text-muted-foreground">{card.label}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Appointments by Doctor */}
+          <Card className="shadow-sm border">
+            <CardHeader className="bg-muted/50 border-b">
+              <CardTitle className="text-lg">Appointments by Doctor</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {doctorStats.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground text-sm">
+                  No appointment data for the selected period.
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{card.value}</p>
-                  <p className="text-xs text-muted-foreground">{card.label}</p>
-                </div>
+              ) : (
+                <Table>
+                  <TableHeader className="bg-muted">
+                    <TableRow>
+                      <TableHead>Doctor</TableHead>
+                      <TableHead>Specialty</TableHead>
+                      <TableHead className="text-center">Total</TableHead>
+                      <TableHead className="text-center">Completed</TableHead>
+                      <TableHead className="text-center">No Shows</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {doctorStats.map((doc) => (
+                      <TableRow key={doc.doctorId}>
+                        <TableCell className="font-medium text-foreground">{doc.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{doc.specialty}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="secondary" className="bg-primary/10 text-primary">
+                            {doc.total}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="secondary" className="bg-status-success-bg text-status-success-text">
+                            {doc.completed}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="secondary" className="bg-status-error-bg text-status-error-text">
+                            {doc.noShows}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Appointments by Visit Type */}
+          <Card className="shadow-sm border">
+            <CardHeader className="bg-muted/50 border-b">
+              <CardTitle className="text-lg">Appointments by Visit Type</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {visitTypeStats.map((vt) => (
+                  <div
+                    key={vt.type}
+                    className="p-4 rounded-lg border bg-white text-center"
+                  >
+                    <p className="text-2xl font-bold text-foreground">{vt.count}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{vt.type}</p>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
 
-      {/* Appointments by Doctor */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b">
-          <CardTitle className="text-lg">Appointments by Doctor</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {doctorStats.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground text-sm">
-              No appointment data for the selected period.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader className="bg-muted">
-                <TableRow>
-                  <TableHead>Doctor</TableHead>
-                  <TableHead>Specialty</TableHead>
-                  <TableHead className="text-center">Total</TableHead>
-                  <TableHead className="text-center">Completed</TableHead>
-                  <TableHead className="text-center">No Shows</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {doctorStats.map((doc) => (
-                  <TableRow key={doc.doctorId}>
-                    <TableCell className="font-medium text-foreground">{doc.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{doc.specialty}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary" className="bg-primary/10 text-primary">
-                        {doc.total}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary" className="bg-status-success-bg text-status-success-text">
-                        {doc.completed}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary" className="bg-status-error-bg text-status-error-text">
-                        {doc.noShows}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Appointments by Visit Type */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b">
-          <CardTitle className="text-lg">Appointments by Visit Type</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {visitTypeStats.map((vt) => (
-              <div
-                key={vt.type}
-                className="p-4 rounded-lg border bg-white text-center"
-              >
-                <p className="text-2xl font-bold text-foreground">{vt.count}</p>
-                <p className="text-sm text-muted-foreground mt-1">{vt.type}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Peak Hours */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Clock className="h-5 w-5 text-muted-foreground" />
-            Peak Hours
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          {peakHours.length === 0 ? (
-            <div className="text-center text-muted-foreground text-sm py-4">
-              No appointment data for the selected period.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {peakHours.map(({ hour, count, pct }) => (
-                <div key={hour} className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground w-28 shrink-0 font-mono">
-                    {hour}
-                  </span>
-                  <div className="flex-1 h-7 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all duration-300 flex items-center justify-end pr-2"
-                      style={{ width: `${Math.max(pct, 5)}%` }}
-                    >
-                      {pct > 20 && (
-                        <span className="text-xs text-white font-medium">{count}</span>
+          {/* Peak Hours */}
+          <Card className="shadow-sm border">
+            <CardHeader className="bg-muted/50 border-b">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Clock className="h-5 w-5 text-muted-foreground" />
+                Peak Hours
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {peakHours.length === 0 ? (
+                <div className="text-center text-muted-foreground text-sm py-4">
+                  No appointment data for the selected period.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {peakHours.map(({ hour, count, pct }) => (
+                    <div key={hour} className="flex items-center gap-4">
+                      <span className="text-sm text-muted-foreground w-28 shrink-0 font-mono">
+                        {hour}
+                      </span>
+                      <div className="flex-1 h-7 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all duration-300 flex items-center justify-end pr-2"
+                          style={{ width: `${Math.max(pct, 5)}%` }}
+                        >
+                          {pct > 20 && (
+                            <span className="text-xs text-white font-medium">{count}</span>
+                          )}
+                        </div>
+                      </div>
+                      {pct <= 20 && (
+                        <span className="text-sm text-muted-foreground font-medium w-6">{count}</span>
                       )}
                     </div>
-                  </div>
-                  {pct <= 20 && (
-                    <span className="text-sm text-muted-foreground font-medium w-6">{count}</span>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
