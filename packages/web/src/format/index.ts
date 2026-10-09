@@ -48,3 +48,11 @@ export function formatAgeSex(dob: string | null | undefined, sex?: string | null
   const age = calculateAge(dob);
   return [age === null ? "" : `${age}y`, sex ? formatStatus(sex) : ""].filter(Boolean).join(" · ");
 }
+
+/** "Good morning" until noon, "Good afternoon" until 5 pm, then "Good evening". */
+export function greeting(now: Date = new Date()): string {
+  const hour = now.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}

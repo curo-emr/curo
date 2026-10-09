@@ -13,14 +13,8 @@ import { useCurrentPractitioner } from "@/lib/hooks/useCurrentPractitioner";
 import { FLOW_STAGES, FlowOverview, countStages } from "@curo/web/flow";
 import { nextForTriage } from "@/lib/queue";
 import { ROUTES } from "@/lib/constants";
+import { greeting } from "@curo/web/format";
 import { minutesSince } from "@/lib/utils";
-
-function greeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 // The day at a glance and the one patient to take next; the full list is the triage queue.
 export default function DashboardPage() {
