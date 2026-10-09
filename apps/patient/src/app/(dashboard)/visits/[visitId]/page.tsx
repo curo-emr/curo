@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useState, use } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { QueryContent, allOf } from "@curo/web/query";
 import { ArrowLeft, ClipboardList, FileText, Eye, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -11,8 +13,11 @@ import { EmptyState } from "@curo/web/ui/empty-state";
 import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import type { Encounter } from "@/types";
-import { getMyProfile, getMyEncounters, getPractitioners } from "@/lib/api/patient-portal";
-import { getMyDocuments, openDocument, type DocumentRef } from "@/lib/api/documents";
+import type { Doctor } from "@/lib/api/patient-portal";
+import { openDocument, type DocumentRef } from "@/lib/api/documents";
+import { MyRecord } from "@/components/features/MyRecord";
+import { useDoctors } from "@/lib/hooks/useDoctors";
+import { myQueries } from "@/lib/queries";
 
 function formatFileSize(bytes?: number): string {
   if (!bytes && bytes !== 0) return "";
@@ -23,32 +28,31 @@ function formatFileSize(bytes?: number): string {
 
 export default function VisitDetailPage({ params }: { params: Promise<{ visitId: string }> }) {
   const { visitId } = use(params);
+  return <MyRecord>{patient => <Visit patientId={patient.id} visitId={visitId} />}</MyRecord>;
+}
 
-  const [encounter, setEncounter] = useState<Encounter | null>(null);
-  const [doctors, setDoctors] = useState<{ id: string; name: { full: string } }[]>([]);
-  const [documents, setDocuments] = useState<DocumentRef[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+function Visit({ patientId, visitId }: { patientId: string; visitId: string }) {
+  const doctors = useDoctors();
+  const visit = allOf(
+    useQuery({ ...myQueries.encounters(patientId), select: encs => encs.find(e => e.id === visitId) ?? null }),
+    useQuery({ ...myQueries.documents(), select: docs => docs.filter(d => d.encounterId === visitId) }),
+  );
+
+  return (
+    <QueryContent query={visit} what="this visit">
+      {([encounter, documents]) => <VisitView encounter={encounter} documents={documents} doctors={doctors} />}
+    </QueryContent>
+  );
+}
+
+interface VisitViewProps {
+  encounter: Encounter | null;
+  documents: DocumentRef[];
+  doctors: Doctor[];
+}
+
+function VisitView({ encounter, documents, doctors }: VisitViewProps) {
   const [openingId, setOpeningId] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const profile = await getMyProfile();
-        if (!profile) return;
-        const [encs, docs, allDocuments] = await Promise.all([
-          getMyEncounters(profile.id),
-          getPractitioners(),
-          getMyDocuments(),
-        ]);
-        setEncounter(encs.find((e) => e.id === visitId) ?? null);
-        setDoctors(docs);
-        setDocuments(allDocuments.filter((d) => d.encounterId === visitId));
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    load();
-  }, [visitId]);
 
   async function handleView(id: string) {
     setOpeningId(id);
@@ -60,14 +64,6 @@ export default function VisitDetailPage({ params }: { params: Promise<{ visitId:
     } finally {
       setOpeningId(null);
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
   }
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, Calendar, Pill, FlaskConical, HeartPulse, AlertTriangle, ArrowRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Calendar, Pill, FlaskConical, HeartPulse, AlertTriangle, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
@@ -9,40 +9,43 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 import { formatDate, formatTime } from "@/lib/utils";
 import { StatusBadge } from "@curo/web/ui/status-badge";
-import { getMyProfile, getMyAppointments, getMyAllergies, getMyConditions, getMyPrescriptions, getMyLabOrders } from "@/lib/api/patient-portal";
+import { QueryContent, allOf } from "@curo/web/query";
+import { MyRecord } from "@/components/features/MyRecord";
+import { myQueries } from "@/lib/queries";
 import type { Patient, Appointment, Allergy, Problem, Prescription, LabOrder } from "@/types";
 
 export default function DashboardPage() {
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [allergies, setAllergies] = useState<Allergy[]>([]);
-  const [problems, setProblems] = useState<Problem[]>([]);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  return <MyRecord>{patient => <Dashboard patient={patient} />}</MyRecord>;
+}
 
-  useEffect(() => {
-    getMyProfile().then(async pt => {
-      if (!pt) { setIsLoading(false); return; }
-      setPatient(pt);
-      const [appts, alg, probs, rxs, labs] = await Promise.all([
-        getMyAppointments(),
-        getMyAllergies(pt.id),
-        getMyConditions(pt.id),
-        getMyPrescriptions(pt.id),
-        getMyLabOrders(pt.id),
-      ]);
-      setAppointments(appts);
-      setAllergies(alg);
-      setProblems(probs);
-      setPrescriptions(rxs);
-      setLabOrders(labs);
-    }).catch(console.error).finally(() => setIsLoading(false));
-  }, []);
+function Dashboard({ patient }: { patient: Patient }) {
+  const record = allOf(
+    useQuery(myQueries.appointments()),
+    useQuery(myQueries.allergies(patient.id)),
+    useQuery(myQueries.conditions(patient.id)),
+    useQuery(myQueries.prescriptions(patient.id)),
+    useQuery(myQueries.labOrders(patient.id)),
+  );
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-  if (!patient) return <div className="text-center py-12 text-muted-foreground">Patient data not found.</div>;
+  return (
+    <QueryContent query={record} what="your dashboard">
+      {([appointments, allergies, problems, prescriptions, labOrders]) => (
+        <Summary patient={patient} appointments={appointments} allergies={allergies} problems={problems} prescriptions={prescriptions} labOrders={labOrders} />
+      )}
+    </QueryContent>
+  );
+}
 
+interface SummaryProps {
+  patient: Patient;
+  appointments: Appointment[];
+  allergies: Allergy[];
+  problems: Problem[];
+  prescriptions: Prescription[];
+  labOrders: LabOrder[];
+}
+
+function Summary({ patient, appointments, allergies, problems, prescriptions, labOrders }: SummaryProps) {
   const today = new Date().toISOString().split('T')[0];
   const upcomingAppts = appointments.filter(a => a.date >= today && a.status === 'scheduled')
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));

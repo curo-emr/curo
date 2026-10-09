@@ -1,25 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, User, Phone, Mail, MapPin, Heart, Shield, Droplets, Calendar } from "lucide-react";
+import { MyRecord } from "@/components/features/MyRecord";
+import { User, Phone, Mail, MapPin, Heart, Shield, Droplets, Calendar } from "lucide-react";
 import { Card, CardContent } from "@curo/web/ui/card";
 import { calculateAge, formatDate } from "@/lib/utils";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { SectionCard } from "@curo/web/ui/section-card";
-import { getMyProfile } from "@/lib/api/patient-portal";
 import type { Patient } from "@/types";
 
 export default function ProfilePage() {
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  return <MyRecord>{patient => <Profile patient={patient} />}</MyRecord>;
+}
 
-  useEffect(() => {
-    getMyProfile().then(setPatient).catch(console.error).finally(() => setIsLoading(false));
-  }, []);
-
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-  if (!patient) return <div className="text-center py-12 text-muted-foreground">Patient data not found.</div>;
-
+function Profile({ patient }: { patient: Patient }) {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <PageHeader

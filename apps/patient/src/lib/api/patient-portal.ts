@@ -1,15 +1,12 @@
-import { apiClient } from '@curo/web/api';
+import { apiClient, nullIfNotFound } from '@curo/web/api';
 import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, mapFhirMedicationRequest, mapFhirServiceRequest, mapFhirAppointment, mapFhirEncounter, type FhirPatient, type FhirAllergy, type FhirCondition, type FhirMedicationRequest, type FhirServiceRequest, type FhirAppointment, type FhirEncounter } from './mappers';
 import type { Patient, Allergy, Problem, Appointment, Encounter, Prescription, LabOrder } from '@/types';
 import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
 
+/** The signed-in patient's record; null when their account has none. */
 export async function getMyProfile(): Promise<Patient | null> {
-  try {
-    const res = await apiClient.get<FhirPatient>('/patients/me');
-    return mapFhirPatient(res.data);
-  } catch {
-    return null;
-  }
+  const res = await nullIfNotFound(apiClient.get<FhirPatient>('/patients/me'));
+  return res && mapFhirPatient(res.data);
 }
 
 export async function getMyAppointments(): Promise<Appointment[]> {
@@ -42,11 +39,12 @@ export async function getMyEncounters(patientId: string): Promise<Encounter[]> {
   return unwrapBundle(res.data).resources.map(mapFhirEncounter);
 }
 
-export async function getPractitioners(): Promise<{ id: string; name: { full: string } }[]> {
-  try {
-    const res = await apiClient.get<Array<{ id: string; name: { full: string } }>>('/auth/practitioners?role=DOCTOR');
-    return res.data.map(p => ({ id: p.id, name: { full: p.name.full } }));
-  } catch {
-    return [];
-  }
+export interface Doctor {
+  id: string;
+  name: { full: string };
+}
+
+export async function getDoctors(): Promise<Doctor[]> {
+  const res = await apiClient.get<Doctor[]>('/auth/practitioners', { params: { role: 'DOCTOR' } });
+  return res.data.map(p => ({ id: p.id, name: { full: p.name.full } }));
 }

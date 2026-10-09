@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, Pill, ArrowRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Pill, ArrowRight } from "lucide-react";
+import { QueryContent } from "@curo/web/query";
+import { MyRecord } from "@/components/features/MyRecord";
+import { useDoctors } from "@/lib/hooks/useDoctors";
+import { myQueries } from "@/lib/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
@@ -10,25 +14,25 @@ import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { EmptyState } from "@curo/web/ui/empty-state";
-import { getMyProfile, getMyPrescriptions, getPractitioners } from "@/lib/api/patient-portal";
+import type { Doctor } from "@/lib/api/patient-portal";
 import type { Prescription } from "@/types";
 
 export default function PrescriptionsPage() {
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [doctors, setDoctors] = useState<{ id: string; name: { full: string } }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  return <MyRecord>{patient => <Prescriptions patientId={patient.id} />}</MyRecord>;
+}
 
-  useEffect(() => {
-    getMyProfile().then(async pt => {
-      if (!pt) { setIsLoading(false); return; }
-      const [rxs, docs] = await Promise.all([getMyPrescriptions(pt.id), getPractitioners()]);
-      setPrescriptions(rxs);
-      setDoctors(docs);
-    }).catch(console.error).finally(() => setIsLoading(false));
-  }, []);
+function Prescriptions({ patientId }: { patientId: string }) {
+  const doctors = useDoctors();
+  const list = useQuery(myQueries.prescriptions(patientId));
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+  return (
+    <QueryContent query={list} what="your prescriptions">
+      {prescriptions => <PrescriptionList prescriptions={prescriptions} doctors={doctors} />}
+    </QueryContent>
+  );
+}
 
+function PrescriptionList({ prescriptions, doctors }: { prescriptions: Prescription[]; doctors: Doctor[] }) {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <PageHeader

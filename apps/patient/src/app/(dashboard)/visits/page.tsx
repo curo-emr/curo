@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, ClipboardList, ArrowRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ClipboardList, ArrowRight } from "lucide-react";
+import { QueryContent } from "@curo/web/query";
+import { MyRecord } from "@/components/features/MyRecord";
+import { useDoctors } from "@/lib/hooks/useDoctors";
+import { myQueries } from "@/lib/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
@@ -12,40 +16,25 @@ import { ROUTES } from "@/lib/constants";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { EmptyState } from "@curo/web/ui/empty-state";
-import { getMyProfile, getMyEncounters, getPractitioners } from "@/lib/api/patient-portal";
+import type { Doctor } from "@/lib/api/patient-portal";
 
 export default function VisitsPage() {
-  const [encounters, setEncounters] = useState<Encounter[]>([]);
-  const [doctors, setDoctors] = useState<{ id: string; name: { full: string } }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  return <MyRecord>{patient => <Visits patientId={patient.id} />}</MyRecord>;
+}
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const profile = await getMyProfile();
-        if (!profile) return;
-        const [encs, docs] = await Promise.all([
-          getMyEncounters(profile.id),
-          getPractitioners(),
-        ]);
-        setEncounters(encs);
-        setDoctors(docs);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    load();
-  }, []);
+function Visits({ patientId }: { patientId: string }) {
+  const doctors = useDoctors();
+  const list = useQuery(myQueries.encounters(patientId));
 
+  return (
+    <QueryContent query={list} what="your visits">
+      {encounters => <VisitList encounters={encounters} doctors={doctors} />}
+    </QueryContent>
+  );
+}
+
+function VisitList({ encounters, doctors }: { encounters: Encounter[]; doctors: Doctor[] }) {
   const completedVisits = encounters.filter(e => e.status === "completed");
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

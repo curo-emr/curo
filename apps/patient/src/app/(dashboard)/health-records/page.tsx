@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, HeartPulse, AlertTriangle, Pill, ShieldAlert } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { HeartPulse, AlertTriangle, Pill, ShieldAlert } from "lucide-react";
+import { QueryContent, allOf } from "@curo/web/query";
+import { MyRecord } from "@/components/features/MyRecord";
+import { myQueries } from "@/lib/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { formatStatus } from "@curo/web/format";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { EmptyState } from "@curo/web/ui/empty-state";
-import { getMyProfile, getMyAllergies, getMyConditions, getMyPrescriptions } from "@/lib/api/patient-portal";
 import type { Allergy, Problem, Prescription } from "@/types";
 
 function SeverityBadge({ severity }: { severity: string }) {
@@ -25,32 +27,25 @@ function SeverityBadge({ severity }: { severity: string }) {
 }
 
 export default function HealthRecordsPage() {
-  const [allergies, setAllergies] = useState<Allergy[]>([]);
-  const [problems, setProblems] = useState<Problem[]>([]);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  // Empty lists would read as "no known allergies", so a failed load gets its own state.
-  const [loadFailed, setLoadFailed] = useState(false);
+  return <MyRecord>{patient => <HealthRecords patientId={patient.id} />}</MyRecord>;
+}
 
-  useEffect(() => {
-    getMyProfile().then(async pt => {
-      if (!pt) { setIsLoading(false); return; }
-      const [alg, probs, rxs] = await Promise.all([
-        getMyAllergies(pt.id),
-        getMyConditions(pt.id),
-        getMyPrescriptions(pt.id),
-      ]);
-      setAllergies(alg);
-      setProblems(probs);
-      setPrescriptions(rxs);
-    }).catch(() => setLoadFailed(true)).finally(() => setIsLoading(false));
-  }, []);
+function HealthRecords({ patientId }: { patientId: string }) {
+  // Loaded together: an empty list must never stand in for one that failed, such as "no known allergies".
+  const record = allOf(
+    useQuery(myQueries.allergies(patientId)),
+    useQuery(myQueries.conditions(patientId)),
+    useQuery(myQueries.prescriptions(patientId)),
+  );
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-  if (loadFailed) {
-    return <EmptyState icon={ShieldAlert} title="Couldn't load your health records" description="Check your connection and try again." className="min-h-[50vh]" />;
-  }
+  return (
+    <QueryContent query={record} what="your health records">
+      {([allergies, problems, prescriptions]) => <Records allergies={allergies} problems={problems} prescriptions={prescriptions} />}
+    </QueryContent>
+  );
+}
 
+function Records({ allergies, problems, prescriptions }: { allergies: Allergy[]; problems: Problem[]; prescriptions: Prescription[] }) {
   const activeProblems = problems.filter(p => p.status === "active");
   const resolvedProblems = problems.filter(p => p.status !== "active");
   const latestRx = prescriptions[0];
