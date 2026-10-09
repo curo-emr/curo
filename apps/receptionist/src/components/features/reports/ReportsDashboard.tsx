@@ -20,7 +20,7 @@ import {
 } from "@curo/web/ui/table";
 import { CalendarCheck, UserCheck, CheckCircle2, XCircle, Ban, UserPlus, Clock } from "lucide-react";
 import { cn, getTodayString } from "@/lib/utils";
-import { APPOINTMENT_STATUS, VISIT_TYPES } from "@/lib/constants";
+import { APPOINTMENT_STATUS } from "@/lib/constants";
 
 interface ReportsDashboardProps {
   doctors: Doctor[];
@@ -121,18 +121,16 @@ export function ReportsDashboard({ doctors }: ReportsDashboardProps) {
     });
   }, [filteredAppointments, doctors]);
 
-  // Appointments by visit type
+  // Appointments by visit type, as booked, most common first
   const visitTypeStats = useMemo(() => {
     const map: Record<string, number> = {};
-    VISIT_TYPES.forEach((t) => (map[t] = 0));
     filteredAppointments.forEach((a) => {
-      if (map[a.visitType] !== undefined) {
-        map[a.visitType]++;
-      } else {
-        map[a.visitType] = 1;
-      }
+      const type = a.visitType || "Not set";
+      map[type] = (map[type] ?? 0) + 1;
     });
-    return Object.entries(map).map(([type, count]) => ({ type, count }));
+    return Object.entries(map)
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count);
   }, [filteredAppointments]);
 
   // Peak hours
@@ -297,14 +295,14 @@ export function ReportsDashboard({ doctors }: ReportsDashboardProps) {
           {/* Appointments by Visit Type */}
           <Card className="shadow-sm border">
             <CardHeader className="bg-muted/50 border-b">
-              <CardTitle className="text-lg">Appointments by Visit Type</CardTitle>
+              <CardTitle className="text-lg">Appointments by visit type</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {visitTypeStats.map((vt) => (
                   <div
                     key={vt.type}
-                    className="p-4 rounded-lg border bg-white text-center"
+                    className="rounded-lg border bg-card p-4 text-center"
                   >
                     <p className="text-2xl font-bold text-foreground">{vt.count}</p>
                     <p className="text-sm text-muted-foreground mt-1">{vt.type}</p>

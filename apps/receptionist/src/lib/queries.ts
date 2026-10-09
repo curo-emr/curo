@@ -5,7 +5,7 @@ import { getAllergies, getPatientById, getPatientsByIds, searchPatients } from "
 import { getAppointments, getSchedule } from "@/lib/api/appointments";
 import { getDoctors } from "@/lib/api/practitioners";
 import { getIncomeSummary } from "@/lib/api/payments";
-import { QUEUE_STAGES } from "@/lib/queue";
+import { FLOW_STAGES } from "@curo/web/flow";
 import type { Appointment } from "@/types";
 
 // Every query the portal makes, keyed so that one invalidation refreshes everything
@@ -58,7 +58,7 @@ export const appointmentQueries = {
   /** The day's checked-in patients, refreshed while the queue board is open. */
   queue: (date: string) => queryOptions({
     queryKey: [...appointmentQueries.all, "queue", date],
-    queryFn: () => getAppointments({ date, queueStage: QUEUE_STAGES.join(",") }),
+    queryFn: () => getAppointments({ date, queueStage: FLOW_STAGES.join(",") }),
     refetchInterval: POLL_QUEUE_MS,
   }),
   /** Appointments in a date range, such as a calendar month. Keeps the last range while the next loads. */

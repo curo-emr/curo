@@ -18,7 +18,8 @@ export async function getPractitioners(role?: string): Promise<Practitioner[]> {
   return res.data;
 }
 
-// The doctors, with the booking defaults the desk schedules them by.
+// The doctors, with the booking defaults the desk schedules them by. The API holds no
+// rooms or working days yet, so those are left empty (the booking form then offers any day).
 export async function getDoctors(): Promise<Doctor[]> {
   return (await getPractitioners('DOCTOR')).map(p => ({
     id: p.id, name: p.name, specialty: p.specialty,

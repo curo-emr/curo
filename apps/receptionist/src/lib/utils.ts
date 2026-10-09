@@ -7,41 +7,12 @@ export function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function calculateAge(dobStr: string): number {
-  if (!dobStr) return 0;
-  const dob = new Date(dobStr);
-  const now = new Date();
-  let age = now.getFullYear() - dob.getFullYear();
-  const m = now.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) {
-    age--;
-  }
-  return age;
-}
-
 /**
  * Returns today's date as a YYYY-MM-DD string in local time.
  */
 export function getTodayString(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
-/**
- * Look up a patient's age and sex by ID.
- */
-export function getPatientMeta(id: string, patients: { id: string; dob: string; sex: string }[]): { age: number; sex: string } | null {
-  const p = patients.find(pat => pat.id === id);
-  if (!p) return null;
-  return { age: calculateAge(p.dob), sex: p.sex };
-}
-
-/**
- * Look up a lab test display name from catalog by test ID.
- */
-export function getTestName(testId: string, catalog: { id: string; name: string; code: string }[]): string {
-  const test = catalog.find(t => t.id === testId);
-  return test ? `${test.name} (${test.code})` : testId;
 }
 
 export function formatTime(timeStr: string): string {
@@ -58,14 +29,3 @@ export function calculateWaitTime(checkInTime: string): number {
   const now = new Date();
   return Math.max(0, Math.round((now.getTime() - checkIn.getTime()) / 60000));
 }
-
-export function generateId(prefix?: string): string {
-  const uuid = crypto.randomUUID();
-  return prefix ? `${prefix}_${uuid}` : uuid;
-}
-
-export function generateMRN(): string {
-  const num = Math.floor(100000 + Math.random() * 900000);
-  return `MRN-${num}`;
-}
-
