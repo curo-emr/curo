@@ -4,7 +4,7 @@ import { LogOut, Mail, ShieldCheck, Stethoscope } from "lucide-react";
 import { Button } from "@curo/web/ui/button";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { SectionCard } from "@curo/web/ui/section-card";
-import { PatientAvatar } from "@/components/features/queue/PatientAvatar";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { useAuth } from "@curo/web/auth";
 import { useCurrentPractitioner } from "@/lib/hooks/useCurrentPractitioner";
 
@@ -21,7 +21,7 @@ export default function SettingsPage() {
 
       <SectionCard title="Profile">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-          <PatientAvatar name={name} className="h-16 w-16 text-xl" />
+          <InitialsAvatar name={name} size="xl" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <p className="text-lg font-semibold text-foreground truncate">{me?.name.full ?? "—"}</p>
             <p className="flex items-center gap-2 text-sm text-muted-foreground">

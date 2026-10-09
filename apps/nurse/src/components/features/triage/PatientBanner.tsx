@@ -2,7 +2,7 @@ import { AlertTriangle, Clock, Stethoscope } from "lucide-react";
 import type { Allergy, Appointment, Patient, Problem } from "@/types";
 import type { Practitioner } from "@/lib/api/practitioners";
 import { Badge } from "@curo/web/ui/badge";
-import { PatientAvatar } from "@/components/features/queue/PatientAvatar";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { calculateAge, cn, formatPhn, formatTime } from "@/lib/utils";
 
 interface PatientBannerProps {
@@ -27,7 +27,7 @@ export function PatientBanner({ patient, appointment, doctor, allergies, conditi
   return (
     <section className="rounded-xl border bg-card shadow-sm">
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-        <PatientAvatar name={patient.name.full} className="h-14 w-14 text-lg" />
+        <InitialsAvatar name={patient.name.full} size="lg" />
         <div className="min-w-0 flex-1 space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground truncate">{patient.name.full}</h1>
           <p className="text-sm text-muted-foreground">

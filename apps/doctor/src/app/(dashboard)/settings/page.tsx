@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@curo/web/ui/button";
 import { Skeleton } from "@curo/web/ui/skeleton";
 import { PageHeader } from "@curo/web/ui/page-header";
-import { PatientAvatar } from "@/components/ui/PatientAvatar";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { practitionerQueries } from "@/lib/queries";
 
@@ -32,7 +32,7 @@ export default function AccountPage() {
 
       <SectionCard icon={UserRound} title="Profile">
         <div className="flex flex-col gap-6 sm:flex-row">
-          <PatientAvatar name={me?.name.full ?? user?.name ?? ""} size="xl" />
+          <InitialsAvatar name={me?.name.full ?? user?.name ?? ""} size="xl" />
           <dl className="grid flex-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             {fields.map(f => (
               <div key={f.label}>

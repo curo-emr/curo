@@ -6,7 +6,7 @@ import type { Appointment, Patient } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { Card } from "@curo/web/ui/card";
 import { EmptyState } from "@curo/web/ui/empty-state";
-import { PatientAvatar } from "@/components/ui/PatientAvatar";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
 import { AllergyChips } from "@/components/features/patients/AllergyChips";
 import { ROUTES } from "@/lib/constants";
@@ -41,7 +41,7 @@ export function UpNextCard({ appointment, patient, hasDraft, nextUpcoming }: Pro
   return (
     <Card className="relative gap-0 border-primary/25 bg-gradient-to-br from-primary/[0.07] via-card to-card">
       <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
-        <PatientAvatar name={name} size="xl" className="bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/10" />
+        <InitialsAvatar name={name} size="xl" className="bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/10" />
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-primary">

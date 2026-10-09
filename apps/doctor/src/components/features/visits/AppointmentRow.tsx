@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronRight, Play, RotateCcw } from "lucide-react";
 import type { Appointment, Patient } from "@/types";
 import { Button } from "@curo/web/ui/button";
-import { PatientAvatar } from "@/components/ui/PatientAvatar";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
@@ -31,7 +31,7 @@ export function AppointmentRow({ appointment: a, patient, hasDraft = false, show
   return (
     <div className={cn("group flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40 sm:gap-4 sm:px-5", closed && "opacity-70")}>
       <div className="w-14 shrink-0 text-xs font-medium tabular-nums text-muted-foreground sm:w-16 sm:text-sm">{formatTime(a.time)}</div>
-      <PatientAvatar name={name} className="hidden sm:flex" />
+      <InitialsAvatar name={name} className="hidden sm:flex" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <Link href={ROUTES.PATIENT(a.patientId)} className="truncate font-medium text-foreground hover:text-primary hover:underline underline-offset-4">

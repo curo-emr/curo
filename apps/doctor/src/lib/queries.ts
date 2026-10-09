@@ -1,6 +1,6 @@
 import { keepPreviousData, queryOptions, type QueryClient } from "@tanstack/react-query";
 import { POLL_INBOX_MS, POLL_QUEUE_MS } from "@curo/web/query";
-import { getAllergies, getConditions, getPatientById, getPatients, getPatientsByIds, getPatientsPaginated } from "@/lib/api/patients";
+import { getAllergies, getConditions, getPatientById, getPatientsByIds, getPatientsPaginated } from "@/lib/api/patients";
 import { getAppointments } from "@/lib/api/appointments";
 import { getLabCatalog, getOrganizations, getPharmacyStock } from "@/lib/api/directory";
 import { getPractitioners } from "@/lib/api/practitioners";
@@ -32,13 +32,6 @@ export const patientQueries = {
   byIds: (ids: string[]) => queryOptions({
     queryKey: [...patientQueries.all, "by-ids", [...new Set(ids)].sort()],
     queryFn: () => getPatientsByIds(ids),
-    placeholderData: keepPreviousData,
-  }),
-
-  /** Patients matching a name, MRN, phone or NIC. Keeps the last results while the next search loads. */
-  search: (text: string) => queryOptions({
-    queryKey: [...patientQueries.all, "search", text],
-    queryFn: () => getPatients(text),
     placeholderData: keepPreviousData,
   }),
 

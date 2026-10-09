@@ -4,7 +4,7 @@ import { Badge } from "@curo/web/ui/badge";
 import { calculateAge, cn, formatPhn, formatTime, minutesSince } from "@/lib/utils";
 import { toneClass, waitTone } from "@curo/web/ui/status-badge";
 import type { QueueEntry } from "@/lib/hooks/useTodayQueue";
-import { PatientAvatar } from "./PatientAvatar";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 
 interface QueueRowProps {
   entry: QueueEntry;
@@ -36,7 +36,7 @@ export function QueueRow({ entry, pending, onOpen, onSkip, primary = false }: Qu
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center hover:bg-muted/40 transition-colors">
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <PatientAvatar name={patientName(entry)} />
+        <InitialsAvatar name={patientName(entry)} />
         <div className="min-w-0">
           <p className="font-semibold text-foreground truncate">{patientName(entry)}</p>
           <p className="text-xs text-muted-foreground truncate">

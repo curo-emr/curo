@@ -1,12 +1,12 @@
 "use client";
 
 import { Settings } from "lucide-react";
-import { AccountMenu, AppShell } from "@curo/web/shell";
+import { AccountMenu, AppShell, PatientSearch } from "@curo/web/shell";
 import { NotificationsMenu } from "@curo/web/notifications";
 import { useAuth } from "@/contexts/AuthContext";
+import { getPatients } from "@/lib/api/patients";
 import { ROUTES } from "@/lib/constants";
 import { NAV } from "./nav";
-import { PatientSearch } from "./PatientSearch";
 
 export function DoctorShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -28,7 +28,7 @@ export function DoctorShell({ children }: { children: React.ReactNode }) {
       toolbar={
         <>
           <div className="flex-1">
-            <PatientSearch />
+            <PatientSearch search={getPatients} href={ROUTES.PATIENT} />
           </div>
           <NotificationsMenu />
         </>

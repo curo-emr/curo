@@ -10,7 +10,7 @@ import { Input } from "@curo/web/ui/input";
 import { Skeleton } from "@curo/web/ui/skeleton";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { LoadError } from "@curo/web/ui/load-error";
-import { PatientAvatar } from "@/components/ui/PatientAvatar";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { Pagination } from "@curo/web/ui/pagination";
 import { ToggleGroup, ToggleGroupItem } from "@curo/web/ui/toggle-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
@@ -100,7 +100,7 @@ export function PatientList() {
                 <TableRow key={p.id} className="group cursor-pointer" onClick={() => router.push(ROUTES.PATIENT(p.id))}>
                   <TableCell className="pl-5">
                     <div className="flex items-center gap-3">
-                      <PatientAvatar name={p.name.full} size="sm" />
+                      <InitialsAvatar name={p.name.full} size="sm" />
                       <div className="min-w-0">
                         <p className="truncate font-medium text-foreground group-hover:text-primary">{p.name.full}</p>
                         <p className="font-mono text-xs text-muted-foreground">{p.mrn}</p>

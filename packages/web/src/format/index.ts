@@ -31,3 +31,20 @@ export function getInitials(name?: string | null): string {
   if (!name) return "";
   return name.split(/\s+/).filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase();
 }
+
+/**
+ * Whole years from a date of birth to `on` (today by default), or null without a valid date.
+ * "YYYY-MM-DD" is read as a calendar date, so a birthday counts from local midnight.
+ */
+export function calculateAge(dob: string | null | undefined, on: Date = new Date()): number | null {
+  const [year, month, day] = (dob ?? "").slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const hadBirthday = on.getMonth() + 1 > month || (on.getMonth() + 1 === month && on.getDate() >= day);
+  return on.getFullYear() - year - (hadBirthday ? 0 : 1);
+}
+
+/** A patient's age and sex for a list row: "35y · Female". Either part is left out when unknown. */
+export function formatAgeSex(dob: string | null | undefined, sex?: string | null): string {
+  const age = calculateAge(dob);
+  return [age === null ? "" : `${age}y`, sex ? formatStatus(sex) : ""].filter(Boolean).join(" · ");
+}

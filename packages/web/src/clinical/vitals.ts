@@ -1,3 +1,5 @@
+import { calculateAge } from "../format";
+
 // ─── Vital-sign catalogue ────────────────────────────────────────────────────
 // One definition for every portal that records or reads vitals, so a reading is
 // flagged the same way at triage and in the doctor's visit. LOINC codes + UCUM
@@ -86,8 +88,6 @@ export const ADULT_FROM_AGE = 18;
  * values depend on their age, and an unknown date of birth can't be checked, so neither is flagged.
  */
 export function adultRangesApply(dob: string | null | undefined, on: Date = new Date()): boolean {
-  const [year, month, day] = (dob ?? "").split("-").map(Number);
-  if (!year || !month || !day) return false;
-  // Local midnight on the eighteenth birthday ("YYYY-MM-DD" is read as a calendar date, not UTC).
-  return on >= new Date(year + ADULT_FROM_AGE, month - 1, day);
+  const age = calculateAge(dob, on);
+  return age !== null && age >= ADULT_FROM_AGE;
 }
