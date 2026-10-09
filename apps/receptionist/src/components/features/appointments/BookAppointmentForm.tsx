@@ -118,7 +118,8 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
     !selectedDoctor || !selectedDate || selectedDoctor.availableDays.length === 0 ||
     selectedDoctor.availableDays.includes(getDayName(selectedDate));
 
-  const complete = !!(selectedPatientId && selectedDoctorId && selectedDate && selectedTime && visitType && reason.trim());
+  // The date picker's `min` stops picking a past day; a typed one is caught here.
+  const complete = !!(selectedPatientId && selectedDoctorId && selectedDate >= getTodayString() && selectedTime && visitType && reason.trim());
 
   const handleSubmit = () => {
     if (!complete) {
