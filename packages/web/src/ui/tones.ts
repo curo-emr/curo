@@ -11,6 +11,20 @@ export const TONES = {
 
 export type Tone = keyof typeof TONES;
 
+// The tone's strongest colour, for a small dot or bar beside a label.
+const DOTS: Record<Tone, string> = {
+  neutral: "bg-status-neutral-text",
+  info: "bg-status-info-text",
+  teal: "bg-status-teal-text",
+  success: "bg-status-success-text",
+  warning: "bg-status-warning-text",
+  error: "bg-status-error-text",
+  purple: "bg-status-purple-text",
+};
+
+/** A tone as a solid fill, for a legend dot or a progress segment. */
+export const toneDotClass = (tone: Tone) => DOTS[tone];
+
 /** A tone's classes, for a pill or badge that isn't a status, such as a BMI category. */
 export const toneClass = (tone: Tone) => TONES[tone];
 

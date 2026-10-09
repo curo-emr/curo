@@ -1,4 +1,4 @@
-import { getDoctorName, getPatientName, nameById } from "./index";
+import { getDoctorName, getInitials, getPatientName, nameById } from "./index";
 
 const people = [
   { id: "p1", name: { full: "Nimal Perera" } },
@@ -18,5 +18,17 @@ describe("nameById", () => {
   it("names the fallback after who is missing", () => {
     expect(getPatientName("p9", people)).toBe("Unknown Patient");
     expect(getDoctorName("p9", people)).toBe("Unknown Doctor");
+  });
+});
+
+describe("getInitials", () => {
+  it("takes the first letter of the first two names", () => {
+    expect(getInitials("Amali Dissanayake")).toBe("AD");
+    expect(getInitials("priya  de silva rajapaksa")).toBe("PD");
+  });
+
+  it("is empty without a name", () => {
+    expect(getInitials(undefined)).toBe("");
+    expect(getInitials("   ")).toBe("");
   });
 });

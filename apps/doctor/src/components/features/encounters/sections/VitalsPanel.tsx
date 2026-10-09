@@ -2,7 +2,10 @@
 
 import { HeartPulse, UserCheck } from "lucide-react";
 import type { Vitals } from "@/types";
-import { BMI_CATEGORY_LABELS, bmiCategory, calculateBMI, type BMICategory } from "@curo/web/clinical";
+import {
+  BMI_CATEGORY_LABELS, VITAL_FIELD, assessVital, bmiCategory, calculateBMI,
+  type BMICategory, type VitalAssessment, type VitalLevel,
+} from "@curo/web/clinical";
 import { cn } from "@/lib/utils";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { toneClass, type Tone } from "@curo/web/ui/status-badge";
@@ -29,6 +32,8 @@ interface VitalsPanelProps {
   vitals: Partial<Vitals>;
   onChange: (vitals: Partial<Vitals>) => void;
   recorded?: RecordedVitals | null;
+  /** Mark readings outside the usual adult ranges. Off for children, whose ranges differ by age. */
+  flagAbnormal?: boolean;
 }
 
 const BMI_TONES: Record<BMICategory, Tone> = {
@@ -38,7 +43,17 @@ const BMI_TONES: Record<BMICategory, Tone> = {
   obese: "error",
 };
 
-export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
+// A reading outside the normal band draws the eye; outside the alert band, more so.
+type Flag = VitalAssessment & { level: Exclude<VitalLevel, "normal"> };
+const LEVEL_TONES: Record<Flag["level"], Tone> = { alert: "warning", critical: "error" };
+const LEVEL_INPUT: Record<Flag["level"], string> = {
+  alert: "border-status-warning-border font-medium text-status-warning-text",
+  critical: "border-status-error-border font-medium text-status-error-text",
+};
+
+const isFlag = (a: VitalAssessment | null): a is Flag => !!a && a.level !== "normal";
+
+export function VitalsPanel({ vitals, onChange, recorded, flagAbnormal = false }: VitalsPanelProps) {
   const bmi = calculateBMI(vitals.heightCm, vitals.weightKg);
   const category = bmi ? bmiCategory(bmi) : null;
   const recordedTime = recorded?.recordedAt
@@ -51,6 +66,14 @@ export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
     else next[key] = Number(raw);
     onChange(next);
   };
+
+  const flagOf = (key: VitalKey): Flag | null => {
+    const assessment = flagAbnormal ? assessVital(VITAL_FIELD[key], vitals[key]) : null;
+    return isFlag(assessment) ? assessment : null;
+  };
+  // Blood pressure is one reading: its tag is the worse of the two numbers.
+  const bp = [flagOf("bpSystolic"), flagOf("bpDiastolic")];
+  const bpFlag = bp.find(f => f?.level === "critical") ?? bp.find(f => f !== null) ?? null;
 
   // "edited" = the doctor changed a value the nurse recorded.
   const edited = (key: VitalKey) => recorded?.vitals[key] !== undefined && vitals[key] !== recorded.vitals[key];
@@ -67,6 +90,7 @@ export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
         className={cn(
           "h-9 w-full rounded-md border border-input bg-background pl-2.5 pr-11 text-sm tabular-nums shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
           edited(key) && "border-status-info-border bg-status-info-bg/40",
+          flagOf(key) && LEVEL_INPUT[flagOf(key)!.level],
         )}
       />
       <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-muted-foreground">{unit}</span>
@@ -87,7 +111,10 @@ export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
           </div>
         )}
         <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">Blood pressure</p>
+          <p className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+            Blood pressure
+            {bpFlag && <FlagTag assessment={bpFlag} />}
+          </p>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
             {input("bpSystolic", "sys", undefined, "Systolic")}
             <span className="text-muted-foreground">/</span>
@@ -99,7 +126,11 @@ export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
             <div key={key} className="space-y-1">
               <p className="flex items-center justify-between text-xs font-medium text-muted-foreground">
                 {label}
-                {edited(key) && <span className="text-[10px] text-status-info-text" title={`Nurse recorded ${recorded?.vitals[key]}`}>edited</span>}
+                {flagOf(key) ? (
+                  <FlagTag assessment={flagOf(key)!} />
+                ) : (
+                  edited(key) && <span className="text-[10px] text-status-info-text" title={`Nurse recorded ${recorded?.vitals[key]}`}>edited</span>
+                )}
               </p>
               {input(key, unit, step, label)}
             </div>
@@ -117,5 +148,13 @@ export function VitalsPanel({ vitals, onChange, recorded }: VitalsPanelProps) {
         </div>
       </div>
     </SectionCard>
+  );
+}
+
+function FlagTag({ assessment }: { assessment: Flag }) {
+  return (
+    <span className={cn("rounded px-1 text-[10px] font-semibold uppercase", toneClass(LEVEL_TONES[assessment.level]))} title="Outside the usual adult range">
+      {assessment.label}
+    </span>
   );
 }

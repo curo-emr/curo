@@ -1,11 +1,21 @@
-import { LayoutDashboard, Users, Calendar, Building2, Activity } from "lucide-react";
+import { BookOpen, Building2, CalendarDays, House, Users } from "lucide-react";
+import type { NavSection } from "@curo/web/shell";
 import { ROUTES } from "@/lib/constants";
 
-// One nav definition shared by the desktop sidebar and the mobile drawer.
-export const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: "Today", href: ROUTES.DASHBOARD },
-  { icon: Users, label: "Patients", href: ROUTES.PATIENTS },
-  { icon: Calendar, label: "Schedule", href: ROUTES.SCHEDULE },
-  { icon: Building2, label: "Pharmacies & Labs", href: ROUTES.DIRECTORY },
-  { icon: Activity, label: "ICD-10", href: ROUTES.ICD },
+// The doctor's day first; lookups they reach for while documenting below.
+export const NAV: NavSection[] = [
+  {
+    items: [
+      { icon: House, label: "Today", href: ROUTES.DASHBOARD },
+      { icon: Users, label: "Patients", href: ROUTES.PATIENTS },
+      { icon: CalendarDays, label: "Schedule", href: ROUTES.SCHEDULE },
+    ],
+  },
+  {
+    label: "Reference",
+    items: [
+      { icon: Building2, label: "Pharmacies & Labs", href: ROUTES.DIRECTORY },
+      { icon: BookOpen, label: "ICD-10 codes", href: ROUTES.ICD },
+    ],
+  },
 ];

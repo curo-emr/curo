@@ -9,6 +9,7 @@ import { EncounterEditor } from "@/components/features/encounters/EncounterEdito
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { appointmentQueries, catalogQueries, patientQueries } from "@/lib/queries";
+import { getTodayString } from "@/lib/utils";
 
 export default function NewVisitPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = use(params);
@@ -22,6 +23,9 @@ export default function NewVisitPage({ params }: { params: Promise<{ patientId: 
     refetchOnMount: "always",
     staleTime: Infinity,
   });
+  // Opened from the queue: today's list (usually cached by the Today screen) has the booking's reason.
+  const queue = useQuery({ ...appointmentQueries.day(getTodayString()), enabled: !!appointmentParam });
+  const appointment = appointmentParam ? queue.data?.find(a => a.id === appointmentParam) : todays.data;
   // Pickers: if one fails it stays empty, and the rest of the visit still works.
   const medicationSuggestions = useQuery(catalogQueries.medicationSuggestions()).data ?? [];
   const labTests = useQuery(catalogQueries.labTests()).data ?? [];
@@ -37,6 +41,7 @@ export default function NewVisitPage({ params }: { params: Promise<{ patientId: 
         <EncounterEditor
           patient={p}
           appointmentId={appointmentParam ?? todays.data?.id}
+          reason={appointment?.reason}
           medicationSuggestions={medicationSuggestions}
           labTestsCatalog={labTests}
           labs={labs}

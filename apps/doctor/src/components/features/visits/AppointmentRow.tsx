@@ -9,7 +9,7 @@ import { QueueStageBadge } from "@/components/ui/QueueStageBadge";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { cn, formatAgeSex, formatTime } from "@/lib/utils";
-import { getVisitAction, isClosed } from "@/lib/visit";
+import { getQueueGroup, getVisitAction, isClosed } from "@/lib/visit";
 
 interface Props {
   appointment: Appointment;
@@ -20,15 +20,18 @@ interface Props {
 }
 
 // One appointment in a list: time, patient, reason, where they are, and the single next action.
+// Rows never use the primary button: that's reserved for the one patient the screen is about.
 export function AppointmentRow({ appointment: a, patient, hasDraft = false, showStage = true }: Props) {
   const action = getVisitAction(a, hasDraft);
   const closed = isClosed(a);
+  // Seeing someone before the nurse is done is allowed, so it's offered, just less prominently.
+  const triage = getQueueGroup(a) === "triage";
   const name = patient?.name.full ?? "Loading…";
 
   return (
-    <div className={cn("group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-muted/40", closed && "opacity-70")}>
-      <div className="w-16 shrink-0 text-sm font-medium tabular-nums text-muted-foreground">{formatTime(a.time)}</div>
-      <PatientAvatar name={name} />
+    <div className={cn("group flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40 sm:gap-4 sm:px-5", closed && "opacity-70")}>
+      <div className="w-14 shrink-0 text-xs font-medium tabular-nums text-muted-foreground sm:w-16 sm:text-sm">{formatTime(a.time)}</div>
+      <PatientAvatar name={name} className="hidden sm:flex" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <Link href={ROUTES.PATIENT(a.patientId)} className="truncate font-medium text-foreground hover:text-primary hover:underline underline-offset-4">
@@ -46,10 +49,11 @@ export function AppointmentRow({ appointment: a, patient, hasDraft = false, show
       </div>
       <div className="flex shrink-0 items-center gap-1">
         {action ? (
-          <Button asChild size="sm" variant={action.kind === "resume" ? "default" : "outline"} className="min-w-[7.5rem]">
-            <Link href={action.href}>
+          <Button asChild size="sm" variant={triage ? "ghost" : "outline"} className="sm:min-w-[7.5rem]">
+            {/* Icon-only on phones, where the name needs the room. */}
+            <Link href={action.href} aria-label={`${action.label}: ${name}`}>
               {action.kind === "resume" ? <RotateCcw /> : <Play />}
-              {action.label}
+              <span className="hidden sm:inline">{action.label}</span>
             </Link>
           </Button>
         ) : (

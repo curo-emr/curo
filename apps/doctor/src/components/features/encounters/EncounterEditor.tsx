@@ -18,7 +18,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/lib/constants";
 import { formatRelative } from "@curo/web/format";
-import { formatAgeSex } from "@/lib/utils";
+import { calculateAge, formatAgeSex } from "@/lib/utils";
 import { readDraft, removeDraft, visitDraftKey, writeDraft } from "@/lib/visit";
 import { getVitalsByAppointment } from "@/lib/api/clinical";
 import { updateQueueStage } from "@/lib/api/appointments";
@@ -37,6 +37,8 @@ import { invalidateAfterVisit } from "@/lib/queries";
 interface Props {
   patient: Patient;
   appointmentId?: string;
+  /** Why the appointment was booked: the starting point for the chief complaint. */
+  reason?: string;
   /** Shown in the prescription search before the doctor types. */
   medicationSuggestions: Medication[];
   labTestsCatalog: LabTestCatalogItem[];
@@ -46,7 +48,7 @@ interface Props {
 type StoredDraft = VisitDraft & { savedAt?: string };
 
 export function EncounterEditor({
-  patient, appointmentId, medicationSuggestions, labTestsCatalog, labs,
+  patient, appointmentId, reason, medicationSuggestions, labTestsCatalog, labs,
 }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -84,12 +86,12 @@ export function EncounterEditor({
     removeDraft(draftKey);
     dirty.current = false;
     setSavedAt(null);
-    setVisit({ ...emptyVisit(), vitals: triage?.vitals ?? {} });
+    setVisit({ ...emptyVisit(), chiefComplaint: reason ?? "", vitals: triage?.vitals ?? {} });
     toast("Draft discarded", {
       id: "draft",
       action: { label: "Undo", onClick: () => { dirty.current = true; setVisit(backup); } },
     });
-  }, [draftKey, triage]);
+  }, [draftKey, reason, triage]);
 
   useEffect(() => {
     if (!restored) return;
@@ -98,6 +100,12 @@ export function EncounterEditor({
       description: `Last saved ${formatRelative(restored.savedAt ?? Date.now())}`,
     });
   }, [restored]);
+
+  // The booking's reason fills an empty chief complaint, until the doctor types anything.
+  useEffect(() => {
+    if (!reason || dirty.current) return;
+    setVisit(v => (v.chiefComplaint ? v : { ...v, chiefComplaint: reason }));
+  }, [reason]);
 
   // ─── Appointment: mark "with doctor" and prefill nurse triage vitals ────────
   useEffect(() => {
@@ -232,7 +240,12 @@ export function EncounterEditor({
           />
         </div>
         <aside className="space-y-6">
-          <VitalsPanel vitals={visit.vitals} onChange={v => update("vitals", v)} recorded={triage} />
+          <VitalsPanel
+            vitals={visit.vitals}
+            onChange={v => update("vitals", v)}
+            recorded={triage}
+            flagAbnormal={!!patient.dob && calculateAge(patient.dob) >= 18}
+          />
           <PatientContext patientId={patient.id} />
         </aside>
       </div>

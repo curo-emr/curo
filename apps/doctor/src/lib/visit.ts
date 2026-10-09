@@ -1,4 +1,5 @@
 import type { Appointment } from "@/types";
+import type { Tone } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { getTodayString } from "@/lib/utils";
 import { getAppointments } from "@/lib/api/appointments";
@@ -9,6 +10,8 @@ import { getAppointments } from "@/lib/api/appointments";
 const CLOSED_STATUSES: Appointment["status"][] = ["completed", "cancelled", "no_show"];
 
 export const isClosed = (a: Appointment) => CLOSED_STATUSES.includes(a.status) || a.queueStage === "done";
+/** Closed without a visit: cancelled, or the patient never came. Not someone the doctor saw. */
+export const isMissed = (a: Appointment) => a.status === "cancelled" || a.status === "no_show";
 export const isInConsultation = (a: Appointment) =>
   !isClosed(a) && (a.queueStage === "with_doctor" || a.status === "in_progress");
 
@@ -21,12 +24,13 @@ export function visitHref(patientId: string, appointmentId?: string) {
 
 export type QueueGroup = "consultation" | "ready" | "triage" | "upcoming" | "done";
 
-export const QUEUE_GROUPS: { id: QueueGroup; label: string }[] = [
-  { id: "consultation", label: "In consultation" },
-  { id: "ready", label: "Ready to see" },
-  { id: "triage", label: "With nurse" },
-  { id: "upcoming", label: "Not arrived yet" },
-  { id: "done", label: "Finished" },
+// In the order the doctor works through them; tones match the stage badges.
+export const QUEUE_GROUPS: { id: QueueGroup; label: string; tone: Tone }[] = [
+  { id: "consultation", label: "In consultation", tone: "info" },
+  { id: "ready", label: "Ready to see", tone: "success" },
+  { id: "triage", label: "With nurse", tone: "warning" },
+  { id: "upcoming", label: "Not arrived yet", tone: "neutral" },
+  { id: "done", label: "Finished", tone: "purple" },
 ];
 
 export function getQueueGroup(a: Appointment): QueueGroup {

@@ -25,3 +25,9 @@ export function nameById(id: string, people: readonly Named[], fallback: string)
 export const getPatientName = (id: string, patients: readonly Named[]) => nameById(id, patients, "Unknown Patient");
 export const getDoctorName = (id: string, doctors: readonly Named[]) => nameById(id, doctors, "Unknown Doctor");
 export const getStaffName = (id: string, staff: readonly Named[]) => nameById(id, staff, "Unknown Staff");
+
+/** Up to two initials for an avatar: "Amali Dissanayake" → "AD". Empty when there's no name. */
+export function getInitials(name?: string | null): string {
+  if (!name) return "";
+  return name.split(/\s+/).filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+}

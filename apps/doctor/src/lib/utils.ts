@@ -50,11 +50,7 @@ export function getPatientMeta(id: string, patients: { id: string; dob: string; 
 
 
 
-/** "Amali Dissanayake" → "AD" */
-export function getInitials(name?: string | null): string {
-  if (!name) return '';
-  return name.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-}
+export { getInitials } from "@curo/web/format";
 
 /** "female" → "Female" */
 export function formatSex(sex?: string | null): string {

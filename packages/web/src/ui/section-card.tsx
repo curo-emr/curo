@@ -23,14 +23,19 @@ export function SectionCard({
     <Card id={id} className={cn("gap-0", className)}>
       <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            {Icon && <Icon className={cn("h-4 w-4 text-muted-foreground", iconClassName)} />}
+          <h2 className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
+            {Icon && (
+              // The tile takes a tint of the icon's colour (bg-current), so any iconClassName colour works.
+              <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground", iconClassName && [iconClassName, "bg-current/10"])}>
+                <Icon className="size-4" />
+              </span>
+            )}
             {title}
             {count !== undefined && count > 0 && (
               <span className="rounded-full bg-muted px-1.5 py-px text-[11px] font-medium text-muted-foreground tabular-nums">{count}</span>
             )}
           </h2>
-          {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
+          {description && <p className={cn("mt-0.5 text-xs text-muted-foreground", Icon && "pl-9.5")}>{description}</p>}
         </div>
         {headerRight}
       </div>

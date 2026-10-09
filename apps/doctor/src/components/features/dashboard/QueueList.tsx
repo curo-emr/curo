@@ -5,19 +5,23 @@ import { ChevronDown, Users } from "lucide-react";
 import type { Appointment, Patient } from "@/types";
 import { Card } from "@curo/web/ui/card";
 import { EmptyState } from "@curo/web/ui/empty-state";
+import { toneDotClass } from "@curo/web/ui/status-badge";
 import { AppointmentRow } from "@/components/features/visits/AppointmentRow";
 import { cn } from "@/lib/utils";
-import { QUEUE_GROUPS, getQueueGroup, type QueueGroup } from "@/lib/visit";
+import { QUEUE_GROUPS, getQueueGroup } from "@/lib/visit";
 
 interface Props {
   appointments: Appointment[];
   patients: Record<string, Patient>;
   draftIds: Set<string>;
+  /** The patient already shown as "Up next", left out here so no one is listed twice. */
+  upNextId?: string;
 }
 
-// Today's list, grouped by where each patient is in the flow (the order the doctor works in).
-export function QueueList({ appointments, patients, draftIds }: Props) {
+// The rest of today, grouped by where each patient is in the flow (the order the doctor works in).
+export function QueueList({ appointments, patients, draftIds, upNextId }: Props) {
   const [showDone, setShowDone] = useState(false);
+  const rest = appointments.filter(a => a.id !== upNextId);
 
   if (appointments.length === 0) {
     return (
@@ -26,30 +30,32 @@ export function QueueList({ appointments, patients, draftIds }: Props) {
       </Card>
     );
   }
-
-  const byGroup = (g: QueueGroup) => appointments.filter(a => getQueueGroup(a) === g);
+  if (rest.length === 0) return null;
 
   return (
     <Card className="gap-0 py-0">
-      {QUEUE_GROUPS.map(({ id, label }) => {
-        const items = byGroup(id);
+      <h2 className="px-5 pt-4 pb-1 text-sm font-semibold text-foreground">{upNextId ? "Rest of today" : "Today's patients"}</h2>
+      {QUEUE_GROUPS.map(({ id, label, tone }) => {
+        const items = rest.filter(a => getQueueGroup(a) === id);
         if (items.length === 0) return null;
         const collapsible = id === "done";
         const open = !collapsible || showDone;
         return (
-          <section key={id} className="border-b last:border-0">
+          <section key={id} aria-label={label}>
             <button
               type="button"
               disabled={!collapsible}
+              aria-expanded={collapsible ? open : undefined}
               onClick={() => setShowDone(s => !s)}
-              className="flex w-full items-center gap-2 bg-muted/40 px-5 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground enabled:hover:text-foreground"
+              className="flex w-full items-center gap-2 px-5 pt-4 pb-2 text-left text-xs font-medium text-muted-foreground enabled:hover:text-foreground"
             >
+              <span className={cn("size-2 rounded-full", toneDotClass(tone))} />
               {label}
-              <span className="tabular-nums font-medium normal-case tracking-normal">· {items.length}</span>
-              {collapsible && <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", open && "rotate-180")} />}
+              <span className="tabular-nums">{items.length}</span>
+              {collapsible && <ChevronDown className={cn("ml-auto size-4 transition-transform", open && "rotate-180")} />}
             </button>
             {open && (
-              <div className="divide-y">
+              <div className="divide-y border-y">
                 {items.map(a => (
                   <AppointmentRow
                     key={a.id}
@@ -64,6 +70,7 @@ export function QueueList({ appointments, patients, draftIds }: Props) {
           </section>
         );
       })}
+      <div className="h-2" />
     </Card>
   );
 }
