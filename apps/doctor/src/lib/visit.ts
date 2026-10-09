@@ -1,4 +1,5 @@
 import type { Appointment } from "@/types";
+import type { Tone } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { getTodayString } from "@/lib/utils";
 import { getAppointments } from "@/lib/api/appointments";
@@ -21,12 +22,13 @@ export function visitHref(patientId: string, appointmentId?: string) {
 
 export type QueueGroup = "consultation" | "ready" | "triage" | "upcoming" | "done";
 
-export const QUEUE_GROUPS: { id: QueueGroup; label: string }[] = [
-  { id: "consultation", label: "In consultation" },
-  { id: "ready", label: "Ready to see" },
-  { id: "triage", label: "With nurse" },
-  { id: "upcoming", label: "Not arrived yet" },
-  { id: "done", label: "Finished" },
+// In the order the doctor works through them; tones match the stage badges.
+export const QUEUE_GROUPS: { id: QueueGroup; label: string; tone: Tone }[] = [
+  { id: "consultation", label: "In consultation", tone: "info" },
+  { id: "ready", label: "Ready to see", tone: "success" },
+  { id: "triage", label: "With nurse", tone: "warning" },
+  { id: "upcoming", label: "Not arrived yet", tone: "neutral" },
+  { id: "done", label: "Finished", tone: "purple" },
 ];
 
 export function getQueueGroup(a: Appointment): QueueGroup {

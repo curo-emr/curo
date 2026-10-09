@@ -3,7 +3,7 @@ import { Badge } from "./badge";
 import { cn } from "cn";
 import { TONES, type Tone } from "./tones";
 
-export { toneClass, waitTone, type Tone } from "./tones";
+export { toneClass, toneDotClass, waitTone, type Tone } from "./tones";
 
 interface StatusStyle {
   tone: Tone;

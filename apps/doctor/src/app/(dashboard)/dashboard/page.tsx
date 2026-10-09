@@ -6,12 +6,13 @@ import { LoadError } from "@curo/web/ui/load-error";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { DayOverview } from "@/components/features/dashboard/DayOverview";
 import { UpNextCard } from "@/components/features/dashboard/UpNextCard";
 import { QueueList } from "@/components/features/dashboard/QueueList";
 import { NeedsAttention } from "@/components/features/dashboard/NeedsAttention";
 import { appointmentQueries, labResultQueries, patientQueries } from "@/lib/queries";
 import { getTodayString } from "@/lib/utils";
-import { QUEUE_GROUPS, getQueueGroup, hasDraft, visitDraftKey, type QueueGroup } from "@/lib/visit";
+import { getQueueGroup, hasDraft, visitDraftKey } from "@/lib/visit";
 import type { Appointment, LabOrder } from "@/types";
 
 // One empty list for "not loaded yet", so the memo below doesn't recompute on every render.
@@ -45,7 +46,6 @@ export default function TodayPage() {
       : <PageSkeleton />;
   }
 
-  const count = (g: QueueGroup) => appointments.filter(a => getQueueGroup(a) === g).length;
   const upNext = appointments.find(a => getQueueGroup(a) === "consultation") ?? appointments.find(a => getQueueGroup(a) === "ready") ?? null;
   const nextUpcoming = appointments.find(a => getQueueGroup(a) === "upcoming") ?? null;
   const dateLabel = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
@@ -57,24 +57,17 @@ export default function TodayPage() {
         description={`${dateLabel} · ${appointments.length} appointment${appointments.length === 1 ? "" : "s"} today`}
       />
 
-      <div className="flex flex-wrap gap-2">
-        {QUEUE_GROUPS.map(({ id, label }) => (
-          <div key={id} className="flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5 text-sm shadow-xs">
-            <span className="font-semibold tabular-nums text-foreground">{count(id)}</span>
-            <span className="text-muted-foreground">{label}</span>
-          </div>
-        ))}
-      </div>
+      {appointments.length > 0 && <DayOverview appointments={appointments} />}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
           <UpNextCard
             appointment={upNext}
             patient={upNext ? patients[upNext.patientId] : undefined}
             hasDraft={!!upNext && draftIds.has(upNext.id)}
             nextUpcoming={nextUpcoming}
           />
-          <QueueList appointments={appointments} patients={patients} draftIds={draftIds} />
+          <QueueList appointments={appointments} patients={patients} draftIds={draftIds} upNextId={upNext?.id} />
         </div>
         <NeedsAttention practitionerId={practitionerId} patients={patients} />
       </div>
