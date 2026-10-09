@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { FileText, Upload, Eye, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
@@ -9,40 +10,25 @@ import { Label } from "@curo/web/ui/label";
 import { Textarea } from "@curo/web/ui/textarea";
 import { FileInput, formatFileSize } from "@curo/web/ui/file-input";
 import { formatDate } from "@/lib/utils";
-import {
-  getOrderReports, uploadDocument, openDocument, type DocumentRef,
-} from "@/lib/api/documents";
+import { uploadDocument, openDocument } from "@/lib/api/documents";
 import { LAB_REPORT_DOCUMENT } from "@/lib/api/lab";
+import { orderQueries } from "@/lib/queries";
 
 interface Props {
   orderId: string;
   patientId: string;
   encounterId?: string;
-  /** Told how many report files the order has, whenever the list loads. */
-  onReportsChange?: (count: number) => void;
 }
 
 /** Report files for an order, as the lab's analyser or a scan produced them. The ordering doctor sees them too. */
-export function LabReportUpload({ orderId, patientId, encounterId, onReportsChange }: Props) {
-  const [reports, setReports] = useState<DocumentRef[]>([]);
+export function LabReportUpload({ orderId, patientId, encounterId }: Props) {
+  const queryClient = useQueryClient();
+  const reportsQuery = useQuery(orderQueries.reports(orderId));
+  const reports = reportsQuery.data ?? [];
   const [file, setFile] = useState<File | null>(null);
   const [description, setDescription] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    getOrderReports(orderId)
-      .then((docs) => {
-        const reports = docs.filter((d) => d.type === LAB_REPORT_DOCUMENT);
-        setReports(reports);
-        onReportsChange?.(reports.length);
-      })
-      .catch(console.error);
-  }, [orderId, onReportsChange]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   async function handleUpload() {
     if (!file) {
@@ -63,7 +49,7 @@ export function LabReportUpload({ orderId, patientId, encounterId, onReportsChan
       toast.success("Report uploaded.");
       setFile(null);
       setDescription("");
-      load();
+      void queryClient.invalidateQueries({ queryKey: orderQueries.reports(orderId).queryKey });
     } catch (err) {
       console.error(err);
       toast.error("Upload failed. Please try again.");
@@ -92,6 +78,9 @@ export function LabReportUpload({ orderId, patientId, encounterId, onReportsChan
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 pt-6">
+        {reportsQuery.isError && !reportsQuery.data && (
+          <p className="text-sm text-status-error-text">The report files couldn&apos;t be loaded.</p>
+        )}
         {reports.length > 0 && (
           <div className="divide-y rounded-lg border">
             {reports.map((doc) => (

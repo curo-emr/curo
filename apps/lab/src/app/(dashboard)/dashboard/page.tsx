@@ -1,53 +1,53 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, AlertTriangle, Cpu } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, Cpu } from "lucide-react";
+import { QueryContent, allOf } from "@curo/web/query";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { LabDashboardStats } from "@/components/features/dashboard/LabDashboardStats";
 import { UrgentOrdersList } from "@/components/features/dashboard/UrgentOrdersList";
 import { RecentActivityFeed } from "@/components/features/dashboard/RecentActivityFeed";
-import { getLabInstruments, getLabOrderSummary, getLabOrdersPage, getQCAlerts, type LabInstrument, type LabOrderSummary } from "@/lib/api/lab";
-import { getPatientsByIds } from "@/lib/api/patients";
+import type { LabInstrument, LabOrderSummary } from "@/lib/api/lab";
+import { labQueries, orderQueries, patientQueries } from "@/lib/queries";
 import type { LabOrder, Patient, QCLog } from "@/types";
 
 const URGENT_LIMIT = 10;
 const RECENT_LIMIT = 8;
 const QC_ALERT_LIMIT = 5;
-import { StatusBadge } from "@curo/web/ui/status-badge";
+const NO_PATIENTS: Patient[] = [];
 
 export default function DashboardPage() {
-  const [summary, setSummary] = useState<LabOrderSummary | null>(null);
-  const [urgent, setUrgent] = useState<{ items: LabOrder[]; total: number }>({ items: [], total: 0 });
-  const [recent, setRecent] = useState<LabOrder[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [instruments, setInstruments] = useState<LabInstrument[]>([]);
-  const [qcAlerts, setQcAlerts] = useState<{ items: QCLog[]; total: number }>({ items: [], total: 0 });
-  const [isLoading, setIsLoading] = useState(true);
+  const dashboard = allOf(
+    useQuery(orderQueries.summary()),
+    // Urgent orders still waiting on the lab, most urgent first.
+    useQuery(orderQueries.page({ page: 1, pageSize: URGENT_LIMIT, status: "sent_to_lab", priorities: ["stat", "urgent"], sort: "priority" })),
+    useQuery(orderQueries.page({ page: 1, pageSize: RECENT_LIMIT, sort: "newest" })),
+    useQuery(labQueries.instruments()),
+    useQuery(labQueries.qcAlerts(QC_ALERT_LIMIT)),
+  );
 
-  useEffect(() => {
-    Promise.all([
-      getLabOrderSummary(),
-      // Urgent orders still waiting on the lab, most urgent first.
-      getLabOrdersPage({ page: 1, pageSize: URGENT_LIMIT, status: "sent_to_lab", priorities: ["stat", "urgent"], sort: "priority" }),
-      getLabOrdersPage({ page: 1, pageSize: RECENT_LIMIT, sort: "newest" }),
-      getLabInstruments(),
-      getQCAlerts(QC_ALERT_LIMIT),
-    ])
-      .then(async ([counts, urgentPage, recentPage, insts, alerts]) => {
-        const pts = await getPatientsByIds([...urgentPage.items, ...recentPage.items].map(o => o.patientId));
-        setSummary(counts);
-        setUrgent(urgentPage);
-        setRecent(recentPage.items);
-        setPatients(pts);
-        setInstruments(insts);
-        setQcAlerts(alerts);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
+  return (
+    <QueryContent query={dashboard} what="the dashboard">
+      {([summary, urgent, recentPage, instruments, qcAlerts]) => (
+        <Dashboard summary={summary} urgent={urgent} recent={recentPage.items} instruments={instruments} qcAlerts={qcAlerts} />
+      )}
+    </QueryContent>
+  );
+}
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+interface DashboardProps {
+  summary: LabOrderSummary;
+  urgent: { items: LabOrder[]; total: number };
+  recent: LabOrder[];
+  instruments: LabInstrument[];
+  qcAlerts: { items: QCLog[]; total: number };
+}
+
+function Dashboard({ summary, urgent, recent, instruments, qcAlerts }: DashboardProps) {
+  // One lookup names everyone in the urgent and recent lists.
+  const patients = useQuery(patientQueries.byIds([...urgent.items, ...recent].map(o => o.patientId))).data ?? NO_PATIENTS;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -58,7 +58,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <LabDashboardStats counts={summary?.byStatus ?? {}} />
+      <LabDashboardStats counts={summary.byStatus} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

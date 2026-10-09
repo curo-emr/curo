@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { Loader2 } from "lucide-react";
-import { getPatientById } from "@/lib/api/patients";
-import { getLabOrdersByPatient, getLabResultsByPatient, type LabResult } from "@/lib/api/lab";
+import { use } from "react";
+import { notFound } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { QueryContent, allOf } from "@curo/web/query";
+import type { LabResult } from "@/lib/api/lab";
+import { patientQueries } from "@/lib/queries";
 import { calculateAge, formatDate } from "@/lib/utils";
 import type { Patient, LabOrder } from "@/types";
 import { Card, CardContent } from "@curo/web/ui/card";
@@ -18,24 +20,25 @@ import { ROUTES } from "@/lib/constants";
 
 export default function PatientDetailPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = use(params);
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [orders, setOrders] = useState<LabOrder[]>([]);
-  const [results, setResults] = useState<LabResult[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const record = allOf(
+    useQuery(patientQueries.detail(patientId)),
+    useQuery(patientQueries.orders(patientId)),
+    useQuery(patientQueries.results(patientId)),
+  );
 
-  useEffect(() => {
-    Promise.all([getPatientById(patientId), getLabOrdersByPatient(patientId), getLabResultsByPatient(patientId)])
-      .then(([pt, ords, res]) => { setPatient(pt); setOrders(ords); setResults(res); })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [patientId]);
+  return (
+    <QueryContent query={record} what="this patient">
+      {([patient, orders, results]) => {
+        if (!patient) notFound();
+        return <PatientRecord patient={patient} orders={orders} results={results} />;
+      }}
+    </QueryContent>
+  );
+}
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-  if (!patient) return <div className="p-8 text-center text-slate-500">Patient not found.</div>;
-
+function PatientRecord({ patient, orders, results }: { patient: Patient; orders: LabOrder[]; results: LabResult[] }) {
   const age = calculateAge(patient.dob);
 
-  const sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -74,10 +77,10 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
         </TabsList>
 
         <TabsContent value="orders" className="space-y-3">
-          {sortedOrders.length === 0 ? (
+          {orders.length === 0 ? (
             <div className="text-center py-12 text-slate-500">No lab orders found for this patient.</div>
           ) : (
-            sortedOrders.map(order => (
+            orders.map(order => (
               <Card key={order.id} className="shadow-sm border-slate-200 hover:bg-slate-50/50 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between gap-4">
