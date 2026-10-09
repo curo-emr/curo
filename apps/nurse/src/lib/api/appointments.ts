@@ -3,7 +3,7 @@ import type { Appointment, QueueStage } from '@/types';
 import { mapFhirAppointment, type FhirAppointment } from './mappers';
 
 // One day's appointments in the given queue stages (ordered by start time).
-export async function getQueue(date: string, stages: QueueStage[]): Promise<Appointment[]> {
+export async function getQueue(date: string, stages: readonly QueueStage[]): Promise<Appointment[]> {
   const appointments = await getAllPages<FhirAppointment>('/appointments', { date, queueStage: stages.join(',') });
   return appointments.map(mapFhirAppointment);
 }

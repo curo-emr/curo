@@ -13,7 +13,8 @@ import { PageHeader } from "@curo/web/ui/page-header";
 import { QueueRow, patientName } from "./QueueRow";
 import { useTodayQueue, type QueueEntry } from "@/lib/hooks/useTodayQueue";
 import { useTriageActions } from "@/lib/hooks/useTriageActions";
-import { TRIAGE_STAGES, nextForTriage, stageDotClass } from "@/lib/queue";
+import { STAGE_META, stageDotClass } from "@curo/web/flow";
+import { TRIAGE_STAGES, nextForTriage } from "@/lib/queue";
 import { ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +85,7 @@ export function TriageQueue() {
             <Card key={stage} className="shadow-sm border">
               <CardHeader className="bg-muted/50 border-b py-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <span className={cn("h-2 w-2 rounded-full", stageDotClass(stage))} />
+                  <span className={cn("h-2 w-2 rounded-full", stageDotClass(STAGE_META[stage]))} />
                   {title}
                   <Badge variant="secondary" className="font-mono tabular-nums">{items.length}</Badge>
                 </CardTitle>

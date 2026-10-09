@@ -8,7 +8,7 @@ import type { QueueStage } from "@/types";
 export const queueQueries = {
   all: ["queue"] as const,
   /** A day's appointments in the given stages, refreshed while the page is open. */
-  day: (date: string, stages: QueueStage[]) => queryOptions({
+  day: (date: string, stages: readonly QueueStage[]) => queryOptions({
     queryKey: [...queueQueries.all, date, stages],
     queryFn: () => getQueue(date, stages),
     refetchInterval: POLL_QUEUE_MS,

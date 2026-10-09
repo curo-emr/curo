@@ -2,17 +2,16 @@
 
 import Link from "next/link";
 import { ArrowRight, HeartPulse, Loader2 } from "lucide-react";
-import type { QueueStage } from "@/types";
 import { Card } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@curo/web/ui/empty-state";
-import { FlowStrip } from "@/components/features/dashboard/FlowStrip";
 import { NextForTriageCard } from "@/components/features/dashboard/NextForTriageCard";
 import { patientName } from "@/components/features/queue/QueueRow";
 import { useTodayQueue, type QueueEntry } from "@/lib/hooks/useTodayQueue";
 import { useTriageActions } from "@/lib/hooks/useTriageActions";
 import { useCurrentPractitioner } from "@/lib/hooks/useCurrentPractitioner";
-import { FLOW_STAGES, nextForTriage } from "@/lib/queue";
+import { FLOW_STAGES, FlowOverview, countStages } from "@curo/web/flow";
+import { nextForTriage } from "@/lib/queue";
 import { ROUTES } from "@/lib/constants";
 import { minutesSince } from "@/lib/utils";
 
@@ -29,9 +28,7 @@ export default function DashboardPage() {
   const { openTriage, skipToDoctor, pendingId } = useTriageActions();
   const me = useCurrentPractitioner();
 
-  const counts = Object.fromEntries(
-    FLOW_STAGES.map(stage => [stage, entries.filter(e => e.appointment.queueStage === stage).length]),
-  ) as Record<QueueStage, number>;
+  const counts = countStages(entries.map(e => e.appointment.queueStage));
   const next = nextForTriage(entries);
 
   const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -60,7 +57,15 @@ export default function DashboardPage() {
         </Card>
       ) : (
         <>
-          <FlowStrip counts={counts} />
+          <FlowOverview
+            counts={counts}
+            summary={
+              <>
+                <span className="text-2xl font-semibold tabular-nums text-foreground">{entries.length}</span>
+                checked in today
+              </>
+            }
+          />
           <NextForTriageCard
             entry={next}
             pending={!!next && pendingId === next.appointment.id}
