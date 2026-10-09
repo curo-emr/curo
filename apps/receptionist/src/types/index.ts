@@ -1,4 +1,5 @@
 import type { Insurance, MaritalStatus } from '@curo/web/fhir';
+import type { DoctorSession } from '@curo/web/schedule';
 import type { QueueStage } from '@curo/web/flow';
 
 export type { Allergy, Insurance } from '@curo/web/fhir';
@@ -160,8 +161,6 @@ export interface Doctor {
   specialty: string;
   phone: string;
   email: string;
-  roomNumber: string;
-  availableDays: string[];
-  slotDurationMinutes: number;
-  workingHours: { start: string; end: string };
+  /** When the doctor sees patients; none until an administrator sets them. */
+  sessions: DoctorSession[];
 }

@@ -19,7 +19,8 @@ import {
   SelectValue,
 } from "@curo/web/ui/select";
 import { SearchInput } from "@curo/web/ui/search-input";
-import { User, Stethoscope, CalendarDays, FileText, Loader2, Check, MapPin } from "lucide-react";
+import { User, Stethoscope, CalendarDays, FileText, Loader2, Check } from "lucide-react";
+import { WEEKDAYS, sessionsOn, slotsOn, weekdayOf, workingDays } from "@curo/web/schedule";
 import Link from "next/link";
 import { cn, formatTime, getTodayString } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
@@ -37,30 +38,8 @@ interface BookAppointmentFormProps {
 const PATIENT_MATCHES = 8;
 const NO_PATIENTS: Patient[] = [];
 
-function generateTimeSlots(start: string, end: string, durationMinutes: number): string[] {
-  const slots: string[] = [];
-  const [startH, startM] = start.split(":").map(Number);
-  const [endH, endM] = end.split(":").map(Number);
-  let currentMinutes = startH * 60 + startM;
-  const endMinutes = endH * 60 + endM;
-
-  while (currentMinutes + durationMinutes <= endMinutes) {
-    const h = Math.floor(currentMinutes / 60);
-    const m = currentMinutes % 60;
-    slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-    currentMinutes += durationMinutes;
-  }
-
-  return slots;
-}
-
 /** How the desk tells patients apart: MRN, then NIC or PHN when there is one. */
 const patientIds = (p: Patient) => [p.mrn, p.nic ? `NIC ${p.nic}` : p.phn ? `PHN ${p.phn}` : ""].filter(Boolean).join(" · ");
-
-function getDayName(dateStr: string): string {
-  const date = new Date(dateStr + "T00:00:00");
-  return date.toLocaleDateString("en-US", { weekday: "long" });
-}
 
 export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
   const router = useRouter();
@@ -95,15 +74,10 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
   const searchDone = !!search && !!matches.data;
   const filteredPatients = search ? matches.data ?? NO_PATIENTS : NO_PATIENTS;
 
-  // Generate time slots for selected doctor
-  const timeSlots = useMemo(() => {
-    if (!selectedDoctor) return [];
-    return generateTimeSlots(
-      selectedDoctor.workingHours.start,
-      selectedDoctor.workingHours.end,
-      selectedDoctor.slotDurationMinutes
-    );
-  }, [selectedDoctor]);
+  // The doctor's sessions on the chosen day, and the appointment times they offer.
+  const daySessions = selectedDoctor && selectedDate ? sessionsOn(selectedDoctor.sessions, selectedDate) : [];
+  const timeSlots = selectedDoctor && selectedDate ? slotsOn(selectedDoctor.sessions, selectedDate) : [];
+  const selectedSlot = timeSlots.find((slot) => slot.time === selectedTime);
 
   // The doctor's booked slots that day, from their schedule.
   const schedule = useQuery({
@@ -116,16 +90,11 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
     [schedule.data],
   );
 
-  // Whether the doctor works on the chosen day. With no working days on record, any day is offered.
-  const isValidDay =
-    !selectedDoctor || !selectedDate || selectedDoctor.availableDays.length === 0 ||
-    selectedDoctor.availableDays.includes(getDayName(selectedDate));
-
   // The date picker's `min` stops picking a past day; a typed one is caught here.
-  const complete = !!(selectedPatientId && selectedDoctorId && selectedDate >= getTodayString() && selectedTime && visitType && reason.trim());
+  const complete = !!(selectedPatientId && selectedDoctorId && selectedDate >= getTodayString() && selectedSlot && visitType && reason.trim());
 
   const handleSubmit = () => {
-    if (!complete || !visitType) {
+    if (!complete || !visitType || !selectedSlot) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -135,7 +104,8 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
         patientId: selectedPatientId,
         doctorId: selectedDoctorId,
         date: selectedDate,
-        time: selectedTime,
+        time: selectedSlot.time,
+        minutes: selectedSlot.minutes,
         visitType,
         reason,
         notes,
@@ -256,11 +226,10 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
                     </span>
                   )}
                 </div>
-                {doc.roomNumber && (
-                  <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="size-3" /> Room {doc.roomNumber}
-                  </p>
-                )}
+                <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                  <CalendarDays className="size-3" />
+                  {doc.sessions.length > 0 ? workingDays(doc.sessions) : "No sessions set up"}
+                </p>
               </button>
             );
           })}
@@ -282,48 +251,55 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
               }}
               className="max-w-xs"
             />
-            {selectedDoctor && selectedDoctor.availableDays.length > 0 && (
-              <FieldDescription>Dr. {selectedDoctor.name.full} works {selectedDoctor.availableDays.join(", ")}.</FieldDescription>
+            {selectedDoctor && selectedDoctor.sessions.length > 0 && (
+              <FieldDescription>Dr. {selectedDoctor.name.full} sees patients {workingDays(selectedDoctor.sessions)}.</FieldDescription>
             )}
           </Field>
 
-          {selectedDate && !isValidDay && selectedDoctor && (
-            <p className="rounded-lg border border-status-warning-border bg-status-warning-bg p-3 text-sm text-status-warning-text">
-              Dr. {selectedDoctor.name.full} doesn&apos;t work on {getDayName(selectedDate)}s. Pick another date.
-            </p>
-          )}
-
-          {!selectedDoctor && <p className="text-sm text-muted-foreground">Pick a doctor to see their free times.</p>}
-
-          {selectedDate && isValidDay && selectedDoctor && (
+          {!selectedDoctor ? (
+            <p className="text-sm text-muted-foreground">Pick a doctor to see their free times.</p>
+          ) : selectedDoctor.sessions.length === 0 ? (
+            <Notice>
+              Dr. {selectedDoctor.name.full} has no sessions set up yet. An administrator can add them on the doctor&apos;s
+              page in the admin portal.
+            </Notice>
+          ) : selectedDate && timeSlots.length === 0 ? (
+            <Notice>
+              Dr. {selectedDoctor.name.full} doesn&apos;t see patients on {WEEKDAYS[weekdayOf(selectedDate)]}s. Pick another date.
+            </Notice>
+          ) : selectedDate ? (
             <Field>
               <FieldLabel>Time</FieldLabel>
-              {timeSlots.length === 0 ? (
-                <FieldDescription>Dr. {selectedDoctor.name.full} has no working hours set.</FieldDescription>
-              ) : (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-                  {timeSlots.map((slot) => {
-                    const isBooked = bookedSlots.has(slot);
-                    return (
-                      <Button
-                        key={slot}
-                        type="button"
-                        variant={selectedTime === slot ? "default" : "outline"}
-                        size="sm"
-                        disabled={isBooked}
-                        title={isBooked ? "Already booked" : undefined}
-                        className={cn("h-10 tabular-nums", isBooked && "line-through")}
-                        onClick={() => setSelectedTime(slot)}
-                      >
-                        {formatTime(slot)}
-                      </Button>
-                    );
-                  })}
-                </div>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+                {timeSlots.map((slot) => {
+                  const isBooked = bookedSlots.has(slot.time);
+                  return (
+                    <Button
+                      key={slot.time}
+                      type="button"
+                      variant={selectedTime === slot.time ? "default" : "outline"}
+                      size="sm"
+                      disabled={isBooked}
+                      title={isBooked ? "Already booked" : undefined}
+                      className={cn("h-10 tabular-nums", isBooked && "line-through")}
+                      onClick={() => setSelectedTime(slot.time)}
+                    >
+                      {formatTime(slot.time)}
+                    </Button>
+                  );
+                })}
+              </div>
+              {schedule.isError && (
+                <Notice>Couldn&apos;t check which times are already taken. A taken time is refused when you book.</Notice>
               )}
-              {timeSlots.length > 0 && <FieldDescription>Crossed-out times are already booked.</FieldDescription>}
+              <FieldDescription>
+                {daySessions
+                  .map((s) => `${formatTime(s.start)}–${formatTime(s.end)}${s.room ? `, room ${s.room}` : ""}`)
+                  .join(" and ")}
+                . Crossed-out times are already booked.
+              </FieldDescription>
             </Field>
-          )}
+          ) : null}
         </FieldGroup>
       </SectionCard>
 
@@ -371,5 +347,14 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
         </Button>
       </div>
     </div>
+  );
+}
+
+/** A reason no times can be offered. */
+function Notice({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-lg border border-status-warning-border bg-status-warning-bg p-3 text-sm text-status-warning-text">
+      {children}
+    </p>
   );
 }

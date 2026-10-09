@@ -17,6 +17,7 @@
     "./patients": "./src/patients/index.ts",
     "./print": "./src/print/index.ts",
     "./query": "./src/query/index.ts",
+    "./schedule": "./src/schedule/index.ts",
     "./shell": "./src/shell/index.ts",
     "./workplace": "./src/workplace/index.ts",
     "./styles.css": "./src/styles.css",

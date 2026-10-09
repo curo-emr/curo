@@ -17,7 +17,7 @@ export async function bookNewAppointment(data: BookAppointmentInput) {
   const [startHour, startMin] = v.time.split(":").map(Number);
   const startDt = new Date(v.date);
   startDt.setHours(startHour, startMin, 0, 0);
-  const endDt = new Date(startDt.getTime() + 30 * 60 * 1000); // 30 min slot
+  const endDt = new Date(startDt.getTime() + v.minutes * 60 * 1000);
 
   const payload = {
     patientId: v.patientId,

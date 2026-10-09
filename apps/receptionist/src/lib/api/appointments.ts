@@ -35,11 +35,12 @@ export async function getAppointmentsByDate(date: string): Promise<Appointment[]
   return getAppointments({ date });
 }
 
+// A doctor's live appointments on a day (booked, arrived or seen; not cancelled or no-shows).
 export async function getSchedule(practitionerId: string, date?: string): Promise<Appointment[]> {
   const params: Record<string, string> = {};
   if (date) params.date = date;
-  const res = await apiClient.get<FhirAppointment[]>(`/appointments/schedule/${practitionerId}`, { params });
-  return res.data.map(mapFhirAppointment);
+  const res = await apiClient.get<{ queue: FhirAppointment[] }>(`/appointments/schedule/${practitionerId}`, { params });
+  return res.data.queue.map(mapFhirAppointment);
 }
 
 export async function updateAppointment(id: string, data: Record<string, unknown>): Promise<Appointment> {

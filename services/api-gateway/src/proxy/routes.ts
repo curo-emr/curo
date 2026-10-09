@@ -9,6 +9,7 @@ export const SERVICE_ROUTES: Record<string, string> = {
   '/appointments':
     process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
   '/payments': process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
+  '/schedules': process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003',
   '/encounters': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
   '/notes': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
   '/vitals': process.env.CLINICAL_SERVICE_URL || 'http://localhost:3004',
