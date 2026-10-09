@@ -8,7 +8,7 @@ type AppointmentStatus = Appointment["status"];
 export async function bookNewAppointment(data: BookAppointmentInput) {
   const parsed = bookAppointmentSchema.safeParse(data);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.flatten().fieldErrors };
+    return { success: false, error: parsed.error.issues[0].message };
   }
 
   const v = parsed.data;
@@ -34,8 +34,7 @@ export async function bookNewAppointment(data: BookAppointmentInput) {
     const appt = mapFhirAppointment(res.data);
     return { success: true, appointmentId: appt.id };
   } catch (err) {
-    const msg = apiErrorMessage(err, "Failed to book appointment");
-    return { success: false, error: { _form: [msg] } };
+    return { success: false, error: apiErrorMessage(err, "Failed to book appointment") };
   }
 }
 

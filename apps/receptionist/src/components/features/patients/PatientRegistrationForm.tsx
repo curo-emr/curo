@@ -89,7 +89,7 @@ export function PatientRegistrationForm() {
         });
         router.push(ROUTES.PATIENT(result.patientId));
       } else {
-        toast.error("Failed to register patient. Please check the form.");
+        toast.error(result.error || "Failed to register patient");
       }
     } catch {
       toast.error("An unexpected error occurred.");

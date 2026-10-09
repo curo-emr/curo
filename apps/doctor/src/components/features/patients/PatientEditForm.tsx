@@ -104,7 +104,7 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
         toast.success("Patient demographics updated successfully");
         router.push(ROUTES.PATIENT(patient.id));
       } else {
-        toast.error("Failed to update patient. Please check the form.");
+        toast.error(result.error || "Failed to update patient");
       }
     } catch {
       toast.error("An unexpected error occurred.");

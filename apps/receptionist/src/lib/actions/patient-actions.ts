@@ -8,7 +8,7 @@ import { mapFhirPatient, type FhirPatient } from "@/lib/api/mappers";
 export async function registerPatient(data: PatientFormValues) {
   const parsed = patientFormSchema.safeParse(data);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.flatten().fieldErrors };
+    return { success: false, error: parsed.error.issues[0].message };
   }
 
   try {
@@ -16,8 +16,7 @@ export async function registerPatient(data: PatientFormValues) {
     const patient = mapFhirPatient(res.data);
     return { success: true, patientId: patient.id, patientCode: patient.mrn, phn: patient.phn };
   } catch (err) {
-    const msg = apiErrorMessage(err, "Failed to register patient");
-    return { success: false, error: { _form: [msg] } };
+    return { success: false, error: apiErrorMessage(err, "Failed to register patient") };
   }
 }
 
@@ -25,7 +24,7 @@ export async function registerPatient(data: PatientFormValues) {
 export async function updatePatientDemographics(patientId: string, data: PatientFormValues) {
   const parsed = patientFormSchema.safeParse(data);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.flatten().fieldErrors };
+    return { success: false, error: parsed.error.issues[0].message };
   }
 
   const v = parsed.data;
@@ -33,7 +32,6 @@ export async function updatePatientDemographics(patientId: string, data: Patient
     await apiClient.patch(`/patients/${patientId}`, { ...patientBody(v), newAllergies: v.allergies.map(newAllergy) });
     return { success: true };
   } catch (err) {
-    const msg = apiErrorMessage(err, "Failed to update patient");
-    return { success: false, error: { _form: [msg] } };
+    return { success: false, error: apiErrorMessage(err, "Failed to update patient") };
   }
 }
