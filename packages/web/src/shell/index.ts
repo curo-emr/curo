@@ -5,3 +5,4 @@ export { AuthShell, type AuthFeature } from "./auth-shell";
 export { SignInForm } from "./sign-in-form";
 export { PasswordHelp } from "./password-help";
 export { PatientSearch, type PatientHit } from "./patient-search";
+export { AccountProfile, type AccountField } from "./account-profile";
