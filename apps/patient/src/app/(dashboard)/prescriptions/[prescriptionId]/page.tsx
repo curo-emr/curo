@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { Loader2, Pill, ArrowLeft, Clock, User } from "lucide-react";
+import { use } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Pill, ArrowLeft, Clock, User } from "lucide-react";
 import { Card, CardContent } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
@@ -10,7 +11,11 @@ import { formatDate, getDoctorName } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { StatusBadge } from "@curo/web/ui/status-badge";
-import { getMyProfile, getMyPrescriptions, getPractitioners } from "@/lib/api/patient-portal";
+import { QueryContent } from "@curo/web/query";
+import { MyRecord } from "@/components/features/MyRecord";
+import { useDoctors } from "@/lib/hooks/useDoctors";
+import { myQueries } from "@/lib/queries";
+import type { Doctor } from "@/lib/api/patient-portal";
 import type { Prescription } from "@/types";
 
 interface Props {
@@ -19,26 +24,24 @@ interface Props {
 
 export default function PrescriptionDetailPage({ params }: Props) {
   const { prescriptionId } = use(params);
-  const [prescription, setPrescription] = useState<Prescription | null>(null);
-  const [doctors, setDoctors] = useState<{ id: string; name: { full: string } }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  return <MyRecord>{patient => <PrescriptionDetail patientId={patient.id} prescriptionId={prescriptionId} />}</MyRecord>;
+}
 
-  useEffect(() => {
-    getMyProfile().then(async pt => {
-      if (!pt) { setIsLoading(false); return; }
-      const [rxs, docs] = await Promise.all([getMyPrescriptions(pt.id), getPractitioners()]);
-      const rx = rxs.find(r => r.id === prescriptionId) ?? null;
-      setPrescription(rx);
-      setDoctors(docs);
-    }).catch(console.error).finally(() => setIsLoading(false));
-  }, [prescriptionId]);
+function PrescriptionDetail({ patientId, prescriptionId }: { patientId: string; prescriptionId: string }) {
+  const doctors = useDoctors();
+  const prescription = useQuery({
+    ...myQueries.prescriptions(patientId),
+    select: rxs => rxs.find(rx => rx.id === prescriptionId) ?? null,
+  });
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+  return (
+    <QueryContent query={prescription} what="this prescription">
+      {rx => rx ? <PrescriptionView prescription={rx} doctors={doctors} /> : <div className="p-8 text-center text-slate-500">Prescription not found.</div>}
+    </QueryContent>
+  );
+}
 
-  if (!prescription) {
-    return <div className="p-8 text-center text-slate-500">Prescription not found.</div>;
-  }
-
+function PrescriptionView({ prescription, doctors }: { prescription: Prescription; doctors: Doctor[] }) {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <Link href={ROUTES.PRESCRIPTIONS}>

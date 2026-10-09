@@ -1,35 +1,42 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, CheckCircle2, Clock } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { CheckCircle2, Clock } from "lucide-react";
+import { QueryContent, allOf } from "@curo/web/query";
+import { MyRecord } from "@/components/features/MyRecord";
+import { useDoctors } from "@/lib/hooks/useDoctors";
+import { directoryQueries, myQueries } from "@/lib/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Badge } from "@curo/web/ui/badge";
 import { formatDate, getTestName, getDoctorName } from "@/lib/utils";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { EmptyState } from "@curo/web/ui/empty-state";
-import { getMyProfile, getMyLabOrders, getPractitioners } from "@/lib/api/patient-portal";
-import { getLabTestCatalog } from "@/lib/data/api";
+import type { Doctor } from "@/lib/api/patient-portal";
 import type { LabOrder, LabTestCatalogItem } from "@/types";
 
 export default function LabReportsPage() {
-  const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
-  const [labTestCatalog, setLabTestCatalog] = useState<LabTestCatalogItem[]>([]);
-  const [doctors, setDoctors] = useState<{ id: string; name: { full: string } }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  return <MyRecord>{patient => <LabReports patientId={patient.id} />}</MyRecord>;
+}
 
-  useEffect(() => {
-    getMyProfile().then(async pt => {
-      if (!pt) { setIsLoading(false); return; }
-      const [labs, catalog, docs] = await Promise.all([getMyLabOrders(pt.id), getLabTestCatalog(), getPractitioners()]);
-      setLabOrders(labs);
-      setLabTestCatalog(catalog);
-      setDoctors(docs);
-    }).catch(console.error).finally(() => setIsLoading(false));
-  }, []);
+function LabReports({ patientId }: { patientId: string }) {
+  const doctors = useDoctors();
+  const reports = allOf(useQuery(myQueries.labOrders(patientId)), useQuery(directoryQueries.labTests()));
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+  return (
+    <QueryContent query={reports} what="your lab reports">
+      {([labOrders, labTestCatalog]) => <LabReportList labOrders={labOrders} labTestCatalog={labTestCatalog} doctors={doctors} />}
+    </QueryContent>
+  );
+}
 
+interface LabReportListProps {
+  labOrders: LabOrder[];
+  labTestCatalog: LabTestCatalogItem[];
+  doctors: Doctor[];
+}
+
+function LabReportList({ labOrders, labTestCatalog, doctors }: LabReportListProps) {
   const completedLabs = labOrders.filter(l => l.status === "completed");
   const pendingLabs = labOrders.filter(l => l.status !== "completed");
 
