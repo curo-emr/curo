@@ -7,8 +7,9 @@ import {
 } from 'typeorm';
 
 /**
- * Prescribing reference catalog (drug name/form/strength/ATC) — distinct from
- * per-batch `Stock` inventory. Doctors browse this when writing prescriptions.
+ * The one list of drugs (name/form/strength/ATC). Doctors prescribe from it,
+ * and pharmacies receive `Stock` batches under its ids, so a prescription's
+ * code is the code its stock is kept under.
  */
 @Entity('medication_catalog')
 export class MedicationCatalog {

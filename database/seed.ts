@@ -8,6 +8,7 @@ import {
   generatePhn,
 } from '../packages/shared/src/identifiers';
 import { seedLabCatalog, seedLabOrders, type SeededLabs } from './seed-labs';
+import { drug, ensureMedicationCatalog, seedStock } from './seed-medications';
 
 // The seed writes raw SQL against the schema created by `npm run db:migrate`.
 // These enums are just the column values it inserts.
@@ -201,66 +202,8 @@ async function topUps(db: DataSource) {
   );
   console.log('✅ lab orders without a lab sent to the Colombo lab');
 
-  // ---- MEDICATION CATALOG (prescribing reference, DB-backed) ----
-  const medicationCatalog = [
-    {
-      id: 'med_0101',
-      name: 'Metformin 500mg Tablet',
-      genericName: 'Metformin',
-      form: 'tablet',
-      strength: '500mg',
-      atc: 'A10BA02',
-      commonSubstitutes: ['med_0102'],
-    },
-    {
-      id: 'med_0102',
-      name: 'Metformin 850mg Tablet',
-      genericName: 'Metformin',
-      form: 'tablet',
-      strength: '850mg',
-      atc: 'A10BA02',
-      commonSubstitutes: ['med_0101'],
-    },
-    {
-      id: 'med_0201',
-      name: 'Salbutamol Inhaler 100mcg',
-      genericName: 'Salbutamol',
-      form: 'inhaler',
-      strength: '100mcg',
-      atc: 'R03AC02',
-      commonSubstitutes: ['med_0202'],
-    },
-    {
-      id: 'med_0202',
-      name: 'Levosalbutamol Inhaler 50mcg',
-      genericName: 'Levosalbutamol',
-      form: 'inhaler',
-      strength: '50mcg',
-      atc: 'R03CC13',
-      commonSubstitutes: ['med_0201'],
-    },
-  ];
-  for (const m of medicationCatalog) {
-    await db.query(
-      `
-      INSERT INTO medication_catalog (id, name, "genericName", form, strength, atc, "commonSubstitutes", active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true)
-      ON CONFLICT (id) DO NOTHING
-    `,
-      [
-        m.id,
-        m.name,
-        m.genericName,
-        m.form,
-        m.strength,
-        m.atc,
-        JSON.stringify(m.commonSubstitutes),
-      ],
-    );
-  }
-  console.log(
-    `✅ ${medicationCatalog.length} medication catalog entries ensured`,
-  );
+  // ---- MEDICATION CATALOG (see seed-medications.ts) ----
+  await ensureMedicationCatalog(db);
 
   // ---- ICD-10 DIAGNOSIS CATALOG (DB-backed) ----
   const icd10Codes = [
@@ -1135,8 +1078,7 @@ async function seed() {
   // ---- PRESCRIPTIONS ----
   const medications = [
     {
-      code: 'metformin-500mg',
-      display: 'Metformin 500mg',
+      drug: 'med_0101',
       dosage: '1 tablet twice daily',
       route: 'oral',
       freq: 'BID',
@@ -1144,8 +1086,7 @@ async function seed() {
       unit: 'tablets',
     },
     {
-      code: 'amlodipine-5mg',
-      display: 'Amlodipine 5mg',
+      drug: 'med_0301',
       dosage: '1 tablet once daily',
       route: 'oral',
       freq: 'QD',
@@ -1153,8 +1094,7 @@ async function seed() {
       unit: 'tablets',
     },
     {
-      code: 'atorvastatin-20mg',
-      display: 'Atorvastatin 20mg',
+      drug: 'med_0302',
       dosage: '1 tablet at night',
       route: 'oral',
       freq: 'QN',
@@ -1162,8 +1102,7 @@ async function seed() {
       unit: 'tablets',
     },
     {
-      code: 'omeprazole-20mg',
-      display: 'Omeprazole 20mg',
+      drug: 'med_0401',
       dosage: '1 capsule before meals',
       route: 'oral',
       freq: 'BID',
@@ -1171,8 +1110,7 @@ async function seed() {
       unit: 'capsules',
     },
     {
-      code: 'salbutamol-inhaler',
-      display: 'Salbutamol Inhaler 100mcg',
+      drug: 'med_0201',
       dosage: '2 puffs when needed',
       route: 'inhalation',
       freq: 'PRN',
@@ -1180,8 +1118,7 @@ async function seed() {
       unit: 'inhaler',
     },
     {
-      code: 'losartan-50mg',
-      display: 'Losartan 50mg',
+      drug: 'med_0304',
       dosage: '1 tablet once daily',
       route: 'oral',
       freq: 'QD',
@@ -1189,8 +1126,7 @@ async function seed() {
       unit: 'tablets',
     },
     {
-      code: 'paracetamol-500mg',
-      display: 'Paracetamol 500mg',
+      drug: 'med_0501',
       dosage: '1-2 tablets every 6 hours',
       route: 'oral',
       freq: 'Q6H PRN',
@@ -1198,8 +1134,7 @@ async function seed() {
       unit: 'tablets',
     },
     {
-      code: 'amoxicillin-250mg',
-      display: 'Amoxicillin 250mg',
+      drug: 'med_0601',
       dosage: '1 capsule three times daily',
       route: 'oral',
       freq: 'TID',
@@ -1226,8 +1161,8 @@ async function seed() {
         rnd(doctorIds),
         encId || null,
         isCompleted ? 'completed' : 'active',
-        med.code,
-        med.display,
+        drug(med.drug).id,
+        drug(med.drug).name,
         med.dosage,
         med.route,
         med.freq,
@@ -1293,362 +1228,8 @@ async function seed() {
   }
   console.log('✅ 5 dispense records created');
 
-  // ---- PHARMACY STOCK ----
-  const stockData = [
-    {
-      code: 'metformin-500mg',
-      name: 'Metformin 500mg',
-      generic: 'Metformin',
-      form: 'tablet',
-      strength: '500mg',
-      qty: 500,
-      unit: 'tablets',
-      expiry: '2026-12-31',
-      threshold: 50,
-      price: 5.5,
-    },
-    {
-      code: 'amlodipine-5mg',
-      name: 'Amlodipine 5mg',
-      generic: 'Amlodipine',
-      form: 'tablet',
-      strength: '5mg',
-      qty: 300,
-      unit: 'tablets',
-      expiry: '2026-12-31',
-      threshold: 30,
-      price: 12.0,
-    },
-    {
-      code: 'atorvastatin-20mg',
-      name: 'Atorvastatin 20mg',
-      generic: 'Atorvastatin',
-      form: 'tablet',
-      strength: '20mg',
-      qty: 200,
-      unit: 'tablets',
-      expiry: '2027-06-30',
-      threshold: 30,
-      price: 18.5,
-    },
-    {
-      code: 'omeprazole-20mg',
-      name: 'Omeprazole 20mg',
-      generic: 'Omeprazole',
-      form: 'capsule',
-      strength: '20mg',
-      qty: 250,
-      unit: 'capsules',
-      expiry: '2026-09-30',
-      threshold: 25,
-      price: 8.0,
-    },
-    {
-      code: 'salbutamol-inhaler',
-      name: 'Salbutamol Inhaler 100mcg',
-      generic: 'Salbutamol',
-      form: 'inhaler',
-      strength: '100mcg/puff',
-      qty: 40,
-      unit: 'inhalers',
-      expiry: '2026-08-31',
-      threshold: 5,
-      price: 320.0,
-    },
-    {
-      code: 'losartan-50mg',
-      name: 'Losartan 50mg',
-      generic: 'Losartan',
-      form: 'tablet',
-      strength: '50mg',
-      qty: 150,
-      unit: 'tablets',
-      expiry: '2027-01-31',
-      threshold: 20,
-      price: 15.0,
-    },
-    {
-      code: 'paracetamol-500mg',
-      name: 'Paracetamol 500mg',
-      generic: 'Paracetamol',
-      form: 'tablet',
-      strength: '500mg',
-      qty: 1000,
-      unit: 'tablets',
-      expiry: '2027-03-31',
-      threshold: 100,
-      price: 3.0,
-    },
-    {
-      code: 'amoxicillin-250mg',
-      name: 'Amoxicillin 250mg',
-      generic: 'Amoxicillin',
-      form: 'capsule',
-      strength: '250mg',
-      qty: 8,
-      unit: 'capsules',
-      expiry: '2026-05-31',
-      threshold: 30,
-      price: 22.0,
-    },
-    {
-      code: 'cetirizine-10mg',
-      name: 'Cetirizine 10mg',
-      generic: 'Cetirizine',
-      form: 'tablet',
-      strength: '10mg',
-      qty: 100,
-      unit: 'tablets',
-      expiry: '2027-02-28',
-      threshold: 20,
-      price: 6.5,
-    },
-    {
-      code: 'pantoprazole-40mg',
-      name: 'Pantoprazole 40mg',
-      generic: 'Pantoprazole',
-      form: 'tablet',
-      strength: '40mg',
-      qty: 5,
-      unit: 'tablets',
-      expiry: '2025-12-31',
-      threshold: 20,
-      price: 14.0,
-    },
-    {
-      code: 'metoprolol-50mg',
-      name: 'Metoprolol 50mg',
-      generic: 'Metoprolol',
-      form: 'tablet',
-      strength: '50mg',
-      qty: 120,
-      unit: 'tablets',
-      expiry: '2026-11-30',
-      threshold: 20,
-      price: 11.0,
-    },
-    {
-      code: 'aspirin-75mg',
-      name: 'Aspirin 75mg',
-      generic: 'Aspirin',
-      form: 'tablet',
-      strength: '75mg',
-      qty: 600,
-      unit: 'tablets',
-      expiry: '2027-06-30',
-      threshold: 50,
-      price: 4.0,
-    },
-    {
-      code: 'diclofenac-50mg',
-      name: 'Diclofenac 50mg',
-      generic: 'Diclofenac',
-      form: 'tablet',
-      strength: '50mg',
-      qty: 80,
-      unit: 'tablets',
-      expiry: '2026-10-31',
-      threshold: 15,
-      price: 9.0,
-    },
-    {
-      code: 'furosemide-40mg',
-      name: 'Furosemide 40mg',
-      generic: 'Furosemide',
-      form: 'tablet',
-      strength: '40mg',
-      qty: 3,
-      unit: 'tablets',
-      expiry: '2026-07-31',
-      threshold: 30,
-      price: 7.0,
-    },
-    {
-      code: 'vitamin-d3',
-      name: 'Vitamin D3 1000IU',
-      generic: 'Cholecalciferol',
-      form: 'capsule',
-      strength: '1000IU',
-      qty: 200,
-      unit: 'capsules',
-      expiry: '2027-12-31',
-      threshold: 30,
-      price: 25.0,
-    },
-    {
-      code: 'insulin-glargine',
-      name: 'Insulin Glargine 100U/ml',
-      generic: 'Insulin Glargine',
-      form: 'injection',
-      strength: '100U/ml',
-      qty: 25,
-      unit: 'vials',
-      expiry: '2026-06-30',
-      threshold: 5,
-      price: 1800.0,
-    },
-    {
-      code: 'lisinopril-10mg',
-      name: 'Lisinopril 10mg',
-      generic: 'Lisinopril',
-      form: 'tablet',
-      strength: '10mg',
-      qty: 90,
-      unit: 'tablets',
-      expiry: '2027-01-31',
-      threshold: 20,
-      price: 13.5,
-    },
-    {
-      code: 'simvastatin-20mg',
-      name: 'Simvastatin 20mg',
-      generic: 'Simvastatin',
-      form: 'tablet',
-      strength: '20mg',
-      qty: 60,
-      unit: 'tablets',
-      expiry: '2026-12-31',
-      threshold: 20,
-      price: 16.0,
-    },
-    {
-      code: 'azithromycin-500mg',
-      name: 'Azithromycin 500mg',
-      generic: 'Azithromycin',
-      form: 'tablet',
-      strength: '500mg',
-      qty: 12,
-      unit: 'tablets',
-      expiry: '2026-09-30',
-      threshold: 10,
-      price: 45.0,
-    },
-    {
-      code: 'clopidogrel-75mg',
-      name: 'Clopidogrel 75mg',
-      generic: 'Clopidogrel',
-      form: 'tablet',
-      strength: '75mg',
-      qty: 90,
-      unit: 'tablets',
-      expiry: '2027-03-31',
-      threshold: 20,
-      price: 28.0,
-    },
-  ];
-
-  for (const s of stockData) {
-    await db.query(
-      `
-      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", "batchNumber", "organizationId", active)
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true)
-    `,
-      [
-        s.code,
-        s.name,
-        s.generic,
-        s.form,
-        s.strength,
-        s.qty,
-        s.unit,
-        s.expiry,
-        s.threshold,
-        s.price,
-        `B-${s.code}-A`,
-        pharmacyOrgIds[0],
-      ],
-    );
-  }
-
-  // Second batches of the same drug with DIFFERENT expiry dates (multi-batch / FEFO demo)
-  // Earlier expiry than the primary batch (above), but still in the future, so
-  // FEFO consumes these "-B" batches first.
-  const secondBatches = [
-    {
-      code: 'paracetamol-500mg',
-      name: 'Paracetamol 500mg',
-      generic: 'Paracetamol',
-      form: 'tablet',
-      strength: '500mg',
-      qty: 400,
-      unit: 'tablets',
-      expiry: '2027-01-31',
-      threshold: 100,
-      price: 3.0,
-    },
-    {
-      code: 'amoxicillin-250mg',
-      name: 'Amoxicillin 250mg',
-      generic: 'Amoxicillin',
-      form: 'capsule',
-      strength: '250mg',
-      qty: 50,
-      unit: 'capsules',
-      expiry: '2027-02-28',
-      threshold: 30,
-      price: 22.0,
-    },
-    {
-      code: 'omeprazole-20mg',
-      name: 'Omeprazole 20mg',
-      generic: 'Omeprazole',
-      form: 'capsule',
-      strength: '20mg',
-      qty: 150,
-      unit: 'capsules',
-      expiry: '2027-03-31',
-      threshold: 20,
-      price: 8.0,
-    },
-  ];
-  for (const s of secondBatches) {
-    await db.query(
-      `
-      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", "batchNumber", "organizationId", active)
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true)
-    `,
-      [
-        s.code,
-        s.name,
-        s.generic,
-        s.form,
-        s.strength,
-        s.qty,
-        s.unit,
-        s.expiry,
-        s.threshold,
-        s.price,
-        `B-${s.code}-B`,
-        pharmacyOrgIds[0],
-      ],
-    );
-  }
-  // Give the second pharmacy a small inventory too (subset of drugs)
-  for (const s of stockData.slice(0, 8)) {
-    await db.query(
-      `
-      INSERT INTO stock (id, "medicationCode", "medicationName", "genericName", form, strength, quantity, unit, "expiryDate", "reorderThreshold", "unitPrice", "batchNumber", "organizationId", active)
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true)
-    `,
-      [
-        s.code,
-        s.name,
-        s.generic,
-        s.form,
-        s.strength,
-        Math.floor(s.qty / 2),
-        s.unit,
-        s.expiry,
-        s.threshold,
-        s.price,
-        `B2-${s.code}-A`,
-        pharmacyOrgIds[1],
-      ],
-    );
-  }
-  console.log(
-    `✅ ${stockData.length + secondBatches.length + 8} pharmacy stock items created (incl. multi-batch, 2 pharmacies)`,
-  );
+  // ---- PHARMACY STOCK (see seed-medications.ts) ----
+  await seedStock(db, pharmacyOrgIds);
 
   // ---- LAB INSTRUMENTS ----
   const instruments = [

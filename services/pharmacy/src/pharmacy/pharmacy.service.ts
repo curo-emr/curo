@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -460,11 +461,26 @@ export class PharmacyService {
     });
   }
 
-  /** Receives a batch into the pharmacist's own pharmacy. */
+  /**
+   * Receives a batch of a catalog drug into the pharmacist's own pharmacy,
+   * under the catalog's code, so what doctors prescribe can be dispensed.
+   */
   async addStock(dto: CreateStockDto, pharmacist: AuthUser): Promise<Stock> {
+    const organizationId = pharmacyOf(pharmacist);
+    const drug = await this.catalogRepo.findOne({
+      where: { id: dto.medicationCode, active: true },
+    });
+    if (!drug)
+      throw new BadRequestException(
+        `${dto.medicationCode} is not in the medication catalog`,
+      );
     const item = this.stockRepo.create({
       ...dto,
-      organizationId: pharmacyOf(pharmacist),
+      medicationName: drug.name,
+      genericName: drug.genericName,
+      form: drug.form,
+      strength: drug.strength,
+      organizationId,
     });
     return this.stockRepo.save(item);
   }

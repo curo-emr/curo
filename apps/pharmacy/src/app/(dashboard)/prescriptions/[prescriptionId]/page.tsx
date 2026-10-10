@@ -198,7 +198,7 @@ function StockLine({ check, item }: { check: StockCheck; item: PrescriptionItem 
     case "unlisted":
       return (
         <Notice tone="warning" icon={TriangleAlert}>
-          This pharmacy keeps no stock under this medicine&apos;s code ({item.medicationId || "none"}), so it can&apos;t be dispensed here.
+          This pharmacy doesn&apos;t stock this medicine, so it can&apos;t be dispensed here.
         </Notice>
       );
   }

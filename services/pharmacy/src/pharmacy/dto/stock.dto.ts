@@ -1,25 +1,10 @@
 import { IsNotEmpty, IsOptional, IsString, IsNumber } from 'class-validator';
 
 export class CreateStockDto {
+  /** The catalog drug received; its name, form and strength come from there. */
   @IsNotEmpty()
   @IsString()
   medicationCode: string;
-
-  @IsNotEmpty()
-  @IsString()
-  medicationName: string;
-
-  @IsOptional()
-  @IsString()
-  genericName?: string;
-
-  @IsOptional()
-  @IsString()
-  form?: string;
-
-  @IsOptional()
-  @IsString()
-  strength?: string;
 
   @IsNumber()
   quantity: number;
