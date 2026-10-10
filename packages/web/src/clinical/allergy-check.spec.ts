@@ -39,6 +39,17 @@ describe("allergyAlerts", () => {
     expect(alerts("Diclofenac 50mg Tablet", "Aspirin")).toEqual([["Aspirin", "an NSAID"]]);
   });
 
+  it("doesn't take sulfates, sulphates or sulfites for sulfonamides", () => {
+    expect(alerts("Ferrous Sulfate 200mg Tablet", "Sulfa", "Sulfonamides")).toEqual([]);
+    expect(alerts("Salbutamol Sulphate Inhaler", "Sulfa")).toEqual([]);
+    expect(alerts("Sulfamethoxazole 400mg", "Sulfites")).toEqual([]);
+  });
+
+  it("matches a recorded drug as whole words, not inside another word", () => {
+    expect(alerts("Sulfamethoxazole 400mg", "Sulfa")).toEqual([["Sulfa", "a sulfonamide"]]);
+    expect(alerts("Ferrous Sulfate 200mg Tablet", "Sulf")).toEqual([]);
+  });
+
   it("leaves out allergies that share no drug or class", () => {
     expect(alerts("Azithromycin 500mg Tablet", "Penicillin", "Peanuts", "Lactose", "Sulfa")).toEqual([]);
     expect(alerts("Paracetamol 500mg Tablet", "Aspirin", "NSAIDs")).toEqual([]);

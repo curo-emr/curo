@@ -22,8 +22,9 @@ const CROSS_REACTING_CLASSES = [
   },
   {
     label: "a sulfonamide",
-    allergy: /\bsul(f|ph)/,
-    member: /\bsul(f|ph)a\w*|\bco-trimoxazole\b/,
+    // Sulfates, sulphates and sulfites are not sulfonamides.
+    allergy: /\bsul(f|ph)(a\b|onamide)/,
+    member: /\bsul(f|ph)a(?!te)\w*|\bco-trimoxazole\b/,
   },
   {
     label: "an NSAID",
@@ -31,6 +32,11 @@ const CROSS_REACTING_CLASSES = [
     member: /\b(aspirin|\w*fenac|\w*profen|naproxen|\w*oxicam|\w*coxib|indomet(h)?acin|mefenamic|ketorolac)\b/,
   },
 ] as const;
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Matches `text` as whole words, so "sulfa" is not found in "sulfate". */
+const wholeWords = (text: string) => new RegExp(`\\b${escapeRegExp(text)}\\b`);
 
 /** A recorded allergy that may apply to a drug: to the drug itself, or to a class it belongs to. */
 export interface AllergyAlert {
@@ -46,7 +52,7 @@ export function allergyAlerts(drugName: string, allergies: readonly Allergy[]): 
   return allergies.flatMap(allergy => {
     const substance = allergy.substance.trim().toLowerCase();
     if (!substance) return [];
-    if (drug.includes(substance)) return [{ allergy }];
+    if (wholeWords(substance).test(drug)) return [{ allergy }];
     const shared = drugClasses.find(c => c.allergy.test(substance) || c.member.test(substance));
     return shared ? [{ allergy, drugClass: shared.label }] : [];
   });
