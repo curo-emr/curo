@@ -474,6 +474,8 @@ export class PharmacyService {
       throw new BadRequestException(
         `${dto.medicationCode} is not in the medication catalog`,
       );
+    if (dto.expiryDate && dto.expiryDate < isoToday())
+      throw new BadRequestException('This batch has already expired');
     const item = this.stockRepo.create({
       ...dto,
       medicationName: drug.name,

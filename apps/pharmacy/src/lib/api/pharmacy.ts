@@ -5,7 +5,7 @@ import {
   type FhirMedicationDispense,
   type FhirMedicationRequest,
 } from './mappers';
-import { unwrapBundle, type FhirBundle, type PaginatedResult } from '@curo/web/fhir';
+import { paginationParams, unwrapBundle, type FhirBundle, type PaginatedResult } from '@curo/web/fhir';
 import type { Prescription } from '@/types';
 
 // ─── Prescriptions ───────────────────────────────────────────────────────────
@@ -166,7 +166,41 @@ export async function updateStock(id: string, data: Record<string, unknown>): Pr
   return res.data;
 }
 
-export async function createStock(data: Record<string, unknown>): Promise<StockItem> {
-  const res = await apiClient.post<StockItem>('/stock', data);
-  return res.data;
+/** A batch as it is received; the drug's name, form and strength come from the catalog. */
+export interface ReceivedBatch {
+  /** The catalog drug's id. */
+  medicationCode: string;
+  batchNumber: string;
+  quantity: number;
+  unit: string;
+  /** YYYY-MM-DD. */
+  expiryDate: string;
+  unitPrice: number;
+  supplier?: string;
+  /** The drug is low at or below this many units; the server keeps its default when left out. */
+  reorderThreshold?: number;
+}
+
+// Receives a batch into this pharmacy's stock.
+export async function receiveStock(batch: ReceivedBatch): Promise<void> {
+  await apiClient.post('/stock', batch);
+}
+
+// ─── Medication catalog ──────────────────────────────────────────────────────
+
+/** A drug in the prescribing catalog, which stock is received under. */
+export interface CatalogDrug {
+  id: string;
+  name: string;
+  genericName: string | null;
+  form: string | null;
+  strength: string | null;
+}
+
+// Searched on the server, like the doctor's prescribing search.
+export async function searchCatalog(search: string): Promise<CatalogDrug[]> {
+  const res = await apiClient.get<FhirBundle<CatalogDrug>>('/medication-catalog', {
+    params: paginationParams({ search: search.trim(), pageSize: 8 }),
+  });
+  return unwrapBundle(res.data).resources;
 }
