@@ -194,8 +194,11 @@ export class ClinicalService implements OnModuleInit {
     return encounters.map(toFhirEncounter);
   }
 
-  async getEncounter(id: string) {
-    const e = await this.encountersRepo.findOne({ where: { id } });
+  /** One visit; with `patientId`, only that patient's (another's is as good as missing). */
+  async getEncounter(id: string, patientId?: string) {
+    const e = await this.encountersRepo.findOne({
+      where: { id, ...(patientId && { patientId }) },
+    });
     if (!e) throw new NotFoundException(`Encounter ${id} not found`);
     return toFhirEncounter(e);
   }
@@ -215,8 +218,11 @@ export class ClinicalService implements OnModuleInit {
     return this.notesRepo.save(note);
   }
 
-  async getEncounterNotes(encounterId: string) {
-    return this.notesRepo.find({ where: { encounterId } });
+  /** A visit's notes; with `patientId`, only if the visit is that patient's. */
+  async getEncounterNotes(encounterId: string, patientId?: string) {
+    return this.notesRepo.find({
+      where: { encounterId, ...(patientId && { patientId }) },
+    });
   }
 
   async getPatientNotes(patientId: string) {
@@ -501,8 +507,11 @@ export class ClinicalService implements OnModuleInit {
     return orders.map(toFhirServiceRequest);
   }
 
-  async getLabOrder(id: string) {
-    const order = await this.labOrdersRepo.findOne({ where: { id } });
+  /** One lab order; with `patientId`, only that patient's (another's is as good as missing). */
+  async getLabOrder(id: string, patientId?: string) {
+    const order = await this.labOrdersRepo.findOne({
+      where: { id, ...(patientId && { patientId }) },
+    });
     if (!order) throw new NotFoundException(`Lab order ${id} not found`);
     const qr = order.qrCodeId
       ? await this.qrCodesRepo.findOne({ where: { id: order.qrCodeId } })
