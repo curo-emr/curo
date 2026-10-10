@@ -92,6 +92,7 @@ export interface FhirMedicationRequest {
   id: string;
   meta?: { lastUpdated?: string };
   status: string;
+  statusReason?: { text?: string };
   authoredOn?: string;
   subject?: { reference?: string };
   requester?: { reference?: string };
@@ -330,7 +331,7 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
   const encounterId = fhir.encounter?.reference?.replace('Encounter/', '') ?? '';
   const doctorId = fhir.requester?.reference?.replace('Practitioner/', '') ?? '';
   const statusMap: Record<string, Prescription['status']> = {
-    draft: 'draft', active: 'sent_to_pharmacy', completed: 'completed',
+    draft: 'draft', active: 'sent_to_pharmacy', 'on-hold': 'on_hold', completed: 'completed',
     cancelled: 'cancelled', stopped: 'cancelled',
   };
 
@@ -358,6 +359,7 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
       instructions: dosage?.text ?? '',
     }],
     notesToPharmacy: fhir.note?.[0]?.text ?? '',
+    holdReason: fhir.statusReason?.text ?? '',
   };
 }
 

@@ -30,6 +30,10 @@ export class MedicationRequest {
   })
   status: MedicationRequestStatus;
 
+  // Why the prescription is on hold, while it is (FHIR statusReason).
+  @Column({ type: 'varchar', nullable: true })
+  statusReason: string | null;
+
   @Column({ nullable: true })
   intent: string; // proposal | plan | order | original-order
 

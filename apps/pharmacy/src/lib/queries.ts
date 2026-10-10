@@ -3,7 +3,7 @@ import { POLL_INBOX_MS } from "@curo/web/query";
 import { getAllergies, getPatientById, getPatientsByIds } from "@/lib/api/patients";
 import {
   getDispenseSummary, getDispensingRecordsByPatient, getDispensingRecordsByPrescription,
-  getGroupedStock, getPendingPrescriptions, getPrescription, getPrescriptionsByPatient,
+  getGroupedStock, getHeldPrescriptions, getPendingPrescriptions, getPrescription, getPrescriptionsByPatient,
 } from "@/lib/api/pharmacy";
 import type { Prescription } from "@/types";
 
@@ -51,6 +51,11 @@ export const prescriptionQueries = {
     queryFn: getPendingPrescriptions,
     refetchInterval: POLL_INBOX_MS,
   }),
+  /** Prescriptions set aside until they can be dispensed. */
+  held: () => queryOptions({
+    queryKey: [...prescriptionQueries.all, "on-hold"],
+    queryFn: getHeldPrescriptions,
+  }),
   detail: (prescriptionId: string) => queryOptions({
     queryKey: [...prescriptionQueries.all, prescriptionId],
     queryFn: () => getPrescription(prescriptionId),
@@ -79,11 +84,18 @@ export const stockQueries = {
   }),
 };
 
-/** After a dispense: the prescription, the patient's record, the dispensing log and the stock all changed. */
-export function invalidateAfterDispense(client: QueryClient, patientId: string) {
+/** After a hold or release: the prescription lists and the patient's record changed. */
+export function invalidateAfterHold(client: QueryClient, patientId: string) {
   return Promise.all([
     client.invalidateQueries({ queryKey: prescriptionQueries.all }),
     client.invalidateQueries({ queryKey: patientQueries.record(patientId) }),
+  ]);
+}
+
+/** After a dispense: as after a hold, and the dispensing log and the stock changed too. */
+export function invalidateAfterDispense(client: QueryClient, patientId: string) {
+  return Promise.all([
+    invalidateAfterHold(client, patientId),
     client.invalidateQueries({ queryKey: dispensingQueries.all }),
     client.invalidateQueries({ queryKey: stockQueries.all }),
   ]);
