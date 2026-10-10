@@ -6,7 +6,14 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, FindOptionsWhere, Repository, In, Not } from 'typeorm';
+import {
+  DataSource,
+  FindOptionsWhere,
+  Repository,
+  In,
+  IsNull,
+  Not,
+} from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Encounter } from '../entities/encounter.entity';
 import { ClinicalNote } from '../entities/clinical-note.entity';
@@ -17,7 +24,8 @@ import {
   QrCode,
   type LabPanelTest,
 } from '@curo/shared/database';
-import { MedicationRequestStatus } from '@curo/shared/enums';
+import { MedicationRequestStatus, UserRole } from '@curo/shared/enums';
+import { workplaceOf, type AuthUser } from '@curo/shared/auth';
 import {
   parsePagination,
   toSearchset,
@@ -42,7 +50,7 @@ import {
 import {
   linkTriageVitals,
   newEncounter,
-  newPrescription,
+  savePrescriptions,
   newVital,
   saveLabOrder,
 } from './clinical-records';
@@ -266,8 +274,10 @@ export class ClinicalService implements OnModuleInit {
 
   // Prescriptions
   async createPrescription(dto: CreatePrescriptionDto, practitionerId: string) {
-    const saved = await this.medsRepo.save(
-      newPrescription(dto, practitionerId),
+    const [saved] = await savePrescriptions(
+      this.medsRepo.manager,
+      [dto],
+      practitionerId,
     );
     return toFhirMedRequest(saved);
   }
@@ -295,9 +305,24 @@ export class ClinicalService implements OnModuleInit {
     return toFhirMedRequest(med);
   }
 
-  async getPendingPrescriptions() {
+  /**
+   * Prescriptions waiting to be dispensed: for a pharmacist, those sent to
+   * their pharmacy and those from before prescriptions named one; for anyone
+   * else, every pharmacy's.
+   */
+  async getPendingPrescriptions(user: AuthUser) {
+    const status = MedicationRequestStatus.ACTIVE;
     const meds = await this.medsRepo.find({
-      where: { status: MedicationRequestStatus.ACTIVE },
+      where:
+        user.role === UserRole.PHARMACIST
+          ? [
+              {
+                status,
+                performerOrganizationId: workplaceOf(user, 'pharmacy'),
+              },
+              { status, performerOrganizationId: IsNull() },
+            ]
+          : { status },
       order: { authoredOn: 'DESC' },
     });
     return meds.map(toFhirMedRequest);

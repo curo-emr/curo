@@ -8,7 +8,7 @@ import { QueryContent } from "@curo/web/query";
 import { EncounterEditor } from "@/components/features/encounters/EncounterEditor";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
-import { appointmentQueries, catalogQueries, patientQueries } from "@/lib/queries";
+import { appointmentQueries, catalogQueries, directoryQueries, patientQueries } from "@/lib/queries";
 import { getTodayString } from "@/lib/utils";
 
 export default function NewVisitPage({ params }: { params: Promise<{ patientId: string }> }) {
@@ -30,6 +30,7 @@ export default function NewVisitPage({ params }: { params: Promise<{ patientId: 
   const medicationSuggestions = useQuery(catalogQueries.medicationSuggestions()).data ?? [];
   const labTests = useQuery(catalogQueries.labTests()).data ?? [];
   const labs = useQuery(catalogQueries.labs()).data ?? [];
+  const pharmacies = useQuery(directoryQueries.organizations("pharmacy")).data ?? [];
 
   // The editor reads its autosaved draft once, keyed by the appointment, so it
   // waits for that. Later refreshes of the patient never unmount it.
@@ -45,6 +46,7 @@ export default function NewVisitPage({ params }: { params: Promise<{ patientId: 
           medicationSuggestions={medicationSuggestions}
           labTestsCatalog={labTests}
           labs={labs}
+          pharmacies={pharmacies}
         />
       ) : (
         <EmptyState icon={UserX} title="Patient not found" className="min-h-[50vh]" />

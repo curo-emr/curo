@@ -188,6 +188,8 @@ export interface Prescription {
   sentAt: string | null;
   items: PrescriptionItem[];
   notesToPharmacy: string;
+  /** The pharmacy it was sent to; null for those written before prescriptions named one, which any pharmacy dispenses. */
+  pharmacyId: string | null;
 }
 
 // --- Dispensing Records ---

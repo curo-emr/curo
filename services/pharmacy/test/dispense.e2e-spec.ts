@@ -184,6 +184,26 @@ describe('POST /dispense', () => {
     ).resolves.toMatchObject({ organizationId: pharmacy });
   });
 
+  it('dispenses only a prescription sent to this pharmacy, or to none', async () => {
+    const sendTo = async (at: string | null) => {
+      const rx = await prescribe(1, [{ batchNumber: 'B1', quantity: 5 }]);
+      return svc.db
+        .getRepository(MedicationRequest)
+        .save({ ...rx, performerOrganizationId: at });
+    };
+    const elsewhere = await sendTo(otherPharmacy);
+
+    const res = await dispense(elsewhere).expect(403);
+
+    expect(res.body).toMatchObject({
+      message: 'This prescription was sent to another pharmacy',
+    });
+    expect(await statusOf(elsewhere)).toBe(MedicationRequestStatus.ACTIVE);
+    expect(await stockLeft(elsewhere)).toEqual({ B1: 5 });
+    await dispense(await sendTo(pharmacy)).expect(201);
+    await dispense(await sendTo(null)).expect(201);
+  });
+
   it('is refused to a pharmacist not yet assigned to a pharmacy', async () => {
     const rx = await prescribe(1, [{ batchNumber: 'B1', quantity: 5 }]);
 

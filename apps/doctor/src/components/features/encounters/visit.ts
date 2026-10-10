@@ -21,6 +21,8 @@ export interface VisitDraft {
   vitals: Partial<Vitals>;
   diagnoses: Diagnosis[];
   prescriptions: PrescriptionItem[];
+  /** The pharmacy the prescriptions are sent to. Drafts saved before prescriptions went to a pharmacy have none. */
+  pharmacyId?: string;
   labTests: LabTestDraft[];
   labPriority: LabPriority;
   labNotes: string;
@@ -75,6 +77,7 @@ export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ 
     })),
     diagnoses: visit.diagnoses.map(d => ({ code: d.icdCode, display: d.name, isPrimary: d.isPrimary })),
     prescriptions: visit.prescriptions.map(rx => ({
+      performerOrganizationId: visit.pharmacyId,
       medicationCode: rx.medicationId,
       medicationDisplay: rx.displayName,
       dosageText: rx.dose,
@@ -104,6 +107,11 @@ export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ 
 }
 
 // ─── Prescribing helpers ─────────────────────────────────────────────────────
+
+/** The pharmacy a visit's prescriptions go to: the one chosen while it is still open, else the first. */
+export function pharmacyFor<P extends { id: string }>(visit: VisitDraft, pharmacies: P[]): P | undefined {
+  return pharmacies.find(p => p.id === visit.pharmacyId) ?? pharmacies[0];
+}
 
 export const FREQUENCIES = [
   { value: "OD", label: "Once daily (OD)", perDay: 1 },

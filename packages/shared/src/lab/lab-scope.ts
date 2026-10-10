@@ -1,6 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
-import { workplaceOf, type AuthUser } from '../auth';
+import { assertActiveOrganization, workplaceOf, type AuthUser } from '../auth';
 import { UserRole } from '../enums';
 
 // Each test goes to the lab the doctor sent it to. Lab staff see and work on
@@ -18,20 +17,7 @@ export function labScope(user: AuthUser): string | undefined {
 }
 
 /** Refuses anything but an active laboratory, e.g. as the lab an order is sent to. */
-export async function assertActiveLab(
+export const assertActiveLab = (
   db: Pick<EntityManager, 'query'>,
   organizationId: string | undefined,
-): Promise<void> {
-  // organizations is owned by the auth service, so it is read with raw SQL.
-  const labs = organizationId
-    ? await db.query<unknown[]>(
-        `SELECT 1 FROM organizations
-         WHERE id::text = $1 AND type = 'laboratory' AND active`,
-        [organizationId],
-      )
-    : [];
-  if (!labs.length)
-    throw new BadRequestException(
-      `Organization ${organizationId ?? '(none)'} is not an active laboratory`,
-    );
-}
+) => assertActiveOrganization(db, organizationId, 'laboratory');

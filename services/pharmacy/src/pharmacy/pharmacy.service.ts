@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -222,6 +223,14 @@ export class PharmacyService {
     if (!prescription)
       throw new NotFoundException(
         `Prescription ${dto.medicationRequestId} not found`,
+      );
+    // Those written before prescriptions named a pharmacy go to any.
+    if (
+      prescription.performerOrganizationId &&
+      prescription.performerOrganizationId !== pharmacy
+    )
+      throw new ForbiddenException(
+        'This prescription was sent to another pharmacy',
       );
     const qty = dto.quantityValue || prescription.quantityValue || 1;
 

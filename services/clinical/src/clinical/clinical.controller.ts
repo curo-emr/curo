@@ -202,8 +202,8 @@ export class ClinicalController {
   @Get('prescriptions/pending')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  getPendingPrescriptions() {
-    return this.clinicalService.getPendingPrescriptions();
+  getPendingPrescriptions(@CurrentUser() user: AuthUser) {
+    return this.clinicalService.getPendingPrescriptions(user);
   }
 
   // Pending count and latest prescription for each patient on a list page.

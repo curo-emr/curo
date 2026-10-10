@@ -112,6 +112,7 @@ export interface FhirMedicationRequest {
     }>;
   }>;
   dispenseRequest?: {
+    performer?: { reference?: string };
     quantity?: { value?: number; unit?: string };
     expectedSupplyDuration?: { value?: number };
     validityPeriod?: { end?: string };
@@ -358,6 +359,7 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
       instructions: dosage?.text ?? '',
     }],
     notesToPharmacy: fhir.note?.[0]?.text ?? '',
+    pharmacyId: supply?.performer?.reference?.replace('Organization/', '') ?? null,
   };
 }
 

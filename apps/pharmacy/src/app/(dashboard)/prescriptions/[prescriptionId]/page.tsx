@@ -9,6 +9,7 @@ import { CircleCheck, CircleX, ClipboardList, Info, Loader2, PackageCheck, Pill,
 import { apiErrorMessage } from "@curo/web/api";
 import { formatStatus } from "@curo/web/format";
 import { QueryContent, allOf, dataOrNull } from "@curo/web/query";
+import { workplaceQueries } from "@curo/web/workplace";
 import { Button } from "@curo/web/ui/button";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { SectionCard } from "@curo/web/ui/section-card";
@@ -79,7 +80,9 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
   // The server checks stock again as it dispenses; this only saves a trip that would fail.
   const stockChecks = stock.data && prescription.items.map(item => checkStock(item, stock.data));
   const stockShort = stockChecks?.some(c => c.kind !== "enough") ?? false;
-  const dispensable = prescription.status === DISPENSABLE_STATUS;
+  const workplace = useQuery(workplaceQueries.mine()).data;
+  const sentElsewhere = !!prescription.pharmacyId && !!workplace && prescription.pharmacyId !== workplace.id;
+  const dispensable = prescription.status === DISPENSABLE_STATUS && !sentElsewhere;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -141,6 +144,10 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
                 </p>
               )}
             </>
+          ) : sentElsewhere ? (
+            <p className="text-sm text-muted-foreground">
+              This prescription was sent to another pharmacy, so it can&apos;t be dispensed here.
+            </p>
           ) : (
             <p className="text-sm text-muted-foreground">
               This prescription is {formatStatus(prescription.status).toLowerCase()} and can&apos;t be dispensed.

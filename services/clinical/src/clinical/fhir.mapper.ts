@@ -49,6 +49,9 @@ export function toFhirMedRequest(m: MedicationRequest) {
       },
     ],
     dispenseRequest: {
+      performer: m.performerOrganizationId
+        ? { reference: `Organization/${m.performerOrganizationId}` }
+        : undefined,
       quantity: { value: m.quantityValue, unit: m.quantityUnit },
       expectedSupplyDuration: m.durationDays
         ? { value: m.durationDays, unit: 'days' }

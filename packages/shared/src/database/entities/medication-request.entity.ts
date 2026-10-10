@@ -20,6 +20,13 @@ export class MedicationRequest {
   @Column()
   practitionerId: string;
 
+  // The pharmacy the prescription is sent to; only its pharmacists dispense it.
+  // Null only on prescriptions written before they were sent to a pharmacy,
+  // which every pharmacy sees.
+  @Index()
+  @Column({ type: 'varchar', nullable: true })
+  performerOrganizationId: string | null;
+
   @Column({ nullable: true })
   encounterId: string;
 

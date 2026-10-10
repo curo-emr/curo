@@ -42,6 +42,7 @@ describe('POST /encounters/visit', () => {
   let svc: ServiceUnderTest;
   let doctor: TestActor;
   let lab: string;
+  let pharmacy: string;
 
   /** An organization, as the auth service keeps them; returns its id. */
   async function organization(type: string, active = true) {
@@ -57,6 +58,7 @@ describe('POST /encounters/visit', () => {
     svc = await startService(AppModule);
     doctor = svc.as(UserRole.DOCTOR);
     lab = await organization('laboratory');
+    pharmacy = await organization('pharmacy');
   });
 
   afterAll(() => svc.close());
@@ -75,7 +77,11 @@ describe('POST /encounters/visit', () => {
       { code: 'R05', display: 'Cough' },
     ],
     prescriptions: [
-      { medicationCode: 'AMOX500', medicationDisplay: 'Amoxicillin 500mg' },
+      {
+        medicationCode: 'AMOX500',
+        medicationDisplay: 'Amoxicillin 500mg',
+        performerOrganizationId: pharmacy,
+      },
     ],
     labOrders: [
       {
@@ -187,6 +193,36 @@ describe('POST /encounters/visit', () => {
     for (const performerOrganizationId of elsewhere) {
       const body = visit({
         labOrders: [{ ...order, performerOrganizationId }],
+      });
+      await sign(body).expect(400);
+      expect(await recordsOf(body.id)).toEqual(NOTHING);
+    }
+  });
+
+  it('sends each prescription to the pharmacy the doctor chose', async () => {
+    const body = visit();
+
+    await sign(body).expect(201);
+
+    await expect(
+      svc.db.getRepository(MedicationRequest).findBy({ encounterId: body.id }),
+    ).resolves.toEqual([
+      expect.objectContaining({ performerOrganizationId: pharmacy }),
+    ]);
+  });
+
+  it('saves nothing when a prescription is sent to no pharmacy, or somewhere that is not an active pharmacy', async () => {
+    const rx = { medicationCode: 'AMOX500', medicationDisplay: 'Amoxicillin' };
+    const elsewhere = [
+      undefined,
+      randomUUID(),
+      lab,
+      await organization('pharmacy', false),
+    ];
+
+    for (const performerOrganizationId of elsewhere) {
+      const body = visit({
+        prescriptions: [{ ...rx, performerOrganizationId }],
       });
       await sign(body).expect(400);
       expect(await recordsOf(body.id)).toEqual(NOTHING);

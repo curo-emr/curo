@@ -31,7 +31,8 @@ import { PrescriptionForm } from "./sections/PrescriptionForm";
 import { LabOrderForm } from "./sections/LabOrderForm";
 import { VitalsPanel, type RecordedVitals } from "./sections/VitalsPanel";
 import { PatientContext } from "./PatientContext";
-import { emptyVisit, signVisit, type VisitDraft } from "./visit";
+import { emptyVisit, pharmacyFor, signVisit, type VisitDraft } from "./visit";
+import type { Organization } from "@/lib/api/directory";
 import { apiErrorMessage } from "@curo/web/api";
 import { invalidateAfterVisit } from "@/lib/queries";
 
@@ -44,12 +45,13 @@ interface Props {
   medicationSuggestions: Medication[];
   labTestsCatalog: LabTestCatalogItem[];
   labs: Lab[];
+  pharmacies: Organization[];
 }
 
 type StoredDraft = VisitDraft & { savedAt?: string };
 
 export function EncounterEditor({
-  patient, appointmentId, reason, medicationSuggestions, labTestsCatalog, labs,
+  patient, appointmentId, reason, medicationSuggestions, labTestsCatalog, labs, pharmacies,
 }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -144,6 +146,11 @@ export function EncounterEditor({
       toast.error("Add the chief complaint before signing");
       return;
     }
+    if (visit.prescriptions.length > 0 && !pharmacyFor(visit, pharmacies)) {
+      document.getElementById("prescriptions")?.scrollIntoView({ block: "start" });
+      toast.error("No pharmacy can take these prescriptions. Ask an administrator to add one.");
+      return;
+    }
     if (visit.labTests.some(t => !t.labId)) {
       document.getElementById("labs")?.scrollIntoView({ block: "start" });
       toast.error("Choose a lab for every test before signing");
@@ -156,7 +163,8 @@ export function EncounterEditor({
     setConfirmOpen(false);
     setSigning(true);
     try {
-      const { encounterId, appointmentClosed } = await signVisit(visitRef.current, {
+      const draft = visitRef.current;
+      const { encounterId, appointmentClosed } = await signVisit({ ...draft, pharmacyId: pharmacyFor(draft, pharmacies)?.id }, {
         patientId: patient.id,
         appointmentId,
         triageVitals: triage?.vitals,
@@ -226,6 +234,9 @@ export function EncounterEditor({
           <PrescriptionForm
             prescriptions={visit.prescriptions}
             onChange={v => update("prescriptions", v)}
+            pharmacies={pharmacies}
+            pharmacyId={pharmacyFor(visit, pharmacies)?.id}
+            onPharmacyChange={id => update("pharmacyId", id)}
             suggestions={medicationSuggestions}
             patientId={patient.id}
           />
@@ -264,7 +275,9 @@ export function EncounterEditor({
             <SummaryLine ok={visit.diagnoses.length > 0} label="Diagnoses"
               value={visit.diagnoses.length ? visit.diagnoses.map(d => d.name).join(", ") : "None recorded"} />
             <SummaryLine ok label="To pharmacy"
-              value={visit.prescriptions.length ? visit.prescriptions.map(p => p.displayName).join(", ") : "No prescriptions"} />
+              value={visit.prescriptions.length
+                ? `${visit.prescriptions.map(p => p.displayName).join(", ")}${pharmacies.length > 1 ? ` → ${pharmacyFor(visit, pharmacies)?.name}` : ""}`
+                : "No prescriptions"} />
             <SummaryLine ok label="To lab"
               value={visit.labTests.length ? `${visit.labTests.map(t => labs.length > 1 ? `${t.name} → ${labs.find(l => l.id === t.labId)?.name}` : t.name).join(", ")} (${visit.labPriority})` : "No lab tests"} />
             {appointmentId && <SummaryLine ok label="Appointment" value="Marked as completed" />}
