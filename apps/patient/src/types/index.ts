@@ -200,8 +200,4 @@ export interface Doctor {
   specialty: string;
   phone: string;
   email: string;
-  roomNumber: string;
-  availableDays: string[];
-  slotDurationMinutes: number;
-  workingHours: { start: string; end: string };
 }

@@ -1,4 +1,5 @@
 import { apiClient } from '@curo/web/api';
+import type { DoctorSession } from '@curo/web/schedule';
 import type { Doctor } from '@/types';
 
 export interface Practitioner {
@@ -18,13 +19,14 @@ export async function getPractitioners(role?: string): Promise<Practitioner[]> {
   return res.data;
 }
 
-// The doctors, with the booking defaults the desk schedules them by. The API holds no
-// rooms or working days yet, so those are left empty (the booking form then offers any day).
+// The doctors, each with their weekly sessions.
 export async function getDoctors(): Promise<Doctor[]> {
-  return (await getPractitioners('DOCTOR')).map(p => ({
-    id: p.id, name: p.name, specialty: p.specialty,
-    phone: p.phone, email: p.email, roomNumber: '',
-    availableDays: [], slotDurationMinutes: 30,
-    workingHours: { start: '08:00', end: '17:00' },
+  const [doctors, sessions] = await Promise.all([
+    getPractitioners('DOCTOR'),
+    apiClient.get<DoctorSession[]>('/schedules').then(res => res.data),
+  ]);
+  return doctors.map(p => ({
+    id: p.id, name: p.name, specialty: p.specialty, phone: p.phone, email: p.email,
+    sessions: sessions.filter(s => s.practitionerId === p.id),
   }));
 }

@@ -158,6 +158,38 @@ async function topUps(db: DataSource) {
     '✅ seeded pharmacists and lab staff assigned to their workplaces',
   );
 
+  // ---- DOCTORS' WEEKLY SESSIONS ----
+  // When each sees patients: Dr. Priya mornings and evenings, the specialists on
+  // set days. Only for a doctor with no sessions yet, so an admin's week is kept.
+  const weeks: [string, number[], string, string, number, string][] = [
+    ['dr.priya@curo.test', [1, 2, 3, 4, 5, 6], '08:00', '12:00', 15, '1'],
+    ['dr.priya@curo.test', [1, 2, 3, 4, 5], '16:00', '19:00', 15, '1'],
+    ['dr.ashan@curo.test', [1, 3, 5], '09:00', '12:00', 20, '2'],
+    ['dr.nimal@curo.test', [2, 4], '09:00', '13:00', 15, '3'],
+    ['dr.nimal@curo.test', [6], '14:00', '17:00', 15, '3'],
+  ];
+  const unscheduled = new Set(
+    (
+      await db.query<{ email: string }[]>(
+        `SELECT p.email FROM practitioners p
+         WHERE NOT EXISTS (SELECT 1 FROM doctor_sessions s WHERE s."practitionerId" = p.id::text)`,
+      )
+    ).map((r) => r.email),
+  );
+  let sessionsCreated = 0;
+  for (const [email, days, start, end, slotMinutes, room] of weeks) {
+    if (!unscheduled.has(email)) continue;
+    for (const weekday of days) {
+      await db.query(
+        `INSERT INTO doctor_sessions ("practitionerId", weekday, "startTime", "endTime", "slotMinutes", room)
+         SELECT id::text, $2, $3, $4, $5, $6 FROM practitioners WHERE email = $1`,
+        [email, weekday, start, end, slotMinutes, room],
+      );
+      sessionsCreated++;
+    }
+  }
+  console.log(`✅ doctors' weekly sessions ensured (${sessionsCreated} new)`);
+
   // ---- LAB ORDERS' LABS (only the lab a test was sent to works on it) ----
   // Orders placed before tests were sent to a lab go to the Colombo lab, which
   // offers every test.

@@ -20,6 +20,7 @@ import { paymentQueries, userQueries } from "@/lib/queries";
 import { QueryContent } from "@curo/web/query";
 import { ROUTES, ROLE_LABELS, WORKPLACE_TYPES, type UserRole } from "@/lib/constants";
 import { WorkplaceSelect } from "@/components/features/organizations/WorkplaceSelect";
+import { WeeklySessions } from "@/components/features/users/WeeklySessions";
 import { format, parseISO } from "date-fns";
 import type { AdminUser, Payment } from "@/types";
 import { apiErrorMessage } from "@curo/web/api";
@@ -104,6 +105,8 @@ function UserDetail({ user }: { user: AdminUser }) {
           </CardContent>
         </Card>
       )}
+
+      {user.role === "DOCTOR" && user.practitionerId && <WeeklySessions practitionerId={user.practitionerId} />}
 
       {user.role === "RECEPTIONIST" && user.practitionerId && <CollectedIncome practitionerId={user.practitionerId} />}
     </div>

@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { getUser, getUserSummary, getUsersByRole } from "@/lib/api/users";
 import { getPaymentTotals } from "@/lib/api/payments";
 import { getOrganizations } from "@/lib/api/organizations";
+import { getSessions } from "@/lib/api/schedules";
 
 export const userQueries = {
   all: ["users"] as const,
@@ -33,5 +34,13 @@ export const organizationQueries = {
   list: (includeInactive = false) => queryOptions({
     queryKey: [...organizationQueries.all, { includeInactive }],
     queryFn: () => getOrganizations({ includeInactive }),
+  }),
+};
+
+export const scheduleQueries = {
+  /** A doctor's weekly sessions. */
+  forDoctor: (practitionerId: string) => queryOptions({
+    queryKey: ["schedules", practitionerId],
+    queryFn: () => getSessions(practitionerId),
   }),
 };

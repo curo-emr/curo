@@ -18,6 +18,7 @@ describe('targetFor', () => {
     ['/patients/123/allergies', PATIENT],
     ['/appointments/123/queue-stage', APPOINTMENT],
     ['/payments', APPOINTMENT],
+    ['/schedules/123', APPOINTMENT],
     ['/encounters/visit', CLINICAL],
     ['/prescriptions/pending', CLINICAL],
     ['/lab-orders/123', CLINICAL],
