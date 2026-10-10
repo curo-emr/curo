@@ -44,7 +44,7 @@ const reorderShare = (drug: GroupedStock) => (drug.reorderLevel ? drug.usableQua
 export const byUrgency = (drugs: GroupedStock[]) => [...drugs].sort((a, b) => reorderShare(a) - reorderShare(b));
 
 export type StockCheck =
-  /** No stock is kept under the prescribed medication's code. */
+  /** This pharmacy keeps no batches of the prescribed medication. */
   | { kind: "unlisted" }
   | { kind: "short" | "enough"; available: number; unit: string };
 
