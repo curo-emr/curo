@@ -49,6 +49,11 @@ export function formatAgeSex(dob: string | null | undefined, sex?: string | null
   return [age === null ? "" : `${age}y`, sex ? formatStatus(sex) : ""].filter(Boolean).join(" · ");
 }
 
+/** A day on the local calendar as YYYY-MM-DD (today by default), the form date inputs and `expiryDate` use. */
+export function getTodayString(on: Date = new Date()): string {
+  return `${on.getFullYear()}-${String(on.getMonth() + 1).padStart(2, "0")}-${String(on.getDate()).padStart(2, "0")}`;
+}
+
 /** "Good morning" until noon, "Good afternoon" until 5 pm, then "Good evening". */
 export function greeting(now: Date = new Date()): string {
   const hour = now.getHours();
