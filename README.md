@@ -58,6 +58,10 @@ cd services/patient && npm run start:dev
 
 `npm run build` and `npm test` at the root run across every backend.
 
+Use npm, not yarn, pnpm or bun: every workspace shares the one `package-lock.json`.
+`npm install` checks this first, and yarn and pnpm stop with an error. Bun skips
+the check, but CI's `npm ci` fails if `package-lock.json` no longer matches.
+
 ## Develop a portal
 
 ```bash
