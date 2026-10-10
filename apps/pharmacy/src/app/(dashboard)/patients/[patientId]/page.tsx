@@ -4,16 +4,19 @@ import { use } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Pill, FileText } from "lucide-react";
+import { ClipboardList, Pill, ReceiptText } from "lucide-react";
 import { QueryContent, dataOrNull } from "@curo/web/query";
-import { Card, CardContent } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
+import { Card } from "@curo/web/ui/card";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { BackLink } from "@curo/web/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { PatientSummaryCard } from "@/components/features/patients/PatientSummaryCard";
 import { DispenseRecordCard } from "@/components/features/dispensing/DispenseRecordCard";
 import { formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
+import { medicineName } from "@/lib/prescriptions";
 import { patientQueries } from "@/lib/queries";
 
 /** A tab's label with its count once the count is known. */
@@ -31,47 +34,41 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
       {p => {
         if (!p) notFound();
         return (
-          <div className="space-y-6 max-w-6xl mx-auto">
+          <div className="mx-auto max-w-5xl space-y-6">
+            <BackLink href={ROUTES.PATIENTS} label="All patients" />
             <PatientSummaryCard patient={p} allergies={allergies} />
 
-            <Tabs defaultValue="prescriptions" className="w-full">
-              <TabsList className="bg-slate-100 p-1 rounded-md mb-4">
-                <TabsTrigger value="prescriptions" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                  <Pill className="h-4 w-4 mr-2" /> {counted("Prescriptions", prescriptions.data)}
+            <Tabs defaultValue="prescriptions">
+              <TabsList className="mb-2">
+                <TabsTrigger value="prescriptions">
+                  <ClipboardList /> {counted("Prescriptions", prescriptions.data)}
                 </TabsTrigger>
-                <TabsTrigger value="dispensing" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                  <FileText className="h-4 w-4 mr-2" /> {counted("Dispensing History", dispensing.data)}
+                <TabsTrigger value="dispensing">
+                  <ReceiptText /> {counted("Dispensed", dispensing.data)}
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="prescriptions" className="space-y-3">
                 <QueryContent query={prescriptions} what="prescriptions">
                   {rxs => rxs.length === 0 ? (
-                    <div className="text-center py-12 text-slate-500">No prescriptions found for this patient.</div>
+                    <Card><EmptyState icon={Pill} title="No prescriptions yet" description="Prescriptions from this patient's visits appear here." /></Card>
                   ) : (
-                    rxs.map(rx => (
-                      <Card key={rx.id} className="shadow-sm border hover:bg-slate-50/50 transition-colors">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <span className="font-mono text-sm font-medium text-slate-900">{rx.id.slice(0, 8).toUpperCase()}</span>
-                                <StatusBadge status={rx.status} />
-                              </div>
-                              <p className="text-sm text-slate-600">
-                                {rx.items.map(i => i.displayName).join(', ')}
-                              </p>
-                              <p className="text-xs text-slate-400 mt-1">
-                                Prescribed: {formatDate(rx.createdAt)}
-                              </p>
+                    <Card className="divide-y">
+                      {rxs.map(rx => (
+                        <div key={rx.id} className="flex items-center justify-between gap-4 px-5 py-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-foreground">{medicineName(rx)}</span>
+                              <StatusBadge status={rx.status} />
                             </div>
-                            <Link href={ROUTES.PRESCRIPTION(rx.id)}>
-                              <Button variant="outline" size="sm" className="shrink-0">View</Button>
-                            </Link>
+                            <p className="mt-0.5 text-xs text-muted-foreground">Prescribed {formatDate(rx.createdAt)}</p>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))
+                          <Button asChild variant="outline" size="sm" className="shrink-0">
+                            <Link href={ROUTES.PRESCRIPTION(rx.id)}>Open</Link>
+                          </Button>
+                        </div>
+                      ))}
+                    </Card>
                   )}
                 </QueryContent>
               </TabsContent>
@@ -79,7 +76,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
               <TabsContent value="dispensing" className="space-y-3">
                 <QueryContent query={dispensing} what="the dispensing history">
                   {records => records.length === 0 ? (
-                    <div className="text-center py-12 text-slate-500">No dispensing records for this patient.</div>
+                    <Card><EmptyState icon={ReceiptText} title="Nothing dispensed yet" description="Dispenses from every pharmacy appear here." /></Card>
                   ) : (
                     records.map(record => <DispenseRecordCard key={record.id} record={record} />)
                   )}

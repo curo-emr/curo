@@ -1,184 +1,117 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, Clock, Pill, XCircle } from "lucide-react";
+import { ChartColumn, Package } from "lucide-react";
 import { QueryContent, allOf } from "@curo/web/query";
-import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { Card } from "@curo/web/ui/card";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { SectionCard } from "@curo/web/ui/section-card";
+import { StackedBar, type BarSegment } from "@curo/web/ui/stacked-bar";
+import { statusLabel, toneDotClass } from "@curo/web/ui/status-badge";
 import { formatCurrency } from "@/lib/utils";
-import { formatStatus } from "@curo/web/format";
 import { dispensingQueries, prescriptionQueries, stockQueries } from "@/lib/queries";
-import type { DispenseSummary, StockItem } from "@/lib/api/pharmacy";
+import { stockLevel } from "@/lib/stock";
+import type { DispenseSummary, GroupedStock } from "@/lib/api/pharmacy";
 import type { Prescription } from "@/types";
 
 export default function ReportsPage() {
   const reports = allOf(
-    useQuery(prescriptionQueries.pending()),
-    useQuery(stockQueries.batches()),
     useQuery(dispensingQueries.summary()),
+    useQuery(prescriptionQueries.pending()),
+    useQuery(stockQueries.grouped()),
   );
 
   return (
-    <QueryContent query={reports} what="the reports">
-      {([prescriptions, medications, dispensing]) => (
-        <Reports prescriptions={prescriptions} medications={medications} dispensing={dispensing} />
-      )}
-    </QueryContent>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader title="Reports" description="This pharmacy's dispensing since it opened, and its stock today." />
+      <QueryContent query={reports} what="the reports">
+        {([dispensing, waiting, stock]) => <Reports dispensing={dispensing} waiting={waiting} stock={stock} />}
+      </QueryContent>
+    </div>
   );
 }
 
 interface ReportsProps {
-  prescriptions: Prescription[];
-  medications: StockItem[];
   dispensing: DispenseSummary;
+  waiting: Prescription[];
+  stock: GroupedStock[];
 }
 
-function Reports({ prescriptions, medications, dispensing }: ReportsProps) {
-  const totalPrescriptions = prescriptions.length;
-  const cancelledCount = prescriptions.filter(p => p.status === 'cancelled').length;
-  const cancellationRate = totalPrescriptions > 0 ? ((cancelledCount / totalPrescriptions) * 100).toFixed(1) : '0';
+const LEVELS = [
+  { status: "in_stock", tone: "success" },
+  { status: "low_stock", tone: "warning" },
+  { status: "out_of_stock", tone: "error" },
+] as const;
 
-  const totalRevenue = dispensing.revenue;
-
-  // The ten medications dispensed most, as [name, units].
-  const topMeds = dispensing.topMedications.map(m => [m.name, m.quantity] as const);
-
-  const maxMedCount = topMeds.length > 0 ? topMeds[0][1] : 1;
-
-  // Status distribution
-  const statusCounts: Record<string, number> = {};
-  for (const rx of prescriptions) {
-    statusCounts[rx.status] = (statusCounts[rx.status] || 0) + 1;
-  }
-  const statusEntries = Object.entries(statusCounts);
-  const maxStatusCount = Math.max(...statusEntries.map(([, v]) => v), 1);
-
-  const statusColors: Record<string, string> = {
-    pending: 'bg-amber-500',
-    processing: 'bg-blue-500',
-    dispensed: 'bg-green-500',
-    partially_dispensed: 'bg-purple-500',
-    on_hold: 'bg-teal-500',
-    cancelled: 'bg-red-500',
-    expired: 'bg-slate-400',
-  };
-
-  // Category distribution — based on form type from stock
-  const catCounts: Record<string, number> = {};
-  for (const med of medications) {
-    const cat = med.form || 'other';
-    catCounts[cat] = (catCounts[cat] || 0) + 1;
-  }
-  const catEntries = Object.entries(catCounts);
-  const maxCatCount = Math.max(...catEntries.map(([, v]) => v), 1);
-
-  const mostDispensedMed = topMeds.length > 0 ? topMeds[0][0] : 'N/A';
+function Reports({ dispensing, waiting, stock }: ReportsProps) {
+  const levels: BarSegment[] = LEVELS.map(({ status, tone }) => ({
+    label: statusLabel(status),
+    tone,
+    count: stock.filter(d => stockLevel(d) === status).length,
+  }));
+  const top = dispensing.topMedications;
+  const most = Math.max(1, ...top.map(m => m.quantity));
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Reports</h1>
-        <p className="text-sm text-muted-foreground">Pharmacy analytics and performance metrics</p>
-      </div>
+    <div className="space-y-6">
+      <Card className="grid grid-cols-2 divide-border lg:grid-cols-4 lg:divide-x">
+        <Stat label="Dispenses" value={dispensing.count.toLocaleString()} />
+        <Stat label="Taken in" value={formatCurrency(dispensing.revenue)} />
+        <Stat label="Prescriptions waiting" value={waiting.length.toLocaleString()} />
+        <Stat label="Medicines to reorder" value={stock.filter(d => d.low).length.toLocaleString()} />
+      </Card>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-lg border p-4 text-blue-700 bg-blue-50 border-blue-200">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="h-4 w-4" />
-            <p className="text-xs font-medium opacity-80">Total Prescriptions</p>
-          </div>
-          <p className="text-2xl font-bold">{totalPrescriptions}</p>
-        </div>
-        <div className="rounded-lg border p-4 text-green-700 bg-green-50 border-green-200">
-          <div className="flex items-center gap-2 mb-1">
-            <Clock className="h-4 w-4" />
-            <p className="text-xs font-medium opacity-80">Total Revenue</p>
-          </div>
-          <p className="text-lg font-bold">{formatCurrency(totalRevenue)}</p>
-        </div>
-        <div className="rounded-lg border p-4 text-purple-700 bg-purple-50 border-purple-200">
-          <div className="flex items-center gap-2 mb-1">
-            <Pill className="h-4 w-4" />
-            <p className="text-xs font-medium opacity-80">Most Dispensed</p>
-          </div>
-          <p className="text-lg font-bold truncate">{mostDispensedMed}</p>
-        </div>
-        <div className="rounded-lg border p-4 text-red-700 bg-red-50 border-red-200">
-          <div className="flex items-center gap-2 mb-1">
-            <XCircle className="h-4 w-4" />
-            <p className="text-xs font-medium opacity-80">Cancellation Rate</p>
-          </div>
-          <p className="text-2xl font-bold">{cancellationRate}%</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Dispensed Medications */}
-        <Card className="shadow-sm border">
-          <CardHeader className="bg-muted/50 border-b pb-3">
-            <CardTitle className="text-base">Most Dispensed Medications</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 space-y-3">
-            {topMeds.map(([medName, count]) => {
-              return (
-                <div key={medName}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-slate-700">{medName}</span>
-                    <span className="text-slate-500 font-mono text-xs">{count} units</span>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard icon={ChartColumn} iconClassName="text-primary" title="Most dispensed" description="By units handed over">
+          {top.length === 0 ? (
+            <EmptyState title="Nothing dispensed yet" className="py-6" />
+          ) : (
+            <ul className="space-y-3">
+              {top.map(m => (
+                <li key={m.name}>
+                  <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                    <span className="truncate text-foreground">{m.name}</span>
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{m.quantity} units</span>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(count / maxMedCount) * 100}%` }} />
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${(m.quantity / most) * 100}%` }} />
                   </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* Prescription Status Distribution */}
-        <Card className="shadow-sm border">
-          <CardHeader className="bg-muted/50 border-b pb-3">
-            <CardTitle className="text-base">Prescription Status Distribution</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 space-y-3">
-            {statusEntries.map(([status, count]) => (
-              <div key={status}>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-slate-700">{formatStatus(status)}</span>
-                  <span className="text-slate-500 font-mono text-xs">{count}</span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${statusColors[status] || 'bg-slate-400'}`}
-                    style={{ width: `${(count / maxStatusCount) * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Medication Category Distribution */}
-        <Card className="shadow-sm border lg:col-span-2">
-          <CardHeader className="bg-muted/50 border-b pb-3">
-            <CardTitle className="text-base">Medications by Category</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="flex items-end gap-6 h-40 justify-center flex-wrap">
-              {catEntries.map(([cat, count]) => (
-                <div key={cat} className="flex flex-col items-center gap-2">
-                  <span className="text-xs font-medium text-slate-600">{count}</span>
-                  <div
-                    className="w-16 bg-blue-500 rounded-t-md"
-                    style={{ height: `${(count / maxCatCount) * 120}px` }}
-                  />
-                  <span className="text-xs text-slate-500 text-center">{formatStatus(cat)}</span>
-                </div>
+                </li>
               ))}
+            </ul>
+          )}
+        </SectionCard>
+
+        <SectionCard icon={Package} iconClassName="text-primary" title="Stock levels" description={`${stock.length} medicines stocked`}>
+          {stock.length === 0 ? (
+            <EmptyState title="No stock recorded" className="py-6" />
+          ) : (
+            <div className="space-y-4">
+              <StackedBar segments={levels} className="h-2.5" />
+              <ul className="space-y-2">
+                {levels.map(l => (
+                  <li key={l.label} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-foreground">
+                      <span className={`size-2 rounded-full ${toneDotClass(l.tone)}`} /> {l.label}
+                    </span>
+                    <span className="tabular-nums text-muted-foreground">{l.count}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </SectionCard>
       </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="px-5 py-4">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-2xl font-semibold tabular-nums tracking-tight text-foreground">{value}</p>
     </div>
   );
 }

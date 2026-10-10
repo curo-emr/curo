@@ -2,8 +2,8 @@ import { keepPreviousData, queryOptions, type QueryClient } from "@tanstack/reac
 import { POLL_INBOX_MS } from "@curo/web/query";
 import { getAllergies, getPatientById, getPatientsByIds } from "@/lib/api/patients";
 import {
-  getDispenseSummary, getDispensingRecordsByPatient, getDispensingRecordsByPrescription, getDispensingRecordsPage,
-  getGroupedStock, getLowStockAlerts, getPendingPrescriptions, getPrescription, getPrescriptionsByPatient, getStock,
+  getDispenseSummary, getDispensingRecordsByPatient, getDispensingRecordsByPrescription,
+  getGroupedStock, getPendingPrescriptions, getPrescription, getPrescriptionsByPatient,
 } from "@/lib/api/pharmacy";
 import type { Prescription } from "@/types";
 
@@ -63,11 +63,7 @@ export const prescriptionQueries = {
 
 export const dispensingQueries = {
   all: ["dispensing"] as const,
-  /** This pharmacy's latest dispenses. */
-  recent: (limit: number) => queryOptions({
-    queryKey: [...dispensingQueries.all, "recent", limit],
-    queryFn: async () => (await getDispensingRecordsPage({ page: 1, pageSize: limit })).items,
-  }),
+  /** All-time totals for this pharmacy. */
   summary: () => queryOptions({
     queryKey: [...dispensingQueries.all, "summary"],
     queryFn: getDispenseSummary,
@@ -76,19 +72,10 @@ export const dispensingQueries = {
 
 export const stockQueries = {
   all: ["stock"] as const,
-  /** Every batch. */
-  batches: () => queryOptions({
-    queryKey: [...stockQueries.all, "batches"],
-    queryFn: getStock,
-  }),
-  /** Batches grouped by drug, FEFO-first. */
+  /** Batches grouped by drug, FEFO-first; a drug's `low` flag marks it for reordering. */
   grouped: () => queryOptions({
     queryKey: [...stockQueries.all, "grouped"],
     queryFn: getGroupedStock,
-  }),
-  lowStock: () => queryOptions({
-    queryKey: [...stockQueries.all, "low"],
-    queryFn: getLowStockAlerts,
   }),
 };
 

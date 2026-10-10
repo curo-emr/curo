@@ -1,20 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Loader2, ReceiptText } from "lucide-react";
 import { findPatientIds } from "@curo/web/api";
 import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
-import { Input } from "@curo/web/ui/input";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { LoadError } from "@curo/web/ui/load-error";
 import { Pagination } from "@curo/web/ui/pagination";
-import { Card, CardContent } from "@curo/web/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@curo/web/ui/table";
-import { Loader2, Search } from "lucide-react";
+import { SearchInput } from "@curo/web/ui/search-input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
+import { ROUTES } from "@/lib/constants";
 import { getDispensingRecordsPage } from "@/lib/api/pharmacy";
 import { getPatientsByIds } from "@/lib/api/patients";
 import { getPatientName, formatDateTime, formatCurrency } from "@/lib/utils";
@@ -38,91 +34,69 @@ export function DispensingLogTable() {
 
   return (
     <div className="space-y-4">
-      <Card className="shadow-sm border">
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search by patient, prescription, or medication..."
-              className="pl-9 bg-muted border"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <SearchInput value={query} onChange={setQuery} placeholder="Search by patient, medicine or prescription…" className="max-w-md" />
 
       {data?.tooManyMatches && (
-        <p className="text-sm text-status-warning-text px-1">
+        <p className="px-1 text-sm text-status-warning-text">
           More than 100 patients match &ldquo;{search}&rdquo;, so only some of them are searched. Add more of the name, or the MRN.
         </p>
       )}
 
-      <div className="bg-white rounded-md border overflow-hidden shadow-sm">
-        <Table>
-          <TableHeader className="bg-muted">
-            <TableRow>
-              <TableHead>Dispensing ID</TableHead>
-              <TableHead>Patient</TableHead>
-              <TableHead>Medications</TableHead>
-              <TableHead>Dispensed By</TableHead>
-              <TableHead>Date & Time</TableHead>
-              <TableHead>Amount</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        {isLoading ? (
+          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 size-5 animate-spin text-primary" /> Loading the dispensing log…
+          </div>
+        ) : isError ? (
+          <LoadError what="the dispensing log" />
+        ) : records.length === 0 ? (
+          <EmptyState
+            icon={ReceiptText}
+            title={search ? "No dispenses match your search" : "Nothing dispensed yet"}
+            description={search ? "Check the spelling, or search by MRN." : "Every dispense from this pharmacy is recorded here."}
+          />
+        ) : (
+          <Table>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />
-                  Loading dispensing records…
-                </TableCell>
+                <TableHead>Dispensed</TableHead>
+                <TableHead>Patient</TableHead>
+                <TableHead>Medicines</TableHead>
+                <TableHead>By</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
               </TableRow>
-            ) : isError ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-destructive">Failed to load dispensing records.</TableCell>
-              </TableRow>
-            ) : records.length > 0 ? (
-              records.map(record => (
-                <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">
-                  <TableCell className="font-mono text-sm font-medium">{record.id.slice(0, 8).toUpperCase()}</TableCell>
-                  <TableCell>
-                    <p className="font-medium text-foreground">{getPatientName(record.patientId, patients)}</p>
-                    <p className="text-xs text-muted-foreground">{record.prescriptionId.slice(0, 8).toUpperCase()}</p>
+            </TableHeader>
+            <TableBody>
+              {records.map(record => (
+                <TableRow key={record.id}>
+                  <TableCell className="whitespace-nowrap">
+                    <span className="block text-sm text-foreground">{formatDateTime(record.dispensedAt)}</span>
+                    <span className="block font-mono text-xs text-muted-foreground">{record.receiptNumber}</span>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-[250px]">
+                  <TableCell>
+                    <Link href={ROUTES.PATIENT(record.patientId)} className="font-medium text-foreground hover:text-primary">
+                      {getPatientName(record.patientId, patients)}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="max-w-[250px] text-sm text-muted-foreground">
                     {record.items.map((i, idx) => (
-                      <div key={idx} className="truncate">
-                        {i.medicationName} <span className="text-xs">x{i.quantity}</span>
-                      </div>
+                      <Link key={idx} href={ROUTES.PRESCRIPTION(record.prescriptionId)} className="block truncate hover:text-primary">
+                        {i.medicationName} <span className="text-xs tabular-nums">×{i.quantity}</span>
+                      </Link>
                     ))}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {record.dispensedBy}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatDateTime(record.dispensedAt)}</TableCell>
-                  <TableCell className="font-medium text-foreground">{formatCurrency(record.totalAmount)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{record.dispensedBy}</TableCell>
+                  <TableCell className="text-right font-medium tabular-nums text-foreground">{formatCurrency(record.totalAmount)}</TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  No dispensing records match your search.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-      />
+      {total > 0 && (
+        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} onPageSizeChange={setPageSize} />
+      )}
     </div>
   );
 }
