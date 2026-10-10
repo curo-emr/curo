@@ -33,6 +33,9 @@ cp .env.example .env      # once: secrets for compose (dev values; never commit 
 npm run docker:rebuild    # builds images one at a time, then `docker compose up -d`
 ```
 
+With `make` installed, `make run` does the same. `make` lists shortcuts for the
+other npm scripts too, such as `make dev APP=nurse` and `make db-generate NAME=AddX`.
+
 Gateway on :3000 (API reference at http://localhost:3000/docs), portals on
 :3010–:3016. Seed accounts are listed in [docs/TEST_CREDENTIALS.md](docs/TEST_CREDENTIALS.md).
 

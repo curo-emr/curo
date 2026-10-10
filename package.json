@@ -35,8 +35,8 @@
     "seed": "cd database && ts-node seed.ts",
     "typecheck": "npm run typecheck -w packages -w services --if-present && npm run typecheck:db",
     "typecheck:db": "tsc -p database",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
     "docker:build:backends": "bash scripts/build-backends-with-local-npm-registry.sh",
     "docker:rebuild": "bash scripts/docker-rebuild.sh"
   },
