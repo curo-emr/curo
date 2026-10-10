@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Plus, Search } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@curo/web/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@curo/web/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./command";
+import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
 interface SearchComboboxProps<T> {
   placeholder: string;
@@ -17,13 +17,17 @@ interface SearchComboboxProps<T> {
   onCustom?: (query: string) => void;
   /** Suggestions shown before the user types. */
   suggestions?: T[];
+  /** The item already chosen, shown in place of the placeholder when the picker holds one value. */
+  selected?: React.ReactNode;
+  /** For a label's htmlFor. */
+  id?: string;
   className?: string;
 }
 
 // A search-as-you-type picker (shadcn Popover + Command). Picking an item clears the box so
-// several items can be added in a row.
+// several items can be added in a row, or, with `selected`, shows the one chosen.
 export function SearchCombobox<T>({
-  placeholder, search, getKey, renderItem, onSelect, onCustom, suggestions = [], className,
+  placeholder, search, getKey, renderItem, onSelect, onCustom, suggestions = [], selected, id, className,
 }: SearchComboboxProps<T>) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -61,6 +65,7 @@ export function SearchCombobox<T>({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
+          id={id}
           type="button"
           className={cn(
             "flex h-10 w-full items-center gap-2 rounded-md border border-input bg-background px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:border-ring/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
@@ -68,7 +73,7 @@ export function SearchCombobox<T>({
           )}
         >
           <Search className="h-4 w-4 shrink-0" />
-          <span className="truncate">{placeholder}</span>
+          <span className={cn("truncate", selected && "text-foreground")}>{selected || placeholder}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-80 p-0">

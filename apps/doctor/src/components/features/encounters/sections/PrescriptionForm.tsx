@@ -6,7 +6,7 @@ import { Button } from "@curo/web/ui/button";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@curo/web/ui/section-card";
-import { SearchCombobox } from "@/components/ui/SearchCombobox";
+import { SearchCombobox } from "@curo/web/ui/search-combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
 import { searchMedications } from "@/lib/api/medications";
 import { usePatientAllergies } from "@/components/features/patients/AllergyChips";

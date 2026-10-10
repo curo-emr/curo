@@ -228,6 +228,20 @@ describe('stock', () => {
       });
     });
 
+    it('turns away an expired batch, and a quantity that is not a whole number above zero', async () => {
+      const medicationCode = await catalogDrug();
+      const receive = (body: object) =>
+        svc.api
+          .post('/stock')
+          .set(pharmacist().headers)
+          .send({ medicationCode, quantity: 10, ...body });
+
+      await receive({ expiryDate: daysFromToday(-1) }).expect(400);
+      for (const quantity of [0, -5, 2.5])
+        await receive({ quantity }).expect(400);
+      await receive({ expiryDate: daysFromToday(0) }).expect(201);
+    });
+
     it('turns away a drug that is not in the catalog', async () => {
       await svc.api
         .post('/stock')

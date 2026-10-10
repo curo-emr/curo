@@ -5,7 +5,7 @@ import { Star, Stethoscope, X } from "lucide-react";
 import type { Diagnosis, ICD10 } from "@/types";
 import { Button } from "@curo/web/ui/button";
 import { SectionCard } from "@curo/web/ui/section-card";
-import { SearchCombobox } from "@/components/ui/SearchCombobox";
+import { SearchCombobox } from "@curo/web/ui/search-combobox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@curo/web/ui/tooltip";
 import { searchICD10 } from "@/lib/api/icd";
 import { cn } from "@/lib/utils";

@@ -6,7 +6,7 @@ import type { Lab, LabTestCatalogItem } from "@/types";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@curo/web/ui/section-card";
-import { SearchCombobox } from "@/components/ui/SearchCombobox";
+import { SearchCombobox } from "@curo/web/ui/search-combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@curo/web/ui/toggle-group";
 import type { LabPriority, LabTestDraft } from "../visit";
