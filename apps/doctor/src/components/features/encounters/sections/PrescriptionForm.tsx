@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { AlertTriangle, Pill, X } from "lucide-react";
-import type { Allergy, Medication, PrescriptionItem } from "@/types";
+import type { Medication, PrescriptionItem } from "@/types";
 import type { Organization as Pharmacy } from "@/lib/api/directory";
+import { allergyAlerts, describeAllergyAlert } from "@curo/web/clinical";
+import { AllergyConfirmDialog } from "@curo/web/ui/allergy-confirm-dialog";
 import { Button } from "@curo/web/ui/button";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@curo/web/ui/section-card";
-import { SearchCombobox } from "@/components/ui/SearchCombobox";
+import { SearchCombobox } from "@curo/web/ui/search-combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
 import { searchMedications } from "@/lib/api/medications";
 import { usePatientAllergies } from "@/components/features/patients/AllergyChips";
@@ -38,15 +41,18 @@ const newItem = (displayName: string, med?: Medication): PrescriptionItem => ({
   substitutes: [],
 });
 
-// Allergy whose substance appears in the drug name, e.g. "Penicillin" in "Penicillin V 250mg".
-const allergyConflict = (name: string, allergies: Allergy[] | null | undefined) =>
-  allergies?.find(a => a.substance && name.toLowerCase().includes(a.substance.toLowerCase()));
-
 export function PrescriptionForm({
   prescriptions, onChange, pharmacies, pharmacyId, onPharmacyChange, suggestions, patientId,
 }: PrescriptionFormProps) {
   // null when they couldn't be loaded: the allergy check can't run, so the doctor is told.
   const allergies = usePatientAllergies(patientId);
+  const alertsFor = (name: string) => allergyAlerts(name, allergies ?? []);
+  // A drug the patient may be allergic to waits here until the doctor confirms it.
+  const [unconfirmed, setUnconfirmed] = useState<PrescriptionItem | null>(null);
+  const add = (item: PrescriptionItem) => {
+    if (alertsFor(item.displayName).length > 0) setUnconfirmed(item);
+    else onChange([...prescriptions, item]);
+  };
   const update = (id: string, patch: Partial<PrescriptionItem>) =>
     onChange(prescriptions.map(p => {
       if (p.id !== id) return p;
@@ -93,8 +99,8 @@ export function PrescriptionForm({
           search={searchMedications}
           suggestions={suggestions}
           getKey={m => m.id}
-          onSelect={m => onChange([...prescriptions, newItem(m.name, m)])}
-          onCustom={name => onChange([...prescriptions, newItem(name)])}
+          onSelect={m => add(newItem(m.name, m))}
+          onCustom={name => add(newItem(name))}
           renderItem={m => (
             <div className="flex w-full items-center justify-between gap-3">
               <span>{m.name}</span>
@@ -103,7 +109,7 @@ export function PrescriptionForm({
           )}
         />
         {prescriptions.map(rx => {
-          const conflict = allergyConflict(rx.displayName, allergies);
+          const alerts = alertsFor(rx.displayName);
           return (
             <div key={rx.id} className="rounded-lg border p-3 space-y-3">
               <div className="flex items-start justify-between gap-2">
@@ -116,12 +122,11 @@ export function PrescriptionForm({
                   <X />
                 </Button>
               </div>
-              {conflict && (
-                <p className="flex items-center gap-2 rounded-md border border-status-error-border bg-status-error-bg px-2.5 py-1.5 text-xs font-medium text-status-error-text">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> Patient is allergic to {conflict.substance}
-                  {conflict.reaction ? ` (${conflict.reaction})` : ""}.
+              {alerts.map(alert => (
+                <p key={alert.allergy.id} className="flex items-center gap-2 rounded-md border border-status-error-border bg-status-error-bg px-2.5 py-1.5 text-xs font-medium text-status-error-text">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {describeAllergyAlert(alert, rx.displayName)}
                 </p>
-              )}
+              ))}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1.6fr_0.7fr_0.7fr]">
                 <Field label="Dose">
                   <Input value={rx.dose} onChange={e => update(rx.id, { dose: e.target.value })} placeholder="e.g. 500mg" className="h-9" />
@@ -148,6 +153,13 @@ export function PrescriptionForm({
           );
         })}
       </div>
+      <AllergyConfirmDialog
+        drugName={unconfirmed?.displayName ?? null}
+        alerts={unconfirmed ? alertsFor(unconfirmed.displayName) : []}
+        confirmLabel="Prescribe anyway"
+        onConfirm={() => { if (unconfirmed) onChange([...prescriptions, unconfirmed]); setUnconfirmed(null); }}
+        onCancel={() => setUnconfirmed(null)}
+      />
     </SectionCard>
   );
 }

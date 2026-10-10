@@ -11,6 +11,8 @@ export class Stock {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  // The catalog drug (medication_catalog.id), the code doctors prescribe
+  // under; the names below are copied from it when the batch is received.
   @Column()
   medicationCode: string;
 

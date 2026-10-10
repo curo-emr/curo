@@ -1,14 +1,16 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CircleCheck, CircleX, ClipboardList, Info, Loader2, PackageCheck, Pill, TriangleAlert, type LucideIcon } from "lucide-react";
+import { CircleCheck, CircleX, ClipboardList, Info, Loader2, PackageCheck, Pill, ShieldAlert, TriangleAlert, type LucideIcon } from "lucide-react";
 import { apiErrorMessage } from "@curo/web/api";
+import { allergyAlerts, describeAllergyAlert } from "@curo/web/clinical";
 import { formatStatus } from "@curo/web/format";
 import { QueryContent, allOf, dataOrNull } from "@curo/web/query";
+import { AllergyConfirmDialog } from "@curo/web/ui/allergy-confirm-dialog";
 import { workplaceQueries } from "@curo/web/workplace";
 import { Button } from "@curo/web/ui/button";
 import { PageHeader } from "@curo/web/ui/page-header";
@@ -17,6 +19,7 @@ import { Skeleton } from "@curo/web/ui/skeleton";
 import { StatusBadge, toneClass, type Tone } from "@curo/web/ui/status-badge";
 import { PatientSummaryCard } from "@/components/features/patients/PatientSummaryCard";
 import { DispenseRecordCard } from "@/components/features/dispensing/DispenseRecordCard";
+import { HeldNotice, HoldPrescriptionDialog } from "@/components/features/prescriptions/PrescriptionHold";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { dispense } from "@/lib/api/pharmacy";
@@ -25,8 +28,9 @@ import { invalidateAfterDispense, patientQueries, prescriptionQueries, stockQuer
 import { checkStock, type StockCheck } from "@/lib/stock";
 import type { Prescription, PrescriptionItem } from "@/types";
 
-// Only active prescriptions (mapped to "sent_to_pharmacy") can be dispensed.
+// Only active prescriptions (mapped to "sent_to_pharmacy") can be dispensed; held ones can be released first.
 const DISPENSABLE_STATUS = "sent_to_pharmacy";
+const HELD_STATUS = "on_hold";
 
 function medicationDetails(item: PrescriptionItem): [string, string][] {
   const details: [string, string][] = [
@@ -56,6 +60,7 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ p
 function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
   const queryClient = useQueryClient();
   const { patientId } = prescription;
+  const name = medicineName(prescription);
   const patient = useQuery(patientQueries.detail(patientId));
   const allergiesQuery = useQuery(patientQueries.allergies(patientId));
   const allergies = dataOrNull(allergiesQuery);
@@ -67,7 +72,7 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
   const dispenseRx = useMutation({
     mutationFn: () => dispense(prescription.id),
     onSuccess: record => {
-      toast.success(`Dispensed ${medicineName(prescription)}`, {
+      toast.success(`Dispensed ${name}`, {
         description: `Receipt ${record.receiptNumber} · ${formatCurrency(record.totalAmount)}`,
       });
       return invalidateAfterDispense(queryClient, patientId);
@@ -82,13 +87,19 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
   const stockShort = stockChecks?.some(c => c.kind !== "enough") ?? false;
   const workplace = useQuery(workplaceQueries.mine()).data;
   const sentElsewhere = !!prescription.pharmacyId && !!workplace && prescription.pharmacyId !== workplace.id;
+  // Only this pharmacy's prescriptions (or ones that name none) are dispensed, held or released here.
   const dispensable = prescription.status === DISPENSABLE_STATUS && !sentElsewhere;
+  const held = prescription.status === HELD_STATUS && !sentElsewhere;
+  const alerts = allergyAlerts(name, allergies ?? []);
+  // Set while the pharmacist is asked whether to dispense despite a possible allergy.
+  const [confirming, setConfirming] = useState(false);
+  const startDispense = () => (alerts.length > 0 ? setConfirming(true) : dispenseRx.mutate());
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
         back={{ href: ROUTES.PRESCRIPTIONS, label: "All prescriptions" }}
-        title={medicineName(prescription)}
+        title={name}
         description={
           <span className="flex flex-wrap items-center gap-2">
             <StatusBadge status={prescription.status} />
@@ -106,6 +117,9 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
 
       <SectionCard icon={Pill} iconClassName="text-primary" title="To dispense" noPadding>
         <div className="space-y-5 p-5">
+          {(dispensable || held) && alerts.map(alert => (
+            <Notice key={alert.allergy.id} tone="error" icon={ShieldAlert}>Possible allergy. {describeAllergyAlert(alert, name)}</Notice>
+          ))}
           {prescription.items.map((item, i) => (
             <div key={item.id} className="space-y-3">
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
@@ -116,7 +130,7 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
                   </div>
                 ))}
               </dl>
-              {dispensable && (stock.isError
+              {(dispensable || held) && (stock.isError
                 ? <Notice tone="neutral" icon={Info}>Stock couldn&apos;t be checked here; dispensing checks it again.</Notice>
                 : stockChecks ? <StockLine check={stockChecks[i]} item={item} /> : <Skeleton className="h-9 w-64" />)}
             </div>
@@ -131,10 +145,13 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
         <div className="space-y-3 border-t bg-muted/30 px-5 py-4">
           {dispensable ? (
             <>
-              <Button size="lg" onClick={() => dispenseRx.mutate()} disabled={!checked || stockShort || dispenseRx.isPending}>
-                {dispenseRx.isPending ? <Loader2 className="animate-spin" /> : <PackageCheck />}
-                {dispenseRx.isPending ? "Dispensing…" : "Dispense"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button size="lg" onClick={startDispense} disabled={!checked || stockShort || dispenseRx.isPending}>
+                  {dispenseRx.isPending ? <Loader2 className="animate-spin" /> : <PackageCheck />}
+                  {dispenseRx.isPending ? "Dispensing…" : "Dispense"}
+                </Button>
+                <HoldPrescriptionDialog prescription={prescription} />
+              </div>
               {!checked && checks.isError && (
                 <p className="text-sm text-status-error-text">
                   The patient&apos;s record or allergies couldn&apos;t be loaded, so this can&apos;t be dispensed until they are.{" "}
@@ -148,11 +165,20 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
             <p className="text-sm text-muted-foreground">
               This prescription was sent to another pharmacy, so it can&apos;t be dispensed here.
             </p>
+          ) : held ? (
+            <HeldNotice prescription={prescription} />
           ) : (
             <p className="text-sm text-muted-foreground">
               This prescription is {formatStatus(prescription.status).toLowerCase()} and can&apos;t be dispensed.
             </p>
           )}
+          <AllergyConfirmDialog
+            drugName={confirming ? name : null}
+            alerts={alerts}
+            confirmLabel="Dispense anyway"
+            onConfirm={() => { setConfirming(false); dispenseRx.mutate(); }}
+            onCancel={() => setConfirming(false)}
+          />
           {dispenseRx.isError && (
             <Notice tone="error" icon={CircleX}>{apiErrorMessage(dispenseRx.error, "The prescription couldn't be dispensed.")}</Notice>
           )}
@@ -205,7 +231,7 @@ function StockLine({ check, item }: { check: StockCheck; item: PrescriptionItem 
     case "unlisted":
       return (
         <Notice tone="warning" icon={TriangleAlert}>
-          This pharmacy keeps no stock under this medicine&apos;s code ({item.medicationId || "none"}), so it can&apos;t be dispensed here.
+          This pharmacy doesn&apos;t stock this medicine, so it can&apos;t be dispensed here.
         </Notice>
       );
   }

@@ -1,43 +1,40 @@
-import { IsNotEmpty, IsOptional, IsString, IsNumber } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreateStockDto {
+  /** The catalog drug received; its name, form and strength come from there. */
   @IsNotEmpty()
   @IsString()
   medicationCode: string;
 
-  @IsNotEmpty()
-  @IsString()
-  medicationName: string;
-
-  @IsOptional()
-  @IsString()
-  genericName?: string;
-
-  @IsOptional()
-  @IsString()
-  form?: string;
-
-  @IsOptional()
-  @IsString()
-  strength?: string;
-
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   quantity: number;
 
   @IsOptional()
   @IsString()
   unit?: string;
 
+  /** YYYY-MM-DD; an expired batch can't be received. */
   @IsOptional()
-  @IsString()
+  @IsDateString()
   expiryDate?: string;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
+  @Min(0)
   reorderThreshold?: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
   unitPrice?: number;
 
   @IsOptional()

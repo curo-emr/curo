@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   OnModuleInit,
   Logger,
 } from '@nestjs/common';
@@ -24,7 +26,12 @@ import {
   QrCode,
   type LabPanelTest,
 } from '@curo/shared/database';
-import { MedicationRequestStatus, UserRole } from '@curo/shared/enums';
+import {
+  MedicationRequestStatus,
+  NotificationEventType,
+  UserRole,
+} from '@curo/shared/enums';
+import { notifyPractitioner } from '@curo/shared/notifications';
 import { workplaceOf, type AuthUser } from '@curo/shared/auth';
 import {
   parsePagination,
@@ -305,13 +312,25 @@ export class ClinicalService implements OnModuleInit {
     return toFhirMedRequest(med);
   }
 
+  /** Prescriptions waiting to be dispensed. */
+  getPendingPrescriptions(user: AuthUser) {
+    return this.prescriptionsIn(MedicationRequestStatus.ACTIVE, user);
+  }
+
+  /** Prescriptions a pharmacy has set aside. */
+  getHeldPrescriptions(user: AuthUser) {
+    return this.prescriptionsIn(MedicationRequestStatus.ON_HOLD, user);
+  }
+
   /**
-   * Prescriptions waiting to be dispensed: for a pharmacist, those sent to
-   * their pharmacy and those from before prescriptions named one; for anyone
-   * else, every pharmacy's.
+   * Prescriptions in `status`: for a pharmacist, those sent to their pharmacy
+   * and those from before prescriptions named one; for anyone else, every
+   * pharmacy's.
    */
-  async getPendingPrescriptions(user: AuthUser) {
-    const status = MedicationRequestStatus.ACTIVE;
+  private async prescriptionsIn(
+    status: MedicationRequestStatus,
+    user: AuthUser,
+  ) {
     const meds = await this.medsRepo.find({
       where:
         user.role === UserRole.PHARMACIST
@@ -326,6 +345,76 @@ export class ClinicalService implements OnModuleInit {
       order: { authoredOn: 'DESC' },
     });
     return meds.map(toFhirMedRequest);
+  }
+
+  /**
+   * Sets a waiting prescription aside until it is released, and tells the
+   * doctor who wrote it why.
+   */
+  async holdPrescription(id: string, reason: string, pharmacist: AuthUser) {
+    const statusReason = reason.trim();
+    const med = await this.dataSource.transaction(async (em) => {
+      const held = await this.changeStatus(
+        em.getRepository(MedicationRequest),
+        id,
+        pharmacist,
+        MedicationRequestStatus.ACTIVE,
+        { status: MedicationRequestStatus.ON_HOLD, statusReason },
+      );
+      await notifyPractitioner(em, held.practitionerId, {
+        eventType: NotificationEventType.GENERAL,
+        title: 'Prescription on hold',
+        message: `The pharmacy put ${held.medicationDisplay} on hold: ${statusReason}`,
+        relatedResourceType: 'MedicationRequest',
+        relatedResourceId: held.id,
+      });
+      return held;
+    });
+    return toFhirMedRequest(med);
+  }
+
+  /** Returns a held prescription to the ones waiting to be dispensed. */
+  async releasePrescription(id: string, pharmacist: AuthUser) {
+    const med = await this.changeStatus(
+      this.medsRepo,
+      id,
+      pharmacist,
+      MedicationRequestStatus.ON_HOLD,
+      { status: MedicationRequestStatus.ACTIVE, statusReason: null },
+    );
+    return toFhirMedRequest(med);
+  }
+
+  /**
+   * Moves a prescription of the pharmacist's own pharmacy (or one that names
+   * none) out of `from`, only if it is still in it, so a dispense or another
+   * hold racing this one can't be overwritten.
+   */
+  private async changeStatus(
+    repo: Repository<MedicationRequest>,
+    id: string,
+    pharmacist: AuthUser,
+    from: MedicationRequestStatus,
+    change: Pick<MedicationRequest, 'status' | 'statusReason'>,
+  ) {
+    const pharmacy = workplaceOf(pharmacist, 'pharmacy');
+    const sentTo = await repo.findOne({
+      where: { id },
+      select: { id: true, performerOrganizationId: true },
+    });
+    if (!sentTo) throw new NotFoundException(`Prescription ${id} not found`);
+    if (
+      sentTo.performerOrganizationId &&
+      sentTo.performerOrganizationId !== pharmacy
+    )
+      throw new ForbiddenException(
+        'This prescription was sent to another pharmacy',
+      );
+    const { affected } = await repo.update({ id, status: from }, change);
+    const med = await repo.findOneByOrFail({ id });
+    if (!affected)
+      throw new ConflictException(`This prescription is ${med.status}`);
+    return med;
   }
 
   /** One summary per patient; patients with no prescriptions are left out. */

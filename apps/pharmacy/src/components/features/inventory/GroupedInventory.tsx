@@ -39,7 +39,7 @@ export function GroupedInventory({ groups }: { groups: GroupedStock[] }) {
   if (groups.length === 0) {
     return (
       <div className="rounded-xl border bg-card shadow-sm">
-        <EmptyState icon={Package} title="No stock recorded" description="This pharmacy has no stock on its books yet." />
+        <EmptyState icon={Package} title="No stock recorded" description="This pharmacy has no stock on its books yet. Record a delivery with Receive stock." />
       </div>
     );
   }

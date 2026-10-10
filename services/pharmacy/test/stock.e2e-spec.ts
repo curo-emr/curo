@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { UserRole } from '@curo/shared/enums';
 import { startService, type ServiceUnderTest } from '@curo/testing';
 import { AppModule } from '../src/app.module';
+import { MedicationCatalog } from '../src/entities/medication-catalog.entity';
 import { Stock } from '../src/entities/stock.entity';
 import type { StockGroup } from '../src/pharmacy/pharmacy.service';
 
@@ -178,13 +179,24 @@ describe('stock', () => {
       );
     });
 
+    /** A drug of its own in the prescribing catalog; returns its code. */
+    async function catalogDrug() {
+      const drug = await svc.db.getRepository(MedicationCatalog).save({
+        id: `TEST-${randomUUID()}`,
+        name: 'Amoxicillin 500mg Capsule',
+        genericName: 'Amoxicillin',
+        form: 'capsule',
+        strength: '500mg',
+      });
+      return drug.id;
+    }
+
     it("receives stock into the pharmacist's pharmacy, not the one the body names", async () => {
       const res = await svc.api
         .post('/stock')
         .set(pharmacist().headers)
         .send({
-          medicationCode: `TEST-${randomUUID()}`,
-          medicationName: 'Amoxicillin 500mg',
+          medicationCode: await catalogDrug(),
           quantity: 50,
           organizationId: otherPharmacy,
         })
@@ -195,6 +207,47 @@ describe('stock', () => {
           .getRepository(Stock)
           .findOneByOrFail({ id: (res.body as Stock).id }),
       ).resolves.toMatchObject({ organizationId: pharmacy, quantity: 50 });
+    });
+
+    it('names received stock as the catalog does, whatever the body says', async () => {
+      const res = await svc.api
+        .post('/stock')
+        .set(pharmacist().headers)
+        .send({
+          medicationCode: await catalogDrug(),
+          medicationName: 'Something else',
+          quantity: 10,
+        })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        medicationName: 'Amoxicillin 500mg Capsule',
+        genericName: 'Amoxicillin',
+        form: 'capsule',
+        strength: '500mg',
+      });
+    });
+
+    it('turns away an expired batch, and a quantity that is not a whole number above zero', async () => {
+      const medicationCode = await catalogDrug();
+      const receive = (body: object) =>
+        svc.api
+          .post('/stock')
+          .set(pharmacist().headers)
+          .send({ medicationCode, quantity: 10, ...body });
+
+      await receive({ expiryDate: daysFromToday(-1) }).expect(400);
+      for (const quantity of [0, -5, 2.5])
+        await receive({ quantity }).expect(400);
+      await receive({ expiryDate: daysFromToday(0) }).expect(201);
+    });
+
+    it('turns away a drug that is not in the catalog', async () => {
+      await svc.api
+        .post('/stock')
+        .set(pharmacist().headers)
+        .send({ medicationCode: `TEST-${randomUUID()}`, quantity: 10 })
+        .expect(400);
     });
 
     it("can't correct another pharmacy's batch", async () => {
@@ -224,7 +277,7 @@ describe('stock', () => {
       await svc.api
         .post('/stock')
         .set(pharmacist(null).headers)
-        .send({ medicationCode: 'X', medicationName: 'X', quantity: 1 })
+        .send({ medicationCode: 'X', quantity: 1 })
         .expect(403);
     });
 
@@ -232,7 +285,7 @@ describe('stock', () => {
       await svc.api
         .post('/stock')
         .set(svc.as(UserRole.SUPER_ADMIN).headers)
-        .send({ medicationCode: 'X', medicationName: 'X', quantity: 1 })
+        .send({ medicationCode: 'X', quantity: 1 })
         .expect(403);
     });
   });

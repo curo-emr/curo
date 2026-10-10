@@ -28,6 +28,7 @@ export function toFhirMedRequest(m: MedicationRequest) {
     resourceType: 'MedicationRequest',
     id: m.id,
     status: m.status,
+    statusReason: m.statusReason ? { text: m.statusReason } : undefined,
     intent: m.intent || 'order',
     medicationCodeableConcept: {
       coding: [{ code: m.medicationCode, display: m.medicationDisplay }],

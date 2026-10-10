@@ -3,11 +3,13 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
   UseGuards,
   Header,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ClinicalService } from './clinical.service';
 import { VisitService } from './visit.service';
@@ -15,6 +17,7 @@ import { CompleteVisitDto } from './dto/complete-visit.dto';
 import { CreateEncounterDto } from './dto/create-encounter.dto';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
+import { HoldPrescriptionDto } from './dto/hold-prescription.dto';
 import { CreateLabOrderDto } from './dto/create-lab-order.dto';
 import { CreateVitalsDto } from './dto/create-vitals.dto';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
@@ -204,6 +207,36 @@ export class ClinicalController {
   @Header('Content-Type', 'application/fhir+json')
   getPendingPrescriptions(@CurrentUser() user: AuthUser) {
     return this.clinicalService.getPendingPrescriptions(user);
+  }
+
+  @Get('prescriptions/on-hold')
+  @Roles('DOCTOR', 'SUPER_ADMIN', 'PHARMACIST')
+  @Header('Content-Type', 'application/fhir+json')
+  getHeldPrescriptions(@CurrentUser() user: AuthUser) {
+    return this.clinicalService.getHeldPrescriptions(user);
+  }
+
+  // A pharmacist sets a prescription aside (out of stock, a query to the
+  // doctor) and releases it when it can be dispensed.
+  @Put('prescriptions/:id/hold')
+  @Roles('PHARMACIST')
+  @Header('Content-Type', 'application/fhir+json')
+  holdPrescription(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: HoldPrescriptionDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.holdPrescription(id, dto.reason, user);
+  }
+
+  @Delete('prescriptions/:id/hold')
+  @Roles('PHARMACIST')
+  @Header('Content-Type', 'application/fhir+json')
+  releasePrescription(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.releasePrescription(id, user);
   }
 
   // Pending count and latest prescription for each patient on a list page.

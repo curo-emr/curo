@@ -162,7 +162,7 @@ export interface Medication {
 
 // --- Prescriptions (FHIR-mapped) ---
 
-export type PrescriptionStatus = 'draft' | 'sent_to_pharmacy' | 'active' | 'completed' | 'cancelled';
+export type PrescriptionStatus = 'draft' | 'sent_to_pharmacy' | 'on_hold' | 'active' | 'completed' | 'cancelled';
 
 export type Priority = 'routine' | 'urgent' | 'stat';
 
@@ -188,6 +188,8 @@ export interface Prescription {
   sentAt: string | null;
   items: PrescriptionItem[];
   notesToPharmacy: string;
+  /** Why a pharmacy put it on hold; empty unless it is on hold. */
+  holdReason: string;
   /** The pharmacy it was sent to; null for those written before prescriptions named one, which any pharmacy dispenses. */
   pharmacyId: string | null;
 }

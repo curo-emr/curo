@@ -7,6 +7,7 @@ import { ClinicalNote } from './entities/clinical-note.entity';
 import {
   Condition,
   MedicationRequest,
+  Notification,
   ServiceRequest,
   Observation,
   QrCode,
@@ -31,6 +32,7 @@ import { JwtAuthModule } from '@curo/shared/auth';
         Task,
         Icd10Code,
         Condition,
+        Notification,
       ]),
     ),
     ClinicalModule,
