@@ -2,7 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { QueryContent } from "@curo/web/query";
-import { PrescriptionTable } from "@/components/features/prescriptions/PrescriptionTable";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { WaitingTable } from "@/components/features/prescriptions/WaitingTable";
+import { waitingByPatient } from "@/lib/prescriptions";
 import { patientQueries, prescriptionQueries } from "@/lib/queries";
 import type { Patient } from "@/types";
 
@@ -14,14 +16,10 @@ export default function PrescriptionsPage() {
   const patients = useQuery(patientQueries.byIds((prescriptions.data ?? []).map(rx => rx.patientId))).data ?? NONE;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Prescriptions</h1>
-        <p className="text-sm text-muted-foreground">View and manage incoming e-prescriptions</p>
-      </div>
-
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader title="Prescriptions" description="Everyone with medicines waiting, longest wait first." />
       <QueryContent query={prescriptions} what="prescriptions">
-        {rxs => <PrescriptionTable prescriptions={rxs} patients={patients} />}
+        {rxs => <WaitingTable waiting={waitingByPatient(rxs)} patients={patients} />}
       </QueryContent>
     </div>
   );

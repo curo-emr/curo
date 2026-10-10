@@ -1,122 +1,132 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Search, AlertTriangle, PackageX } from "lucide-react";
-import { Card, CardContent } from "@curo/web/ui/card";
-import { Badge } from "@curo/web/ui/badge";
-import { Input } from "@curo/web/ui/input";
+import { ChevronRight, Package, SearchX } from "lucide-react";
+import { formatStatus } from "@curo/web/format";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { SearchInput } from "@curo/web/ui/search-input";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import type { GroupedStock } from "@/lib/api/pharmacy";
+import { expiryState, stockLevel, type ExpiryState } from "@/lib/stock";
+import { cn, formatDate } from "@/lib/utils";
 
-function expiryStatus(date: string): "expired" | "soon" | "ok" {
-  if (!date) return "ok";
-  const d = new Date(date).getTime();
-  const now = Date.now();
-  if (d < now) return "expired";
-  if (d < now + 90 * 24 * 3600 * 1000) return "soon"; // within 90 days
-  return "ok";
-}
+const EXPIRY_TEXT: Record<ExpiryState, string> = {
+  expired: "font-medium text-status-error-text",
+  expiring: "font-medium text-status-warning-text",
+  ok: "text-muted-foreground",
+};
 
-function fmtDate(date: string) {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-}
+const EXPIRY_NOTE: Record<ExpiryState, string> = { expired: " · expired", expiring: " · soon", ok: "" };
 
+// Every drug the pharmacy stocks, with its batches (earliest expiry first) one click away.
 export function GroupedInventory({ groups }: { groups: GroupedStock[] }) {
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState<Set<string>>(new Set());
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     if (!q) return groups;
-    return groups.filter(
-      (g) => g.medicationName.toLowerCase().includes(q) || (g.genericName ?? "").toLowerCase().includes(q),
-    );
+    return groups.filter(g => [g.medicationName, g.genericName].some(text => text?.toLowerCase().includes(q)));
   }, [groups, query]);
 
   const toggle = (code: string) =>
-    setOpen((prev) => {
+    setOpen(prev => {
       const next = new Set(prev);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
+      if (!next.delete(code)) next.add(code);
       return next;
     });
 
+  if (groups.length === 0) {
+    return (
+      <div className="rounded-xl border bg-card shadow-sm">
+        <EmptyState icon={Package} title="No stock recorded" description="This pharmacy has no stock on its books yet." />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search medication..." value={query} onChange={(e) => setQuery(e.target.value)} className="pl-9 bg-muted border" />
-      </div>
+      <SearchInput value={query} onChange={setQuery} placeholder="Search by medicine…" className="max-w-md" />
 
-      <div className="space-y-2">
-        {filtered.map((g) => {
-          const isOpen = open.has(g.medicationCode);
-          const anyExpiringSoon = g.batches.some((b) => expiryStatus(b.expiryDate) !== "ok");
-          return (
-            <Card key={g.medicationCode} className="shadow-sm border">
-              <CardContent className="p-0">
-                <button
-                  onClick={() => toggle(g.medicationCode)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-muted/50 text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                    <div>
-                      <p className="font-medium text-slate-900">{g.medicationName}</p>
-                      <p className="text-xs text-muted-foreground">{g.genericName} · {g.strength} · {g.batches.length} batch{g.batches.length !== 1 ? "es" : ""}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {anyExpiringSoon && <AlertTriangle className="h-4 w-4 text-status-warning-text" />}
-                    {g.low && <Badge variant="outline" className="bg-status-error-bg text-status-error-text border-status-error-border">Low</Badge>}
-                    <span className="text-sm font-semibold text-slate-700">{g.usableQuantity} {g.unit}</span>
-                  </div>
-                </button>
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        {filtered.length === 0 ? (
+          <EmptyState icon={SearchX} title="No medicines match your search" />
+        ) : (
+          <ul className="divide-y">
+            {filtered.map(g => {
+              const isOpen = open.has(g.medicationCode);
+              const expiries = g.batches.filter(b => b.quantity > 0).map(b => expiryState(b.expiryDate));
+              const attention = expiries.includes("expired") ? "expired" : expiries.includes("expiring") ? "expiring" : null;
+              return (
+                <li key={g.medicationCode}>
+                  <button
+                    type="button"
+                    onClick={() => toggle(g.medicationCode)}
+                    aria-expanded={isOpen}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/50"
+                  >
+                    <ChevronRight className={cn("size-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-90")} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-foreground">{g.medicationName}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {[g.form && formatStatus(g.form), `${g.batches.length} batch${g.batches.length === 1 ? "" : "es"}`, `reorder at ${g.reorderLevel}`]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </span>
+                    {attention && (
+                      <span className={cn("hidden text-xs sm:inline", EXPIRY_TEXT[attention])}>
+                        {attention === "expired" ? "Expired batch" : "Batch expiring"}
+                      </span>
+                    )}
+                    <span className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
+                      <span className="text-sm font-semibold tabular-nums text-foreground">{g.usableQuantity} {g.unit}</span>
+                      <StatusBadge status={stockLevel(g)} />
+                    </span>
+                  </button>
 
-                {isOpen && (
-                  <div className="border-t bg-muted/30 px-4 py-3">
-                    <table className="w-full text-sm">
-                      <thead className="text-xs text-muted-foreground">
-                        <tr className="text-left">
-                          <th className="py-1 font-medium">Batch</th>
-                          <th className="py-1 font-medium">Qty</th>
-                          <th className="py-1 font-medium">Expiry</th>
-                          <th className="py-1 font-medium">Supplier</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {g.batches.map((b) => {
-                          const st = expiryStatus(b.expiryDate);
-                          return (
-                            <tr key={b.id} className="border-t border-border/50">
-                              <td className="py-1.5 font-mono text-xs">{b.batchNumber ?? "—"}</td>
-                              <td className="py-1.5">{b.quantity}</td>
-                              <td className="py-1.5">
-                                <span className={
-                                  st === "expired" ? "text-status-error-text font-medium"
-                                    : st === "soon" ? "text-status-warning-text font-medium"
-                                      : "text-muted-foreground"
-                                }>
-                                  {st === "expired" && <PackageX className="inline h-3 w-3 mr-1" />}
-                                  {fmtDate(b.expiryDate)}
-                                  {st === "expired" ? " (expired)" : st === "soon" ? " (soon)" : ""}
-                                </span>
-                              </td>
-                              <td className="py-1.5 text-muted-foreground">{b.supplier ?? "—"}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                    <p className="text-xs text-muted-foreground mt-2">Dispensing draws from the earliest-expiring batch first (FEFO).</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-        {filtered.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">No medications found.</p>}
+                  {isOpen && <Batches drug={g} />}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
+    </div>
+  );
+}
+
+function Batches({ drug }: { drug: GroupedStock }) {
+  return (
+    <div className="border-t bg-muted/30 px-4 py-3 sm:pl-11">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-xs text-muted-foreground">
+            <tr className="text-left">
+              <th className="py-1 pr-4 font-medium">Batch</th>
+              <th className="py-1 pr-4 font-medium">Quantity</th>
+              <th className="py-1 pr-4 font-medium">Expires</th>
+              <th className="py-1 font-medium">Supplier</th>
+            </tr>
+          </thead>
+          <tbody>
+            {drug.batches.map(b => {
+              const state = expiryState(b.expiryDate);
+              return (
+                <tr key={b.id} className="border-t border-border/50">
+                  <td className="py-1.5 pr-4 font-mono text-xs">{b.batchNumber ?? "—"}</td>
+                  <td className="py-1.5 pr-4 tabular-nums">{b.quantity}</td>
+                  <td className={cn("whitespace-nowrap py-1.5 pr-4", EXPIRY_TEXT[state])}>
+                    {b.expiryDate ? formatDate(b.expiryDate) : "—"}{EXPIRY_NOTE[state]}
+                  </td>
+                  <td className="py-1.5 text-muted-foreground">{b.supplier ?? "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">Dispensing takes from the batch that expires first.</p>
     </div>
   );
 }

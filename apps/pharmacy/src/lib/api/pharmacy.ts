@@ -5,7 +5,7 @@ import {
   type FhirMedicationDispense,
   type FhirMedicationRequest,
 } from './mappers';
-import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
+import { unwrapBundle, type FhirBundle, type PaginatedResult } from '@curo/web/fhir';
 import type { Prescription } from '@/types';
 
 // ─── Prescriptions ───────────────────────────────────────────────────────────
@@ -129,17 +129,6 @@ export interface StockItem {
   isActive?: boolean;
 }
 
-// Every batch in the pharmacy's inventory.
-export async function getStock(): Promise<StockItem[]> {
-  return getAllPages<StockItem>('/stock');
-}
-
-export async function getStockPaginated(params: PaginationParams = {}): Promise<PaginatedResult<StockItem>> {
-  const res = await apiClient.get<StockItem[] | FhirBundle<StockItem>>('/stock', { params: paginationParams(params) });
-  const { resources, total } = unwrapBundle(res.data);
-  return { items: resources, total, page: params.page ?? 1, pageSize: params.pageSize ?? 25 };
-}
-
 export interface StockBatch {
   id: string;
   batchNumber: string;
@@ -169,12 +158,6 @@ export interface GroupedStock {
 // Inventory grouped by drug, with each drug's batches (different expiry dates) FEFO-first.
 export async function getGroupedStock(): Promise<GroupedStock[]> {
   const res = await apiClient.get<GroupedStock[]>('/stock/grouped');
-  return res.data;
-}
-
-// The drugs at or below their reorder level, one entry per drug (same shape as getGroupedStock).
-export async function getLowStockAlerts(): Promise<GroupedStock[]> {
-  const res = await apiClient.get<GroupedStock[]>('/stock/alerts');
   return res.data;
 }
 

@@ -1,31 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Loader2, Users } from "lucide-react";
 import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
-import { useSearchParams } from "next/navigation";
-import { Input } from "@curo/web/ui/input";
-import { Card, CardContent } from "@curo/web/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@curo/web/ui/table";
-import { Button } from "@curo/web/ui/button";
+import { formatAgeSex } from "@curo/web/format";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
+import { LoadError } from "@curo/web/ui/load-error";
 import { Pagination } from "@curo/web/ui/pagination";
-import { Search, ChevronRight, User, Loader2 } from "lucide-react";
-import { calculateAge, formatAllergies, formatDate } from "@/lib/utils";
+import { SearchInput } from "@curo/web/ui/search-input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
+import { ROUTES } from "@/lib/constants";
+import { formatAllergies, formatDate } from "@/lib/utils";
 import { getAllergiesByPatient, getPatientsPaginated } from "@/lib/api/patients";
 import { getPrescriptionSummaries } from "@/lib/api/pharmacy";
-import Link from "next/link";
+
+const Unavailable = () => <span className="text-muted-foreground">Unavailable</span>;
 
 export function PatientList() {
-  const searchParams = useSearchParams();
-  const initialQuery = searchParams.get("q") || "";
-
-  const [query, setQuery] = useState(initialQuery);
+  const [query, setQuery] = useState("");
   const search = useDebouncedValue(query);
   const { data, items: patients, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
     async (page, pageSize) => {
@@ -43,114 +37,74 @@ export function PatientList() {
 
   return (
     <div className="space-y-4">
-      <Card className="shadow-sm border">
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search by name, MRN, or PHN..."
-              className="pl-9 bg-muted border"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <SearchInput value={query} onChange={setQuery} placeholder="Search by name, MRN or PHN…" className="max-w-md" />
 
-      <div className="bg-white rounded-md border overflow-hidden shadow-sm">
-        <Table>
-          <TableHeader className="bg-muted">
-            <TableRow>
-              <TableHead>Patient</TableHead>
-              <TableHead>Age / Sex</TableHead>
-              <TableHead>Allergies</TableHead>
-              <TableHead>Pending Rx</TableHead>
-              <TableHead>Last Prescribed</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        {isLoading ? (
+          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 size-5 animate-spin text-primary" /> Loading patients…
+          </div>
+        ) : isError ? (
+          <LoadError what="patients" />
+        ) : patients.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={search ? "No patients match your search" : "No patients yet"}
+            description={search ? "Check the spelling, or search by MRN or PHN." : undefined}
+          />
+        ) : (
+          <Table>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />
-                  Loading patients…
-                </TableCell>
+                <TableHead>Patient</TableHead>
+                <TableHead>Age / Sex</TableHead>
+                <TableHead>Allergies</TableHead>
+                <TableHead>Waiting</TableHead>
+                <TableHead>Last prescribed</TableHead>
               </TableRow>
-            ) : isError ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-destructive">Failed to load patients.</TableCell>
-              </TableRow>
-            ) : patients.length > 0 ? (
-              patients.map(patient => {
+            </TableHeader>
+            <TableBody>
+              {patients.map(patient => {
                 const rx = data?.rxSummaries?.get(patient.id);
-                const patientAllergies = data?.allergies?.get(patient.id);
+                const allergies = data?.allergies?.get(patient.id);
                 return (
-                  <TableRow key={patient.id} className="hover:bg-muted/50 transition-colors group">
+                  <TableRow key={patient.id}>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                          <User className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">{patient.name.full}</p>
-                          <p className="text-xs text-muted-foreground">{patient.mrn}</p>
-                        </div>
-                      </div>
+                      <Link href={ROUTES.PATIENT(patient.id)} className="group flex items-center gap-3">
+                        <InitialsAvatar name={patient.name.full} size="sm" />
+                        <span className="min-w-0">
+                          <span className="block font-medium text-foreground group-hover:text-primary">{patient.name.full}</span>
+                          <span className="block font-mono text-xs text-muted-foreground">{patient.mrn}</span>
+                        </span>
+                      </Link>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {calculateAge(patient.dob)}y / {patient.sex.charAt(0).toUpperCase()}{patient.sex.slice(1)}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground">{formatAgeSex(patient.dob, patient.sex)}</TableCell>
                     <TableCell className="text-sm">
-                      {!patientAllergies ? (
-                        <span className="text-muted-foreground">Unavailable</span>
-                      ) : patientAllergies.length > 0 ? (
-                        <span className="text-status-error-text font-medium">{formatAllergies(patientAllergies)}</span>
+                      {!allergies ? <Unavailable /> : allergies.length > 0 ? (
+                        <span className="font-medium text-status-error-text">{formatAllergies(allergies)}</span>
                       ) : (
                         <span className="text-muted-foreground">None known</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {!rx ? (
-                        <span className="text-muted-foreground">Unavailable</span>
-                      ) : rx.pendingCount > 0 ? (
-                        <span className="font-medium text-foreground">{rx.pendingCount}</span>
-                      ) : (
-                        <span className="text-muted-foreground">0</span>
+                    <TableCell className="text-sm tabular-nums">
+                      {!rx ? <Unavailable /> : (
+                        <span className={rx.pendingCount > 0 ? "font-medium text-foreground" : "text-muted-foreground"}>{rx.pendingCount}</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {rx?.lastPrescribedAt ? formatDate(rx.lastPrescribedAt) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Link href={`/patients/${patient.id}`}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground group-hover:text-primary hover:bg-primary/10">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {rx?.lastPrescribedAt ? formatDate(rx.lastPrescribedAt) : "—"}
                     </TableCell>
                   </TableRow>
                 );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  No patients match your search.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              })}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-      />
+      {total > 0 && (
+        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} onPageSizeChange={setPageSize} />
+      )}
     </div>
   );
 }
