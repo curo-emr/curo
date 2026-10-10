@@ -23,3 +23,4 @@ export const BMI_CATEGORY_LABELS: Record<BMICategory, string> = {
 
 
 export * from "./vitals";
+export * from "./allergy-check";
