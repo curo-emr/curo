@@ -11,7 +11,8 @@ import {
 } from './mappers';
 import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
 import type { LabOrder } from '@/types';
-import type { LabStaff, LabTestCatalogItem, QCLog, QCStatus, SpecimenType } from '@/types';
+import type { LabStaff, LabTestCatalogItem, QCLog, QCStatus } from '@/types';
+import type { ResultFlag } from '@curo/web/clinical';
 import { interpret, parseNumeric } from '@/lib/result-flag';
 
 // ─── Lab Orders ───────────────────────────────────────────────────────────────
@@ -90,6 +91,12 @@ export async function getLabOrderSummary(encounterId?: string): Promise<LabOrder
   };
 }
 
+/** Average minutes from sample received to results reported, over the lab's completed orders; null before any. */
+export async function getTurnaround(): Promise<{ averageMinutes: number | null; count: number }> {
+  const res = await apiClient.get<{ averageTatMinutes: number | null; count: number }>('/orders/tat');
+  return { averageMinutes: res.data.averageTatMinutes, count: res.data.count };
+}
+
 export async function getLabOrderById(id: string): Promise<LabOrder | null> {
   const res = await nullIfNotFound(apiClient.get<FhirServiceRequest>(`/orders/${id}`));
   return res && mapFhirServiceRequest(res.data);
@@ -110,28 +117,18 @@ interface ApiCatalogItem {
   price?: number | string | null;
 }
 
-function mapSpecimenType(specimen?: string | null): SpecimenType {
-  const normalized = specimen?.toLowerCase().replace(/\s+/g, '_') ?? '';
-  if (normalized === 'whole_blood' || normalized === 'serum' || normalized === 'urine' || normalized === 'csf' || normalized === 'swab') {
-    return normalized;
-  }
-  return 'other';
-}
-
 function mapCatalogItem(item: ApiCatalogItem): LabTestCatalogItem {
   return {
     id: item.id,
     code: item.code,
     name: item.name,
     category: item.category ?? undefined,
-    department: item.category ?? undefined,
-    specimenType: mapSpecimenType(item.specimen),
+    specimen: item.specimen ?? undefined,
     price: item.price == null ? undefined : Number(item.price),
-    isPanel: false,
-    components: [],
   };
 }
 
+/** The tests a lab offers (every lab's, with no `organizationId`). */
 export async function getLabTestCatalog(params?: { organizationId?: string }): Promise<LabTestCatalogItem[]> {
   const res = await apiClient.get<ApiCatalogItem[]>('/catalog', { params });
   return res.data.map(mapCatalogItem);
@@ -169,7 +166,7 @@ export interface LabResultItem {
   value: string;
   unit?: string;
   referenceRange?: string;
-  flag?: 'normal' | 'high' | 'low' | 'critical';
+  flag?: ResultFlag;
 }
 
 export interface LabResult {

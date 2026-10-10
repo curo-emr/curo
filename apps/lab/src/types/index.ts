@@ -142,38 +142,20 @@ export interface LabStaff {
 
 // --- Lab Test Catalog ---
 
-export interface ReferenceRange {
-  low: number;
-  high: number;
-}
-
-export interface TestComponent {
-  id: string;
-  name: string;
-  unit: string;
-  referenceRange: ReferenceRange;
-}
-
 export interface LabTestCatalogItem {
   id: string;
   code: string;
   name: string;
   category?: string;
-  department?: string;
-  specimenType?: SpecimenType;
-  containerType?: string;
-  tat?: number;
+  /** As the lab names it, e.g. "Whole Blood". */
+  specimen?: string;
   price?: number;
-  isPanel?: boolean;
-  components?: TestComponent[];
 }
 
 // --- Lab Orders (FHIR-mapped) ---
 
 export type LabOrderStatus = 'draft' | 'sent_to_lab' | 'results_pending' | 'completed';
 export type Priority = 'routine' | 'urgent' | 'stat';
-export type SpecimenType = 'whole_blood' | 'serum' | 'urine' | 'csf' | 'swab' | 'other';
-export type ResultFlag = 'normal' | 'low' | 'high' | 'critical' | 'abnormal';
 
 export interface LabOrderTest {
   /** The test's code (LOINC). */
@@ -200,34 +182,14 @@ export interface LabOrder {
   sentToLabAt: string | null;
   /** When the lab received the sample. */
   receivedAt: string | null;
+  /** When the lab filed the results. */
+  completedAt: string | null;
   notesToLab: string;
   tests: LabOrderTest[];
   // Per-test QR labels (populated on order detail) for printing & sticking on samples.
   testQrs?: { testCode: string; display: string; qrBase64: string | null }[];
   review: LabOrderReview;
   showResultsToPatient: boolean;
-}
-
-// --- Lab Results ---
-
-export interface ResultValue {
-  componentId: string;
-  value: number | string;
-  flag: ResultFlag;
-  notes: string;
-}
-
-export interface LabResult {
-  id: string;
-  orderId: string;
-  testId: string;
-  patientId: string;
-  performedBy: string;
-  verifiedBy: string | null;
-  instrumentId: string;
-  performedAt: string;
-  verifiedAt: string | null;
-  values: ResultValue[];
 }
 
 // --- QC ---

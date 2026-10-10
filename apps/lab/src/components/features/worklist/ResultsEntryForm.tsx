@@ -4,33 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { Input } from "@curo/web/ui/input";
+import { toast } from "sonner";
+import { CheckCircle, FlaskConical, Loader2, MessageSquareText } from "lucide-react";
+import { resultFlag } from "@curo/web/clinical";
 import { Button } from "@curo/web/ui/button";
-import { Badge } from "@curo/web/ui/badge";
+import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
+import { SectionCard } from "@curo/web/ui/section-card";
 import { Textarea } from "@curo/web/ui/textarea";
-import { LabOrder, Patient } from "@/types";
-import { StatusBadge } from "@curo/web/ui/status-badge";
-import { orderStatus } from "@/lib/order-status";
+import { ResultFlagBadge } from "@/components/features/orders/ResultFlagBadge";
 import { enterResults, type ResultEntry } from "@/lib/api/lab";
-import { interpret, type Interpretation } from "@/lib/result-flag";
 import { ROUTES } from "@/lib/constants";
 import { invalidateOrder, orderQueries } from "@/lib/queries";
+import { interpret } from "@/lib/result-flag";
+import type { LabOrder } from "@/types";
 import { LabReportUpload } from "./LabReportUpload";
-import { FlaskConical, CheckCircle, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-
-interface ResultsEntryFormProps {
-  order: LabOrder;
-  patient: Patient;
-}
-
-const FLAG_BADGE: Record<Interpretation, { label: string; className: string }> = {
-  L: { label: "LOW", className: "text-primary border-primary/20 bg-primary/10" },
-  H: { label: "HIGH", className: "text-status-warning-text border-status-warning-border bg-status-warning-bg" },
-  N: { label: "Normal", className: "text-status-success-text border-status-success-border bg-status-success-bg" },
-};
 
 /**
  * One row per ordered test, and the report files uploaded for the order.
@@ -38,7 +26,7 @@ const FLAG_BADGE: Record<Interpretation, { label: string; className: string }> =
  * value for every test, or an uploaded report with no values typed (the
  * report holds them), or both.
  */
-export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
+export function ResultsEntryForm({ order }: { order: LabOrder }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [entries, setEntries] = useState<ResultEntry[]>(() =>
@@ -89,125 +77,84 @@ export function ResultsEntryForm({ order, patient }: ResultsEntryFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Order Summary */}
-      <Card className="shadow-sm border">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground text-xs">Order ID</p>
-              <p className="font-mono font-medium text-foreground">{order.id.slice(0, 8).toUpperCase()}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Patient</p>
-              <p className="font-medium text-foreground">{patient.name.full}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Status</p>
-              <StatusBadge status={orderStatus(order)} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Test Results Entry */}
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FlaskConical className="h-4 w-4 text-primary" />
-            Results ({entries.length} test{entries.length !== 1 ? "s" : ""})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="hidden md:grid grid-cols-12 gap-3 px-4 pt-3 text-xs text-muted-foreground">
-            <span className="col-span-3">Test</span>
-            <span className="col-span-3">Result</span>
-            <span className="col-span-2">Unit</span>
-            <span className="col-span-3">Reference range</span>
-            <span className="col-span-1">Flag</span>
-          </div>
-          <div className="divide-y">
-            {entries.map((entry, i) => {
-              const flag = interpret(entry.value, entry.referenceRangeLow, entry.referenceRangeHigh);
-              return (
-                <div key={`${entry.code}:${i}`} className="px-4 py-3">
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                    <div className="md:col-span-3">
-                      <Label htmlFor={`value-${i}`} className="text-sm font-medium text-foreground">{entry.display}</Label>
-                      <p className="text-xs text-muted-foreground">{entry.code}</p>
-                    </div>
-                    <div className="md:col-span-3">
-                      <Input
-                        id={`value-${i}`}
-                        placeholder="Value"
-                        value={entry.value}
-                        onChange={e => update(i, "value", e.target.value)}
-                        className="h-9 text-sm"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Input
-                        aria-label={`${entry.display} unit`}
-                        placeholder="Unit"
-                        value={entry.unit}
-                        onChange={e => update(i, "unit", e.target.value)}
-                        className="h-9 text-sm"
-                      />
-                    </div>
-                    <div className="md:col-span-3 flex items-center gap-2">
-                      <Input
-                        aria-label={`${entry.display} reference range low`}
-                        placeholder="Low"
-                        inputMode="decimal"
-                        value={entry.referenceRangeLow}
-                        onChange={e => update(i, "referenceRangeLow", e.target.value)}
-                        className="h-9 text-sm"
-                      />
-                      <span className="text-muted-foreground">–</span>
-                      <Input
-                        aria-label={`${entry.display} reference range high`}
-                        placeholder="High"
-                        inputMode="decimal"
-                        value={entry.referenceRangeHigh}
-                        onChange={e => update(i, "referenceRangeHigh", e.target.value)}
-                        className="h-9 text-sm"
-                      />
-                    </div>
-                    <div className="md:col-span-1">
-                      {flag && (
-                        <Badge variant="outline" className={FLAG_BADGE[flag].className}>
-                          {FLAG_BADGE[flag].label}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
+      <SectionCard
+        icon={FlaskConical}
+        iconClassName="text-primary"
+        title="Results"
+        count={entries.length}
+        description="Numbers are flagged against the reference range as you type."
+        noPadding
+      >
+        <div className="hidden grid-cols-12 gap-3 px-5 pt-3 text-xs font-medium text-muted-foreground md:grid">
+          <span className="col-span-3">Test</span>
+          <span className="col-span-3">Result</span>
+          <span className="col-span-2">Unit</span>
+          <span className="col-span-3">Reference range</span>
+          <span className="col-span-1">Flag</span>
+        </div>
+        <div className="divide-y">
+          {entries.map((entry, i) => {
+            const flag = resultFlag(interpret(entry.value, entry.referenceRangeLow, entry.referenceRangeHigh));
+            return (
+              <div key={`${entry.code}:${i}`} className="grid grid-cols-2 items-center gap-3 px-5 py-3 md:grid-cols-12">
+                <div className="col-span-2 md:col-span-3">
+                  <Label htmlFor={`value-${i}`} className="text-sm font-medium text-foreground">{entry.display}</Label>
+                  <p className="font-mono text-xs text-muted-foreground">{entry.code}</p>
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                <Input
+                  id={`value-${i}`}
+                  placeholder="Value"
+                  value={entry.value}
+                  onChange={e => update(i, "value", e.target.value)}
+                  className="md:col-span-3"
+                />
+                <Input
+                  aria-label={`${entry.display} unit`}
+                  placeholder="Unit"
+                  value={entry.unit}
+                  onChange={e => update(i, "unit", e.target.value)}
+                  className="md:col-span-2"
+                />
+                <div className="flex items-center gap-2 md:col-span-3">
+                  <Input
+                    aria-label={`${entry.display} reference range low`}
+                    placeholder="Low"
+                    inputMode="decimal"
+                    value={entry.referenceRangeLow}
+                    onChange={e => update(i, "referenceRangeLow", e.target.value)}
+                  />
+                  <span className="text-muted-foreground">–</span>
+                  <Input
+                    aria-label={`${entry.display} reference range high`}
+                    placeholder="High"
+                    inputMode="decimal"
+                    value={entry.referenceRangeHigh}
+                    onChange={e => update(i, "referenceRangeHigh", e.target.value)}
+                  />
+                </div>
+                <div className="md:col-span-1">{flag && <ResultFlagBadge flag={flag} />}</div>
+              </div>
+            );
+          })}
+        </div>
+      </SectionCard>
 
-      {/* Conclusion */}
-      <Card className="shadow-sm border">
-        <CardContent className="p-4 space-y-2">
-          <Label htmlFor="conclusion" className="text-sm font-medium text-foreground">Conclusion (optional)</Label>
-          <Textarea
-            id="conclusion"
-            placeholder="Interpretation or comments for the ordering doctor; printed on the report"
-            value={conclusion}
-            onChange={e => setConclusion(e.target.value)}
-            rows={3}
-          />
-        </CardContent>
-      </Card>
+      <SectionCard icon={MessageSquareText} iconClassName="text-primary" title="Conclusion" description="Optional. For the ordering doctor; printed on the report.">
+        <Textarea
+          aria-label="Conclusion"
+          placeholder="Interpretation or comments"
+          value={conclusion}
+          onChange={e => setConclusion(e.target.value)}
+          rows={3}
+        />
+      </SectionCard>
 
       <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId} />
 
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-3 pt-4">
+      <div className="flex flex-col-reverse items-stretch justify-end gap-3 sm:flex-row sm:items-center">
         {!canSubmit && <p className="text-xs text-muted-foreground">{hint}</p>}
-        <Button className="bg-primary hover:bg-primary/90" onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
-          {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+        <Button size="lg" onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
+          {isSubmitting ? <Loader2 className="animate-spin" /> : <CheckCircle />}
           Submit results
         </Button>
       </div>

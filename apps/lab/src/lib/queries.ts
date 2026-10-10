@@ -2,7 +2,7 @@ import { keepPreviousData, queryOptions, type QueryClient } from "@tanstack/reac
 import { getPatientById, getPatientsByIds } from "@/lib/api/patients";
 import {
   LAB_REPORT_DOCUMENT, getLabInstruments, getLabOrderById, getLabOrderSummary, getLabOrdersByPatient, getLabOrdersPage,
-  getLabResultsByOrder, getLabResultsByPatient, getLabStaff, getLabTestCatalog, getQCAlerts,
+  getLabResultsByOrder, getLabResultsByPatient, getLabStaff, getLabTestCatalog, getQCAlerts, getTurnaround,
 } from "@/lib/api/lab";
 import { getOrderReports } from "@/lib/api/documents";
 import type { LabOrder } from "@/types";
@@ -48,6 +48,10 @@ export const orderQueries = {
     queryKey: [...orderQueries.all, "summary"],
     queryFn: () => getLabOrderSummary(),
   }),
+  turnaround: () => queryOptions({
+    queryKey: [...orderQueries.all, "turnaround"],
+    queryFn: getTurnaround,
+  }),
   page: (params: Parameters<typeof getLabOrdersPage>[0]) => queryOptions({
     queryKey: [...orderQueries.all, "page", params],
     queryFn: () => getLabOrdersPage(params),
@@ -69,9 +73,10 @@ export const orderQueries = {
 };
 
 export const labQueries = {
-  catalog: () => queryOptions({
-    queryKey: ["catalog"],
-    queryFn: () => getLabTestCatalog(),
+  /** One lab's tests; every lab's for someone not at a lab. */
+  catalog: (organizationId?: string) => queryOptions({
+    queryKey: ["catalog", organizationId ?? "all"],
+    queryFn: () => getLabTestCatalog({ organizationId }),
     staleTime: CATALOG_STALE_MS,
   }),
   instruments: () => queryOptions({

@@ -1,25 +1,28 @@
 "use client";
 
 import { use } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { CheckCircle2, CircleDashed, Clock, FlaskConical, Info, Loader2, Printer, QrCode, StickyNote } from "lucide-react";
 import { apiErrorMessage } from "@curo/web/api";
-import { QueryContent, allOf } from "@curo/web/query";
-import { Loader2, User, FlaskConical, Clock, ArrowLeft, CheckCircle2, QrCode, Printer } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { Badge } from "@curo/web/ui/badge";
-import { Button } from "@curo/web/ui/button";
-import { StatusBadge } from "@curo/web/ui/status-badge";
-import { orderStatus } from "@/lib/order-status";
-import Link from "next/link";
-import { calculateAge, formatDate } from "@/lib/utils";
-import { ROUTES } from "@/lib/constants";
-import { receiveOrder, type LabResult } from "@/lib/api/lab";
-import { invalidateOrder, labQueries, orderQueries, patientQueries } from "@/lib/queries";
-import type { LabOrder, LabTestCatalogItem, Patient } from "@/types";
 import { printOnly } from "@curo/web/print";
+import { QueryContent, allOf } from "@curo/web/query";
+import { Button } from "@curo/web/ui/button";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { SectionCard } from "@curo/web/ui/section-card";
+import { StatusBadge } from "@curo/web/ui/status-badge";
+import { PriorityBadge } from "@/components/features/orders/PriorityBadge";
+import { ResultsTable } from "@/components/features/orders/ResultsTable";
+import { PatientCard } from "@/components/features/patients/PatientCard";
 import { LabReportUpload } from "@/components/features/worklist/LabReportUpload";
+import { receiveOrder, type LabResult } from "@/lib/api/lab";
+import { ROUTES } from "@/lib/constants";
+import { STEP_ACTION, nextStep, orderNumber, orderStatus } from "@/lib/orders";
+import { invalidateOrder, orderQueries, patientQueries } from "@/lib/queries";
+import { cn, formatDate, formatDateTime } from "@/lib/utils";
+import type { LabOrder, Patient } from "@/types";
 
 export default function OrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params);
@@ -36,268 +39,187 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
 }
 
 function OrderDetails({ order }: { order: LabOrder }) {
-  const details = allOf(
-    useQuery(patientQueries.detail(order.patientId)),
-    useQuery(labQueries.catalog()),
-    useQuery(orderQueries.results(order.id)),
-  );
+  const details = allOf(useQuery(patientQueries.detail(order.patientId)), useQuery(orderQueries.results(order.id)));
 
   return (
     <QueryContent query={details} what="this order">
-      {([patient, testCatalog, results]) => {
+      {([patient, results]) => {
         if (!patient) notFound();
-        return <OrderView order={order} patient={patient} testCatalog={testCatalog} results={results} />;
+        return <OrderView order={order} patient={patient} results={results} />;
       }}
     </QueryContent>
   );
 }
 
-interface OrderViewProps {
-  order: LabOrder;
-  patient: Patient;
-  testCatalog: LabTestCatalogItem[];
-  results: LabResult[];
-}
-
-function OrderView({ order, patient, testCatalog, results }: OrderViewProps) {
+function OrderView({ order, patient, results }: { order: LabOrder; patient: Patient; results: LabResult[] }) {
   const queryClient = useQueryClient();
   const receive = useMutation({
     mutationFn: () => receiveOrder(order.id),
     onSuccess: () => invalidateOrder(queryClient, order),
-    onError: err => toast.error(apiErrorMessage(err, "The order couldn't be marked as received.")),
+    onError: err => toast.error(apiErrorMessage(err, "The sample couldn't be marked as received.")),
   });
-
-  const age = calculateAge(patient.dob);
+  const step = nextStep(order);
+  const completed = order.status === "completed";
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{order.id.slice(0, 8).toUpperCase()}</h1>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader
+        back={{ href: ROUTES.WORKLIST, label: "Worklist" }}
+        title={
+          <span className="flex flex-wrap items-center gap-2">
+            Order <span className="font-mono">{orderNumber(order)}</span>
             <StatusBadge status={orderStatus(order)} />
-            <Badge variant="outline" className={
-              order.priority === 'stat' ? 'text-red-700 border-red-200 bg-red-50' :
-              order.priority === 'urgent' ? 'text-amber-700 border-amber-200 bg-amber-50' :
-              'text-slate-600 border-slate-200 bg-slate-50'
-            }>{order.priority.toUpperCase()}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">Ordered: {formatDate(order.createdAt)}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {order.status === 'sent_to_lab' && !order.receivedAt && (
-            <Button onClick={() => receive.mutate()} disabled={receive.isPending} className="bg-teal-600 hover:bg-teal-700">
-              {receive.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Receiving...</> : "Mark as Received"}
+            <PriorityBadge priority={order.priority} />
+          </span>
+        }
+        description={`Ordered ${formatDate(order.createdAt)}`}
+      >
+        {/* One primary action: the next step. Entering results also receives the sample. */}
+        {step === "receive" && (
+          <>
+            <Button asChild variant="outline">
+              <Link href={STEP_ACTION.results.href(order.id)}>{STEP_ACTION.results.label}</Link>
             </Button>
-          )}
-          {(order.status === 'sent_to_lab' || order.status === 'draft') && (
-            <Link href={ROUTES.ORDER_RESULTS(order.id)}>
-              <Button className="bg-blue-600 hover:bg-blue-700">Enter Results</Button>
-            </Link>
-          )}
-          <Link href={ROUTES.WORKLIST}>
-            <Button variant="outline"><ArrowLeft className="h-4 w-4 mr-1" />Back</Button>
-          </Link>
-        </div>
-      </div>
+            <Button onClick={() => receive.mutate()} disabled={receive.isPending}>
+              {receive.isPending && <Loader2 className="animate-spin" />} {STEP_ACTION.receive.label}
+            </Button>
+          </>
+        )}
+        {step === "results" && (
+          <Button asChild>
+            <Link href={STEP_ACTION.results.href(order.id)}>{STEP_ACTION.results.label}</Link>
+          </Button>
+        )}
+      </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Patient Info */}
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <User className="h-4 w-4 text-blue-600" />Patient Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><p className="text-slate-400 text-xs">Name</p><p className="font-medium">{patient.name.full}</p></div>
-                <div><p className="text-slate-400 text-xs">MRN</p><p className="font-medium">{patient.mrn}</p></div>
-                <div><p className="text-slate-400 text-xs">Age / Sex</p><p className="font-medium">{age}y / {patient.sex.charAt(0).toUpperCase()}{patient.sex.slice(1)}</p></div>
-                <div><p className="text-slate-400 text-xs">PHN</p><p className="font-medium font-mono text-xs">{patient.phn || '—'}</p></div>
-              </div>
-            </CardContent>
-          </Card>
+      {order.status === "draft" && (
+        <p className="flex items-center gap-2 rounded-lg border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+          <Info className="size-4 shrink-0" /> The doctor hasn&apos;t sent this order to the lab, or has taken it back. There&apos;s nothing to do yet.
+        </p>
+      )}
 
-          {/* Tests */}
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FlaskConical className="h-4 w-4 text-blue-600" />Tests Ordered ({order.tests.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-slate-100">
-                {order.tests.map((test, i) => {
-                  const catalogItem = testCatalog.find(t => t.id === test.testId || t.code === test.testId);
-                  // A report uploaded as a file completes the order without per-test values.
-                  const orderResult = order.status === 'completed' || results.some(r => r.results?.some(rr => rr.testCode === test.testId));
-                  return (
-                    <div key={`${test.testId}:${i}`} className="p-4 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">{test.name}</p>
-                        {catalogItem && <p className="text-xs text-slate-400">{catalogItem.code} · {catalogItem.category}</p>}
-                      </div>
-                      {orderResult ? (
-                        <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />Results Available
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-slate-500">Pending</Badge>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <PatientCard patient={patient} href={ROUTES.PATIENT(patient.id)} />
 
-          {/* Sample QR labels — print and stick on each specimen tube */}
-          {order.testQrs && order.testQrs.length > 0 && (
-            <Card className="shadow-sm border-slate-200 no-print">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-3 flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <QrCode className="h-4 w-4 text-blue-600" />Sample Labels ({order.testQrs.length})
-                </CardTitle>
-                <Button variant="outline" size="sm" onClick={() => printOnly("sample-labels")}>
-                  <Printer className="h-4 w-4 mr-2" />Print labels
-                </Button>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {order.testQrs.map((t, i) => (
-                    <div key={`${t.testCode}-${i}`} className="border rounded-md p-3 text-center">
-                      {t.qrBase64
-                        // eslint-disable-next-line @next/next/no-img-element -- data: URL QR code; next/image adds nothing
-                        ? <img src={t.qrBase64} alt={`QR ${t.display}`} className="w-24 h-24 mx-auto" />
-                        : <div className="w-24 h-24 mx-auto flex items-center justify-center text-xs text-slate-400">No QR</div>}
-                      <p className="text-xs font-medium mt-1">{t.display}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">{t.testCode}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Print-only sheet of sample labels */}
-          {order.testQrs && order.testQrs.length > 0 && (
-            <div id="sample-labels" className="hidden">
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, padding: 16 }}>
-                {order.testQrs.map((t, i) => (
-                  <div key={`p-${t.testCode}-${i}`} style={{ border: "1px solid #000", padding: 8, width: 200, fontFamily: "sans-serif" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- data: URL QR code; next/image adds nothing */}
-                    {t.qrBase64 && <img src={t.qrBase64} alt="" style={{ width: 96, height: 96 }} />}
-                    <div style={{ fontSize: 12, fontWeight: 700 }}>{t.display} ({t.testCode})</div>
-                    <div style={{ fontSize: 11 }}>{patient?.name.full}</div>
-                    <div style={{ fontSize: 10, color: "#333" }}>{patient?.phn ? `PHN ${patient.phn}` : patient?.mrn}</div>
-                    <div style={{ fontSize: 9, color: "#666" }}>Order {order.id.slice(0, 8)}</div>
+          <SectionCard icon={FlaskConical} iconClassName="text-primary" title="Tests" count={order.tests.length} noPadding>
+            <ul className="divide-y">
+              {order.tests.map((test, i) => (
+                <li key={`${test.testId}:${i}`} className="flex items-center justify-between gap-3 px-5 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{test.name}</p>
+                    <p className="font-mono text-xs text-muted-foreground">{test.testId}</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                  {completed ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-status-success-text">
+                      <CheckCircle2 className="size-3.5" /> Reported
+                    </span>
+                  ) : (
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                      <CircleDashed className="size-3.5" /> Waiting
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
 
-          {/* Results */}
           {results.length > 0 && (
-            <Card className="shadow-sm border-slate-200">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />Results
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 space-y-4">
+            <SectionCard icon={CheckCircle2} iconClassName="text-status-success-text" title="Results">
+              <div className="space-y-6">
                 {results.map(result => (
-                  <div key={result.id}>
-                    <p className="text-xs text-slate-400 mb-2">Performed: {formatDate(result.performedAt)}</p>
-                    {!result.results?.length ? (
-                      <p className="text-sm text-slate-500">Reported in the uploaded report file.</p>
-                    ) : (
-                    <div className="bg-slate-50 rounded-md overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-slate-200">
-                            <th className="text-left px-3 py-2 text-xs font-medium text-slate-500">Test</th>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-slate-500">Value</th>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-slate-500">Ref Range</th>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-slate-500">Flag</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {result.results?.map((rr, i) => (
-                            <tr key={i} className="border-b border-slate-100 last:border-0">
-                              <td className="px-3 py-2 text-slate-700">{rr.testName}</td>
-                              <td className="px-3 py-2 font-medium">{rr.value} {rr.unit}</td>
-                              <td className="px-3 py-2 text-slate-500">{rr.referenceRange || '—'}</td>
-                              <td className="px-3 py-2">
-                                {rr.flag && rr.flag !== 'normal' && (
-                                  <Badge variant="outline" className={
-                                    rr.flag === 'critical' ? 'text-red-700 border-red-200 bg-red-50' :
-                                    rr.flag === 'high' ? 'text-amber-700 border-amber-200 bg-amber-50' :
-                                    'text-blue-700 border-blue-200 bg-blue-50'
-                                  }>{rr.flag.toUpperCase()}</Badge>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    )}
-                    {result.conclusion && (
-                      <p className="text-sm text-slate-600 mt-2 bg-slate-50 rounded p-3">{result.conclusion}</p>
-                    )}
+                  <div key={result.id} className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Reported {formatDateTime(result.performedAt)}</p>
+                    <ResultsTable result={result} />
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
           )}
 
-          {order.status === 'completed' && (
-            <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId} />
-          )}
+          {/* The labels are for the samples: once the results are in, they're done with. */}
+          {!completed && <SampleLabels order={order} patient={patient} />}
+
+          {completed && <LabReportUpload orderId={order.id} patientId={order.patientId} encounterId={order.encounterId} />}
         </div>
 
         <div className="space-y-6">
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Clock className="h-4 w-4 text-blue-600" />Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                {[
-                  { label: "Ordered", time: order.createdAt, done: true },
-                  { label: "Sent to lab", time: order.sentToLabAt, done: !!order.sentToLabAt },
-                  { label: "Sample received", time: order.receivedAt, done: !!order.receivedAt },
-                  { label: "Completed", time: null, done: order.status === 'completed' },
-                ].map(step => (
-                  <div key={step.label} className="flex items-start gap-3">
-                    <div className={`h-3 w-3 rounded-full mt-1 shrink-0 ${step.done ? 'bg-blue-600' : 'bg-slate-200'}`} />
-                    <div>
-                      <p className={`text-sm font-medium ${step.done ? 'text-slate-900' : 'text-slate-400'}`}>{step.label}</p>
-                      {step.time && <p className="text-xs text-slate-400">{formatDate(step.time)}</p>}
-                    </div>
+          <SectionCard icon={Clock} iconClassName="text-primary" title="Progress">
+            <ol className="space-y-3">
+              {[
+                { label: "Sent to lab", time: order.sentToLabAt },
+                { label: "Sample received", time: order.receivedAt },
+                { label: "Results reported", time: order.completedAt },
+              ].map(({ label, time }) => (
+                <li key={label} className="flex items-start gap-3">
+                  <span className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", time ? "bg-primary" : "bg-muted-foreground/25")} />
+                  <div>
+                    <p className={cn("text-sm font-medium", time ? "text-foreground" : "text-muted-foreground")}>{label}</p>
+                    {time && <p className="text-xs text-muted-foreground">{formatDateTime(time)}</p>}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </li>
+              ))}
+            </ol>
+          </SectionCard>
 
           {order.notesToLab && (
-            <Card className="shadow-sm border-slate-200">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-3">
-                <CardTitle className="text-base">Notes to Lab</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <p className="text-sm text-slate-600">{order.notesToLab}</p>
-              </CardContent>
-            </Card>
+            <SectionCard icon={StickyNote} iconClassName="text-status-warning-text" title="Notes from the doctor">
+              <p className="text-sm text-foreground">{order.notesToLab}</p>
+            </SectionCard>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+/** A label to print and stick on each sample tube, and the print-only sheet of them. */
+function SampleLabels({ order, patient }: { order: LabOrder; patient: Patient }) {
+  const labels = order.testQrs ?? [];
+  if (labels.length === 0) return null;
+
+  return (
+    <>
+      <SectionCard
+        icon={QrCode}
+        iconClassName="text-primary"
+        title="Sample labels"
+        count={labels.length}
+        className="no-print"
+        headerRight={
+          <Button variant="outline" size="sm" onClick={() => printOnly("sample-labels")}>
+            <Printer /> Print labels
+          </Button>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {labels.map((t, i) => (
+            <div key={`${t.testCode}-${i}`} className="rounded-lg border p-3 text-center">
+              {t.qrBase64
+                // eslint-disable-next-line @next/next/no-img-element -- data: URL QR code; next/image adds nothing
+                ? <img src={t.qrBase64} alt={`QR ${t.display}`} className="mx-auto size-24" />
+                : <div className="mx-auto flex size-24 items-center justify-center text-xs text-muted-foreground">No QR</div>}
+              <p className="mt-1 text-xs font-medium text-foreground">{t.display}</p>
+              <p className="font-mono text-[10px] text-muted-foreground">{t.testCode}</p>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <div id="sample-labels" className="hidden">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, padding: 16 }}>
+          {labels.map((t, i) => (
+            <div key={`p-${t.testCode}-${i}`} style={{ border: "1px solid #000", padding: 8, width: 200, fontFamily: "sans-serif" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- data: URL QR code; next/image adds nothing */}
+              {t.qrBase64 && <img src={t.qrBase64} alt="" style={{ width: 96, height: 96 }} />}
+              <div style={{ fontSize: 12, fontWeight: 700 }}>{t.display} ({t.testCode})</div>
+              <div style={{ fontSize: 11 }}>{patient.name.full}</div>
+              <div style={{ fontSize: 10, color: "#333" }}>{patient.phn ? `PHN ${patient.phn}` : patient.mrn}</div>
+              <div style={{ fontSize: 9, color: "#666" }}>Order {orderNumber(order)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }

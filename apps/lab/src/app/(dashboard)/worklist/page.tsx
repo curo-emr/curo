@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
+import { PageHeader } from "@curo/web/ui/page-header";
 import { WorklistTable } from "@/components/features/worklist/WorklistTable";
 import { ScanBox } from "@/components/features/worklist/ScanBox";
 import { ROUTES } from "@/lib/constants";
@@ -22,11 +23,8 @@ function Worklist() {
   const visit = useSearchParams().get("visit") ?? undefined;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Worklist</h1>
-        <p className="text-sm text-muted-foreground">Manage lab orders, specimens, and results</p>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader title="Worklist" description="Every order sent to your lab, stat first, then the longest waiting." />
 
       <ScanBox />
 
@@ -34,12 +32,13 @@ function Worklist() {
         <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-sm">
           <span className="text-foreground">Showing the tests from one visit that were sent to your lab.</span>
           <Link href={ROUTES.WORKLIST} className="inline-flex shrink-0 items-center gap-1 font-medium text-primary hover:underline">
-            <X className="h-3.5 w-3.5" /> Show all
+            <X className="size-3.5" /> Show all
           </Link>
         </div>
       )}
 
-      <WorklistTable visit={visit} />
+      {/* Keyed so a new visit starts the list afresh. */}
+      <WorklistTable key={visit ?? "all"} visit={visit} />
     </div>
   );
 }
