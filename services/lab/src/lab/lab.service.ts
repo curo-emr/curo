@@ -129,8 +129,9 @@ export class LabService {
    * The orders `user` may see → FHIR searchset Bundle (paginated). Filters take
    * comma-separated values. `search` matches the start of an order id, or any
    * order for `searchPatientIds` (the patients whose name matched it).
-   * `_sort=priority` puts stat before urgent before routine, newest first within
-   * each; `_sort=-authored` is newest first; otherwise oldest first.
+   * `_sort=priority` puts stat before urgent before routine, longest waiting
+   * first within each (the lab's work order); `_sort=-authored` is newest
+   * first; otherwise oldest first.
    */
   async getOrders(
     user: AuthUser,
@@ -172,7 +173,7 @@ export class LabService {
     if (filter._sort === 'priority')
       qb.orderBy(PRIORITY_RANK, 'ASC').addOrderBy(
         'o.authoredOn',
-        'DESC',
+        'ASC',
         'NULLS LAST',
       );
     else if (filter._sort === '-authored')

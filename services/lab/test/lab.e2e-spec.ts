@@ -545,7 +545,7 @@ describe('Lab specimens and results', () => {
       expect(await listed(labId, { search: '%' })).toEqual([]);
     });
 
-    it('puts stat before urgent before routine, newest first within each, when sorted by priority', async () => {
+    it('puts stat before urgent before routine, longest waiting first within each, when sorted by priority', async () => {
       const labId = await laboratory();
       const at = (day: number) => new Date(Date.UTC(2026, 0, day));
       const oldStat = await saveOrder(labId, {
@@ -566,8 +566,8 @@ describe('Lab specimens and results', () => {
       });
 
       expect(await listed(labId, { _sort: 'priority' })).toEqual([
-        newAsap.id,
         oldStat.id,
+        newAsap.id,
         urgent.id,
         routine.id,
       ]);
