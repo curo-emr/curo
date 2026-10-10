@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   OnModuleInit,
   Logger,
 } from '@nestjs/common';
@@ -17,7 +18,11 @@ import {
   QrCode,
   type LabPanelTest,
 } from '@curo/shared/database';
-import { MedicationRequestStatus } from '@curo/shared/enums';
+import {
+  MedicationRequestStatus,
+  NotificationEventType,
+} from '@curo/shared/enums';
+import { notifyPractitioner } from '@curo/shared/notifications';
 import {
   parsePagination,
   toSearchset,
@@ -295,12 +300,76 @@ export class ClinicalService implements OnModuleInit {
     return toFhirMedRequest(med);
   }
 
-  async getPendingPrescriptions() {
+  /** Prescriptions waiting to be dispensed. */
+  getPendingPrescriptions() {
+    return this.prescriptionsIn(MedicationRequestStatus.ACTIVE);
+  }
+
+  /** Prescriptions a pharmacy has set aside. */
+  getHeldPrescriptions() {
+    return this.prescriptionsIn(MedicationRequestStatus.ON_HOLD);
+  }
+
+  private async prescriptionsIn(status: MedicationRequestStatus) {
     const meds = await this.medsRepo.find({
-      where: { status: MedicationRequestStatus.ACTIVE },
+      where: { status },
       order: { authoredOn: 'DESC' },
     });
     return meds.map(toFhirMedRequest);
+  }
+
+  /**
+   * Sets a waiting prescription aside until it is released, and tells the
+   * doctor who wrote it why.
+   */
+  async holdPrescription(id: string, reason: string) {
+    const statusReason = reason.trim();
+    const med = await this.dataSource.transaction(async (em) => {
+      const held = await this.changeStatus(
+        em.getRepository(MedicationRequest),
+        id,
+        MedicationRequestStatus.ACTIVE,
+        { status: MedicationRequestStatus.ON_HOLD, statusReason },
+      );
+      await notifyPractitioner(em, held.practitionerId, {
+        eventType: NotificationEventType.GENERAL,
+        title: 'Prescription on hold',
+        message: `The pharmacy put ${held.medicationDisplay} on hold: ${statusReason}`,
+        relatedResourceType: 'MedicationRequest',
+        relatedResourceId: held.id,
+      });
+      return held;
+    });
+    return toFhirMedRequest(med);
+  }
+
+  /** Returns a held prescription to the ones waiting to be dispensed. */
+  async releasePrescription(id: string) {
+    const med = await this.changeStatus(
+      this.medsRepo,
+      id,
+      MedicationRequestStatus.ON_HOLD,
+      { status: MedicationRequestStatus.ACTIVE, statusReason: null },
+    );
+    return toFhirMedRequest(med);
+  }
+
+  /**
+   * Moves a prescription out of `from`, only if it is still in it, so a
+   * dispense or another hold racing this one can't be overwritten.
+   */
+  private async changeStatus(
+    repo: Repository<MedicationRequest>,
+    id: string,
+    from: MedicationRequestStatus,
+    change: Pick<MedicationRequest, 'status' | 'statusReason'>,
+  ) {
+    const { affected } = await repo.update({ id, status: from }, change);
+    const med = await repo.findOne({ where: { id } });
+    if (!med) throw new NotFoundException(`Prescription ${id} not found`);
+    if (!affected)
+      throw new ConflictException(`This prescription is ${med.status}`);
+    return med;
   }
 
   /** One summary per patient; patients with no prescriptions are left out. */

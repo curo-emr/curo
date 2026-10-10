@@ -16,6 +16,7 @@ import { Skeleton } from "@curo/web/ui/skeleton";
 import { StatusBadge, toneClass, type Tone } from "@curo/web/ui/status-badge";
 import { PatientSummaryCard } from "@/components/features/patients/PatientSummaryCard";
 import { DispenseRecordCard } from "@/components/features/dispensing/DispenseRecordCard";
+import { HeldNotice, HoldPrescriptionDialog } from "@/components/features/prescriptions/PrescriptionHold";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { dispense } from "@/lib/api/pharmacy";
@@ -24,8 +25,9 @@ import { invalidateAfterDispense, patientQueries, prescriptionQueries, stockQuer
 import { checkStock, type StockCheck } from "@/lib/stock";
 import type { Prescription, PrescriptionItem } from "@/types";
 
-// Only active prescriptions (mapped to "sent_to_pharmacy") can be dispensed.
+// Only active prescriptions (mapped to "sent_to_pharmacy") can be dispensed; held ones can be released first.
 const DISPENSABLE_STATUS = "sent_to_pharmacy";
+const HELD_STATUS = "on_hold";
 
 function medicationDetails(item: PrescriptionItem): [string, string][] {
   const details: [string, string][] = [
@@ -80,6 +82,7 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
   const stockChecks = stock.data && prescription.items.map(item => checkStock(item, stock.data));
   const stockShort = stockChecks?.some(c => c.kind !== "enough") ?? false;
   const dispensable = prescription.status === DISPENSABLE_STATUS;
+  const held = prescription.status === HELD_STATUS;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -113,7 +116,7 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
                   </div>
                 ))}
               </dl>
-              {dispensable && (stock.isError
+              {(dispensable || held) && (stock.isError
                 ? <Notice tone="neutral" icon={Info}>Stock couldn&apos;t be checked here; dispensing checks it again.</Notice>
                 : stockChecks ? <StockLine check={stockChecks[i]} item={item} /> : <Skeleton className="h-9 w-64" />)}
             </div>
@@ -128,10 +131,13 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
         <div className="space-y-3 border-t bg-muted/30 px-5 py-4">
           {dispensable ? (
             <>
-              <Button size="lg" onClick={() => dispenseRx.mutate()} disabled={!checked || stockShort || dispenseRx.isPending}>
-                {dispenseRx.isPending ? <Loader2 className="animate-spin" /> : <PackageCheck />}
-                {dispenseRx.isPending ? "Dispensing…" : "Dispense"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button size="lg" onClick={() => dispenseRx.mutate()} disabled={!checked || stockShort || dispenseRx.isPending}>
+                  {dispenseRx.isPending ? <Loader2 className="animate-spin" /> : <PackageCheck />}
+                  {dispenseRx.isPending ? "Dispensing…" : "Dispense"}
+                </Button>
+                <HoldPrescriptionDialog prescription={prescription} />
+              </div>
               {!checked && checks.isError && (
                 <p className="text-sm text-status-error-text">
                   The patient&apos;s record or allergies couldn&apos;t be loaded, so this can&apos;t be dispensed until they are.{" "}
@@ -141,6 +147,8 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
                 </p>
               )}
             </>
+          ) : held ? (
+            <HeldNotice prescription={prescription} />
           ) : (
             <p className="text-sm text-muted-foreground">
               This prescription is {formatStatus(prescription.status).toLowerCase()} and can&apos;t be dispensed.

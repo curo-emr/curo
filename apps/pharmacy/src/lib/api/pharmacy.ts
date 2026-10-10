@@ -10,10 +10,24 @@ import type { Prescription } from '@/types';
 
 // ─── Prescriptions ───────────────────────────────────────────────────────────
 
-// Every active prescription (served by the clinical service, unpaginated).
-export async function getPendingPrescriptions(): Promise<Prescription[]> {
-  const res = await apiClient.get<FhirMedicationRequest[]>('/prescriptions/pending');
+async function getPrescriptionList(path: string): Promise<Prescription[]> {
+  const res = await apiClient.get<FhirMedicationRequest[]>(path);
   return res.data.map(mapFhirMedicationRequest);
+}
+
+// Every prescription waiting to be dispensed, and every one on hold (unpaginated).
+export const getPendingPrescriptions = () => getPrescriptionList('/prescriptions/pending');
+export const getHeldPrescriptions = () => getPrescriptionList('/prescriptions/on-hold');
+
+// Sets a waiting prescription aside with why (the doctor who wrote it is told), or puts it back.
+export async function holdPrescription(id: string, reason: string): Promise<Prescription> {
+  const res = await apiClient.put<FhirMedicationRequest>(`/prescriptions/${id}/hold`, { reason });
+  return mapFhirMedicationRequest(res.data);
+}
+
+export async function releasePrescription(id: string): Promise<Prescription> {
+  const res = await apiClient.delete<FhirMedicationRequest>(`/prescriptions/${id}/hold`);
+  return mapFhirMedicationRequest(res.data);
 }
 
 export async function getPrescription(id: string): Promise<Prescription | null> {
