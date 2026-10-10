@@ -1,141 +1,107 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Loader2, Users } from "lucide-react";
+import { formatAgeSex } from "@curo/web/format";
 import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
-import { useSearchParams } from "next/navigation";
-import { Input } from "@curo/web/ui/input";
-import { Card, CardContent } from "@curo/web/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@curo/web/ui/table";
-import { Button } from "@curo/web/ui/button";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
+import { LoadError } from "@curo/web/ui/load-error";
 import { Pagination } from "@curo/web/ui/pagination";
-import { Search, ChevronRight, User, Loader2 } from "lucide-react";
-import { calculateAge, formatDate } from "@/lib/utils";
+import { SearchInput } from "@curo/web/ui/search-input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
 import { getLabOrders } from "@/lib/api/lab";
 import { getPatientsPaginated } from "@/lib/api/patients";
-import Link from "next/link";
+import { ROUTES } from "@/lib/constants";
+import { formatDate } from "@/lib/utils";
+import type { LabOrder } from "@/types";
+
+/** Each patient's orders at this lab: how many, and when the last one came. */
+function ordersByPatient(orders: LabOrder[]) {
+  const byPatient = new Map<string, { count: number; last: string }>();
+  for (const order of orders) {
+    const seen = byPatient.get(order.patientId);
+    byPatient.set(order.patientId, {
+      count: (seen?.count ?? 0) + 1,
+      last: seen && seen.last > order.createdAt ? seen.last : order.createdAt,
+    });
+  }
+  return byPatient;
+}
 
 export function PatientList() {
-  const searchParams = useSearchParams();
-  const initialQuery = searchParams.get("q") || "";
-
-  const [query, setQuery] = useState(initialQuery);
+  const [query, setQuery] = useState("");
   const search = useDebouncedValue(query);
   const { data, items: patients, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
     async (page, pageSize) => {
       const result = await getPatientsPaginated({ page, pageSize, search: search || undefined });
       // The lab-history columns: these patients' orders, not every order.
       const orders = await getLabOrders({ patientIds: result.items.map(p => p.id) });
-      return { ...result, orders };
+      return { ...result, orders: ordersByPatient(orders) };
     },
     [search],
   );
 
-  const getPatientOrderInfo = (patientId: string) => {
-    const patientOrders = (data?.orders ?? []).filter(o => o.patientId === patientId);
-    const lastOrder = [...patientOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-    return { count: patientOrders.length, lastOrder };
-  };
-
   return (
     <div className="space-y-4">
-      <Card className="shadow-sm border">
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search by name, MRN, or PHN..."
-              className="pl-9 bg-muted border"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <SearchInput value={query} onChange={setQuery} placeholder="Search by name, MRN or PHN…" className="max-w-md" />
 
-      <div className="bg-white rounded-md border overflow-hidden shadow-sm">
-        <Table>
-          <TableHeader className="bg-muted">
-            <TableRow>
-              <TableHead>Patient</TableHead>
-              <TableHead>Age / Sex</TableHead>
-              <TableHead>PHN</TableHead>
-              <TableHead>Last Lab Order</TableHead>
-              <TableHead>Total Orders</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />
-                  Loading patients…
-                </TableCell>
-              </TableRow>
-            ) : isError ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-destructive">Failed to load patients.</TableCell>
-              </TableRow>
-            ) : patients.length > 0 ? (
-              patients.map(patient => {
-                const { count, lastOrder } = getPatientOrderInfo(patient.id);
-                return (
-                  <TableRow key={patient.id} className="hover:bg-muted/50 transition-colors group">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                          <User className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">{patient.name.full}</p>
-                          <p className="text-xs text-muted-foreground">{patient.mrn}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {calculateAge(patient.dob)}y / {patient.sex.charAt(0).toUpperCase()}{patient.sex.slice(1)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">{patient.phn || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {lastOrder ? formatDate(lastOrder.createdAt) : '-'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{count}</TableCell>
-                    <TableCell>
-                      <Link href={`/patients/${patient.id}`}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground group-hover:text-primary hover:bg-primary/10">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  No patients match your search.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        {isLoading ? (
+          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 size-5 animate-spin text-primary" /> Loading patients…
+          </div>
+        ) : isError ? (
+          <LoadError what="patients" />
+        ) : patients.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={search ? "No patients match your search" : "No patients yet"}
+            description={search ? "Check the spelling, or search by MRN or PHN." : undefined}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead>Patient</TableHead>
+                  <TableHead>Age / Sex</TableHead>
+                  <TableHead>PHN</TableHead>
+                  <TableHead>Lab orders</TableHead>
+                  <TableHead>Last order</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {patients.map(patient => {
+                  const orders = data?.orders.get(patient.id);
+                  return (
+                    <TableRow key={patient.id}>
+                      <TableCell>
+                        <Link href={ROUTES.PATIENT(patient.id)} className="group flex items-center gap-3">
+                          <InitialsAvatar name={patient.name.full} size="sm" />
+                          <span className="min-w-0">
+                            <span className="block font-medium text-foreground group-hover:text-primary">{patient.name.full}</span>
+                            <span className="block font-mono text-xs text-muted-foreground">{patient.mrn}</span>
+                          </span>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">{formatAgeSex(patient.dob, patient.sex)}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{patient.phn || "—"}</TableCell>
+                      <TableCell className="tabular-nums text-muted-foreground">{orders?.count ?? 0}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{orders ? formatDate(orders.last) : "—"}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-      />
+      {total > 0 && (
+        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} onPageSizeChange={setPageSize} />
+      )}
     </div>
   );
 }

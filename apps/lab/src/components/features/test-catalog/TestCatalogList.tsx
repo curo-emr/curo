@@ -1,140 +1,111 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Input } from "@curo/web/ui/input";
-import { Card, CardContent } from "@curo/web/ui/card";
-import { Badge } from "@curo/web/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@curo/web/ui/select";
-import { Search, ChevronDown, ChevronRight, FlaskConical } from "lucide-react";
-import { LabTestCatalogItem } from "@/types";
-import { formatTAT } from "@/lib/utils";
-import { formatStatus } from "@curo/web/format";
+import { useMemo, useState } from "react";
+import { FlaskConical, SearchX } from "lucide-react";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { SearchInput } from "@curo/web/ui/search-input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
+import type { LabTestCatalogItem } from "@/types";
 
-interface TestCatalogListProps {
-  tests: LabTestCatalogItem[];
-}
+const ALL = "all";
 
-export function TestCatalogList({ tests }: TestCatalogListProps) {
+/** The distinct values of one field, sorted, for a filter's options. */
+const optionsOf = (tests: LabTestCatalogItem[], field: "category" | "specimen") =>
+  [...new Set(tests.map(t => t[field]).filter((v): v is string => !!v))].sort();
+
+export function TestCatalogList({ tests }: { tests: LabTestCatalogItem[] }) {
   const [query, setQuery] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
-  const [specimenFilter, setSpecimenFilter] = useState("all");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [category, setCategory] = useState(ALL);
+  const [specimen, setSpecimen] = useState(ALL);
+  const categories = useMemo(() => optionsOf(tests, "category"), [tests]);
+  const specimens = useMemo(() => optionsOf(tests, "specimen"), [tests]);
 
   const filtered = useMemo(() => {
-    return tests.filter(t => {
-      const q = query.toLowerCase().trim();
-      const matchesQuery = !q || t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q);
-      const matchesDept = departmentFilter === "all" || t.department === departmentFilter;
-      const matchesSpecimen = specimenFilter === "all" || t.specimenType === specimenFilter;
-      return matchesQuery && matchesDept && matchesSpecimen;
-    });
-  }, [query, departmentFilter, specimenFilter, tests]);
+    const q = query.toLowerCase().trim();
+    return tests.filter(t =>
+      (!q || t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q)) &&
+      (category === ALL || t.category === category) &&
+      (specimen === ALL || t.specimen === specimen),
+    );
+  }, [tests, query, category, specimen]);
+
+  if (tests.length === 0) {
+    return (
+      <div className="rounded-xl border bg-card shadow-sm">
+        <EmptyState icon={FlaskConical} title="No tests in the catalog" description="Your lab doesn't offer any tests yet." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <Card className="shadow-sm border">
-        <CardContent className="p-4 space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search by test name or code..."
-              className="pl-9 bg-muted border"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger className="w-[160px] h-8 text-xs">
-                <SelectValue placeholder="Department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="Hematology">Hematology</SelectItem>
-                <SelectItem value="Biochemistry">Biochemistry</SelectItem>
-                <SelectItem value="Microbiology">Microbiology</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={specimenFilter} onValueChange={setSpecimenFilter}>
-              <SelectTrigger className="w-[160px] h-8 text-xs">
-                <SelectValue placeholder="Specimen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Specimens</SelectItem>
-                <SelectItem value="whole_blood">Whole Blood</SelectItem>
-                <SelectItem value="serum">Serum</SelectItem>
-                <SelectItem value="urine">Urine</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-sm text-muted-foreground ml-auto">{filtered.length} tests</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-2">
-        {filtered.map(test => {
-          const isExpanded = expandedId === test.id;
-          return (
-            <Card key={test.id} className="shadow-sm border">
-              <CardContent className="p-0">
-                <button
-                  onClick={() => setExpandedId(isExpanded ? null : test.id)}
-                  className="w-full text-left p-4 hover:bg-muted transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <FlaskConical className="h-4 w-4 text-primary shrink-0" />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-sm text-foreground">{test.name}</span>
-                          <Badge variant="outline" className="text-xs">{test.code}</Badge>
-                          {test.isPanel && <Badge variant="secondary" className="text-xs bg-status-purple-bg text-status-purple-text">Panel</Badge>}
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                          <span>{test.department}</span>
-                          <span>{test.specimenType ? formatStatus(test.specimenType) : ''}</span>
-                          <span>{test.containerType}</span>
-                          <span>TAT: {formatTAT(test.tat ?? 0)}</span>
-                          <span>Rs. {(test.price ?? 0).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                  </div>
-                </button>
-
-                {isExpanded && (
-                  <div className="border-t p-4 bg-muted/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Components & Reference Ranges</p>
-                    <div className="space-y-1.5">
-                      {(test.components ?? []).map(comp => (
-                        <div key={comp.id} className="flex items-center justify-between text-sm bg-white rounded-md px-3 py-2 border">
-                          <span className="text-foreground">{comp.name}</span>
-                          <div className="flex items-center gap-4 text-muted-foreground">
-                            <span className="text-xs">{comp.unit || '-'}</span>
-                            <span className="text-xs font-mono">
-                              {comp.referenceRange.low !== 0 || comp.referenceRange.high !== 0
-                                ? `${comp.referenceRange.low} - ${comp.referenceRange.high}`
-                                : '-'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <SearchInput value={query} onChange={setQuery} placeholder="Test name or LOINC code…" className="min-w-0 flex-1" />
+        <div className="flex gap-2">
+          <FilterSelect label="Category" anyLabel="Any category" value={category} onChange={setCategory} options={categories} />
+          <FilterSelect label="Specimen" anyLabel="Any specimen" value={specimen} onChange={setSpecimen} options={specimens} />
+        </div>
       </div>
+
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        {filtered.length === 0 ? (
+          <EmptyState icon={SearchX} title="No tests match" description="Try another name or code, or clear a filter." />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead>Test</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Specimen</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map(test => (
+                  <TableRow key={test.id}>
+                    <TableCell>
+                      <span className="block font-medium text-foreground">{test.name}</span>
+                      <span className="block font-mono text-xs text-muted-foreground">{test.code}</span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{test.category ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{test.specimen ?? "—"}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right tabular-nums text-foreground">
+                      {test.price == null ? "—" : `Rs. ${test.price.toLocaleString()}`}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+      <p className="px-1 text-xs text-muted-foreground">
+        {filtered.length} of {tests.length} tests
+      </p>
     </div>
+  );
+}
+
+interface FilterSelectProps {
+  label: string;
+  anyLabel: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+}
+
+function FilterSelect({ label, anyLabel, value, onChange, options }: FilterSelectProps) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-full sm:w-40" aria-label={label}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL}>{anyLabel}</SelectItem>
+        {options.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+      </SelectContent>
+    </Select>
   );
 }

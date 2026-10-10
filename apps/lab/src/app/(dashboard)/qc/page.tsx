@@ -3,47 +3,40 @@
 import { useQuery } from "@tanstack/react-query";
 import { Cpu } from "lucide-react";
 import { QueryContent } from "@curo/web/query";
+import { Card } from "@curo/web/ui/card";
+import { PageHeader } from "@curo/web/ui/page-header";
+import { StatusBadge, type Status } from "@curo/web/ui/status-badge";
 import { QCLogTable } from "@/components/features/qc/QCLogTable";
-import { Badge } from "@curo/web/ui/badge";
-import { Card, CardContent } from "@curo/web/ui/card";
-import { labQueries } from "@/lib/queries";
 import type { LabInstrument } from "@/lib/api/lab";
+import { labQueries } from "@/lib/queries";
 import type { LabStaff } from "@/types";
 
 const NO_INSTRUMENTS: LabInstrument[] = [];
 const NO_STAFF: LabStaff[] = [];
 
 export default function QCPage() {
-  // Instruments feed the status cards + the table's filter dropdown; staff feeds the
-  // "performed by" lookup. The QC log table fetches its own paginated records.
+  // Instruments feed the status cards and the table's filter; staff name who ran each control.
+  // The QC log table fetches its own pages.
   const instruments = useQuery(labQueries.instruments());
   const staff = useQuery(labQueries.staff()).data ?? NO_STAFF;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Quality Control</h1>
-        <p className="text-sm text-muted-foreground">Monitor QC results and instrument performance</p>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader title="Quality control" description="Control runs on your lab's instruments, newest first." />
 
       <QueryContent query={instruments} what="the instruments">
-        {list => (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {list => list.length > 0 && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {list.map(inst => (
-              <Card key={inst.id} className="shadow-sm border-slate-200">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Cpu className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="text-xs font-medium text-slate-700 truncate">{inst.name}</span>
-                  </div>
-                  <Badge variant="outline" className={
-                    inst.status === 'operational' ? 'text-green-700 border-green-200 bg-green-50' :
-                    inst.status === 'maintenance' ? 'text-amber-700 border-amber-200 bg-amber-50' :
-                    'text-red-700 border-red-200 bg-red-50'
-                  }>
-                    {inst.status.charAt(0).toUpperCase() + inst.status.slice(1)}
-                  </Badge>
-                </CardContent>
+              <Card key={inst.id} className="flex-row items-center gap-3 p-4">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Cpu className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{inst.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{[inst.model, inst.location].filter(Boolean).join(" · ")}</p>
+                </div>
+                <StatusBadge status={inst.status as Status} className="shrink-0" />
               </Card>
             ))}
           </div>

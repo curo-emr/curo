@@ -1,22 +1,26 @@
 "use client";
 
 import { use } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { ClipboardList, FileText, FlaskConical } from "lucide-react";
 import { QueryContent, allOf } from "@curo/web/query";
-import type { LabResult } from "@/lib/api/lab";
-import { patientQueries } from "@/lib/queries";
-import { calculateAge, formatDate } from "@/lib/utils";
-import type { Patient, LabOrder } from "@/types";
-import { Card, CardContent } from "@curo/web/ui/card";
-import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
+import { Card } from "@curo/web/ui/card";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { BackLink } from "@curo/web/ui/page-header";
 import { StatusBadge } from "@curo/web/ui/status-badge";
-import { orderStatus } from "@/lib/order-status";
-import { User, FlaskConical, FileText } from "lucide-react";
-import Link from "next/link";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
+import { PriorityBadge } from "@/components/features/orders/PriorityBadge";
+import { ResultsTable } from "@/components/features/orders/ResultsTable";
+import { PatientCard } from "@/components/features/patients/PatientCard";
+import type { LabResult } from "@/lib/api/lab";
 import { ROUTES } from "@/lib/constants";
+import { STEP_ACTION, nextStep, orderNumber, orderStatus } from "@/lib/orders";
+import { patientQueries } from "@/lib/queries";
+import { formatDate } from "@/lib/utils";
+import type { LabOrder, Patient } from "@/types";
 
 export default function PatientDetailPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = use(params);
@@ -37,110 +41,60 @@ export default function PatientDetailPage({ params }: { params: Promise<{ patien
 }
 
 function PatientRecord({ patient, orders, results }: { patient: Patient; orders: LabOrder[]; results: LabResult[] }) {
-  const age = calculateAge(patient.dob);
-
-
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Patient Header */}
-      <Card className="shadow-sm border-slate-200">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <User className="h-6 w-6" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-3 mb-1">
-                <h1 className="text-xl font-bold text-slate-900">{patient.name.full}</h1>
-                <Badge variant="outline" className="text-slate-600">{patient.mrn}</Badge>
-                {patient.phn && <Badge variant="outline" className="text-slate-600" title="Personal Health Number">PHN {patient.phn}</Badge>}
-              </div>
-              {/* Lab sees only identity needed for specimen labeling — no blood type,
-                  contact, or address (data minimization). */}
-              <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
-                <span>{age}y / {patient.sex.charAt(0).toUpperCase()}{patient.sex.slice(1)}</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <BackLink href={ROUTES.PATIENTS} label="All patients" />
+      <PatientCard patient={patient} />
 
-      {/* Tabs */}
-      <Tabs defaultValue="orders" className="w-full">
-        <TabsList className="bg-slate-100 p-1 rounded-md mb-4">
-          <TabsTrigger value="orders" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <FlaskConical className="h-4 w-4 mr-2" /> Lab Orders ({orders.length})
-          </TabsTrigger>
-          <TabsTrigger value="results" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <FileText className="h-4 w-4 mr-2" /> Results History ({results.length})
-          </TabsTrigger>
+      <Tabs defaultValue="orders">
+        <TabsList className="mb-2">
+          <TabsTrigger value="orders"><ClipboardList /> Orders ({orders.length})</TabsTrigger>
+          <TabsTrigger value="results"><FileText /> Results ({results.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="orders" className="space-y-3">
+        <TabsContent value="orders">
           {orders.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">No lab orders found for this patient.</div>
+            <Card><EmptyState icon={FlaskConical} title="No lab orders yet" description="Orders sent to your lab for this patient appear here." /></Card>
           ) : (
-            orders.map(order => (
-              <Card key={order.id} className="shadow-sm border-slate-200 hover:bg-slate-50/50 transition-colors">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-4">
+            <Card className="divide-y">
+              {orders.map(order => {
+                const step = nextStep(order);
+                return (
+                  <div key={order.id} className="flex items-center justify-between gap-4 px-5 py-3">
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="font-mono text-sm font-medium text-slate-900">{order.id.slice(0, 8).toUpperCase()}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm font-medium text-foreground">{orderNumber(order)}</span>
                         <StatusBadge status={orderStatus(order)} />
-                        <Badge variant="outline" className={
-                          order.priority === 'stat' ? 'text-red-700 border-red-200 bg-red-50' :
-                          order.priority === 'urgent' ? 'text-amber-700 border-amber-200 bg-amber-50' :
-                          'text-slate-600 border-slate-200 bg-slate-50'
-                        }>
-                          {order.priority}
-                        </Badge>
+                        {order.priority !== "routine" && <PriorityBadge priority={order.priority} />}
                       </div>
-                      <p className="text-sm text-slate-600">
-                        {order.tests.map(t => t.name).join(', ')}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Ordered: {formatDate(order.createdAt)}
-                      </p>
+                      <p className="mt-0.5 truncate text-sm text-foreground">{order.tests.map(t => t.name).join(", ")}</p>
+                      <p className="text-xs text-muted-foreground">Ordered {formatDate(order.createdAt)}</p>
                     </div>
-                    <Link href={ROUTES.ORDER(order.id)}>
-                      <Button variant="outline" size="sm" className="shrink-0">View</Button>
-                    </Link>
+                    <Button asChild variant="outline" size="sm" className="shrink-0">
+                      <Link href={step ? STEP_ACTION[step].href(order.id) : ROUTES.ORDER(order.id)}>
+                        {step ? STEP_ACTION[step].label : "View"}
+                      </Link>
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
-            ))
+                );
+              })}
+            </Card>
           )}
         </TabsContent>
 
         <TabsContent value="results" className="space-y-3">
           {results.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">No results available for this patient.</div>
+            <Card><EmptyState icon={FileText} title="No results yet" description="Results your lab reports for this patient appear here." /></Card>
           ) : (
             results.map(result => (
-              <Card key={result.id} className="shadow-sm border-slate-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-sm text-slate-900">Lab Report</span>
-                    <span className="text-xs text-slate-400">{formatDate(result.performedAt)}</span>
-                  </div>
-                  <div className="bg-slate-50 rounded-md p-3 space-y-1.5">
-                    {result.results.map((rr, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">{rr.testName}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{rr.value} {rr.unit}</span>
-                          {rr.flag && rr.flag !== 'normal' && (
-                            <Badge variant="outline" className={
-                              rr.flag === 'critical' ? 'text-red-700 border-red-200 bg-red-50 text-xs' :
-                              'text-amber-700 border-amber-200 bg-amber-50 text-xs'
-                            }>{rr.flag.toUpperCase()}</Badge>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
+              <Card key={result.id} className="gap-3 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <Link href={ROUTES.ORDER(result.orderId)} className="font-mono font-medium text-foreground hover:text-primary">
+                    Order {orderNumber({ id: result.orderId })}
+                  </Link>
+                  <span className="text-xs text-muted-foreground">Reported {formatDate(result.performedAt)}</span>
+                </div>
+                <ResultsTable result={result} />
               </Card>
             ))
           )}

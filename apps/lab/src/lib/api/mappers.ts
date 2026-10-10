@@ -4,7 +4,8 @@ import type {
 } from '@/types';
 
 export { mapFhirAllergy, type FhirAllergy } from '@curo/web/fhir';
-import type { LabResult, LabResultItem } from './lab';
+import { resultFlag } from '@curo/web/clinical';
+import type { LabResult } from './lab';
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
 
@@ -129,6 +130,7 @@ export interface FhirServiceRequest {
   encounter?: { reference?: string };
   authoredOn?: string;
   receivedAt?: string | null;
+  completedAt?: string | null;
   code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
   note?: Array<{ text?: string }>;
   extension?: Array<{ url: string; valueString?: string }>;
@@ -159,7 +161,6 @@ export interface FhirDiagnosticReport {
     referenceRangeText?: string;
     referenceRangeLow?: string;
     referenceRangeHigh?: string;
-    flag?: LabResultItem['flag'];
     interpretation?: string;
   }>;
 }
@@ -416,6 +417,7 @@ export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
     createdAt: fhir.authoredOn ?? fhir.meta?.lastUpdated ?? '',
     sentToLabAt: fhir.status !== 'draft' ? (fhir.authoredOn ?? fhir.meta?.lastUpdated ?? null) : null,
     receivedAt: fhir.receivedAt ?? null,
+    completedAt: fhir.completedAt ?? null,
     notesToLab: fhir.note?.[0]?.text ?? '',
     tests: orderedTests(fhir).map(t => ({
       testId: t.code,
@@ -442,16 +444,6 @@ function getReferenceRange(item: NonNullable<FhirDiagnosticReport['result']>[num
   return undefined;
 }
 
-function getResultFlag(item: NonNullable<FhirDiagnosticReport['result']>[number]): LabResultItem['flag'] | undefined {
-  if (item.flag) return item.flag;
-  const interpretation = item.interpretation?.toUpperCase();
-  if (interpretation === 'H' || interpretation === 'HH') return 'high';
-  if (interpretation === 'L' || interpretation === 'LL') return 'low';
-  if (interpretation === 'A') return 'critical';
-  if (interpretation === 'N') return 'normal';
-  return undefined;
-}
-
 export function mapFhirDiagnosticReport(fhir: FhirDiagnosticReport): LabResult {
   const reportCode = fhir.code?.coding?.[0]?.code ?? '';
   const reportDisplay = fhir.code?.text ?? fhir.code?.coding?.[0]?.display ?? reportCode;
@@ -473,7 +465,7 @@ export function mapFhirDiagnosticReport(fhir: FhirDiagnosticReport): LabResult {
         value,
         unit: item.unit,
         referenceRange: getReferenceRange(item),
-        flag: getResultFlag(item),
+        flag: resultFlag(item.interpretation),
       };
     }),
     conclusion: fhir.conclusion,

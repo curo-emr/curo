@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FileText, FlaskConical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { isAbnormalResult, resultFlag } from "@curo/web/clinical";
 import { QueryContent } from "@curo/web/query";
 import type { LabOrder, LabReport, LabResultValue } from "@/types";
 import { Button } from "@curo/web/ui/button";
@@ -118,8 +119,6 @@ function LabOrderRow({ order, labName, report, files }: {
   );
 }
 
-const ABNORMAL = new Set(["H", "HH", "L", "LL", "A", "AA"]);
-
 function ResultsTable({ results }: { results: LabResultValue[] }) {
   return (
     <div className="overflow-x-auto rounded-lg border">
@@ -133,7 +132,7 @@ function ResultsTable({ results }: { results: LabResultValue[] }) {
         </thead>
         <tbody className="divide-y">
           {results.map(r => {
-            const abnormal = ABNORMAL.has(r.interpretation ?? "");
+            const abnormal = isAbnormalResult(resultFlag(r.interpretation));
             return (
               <tr key={r.code}>
                 <td className="px-3 py-2 text-foreground">{r.display}</td>

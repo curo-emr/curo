@@ -47,10 +47,13 @@ const STATUSES = {
   verified: { tone: "success" },
   dispatched: { tone: "success" },
   rejected: { tone: "error" },
-  // Lab quality control
+  // Lab quality control, and the lab's instruments
   pass: { tone: "success" },
   fail: { tone: "error" },
   warning: { tone: "warning" },
+  operational: { tone: "success" },
+  maintenance: { tone: "warning" },
+  offline: { tone: "error" },
   // Dispensing
   pending: { tone: "warning" },
   dispensed: { tone: "success" },
