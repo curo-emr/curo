@@ -20,3 +20,9 @@ npm-debug.log*
 # Written by `next dev` in each portal
 /apps/*/AGENTS.md
 /apps/*/CLAUDE.md
+
+# npm is the only package manager (see "preinstall" in package.json)
+yarn.lock
+pnpm-lock.yaml
+bun.lock
+bun.lockb

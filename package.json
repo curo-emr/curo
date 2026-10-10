@@ -8,7 +8,18 @@
     "services/*",
     "apps/*"
   ],
+  "engines": {
+    "pnpm": "please-use-npm",
+    "yarn": "please-use-npm"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "npm",
+      "onFail": "error"
+    }
+  },
   "scripts": {
+    "preinstall": "node -e \"if (!(process.env.npm_config_user_agent || '').startsWith('npm/')) { console.error('This repo uses npm (one package-lock.json for every workspace): run npm install instead.'); process.exit(1) }\"",
     "build": "npm run build -w packages -w services --if-present",
     "build:shared": "npm run build -w @curo/shared",
     "build:portals": "npm run build -w apps",
