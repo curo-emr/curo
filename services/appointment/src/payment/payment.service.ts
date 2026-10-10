@@ -8,11 +8,14 @@ import { Repository, Between, In } from 'typeorm';
 import { Payment } from '../entities/payment.entity';
 import { AuditLog } from '@curo/shared/database';
 import {
+  dayBounds,
   parseList,
   parsePagination,
   toSearchset,
   PaginationQuery,
 } from '@curo/shared/fhir';
+import { clinicTimeZone } from '@curo/shared/config';
+
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { actorId, type AuthUser } from '@curo/shared/auth';
@@ -95,10 +98,11 @@ export class PaymentService {
     return saved;
   }
 
+  /** Whole days on the clinic's calendar, from `from` through `to`. */
   private dateRange(from?: string, to?: string) {
     if (!from && !to) return undefined;
-    const start = from ? new Date(from) : new Date('1970-01-01');
-    const end = to ? new Date(`${to}T23:59:59.999Z`) : new Date('2999-12-31');
+    const start = from ? dayBounds(from).start : new Date('1970-01-01');
+    const end = to ? dayBounds(to).end : new Date('2999-12-31');
     return Between(start, end);
   }
 
@@ -146,20 +150,25 @@ export class PaymentService {
     const unit = ['day', 'week', 'month'].includes(period) ? period : 'day';
 
     const qb = this.income()
-      .select(`date_trunc('${unit}', p."paidAt")`, 'bucket')
+      // The bucket's first day on the clinic's calendar, as YYYY-MM-DD (paidAt is a timestamptz).
+      .select(
+        `to_char(date_trunc('${unit}', p."paidAt" AT TIME ZONE :clinicZone), 'YYYY-MM-DD')`,
+        'bucket',
+      )
+      .setParameter('clinicZone', clinicTimeZone())
       .addSelect('SUM(p.amount)', 'total')
       .addSelect('COUNT(*)', 'count')
       .andWhere('p.collectedBy = :collectedBy', { collectedBy });
 
-    if (from) qb.andWhere('p."paidAt" >= :from', { from: new Date(from) });
-    if (to)
-      qb.andWhere('p."paidAt" <= :to', { to: new Date(`${to}T23:59:59.999Z`) });
+    if (from)
+      qb.andWhere('p."paidAt" >= :from', { from: dayBounds(from).start });
+    if (to) qb.andWhere('p."paidAt" <= :to', { to: dayBounds(to).end });
 
     qb.groupBy('bucket').orderBy('bucket', 'ASC');
 
     // pg returns SUM/COUNT as strings.
     const rows = await qb.getRawMany<{
-      bucket: Date;
+      bucket: string;
       total: string;
       count: string;
     }>();

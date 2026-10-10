@@ -8,6 +8,7 @@
  */
 
 import { BadRequestException } from '@nestjs/common';
+import { clinicDayBounds } from '../config/clinic-time';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -32,15 +33,11 @@ export function escapeLike(text: string): string {
 }
 
 /**
- * The first and last instants of `day` (a YYYY-MM-DD param) in the server's time
- * zone, for filters over whole days. A 400 when it isn't a date.
+ * The first and last instants of `day` (a YYYY-MM-DD param) on the clinic's
+ * calendar, for filters over whole days. A 400 when it isn't a date.
  */
 export function dayBounds(day: string): { start: Date; end: Date } {
-  const start = new Date(day);
-  if (Number.isNaN(start.getTime()))
-    throw new BadRequestException(`${day} is not a date`);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setHours(23, 59, 59, 999);
-  return { start, end };
+  const bounds = clinicDayBounds(day);
+  if (!bounds) throw new BadRequestException(`${day} is not a date`);
+  return bounds;
 }

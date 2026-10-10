@@ -7,6 +7,7 @@ import {
 } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { Appointment } from '../src/entities/appointment.entity';
+import { Payment } from '../src/entities/payment.entity';
 import { AppointmentStatus, QueueStage, VisitType } from '../src/enums';
 
 describe('Appointments and the patient queue', () => {
@@ -243,15 +244,16 @@ describe('Appointments and the patient queue', () => {
 
     it('lists the appointments within whole days, latest first when asked', async () => {
       const patientId = randomUUID();
+      // Days are the clinic's (Asia/Colombo by default), whatever the server's zone.
       const first = await saveAppointment(
         patientId,
-        new Date(2030, 0, 10, 0, 0),
+        new Date('2030-01-10T00:00:00+05:30'),
       );
       const second = await saveAppointment(
         patientId,
-        new Date(2030, 0, 11, 23, 59),
+        new Date('2030-01-11T23:59:00+05:30'),
       );
-      await saveAppointment(patientId, new Date(2030, 0, 12, 0, 0));
+      await saveAppointment(patientId, new Date('2030-01-12T00:00:00+05:30'));
 
       const range = { patientId, from: '2030-01-10', to: '2030-01-11' };
       expect(await listed(range)).toEqual([first.id, second.id]);
@@ -263,6 +265,20 @@ describe('Appointments and the patient queue', () => {
       expect(
         await listed({ patientId, from: '2030-01-11', to: '2030-01-11' }),
       ).toEqual(await listed({ patientId, date: '2030-01-11' }));
+    });
+
+    it("keeps an early-morning appointment on the clinic's day, not the UTC one before it", async () => {
+      const patientId = randomUUID();
+      // 02:00 in Colombo on 15 January is 20:30 UTC on the 14th.
+      const early = await saveAppointment(
+        patientId,
+        new Date('2030-01-15T02:00:00+05:30'),
+      );
+
+      expect(await listed({ patientId, date: '2030-01-15' })).toEqual([
+        early.id,
+      ]);
+      expect(await listed({ patientId, date: '2030-01-14' })).toEqual([]);
     });
 
     it('narrows by status, a list; an unknown status matches nothing', async () => {
@@ -319,6 +335,33 @@ describe('Appointments and the patient queue', () => {
         .map((e) => e.resource.id)
         .sort();
       expect(ids).toEqual([a.id, b.id].sort());
+    });
+  });
+
+  describe('GET /payments/summary', () => {
+    it("buckets a payment by the clinic's day, even in the early morning", async () => {
+      const desk = svc.as(UserRole.RECEPTIONIST);
+      const res = await svc.api
+        .post('/payments')
+        .set(desk.headers)
+        .send({ patientId: randomUUID(), amount: 500 })
+        .expect(201);
+      // 01:00 in Colombo on 1 March is 19:30 UTC on 28 February.
+      await svc.db
+        .getRepository(Payment)
+        .update((res.body as { id: string }).id, {
+          paidAt: new Date('2030-03-01T01:00:00+05:30'),
+        });
+
+      const summary = await svc.api
+        .get('/payments/summary')
+        .query({ period: 'day', from: '2030-03-01', to: '2030-03-01' })
+        .set(desk.headers)
+        .expect(200);
+      expect(summary.body).toMatchObject({
+        total: 500,
+        buckets: [{ bucket: '2030-03-01', total: 500, count: 1 }],
+      });
     });
   });
 
