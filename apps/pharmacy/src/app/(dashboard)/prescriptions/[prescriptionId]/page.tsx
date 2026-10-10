@@ -1,14 +1,16 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CircleCheck, CircleX, ClipboardList, Info, Loader2, PackageCheck, Pill, TriangleAlert, type LucideIcon } from "lucide-react";
+import { CircleCheck, CircleX, ClipboardList, Info, Loader2, PackageCheck, Pill, ShieldAlert, TriangleAlert, type LucideIcon } from "lucide-react";
 import { apiErrorMessage } from "@curo/web/api";
+import { allergyAlerts, describeAllergyAlert } from "@curo/web/clinical";
 import { formatStatus } from "@curo/web/format";
 import { QueryContent, allOf, dataOrNull } from "@curo/web/query";
+import { AllergyConfirmDialog } from "@curo/web/ui/allergy-confirm-dialog";
 import { Button } from "@curo/web/ui/button";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { SectionCard } from "@curo/web/ui/section-card";
@@ -55,6 +57,7 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ p
 function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
   const queryClient = useQueryClient();
   const { patientId } = prescription;
+  const name = medicineName(prescription);
   const patient = useQuery(patientQueries.detail(patientId));
   const allergiesQuery = useQuery(patientQueries.allergies(patientId));
   const allergies = dataOrNull(allergiesQuery);
@@ -66,7 +69,7 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
   const dispenseRx = useMutation({
     mutationFn: () => dispense(prescription.id),
     onSuccess: record => {
-      toast.success(`Dispensed ${medicineName(prescription)}`, {
+      toast.success(`Dispensed ${name}`, {
         description: `Receipt ${record.receiptNumber} · ${formatCurrency(record.totalAmount)}`,
       });
       return invalidateAfterDispense(queryClient, patientId);
@@ -80,12 +83,16 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
   const stockChecks = stock.data && prescription.items.map(item => checkStock(item, stock.data));
   const stockShort = stockChecks?.some(c => c.kind !== "enough") ?? false;
   const dispensable = prescription.status === DISPENSABLE_STATUS;
+  const alerts = allergyAlerts(name, allergies ?? []);
+  // Set while the pharmacist is asked whether to dispense despite a possible allergy.
+  const [confirming, setConfirming] = useState(false);
+  const startDispense = () => (alerts.length > 0 ? setConfirming(true) : dispenseRx.mutate());
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
         back={{ href: ROUTES.PRESCRIPTIONS, label: "All prescriptions" }}
-        title={medicineName(prescription)}
+        title={name}
         description={
           <span className="flex flex-wrap items-center gap-2">
             <StatusBadge status={prescription.status} />
@@ -103,6 +110,9 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
 
       <SectionCard icon={Pill} iconClassName="text-primary" title="To dispense" noPadding>
         <div className="space-y-5 p-5">
+          {dispensable && alerts.map(alert => (
+            <Notice key={alert.allergy.id} tone="error" icon={ShieldAlert}>Possible allergy. {describeAllergyAlert(alert, name)}</Notice>
+          ))}
           {prescription.items.map((item, i) => (
             <div key={item.id} className="space-y-3">
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
@@ -128,7 +138,7 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
         <div className="space-y-3 border-t bg-muted/30 px-5 py-4">
           {dispensable ? (
             <>
-              <Button size="lg" onClick={() => dispenseRx.mutate()} disabled={!checked || stockShort || dispenseRx.isPending}>
+              <Button size="lg" onClick={startDispense} disabled={!checked || stockShort || dispenseRx.isPending}>
                 {dispenseRx.isPending ? <Loader2 className="animate-spin" /> : <PackageCheck />}
                 {dispenseRx.isPending ? "Dispensing…" : "Dispense"}
               </Button>
@@ -146,6 +156,13 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
               This prescription is {formatStatus(prescription.status).toLowerCase()} and can&apos;t be dispensed.
             </p>
           )}
+          <AllergyConfirmDialog
+            drugName={confirming ? name : null}
+            alerts={alerts}
+            confirmLabel="Dispense anyway"
+            onConfirm={() => { setConfirming(false); dispenseRx.mutate(); }}
+            onCancel={() => setConfirming(false)}
+          />
           {dispenseRx.isError && (
             <Notice tone="error" icon={CircleX}>{apiErrorMessage(dispenseRx.error, "The prescription couldn't be dispensed.")}</Notice>
           )}
