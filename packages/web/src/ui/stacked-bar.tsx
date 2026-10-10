@@ -28,3 +28,19 @@ export function StackedBar({ segments, className }: { segments: BarSegment[]; cl
     </div>
   );
 }
+
+/** The bar's parts as a list: a dot in each part's tone, its label and its count. */
+export function StackedBarLegend({ segments }: { segments: BarSegment[] }) {
+  return (
+    <ul className="space-y-2">
+      {segments.map(s => (
+        <li key={s.label} className="flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2 text-foreground">
+            <span className={cn("size-2 rounded-full", toneDotClass(s.tone))} /> {s.label}
+          </span>
+          <span className="tabular-nums text-muted-foreground">{s.count}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}

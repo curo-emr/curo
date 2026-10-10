@@ -3,12 +3,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChartColumn, Package } from "lucide-react";
 import { QueryContent, allOf } from "@curo/web/query";
-import { Card } from "@curo/web/ui/card";
+import { BarList } from "@curo/web/ui/bar-list";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { SectionCard } from "@curo/web/ui/section-card";
-import { StackedBar, type BarSegment } from "@curo/web/ui/stacked-bar";
-import { statusLabel, toneDotClass } from "@curo/web/ui/status-badge";
+import { StackedBar, StackedBarLegend, type BarSegment } from "@curo/web/ui/stacked-bar";
+import { Stat, StatStrip } from "@curo/web/ui/stat";
+import { statusLabel } from "@curo/web/ui/status-badge";
 import { formatCurrency } from "@/lib/utils";
 import { dispensingQueries, prescriptionQueries, stockQueries } from "@/lib/queries";
 import { stockLevel } from "@/lib/stock";
@@ -51,35 +52,22 @@ function Reports({ dispensing, waiting, stock }: ReportsProps) {
     count: stock.filter(d => stockLevel(d) === status).length,
   }));
   const top = dispensing.topMedications;
-  const most = Math.max(1, ...top.map(m => m.quantity));
 
   return (
     <div className="space-y-6">
-      <Card className="grid grid-cols-2 divide-border lg:grid-cols-4 lg:divide-x">
+      <StatStrip>
         <Stat label="Dispenses" value={dispensing.count.toLocaleString()} />
         <Stat label="Taken in" value={formatCurrency(dispensing.revenue)} />
         <Stat label="Prescriptions waiting" value={waiting.length.toLocaleString()} />
         <Stat label="Medicines to reorder" value={stock.filter(d => d.low).length.toLocaleString()} />
-      </Card>
+      </StatStrip>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <SectionCard icon={ChartColumn} iconClassName="text-primary" title="Most dispensed" description="By units handed over">
           {top.length === 0 ? (
             <EmptyState title="Nothing dispensed yet" className="py-6" />
           ) : (
-            <ul className="space-y-3">
-              {top.map(m => (
-                <li key={m.name}>
-                  <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-                    <span className="truncate text-foreground">{m.name}</span>
-                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{m.quantity} units</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${(m.quantity / most) * 100}%` }} />
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <BarList items={top.map(m => ({ label: m.name, value: m.quantity, display: `${m.quantity} units` }))} />
           )}
         </SectionCard>
 
@@ -89,29 +77,11 @@ function Reports({ dispensing, waiting, stock }: ReportsProps) {
           ) : (
             <div className="space-y-4">
               <StackedBar segments={levels} className="h-2.5" />
-              <ul className="space-y-2">
-                {levels.map(l => (
-                  <li key={l.label} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 text-foreground">
-                      <span className={`size-2 rounded-full ${toneDotClass(l.tone)}`} /> {l.label}
-                    </span>
-                    <span className="tabular-nums text-muted-foreground">{l.count}</span>
-                  </li>
-                ))}
-              </ul>
+              <StackedBarLegend segments={levels} />
             </div>
           )}
         </SectionCard>
       </div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="px-5 py-4">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 truncate text-2xl font-semibold tabular-nums tracking-tight text-foreground">{value}</p>
     </div>
   );
 }
