@@ -11,6 +11,7 @@ import { allergyAlerts, describeAllergyAlert } from "@curo/web/clinical";
 import { formatStatus } from "@curo/web/format";
 import { QueryContent, allOf, dataOrNull } from "@curo/web/query";
 import { AllergyConfirmDialog } from "@curo/web/ui/allergy-confirm-dialog";
+import { workplaceQueries } from "@curo/web/workplace";
 import { Button } from "@curo/web/ui/button";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { SectionCard } from "@curo/web/ui/section-card";
@@ -84,8 +85,11 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
   // The server checks stock again as it dispenses; this only saves a trip that would fail.
   const stockChecks = stock.data && prescription.items.map(item => checkStock(item, stock.data));
   const stockShort = stockChecks?.some(c => c.kind !== "enough") ?? false;
-  const dispensable = prescription.status === DISPENSABLE_STATUS;
-  const held = prescription.status === HELD_STATUS;
+  const workplace = useQuery(workplaceQueries.mine()).data;
+  const sentElsewhere = !!prescription.pharmacyId && !!workplace && prescription.pharmacyId !== workplace.id;
+  // Only this pharmacy's prescriptions (or ones that name none) are dispensed, held or released here.
+  const dispensable = prescription.status === DISPENSABLE_STATUS && !sentElsewhere;
+  const held = prescription.status === HELD_STATUS && !sentElsewhere;
   const alerts = allergyAlerts(name, allergies ?? []);
   // Set while the pharmacist is asked whether to dispense despite a possible allergy.
   const [confirming, setConfirming] = useState(false);
@@ -157,6 +161,10 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
                 </p>
               )}
             </>
+          ) : sentElsewhere ? (
+            <p className="text-sm text-muted-foreground">
+              This prescription was sent to another pharmacy, so it can&apos;t be dispensed here.
+            </p>
           ) : held ? (
             <HeldNotice prescription={prescription} />
           ) : (

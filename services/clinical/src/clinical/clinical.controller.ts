@@ -205,15 +205,15 @@ export class ClinicalController {
   @Get('prescriptions/pending')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  getPendingPrescriptions() {
-    return this.clinicalService.getPendingPrescriptions();
+  getPendingPrescriptions(@CurrentUser() user: AuthUser) {
+    return this.clinicalService.getPendingPrescriptions(user);
   }
 
   @Get('prescriptions/on-hold')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  getHeldPrescriptions() {
-    return this.clinicalService.getHeldPrescriptions();
+  getHeldPrescriptions(@CurrentUser() user: AuthUser) {
+    return this.clinicalService.getHeldPrescriptions(user);
   }
 
   // A pharmacist sets a prescription aside (out of stock, a query to the
@@ -224,15 +224,19 @@ export class ClinicalController {
   holdPrescription(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: HoldPrescriptionDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.holdPrescription(id, dto.reason);
+    return this.clinicalService.holdPrescription(id, dto.reason, user);
   }
 
   @Delete('prescriptions/:id/hold')
   @Roles('PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  releasePrescription(@Param('id', ParseUUIDPipe) id: string) {
-    return this.clinicalService.releasePrescription(id);
+  releasePrescription(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.releasePrescription(id, user);
   }
 
   // Pending count and latest prescription for each patient on a list page.

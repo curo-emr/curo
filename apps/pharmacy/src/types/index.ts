@@ -190,6 +190,8 @@ export interface Prescription {
   notesToPharmacy: string;
   /** Why a pharmacy put it on hold; empty unless it is on hold. */
   holdReason: string;
+  /** The pharmacy it was sent to; null for those written before prescriptions named one, which any pharmacy dispenses. */
+  pharmacyId: string | null;
 }
 
 // --- Dispensing Records ---

@@ -3,11 +3,19 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   OnModuleInit,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, FindOptionsWhere, Repository, In, Not } from 'typeorm';
+import {
+  DataSource,
+  FindOptionsWhere,
+  Repository,
+  In,
+  IsNull,
+  Not,
+} from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Encounter } from '../entities/encounter.entity';
 import { ClinicalNote } from '../entities/clinical-note.entity';
@@ -21,8 +29,10 @@ import {
 import {
   MedicationRequestStatus,
   NotificationEventType,
+  UserRole,
 } from '@curo/shared/enums';
 import { notifyPractitioner } from '@curo/shared/notifications';
+import { workplaceOf, type AuthUser } from '@curo/shared/auth';
 import {
   parsePagination,
   toSearchset,
@@ -47,7 +57,7 @@ import {
 import {
   linkTriageVitals,
   newEncounter,
-  newPrescription,
+  savePrescriptions,
   newVital,
   saveLabOrder,
 } from './clinical-records';
@@ -271,8 +281,10 @@ export class ClinicalService implements OnModuleInit {
 
   // Prescriptions
   async createPrescription(dto: CreatePrescriptionDto, practitionerId: string) {
-    const saved = await this.medsRepo.save(
-      newPrescription(dto, practitionerId),
+    const [saved] = await savePrescriptions(
+      this.medsRepo.manager,
+      [dto],
+      practitionerId,
     );
     return toFhirMedRequest(saved);
   }
@@ -301,18 +313,35 @@ export class ClinicalService implements OnModuleInit {
   }
 
   /** Prescriptions waiting to be dispensed. */
-  getPendingPrescriptions() {
-    return this.prescriptionsIn(MedicationRequestStatus.ACTIVE);
+  getPendingPrescriptions(user: AuthUser) {
+    return this.prescriptionsIn(MedicationRequestStatus.ACTIVE, user);
   }
 
   /** Prescriptions a pharmacy has set aside. */
-  getHeldPrescriptions() {
-    return this.prescriptionsIn(MedicationRequestStatus.ON_HOLD);
+  getHeldPrescriptions(user: AuthUser) {
+    return this.prescriptionsIn(MedicationRequestStatus.ON_HOLD, user);
   }
 
-  private async prescriptionsIn(status: MedicationRequestStatus) {
+  /**
+   * Prescriptions in `status`: for a pharmacist, those sent to their pharmacy
+   * and those from before prescriptions named one; for anyone else, every
+   * pharmacy's.
+   */
+  private async prescriptionsIn(
+    status: MedicationRequestStatus,
+    user: AuthUser,
+  ) {
     const meds = await this.medsRepo.find({
-      where: { status },
+      where:
+        user.role === UserRole.PHARMACIST
+          ? [
+              {
+                status,
+                performerOrganizationId: workplaceOf(user, 'pharmacy'),
+              },
+              { status, performerOrganizationId: IsNull() },
+            ]
+          : { status },
       order: { authoredOn: 'DESC' },
     });
     return meds.map(toFhirMedRequest);
@@ -322,12 +351,13 @@ export class ClinicalService implements OnModuleInit {
    * Sets a waiting prescription aside until it is released, and tells the
    * doctor who wrote it why.
    */
-  async holdPrescription(id: string, reason: string) {
+  async holdPrescription(id: string, reason: string, pharmacist: AuthUser) {
     const statusReason = reason.trim();
     const med = await this.dataSource.transaction(async (em) => {
       const held = await this.changeStatus(
         em.getRepository(MedicationRequest),
         id,
+        pharmacist,
         MedicationRequestStatus.ACTIVE,
         { status: MedicationRequestStatus.ON_HOLD, statusReason },
       );
@@ -344,10 +374,11 @@ export class ClinicalService implements OnModuleInit {
   }
 
   /** Returns a held prescription to the ones waiting to be dispensed. */
-  async releasePrescription(id: string) {
+  async releasePrescription(id: string, pharmacist: AuthUser) {
     const med = await this.changeStatus(
       this.medsRepo,
       id,
+      pharmacist,
       MedicationRequestStatus.ON_HOLD,
       { status: MedicationRequestStatus.ACTIVE, statusReason: null },
     );
@@ -355,18 +386,32 @@ export class ClinicalService implements OnModuleInit {
   }
 
   /**
-   * Moves a prescription out of `from`, only if it is still in it, so a
-   * dispense or another hold racing this one can't be overwritten.
+   * Moves a prescription of the pharmacist's own pharmacy (or one that names
+   * none) out of `from`, only if it is still in it, so a dispense or another
+   * hold racing this one can't be overwritten.
    */
   private async changeStatus(
     repo: Repository<MedicationRequest>,
     id: string,
+    pharmacist: AuthUser,
     from: MedicationRequestStatus,
     change: Pick<MedicationRequest, 'status' | 'statusReason'>,
   ) {
+    const pharmacy = workplaceOf(pharmacist, 'pharmacy');
+    const sentTo = await repo.findOne({
+      where: { id },
+      select: { id: true, performerOrganizationId: true },
+    });
+    if (!sentTo) throw new NotFoundException(`Prescription ${id} not found`);
+    if (
+      sentTo.performerOrganizationId &&
+      sentTo.performerOrganizationId !== pharmacy
+    )
+      throw new ForbiddenException(
+        'This prescription was sent to another pharmacy',
+      );
     const { affected } = await repo.update({ id, status: from }, change);
-    const med = await repo.findOne({ where: { id } });
-    if (!med) throw new NotFoundException(`Prescription ${id} not found`);
+    const med = await repo.findOneByOrFail({ id });
     if (!affected)
       throw new ConflictException(`This prescription is ${med.status}`);
     return med;

@@ -1,10 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { DataSource, type EntityManager } from 'typeorm';
-import {
-  Condition,
-  MedicationRequest,
-  Observation,
-} from '@curo/shared/database';
+import { Condition, Observation } from '@curo/shared/database';
 import { actorId, type AuthUser } from '@curo/shared/auth';
 import { Encounter } from '../entities/encounter.entity';
 import { ClinicalNote } from '../entities/clinical-note.entity';
@@ -15,7 +11,7 @@ import {
   linkTriageVitals,
   newDiagnosis,
   newEncounter,
-  newPrescription,
+  savePrescriptions,
   newVital,
   saveLabOrder,
 } from './clinical-records';
@@ -66,11 +62,10 @@ export class VisitService {
       Condition,
       diagnoses.map((d) => newDiagnosis(d, ref, practitionerId)),
     );
-    await em.save(
-      MedicationRequest,
-      prescriptions.map((p) =>
-        newPrescription({ ...p, ...ref }, practitionerId),
-      ),
+    await savePrescriptions(
+      em,
+      prescriptions.map((p) => ({ ...p, ...ref })),
+      practitionerId,
     );
     for (const order of labOrders)
       await saveLabOrder(em, { ...order, ...ref }, practitionerId);

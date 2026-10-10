@@ -1152,8 +1152,8 @@ async function seed() {
     const authoredOn = daysAgo(i + 1);
     const [rx] = await db.query<IdRow[]>(
       `
-      INSERT INTO medication_requests (id, "patientId", "practitionerId", "encounterId", status, intent, "medicationCode", "medicationDisplay", "dosageText", route, frequency, "quantityValue", "quantityUnit", "durationDays", "authoredOn")
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, 'order', $5, $6, $7, $8, $9, $10, $11, 30, $12)
+      INSERT INTO medication_requests (id, "patientId", "practitionerId", "encounterId", status, intent, "medicationCode", "medicationDisplay", "dosageText", route, frequency, "quantityValue", "quantityUnit", "durationDays", "authoredOn", "performerOrganizationId")
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, 'order', $5, $6, $7, $8, $9, $10, $11, 30, $12, $13)
       RETURNING id
     `,
       [
@@ -1169,6 +1169,8 @@ async function seed() {
         med.qty,
         med.unit,
         authoredOn,
+        // Sent to the pharmacies by turns, as the dispenses below are made.
+        pharmacyOrgIds[i % pharmacyOrgIds.length],
       ],
     );
     prescriptionIds.push(rx.id);

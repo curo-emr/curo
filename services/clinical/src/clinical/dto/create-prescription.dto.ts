@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsOptional, IsString, IsNumber } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsUUID,
+} from 'class-validator';
 
 export class CreatePrescriptionDto {
   @IsNotEmpty()
@@ -8,6 +14,10 @@ export class CreatePrescriptionDto {
   @IsOptional()
   @IsString()
   encounterId?: string;
+
+  /** The pharmacy the prescription is sent to; only its pharmacists dispense it. */
+  @IsUUID()
+  performerOrganizationId: string;
 
   @IsNotEmpty()
   @IsString()

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertTriangle, Pill, X } from "lucide-react";
 import type { Medication, PrescriptionItem } from "@/types";
+import type { Organization as Pharmacy } from "@/lib/api/directory";
 import { allergyAlerts, describeAllergyAlert } from "@curo/web/clinical";
 import { AllergyConfirmDialog } from "@curo/web/ui/allergy-confirm-dialog";
 import { Button } from "@curo/web/ui/button";
@@ -18,6 +19,10 @@ import { FREQUENCIES, routeForForm, suggestQuantity } from "../visit";
 interface PrescriptionFormProps {
   prescriptions: PrescriptionItem[];
   onChange: (items: PrescriptionItem[]) => void;
+  /** Where the prescriptions are sent; the doctor chooses when there is more than one. */
+  pharmacies: Pharmacy[];
+  pharmacyId: string | undefined;
+  onPharmacyChange: (pharmacyId: string) => void;
   /** Shown before the doctor types; typing searches the whole catalog. */
   suggestions: Medication[];
   patientId: string;
@@ -36,7 +41,9 @@ const newItem = (displayName: string, med?: Medication): PrescriptionItem => ({
   substitutes: [],
 });
 
-export function PrescriptionForm({ prescriptions, onChange, suggestions, patientId }: PrescriptionFormProps) {
+export function PrescriptionForm({
+  prescriptions, onChange, pharmacies, pharmacyId, onPharmacyChange, suggestions, patientId,
+}: PrescriptionFormProps) {
   // null when they couldn't be loaded: the allergy check can't run, so the doctor is told.
   const allergies = usePatientAllergies(patientId);
   const alertsFor = (name: string) => allergyAlerts(name, allergies ?? []);
@@ -57,9 +64,30 @@ export function PrescriptionForm({ prescriptions, onChange, suggestions, patient
       return next;
     }));
 
+  if (pharmacies.length === 0)
+    return (
+      <SectionCard id="prescriptions" icon={Pill} iconClassName="text-clinical-rx" title="Prescriptions">
+        <p className="text-sm text-muted-foreground">No pharmacy is set up yet, so medicines can&apos;t be prescribed. Ask an administrator to add one.</p>
+      </SectionCard>
+    );
+
+  const description = pharmacies.length === 1
+    ? `Sent to ${pharmacies[0].name} when you sign the visit`
+    : "Sent to the pharmacy you choose when you sign the visit";
+
   return (
     <SectionCard id="prescriptions" icon={Pill} iconClassName="text-clinical-rx" title="Prescriptions" count={prescriptions.length}
-      description="Sent to the pharmacy when you sign the visit">
+      description={description}
+      headerRight={pharmacies.length > 1 && (
+        <Select value={pharmacyId ?? ""} onValueChange={onPharmacyChange}>
+          <SelectTrigger size="sm" aria-label="Pharmacy" className="max-w-48 bg-card text-xs sm:max-w-60">
+            <SelectValue placeholder="Choose a pharmacy" />
+          </SelectTrigger>
+          <SelectContent>
+            {pharmacies.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      )}>
       <div className="space-y-3">
         {allergies === null && (
           <p className="flex items-center gap-2 rounded-md border border-status-warning-border bg-status-warning-bg px-2.5 py-1.5 text-xs font-medium text-status-warning-text">

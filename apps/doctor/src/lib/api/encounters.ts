@@ -24,6 +24,7 @@ export interface VisitPayload {
   vitals: { code: string; display: string; valueQuantity: number; valueUnit: string }[];
   diagnoses: { code: string; display: string; isPrimary: boolean }[];
   prescriptions: {
+    performerOrganizationId?: string;
     medicationCode: string;
     medicationDisplay: string;
     dosageText?: string;

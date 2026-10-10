@@ -13,6 +13,7 @@ import {
   ObservationStatus,
   ServiceRequestStatus,
 } from '@curo/shared/enums';
+import { assertActiveOrganization } from '@curo/shared/auth';
 import { assertActiveLab, labSampleUrl } from '@curo/shared/lab';
 import { clinicDate } from '@curo/shared/config';
 import type { Encounter } from '../entities/encounter.entity';
@@ -56,17 +57,24 @@ export function newVital(
   };
 }
 
-export function newPrescription(
-  dto: CreatePrescriptionDto,
+/** Saves prescriptions, each sent to the pharmacy it names. */
+export async function savePrescriptions(
+  em: EntityManager,
+  dtos: CreatePrescriptionDto[],
   practitionerId: string,
-): DeepPartial<MedicationRequest> {
-  return {
-    ...dto,
-    practitionerId,
-    status: MedicationRequestStatus.ACTIVE,
-    intent: 'order',
-    authoredOn: new Date(),
-  };
+): Promise<MedicationRequest[]> {
+  for (const pharmacy of new Set(dtos.map((d) => d.performerOrganizationId)))
+    await assertActiveOrganization(em, pharmacy, 'pharmacy');
+  return em.save(
+    MedicationRequest,
+    dtos.map((dto) => ({
+      ...dto,
+      practitionerId,
+      status: MedicationRequestStatus.ACTIVE,
+      intent: 'order',
+      authoredOn: new Date(),
+    })),
+  );
 }
 
 // Read back by the doctor portal: a visit's diagnoses are encounter-diagnosis

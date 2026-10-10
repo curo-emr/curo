@@ -6,7 +6,11 @@ import { AppModule } from '../src/app.module';
 
 describe('prescription holds', () => {
   let svc: ServiceUnderTest;
-  const pharmacist = () => svc.as(UserRole.PHARMACIST);
+  /** The pharmacy the tests hold at; another is a branch elsewhere. */
+  const pharmacy = randomUUID();
+  const otherPharmacy = randomUUID();
+  const pharmacist = () =>
+    svc.as(UserRole.PHARMACIST, { organizationId: pharmacy });
 
   beforeAll(async () => {
     svc = await startService(AppModule);
@@ -33,13 +37,16 @@ describe('prescription holds', () => {
     return { practitionerId: practitioner.id, userId: user.id };
   }
 
+  /** A prescription sent to the tests' pharmacy, unless `sentTo` says otherwise. */
   const prescription = (
     status = MedicationRequestStatus.ACTIVE,
     practitionerId: string = randomUUID(),
+    sentTo: string | null = pharmacy,
   ) =>
     svc.db.getRepository(MedicationRequest).save({
       patientId: randomUUID(),
       practitionerId,
+      performerOrganizationId: sentTo,
       status,
       medicationCode: 'med_0301',
       medicationDisplay: 'Amlodipine 5mg Tablet',
@@ -129,6 +136,46 @@ describe('prescription holds', () => {
       status: 'completed',
       statusReason: null,
     });
+  });
+
+  it("lists a pharmacist's own pharmacy's held prescriptions and those that name none, not another's", async () => {
+    const ours = await prescription(MedicationRequestStatus.ON_HOLD);
+    const unnamed = await prescription(
+      MedicationRequestStatus.ON_HOLD,
+      undefined,
+      null,
+    );
+    const theirs = await prescription(
+      MedicationRequestStatus.ON_HOLD,
+      undefined,
+      otherPharmacy,
+    );
+
+    const held = await listed('/prescriptions/on-hold');
+
+    expect(held).toEqual(expect.arrayContaining([ours.id, unnamed.id]));
+    expect(held).not.toContain(theirs.id);
+  });
+
+  it("can't hold or release another pharmacy's prescription", async () => {
+    const waiting = await prescription(undefined, undefined, otherPharmacy);
+    const held = await prescription(
+      MedicationRequestStatus.ON_HOLD,
+      undefined,
+      otherPharmacy,
+    );
+
+    await hold(waiting).expect(403);
+    await release(held).expect(403);
+
+    expect(await stored(waiting)).toMatchObject({ status: 'active' });
+    expect(await stored(held)).toMatchObject({ status: 'on-hold' });
+  });
+
+  it('holds a prescription that names no pharmacy', async () => {
+    const rx = await prescription(undefined, undefined, null);
+
+    await hold(rx).expect(200);
   });
 
   it('answers 404 for a prescription that does not exist', async () => {
