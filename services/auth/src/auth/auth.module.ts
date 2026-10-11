@@ -27,6 +27,6 @@ import { jwtSecret } from '@curo/shared/auth';
     // One per app, with the default limits.
     { provide: LoginAttempts, useFactory: () => new LoginAttempts() },
   ],
-  exports: [AuthService, JwtModule],
+  exports: [AuthService, JwtModule, LoginAttempts],
 })
 export class AuthModule {}

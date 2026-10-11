@@ -1,5 +1,6 @@
 import {
   Injectable,
+  BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
@@ -20,6 +21,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import type { AuthUser } from '@curo/shared/auth';
 import { AuditTrail } from '../audit/audit-trail';
 import { OrganizationService } from '../organization/organization.service';
+import { LoginAttempts } from '../auth/login-attempts';
 
 @Injectable()
 export class AdminService {
@@ -32,6 +34,7 @@ export class AdminService {
     private patientsRepo: Repository<Patient>,
     private auditTrail: AuditTrail,
     private organizations: OrganizationService,
+    private loginAttempts: LoginAttempts,
   ) {}
 
   async createUser(dto: CreateUserDto, requestingUser: AuthUser) {
@@ -219,6 +222,10 @@ export class AdminService {
     const user = await this.usersRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException(`User ${id} not found`);
 
+    // A super admin suspending themselves could leave no one to undo it.
+    if (dto.isActive === false && id === requestingUser.userId)
+      throw new BadRequestException("You can't suspend your own account");
+
     if (dto.organizationId != null)
       await this.organizations.checkWorkplace(user.role, dto.organizationId);
 
@@ -268,6 +275,8 @@ export class AdminService {
     if (!user) throw new NotFoundException(`User ${id} not found`);
     user.passwordHash = await bcrypt.hash(newPassword, 12);
     await this.usersRepo.save(user);
+    // Whoever asked for a reset has often locked themselves out guessing.
+    this.loginAttempts.clearFailures(user.email);
 
     await this.auditTrail.record(requestingUser, {
       action: 'UPDATE',

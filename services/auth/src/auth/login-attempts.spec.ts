@@ -61,7 +61,7 @@ describe('LoginAttempts', () => {
 
   it("clears the account's failures on a correct password, not the IP's", () => {
     fail(2);
-    attempts.recordSuccess('priya@curo.test');
+    attempts.clearFailures('priya@curo.test');
     fail(2);
     expect(refusal()).toBeUndefined();
 

@@ -47,7 +47,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    this.loginAttempts.recordSuccess(dto.email);
+    this.loginAttempts.clearFailures(dto.email);
     return this.issueTokens(user);
   }
 
