@@ -11,8 +11,8 @@ import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { StatusBadge, type Status } from "@curo/web/ui/status-badge";
-import { openDocument, type DocumentRef } from "@/lib/api/documents";
-import { openPdf } from "@/lib/api/labs";
+import { openDocument, openPdf } from "@curo/web/api";
+import type { DocumentRef } from "@/lib/api/documents";
 import { cn, formatDate } from "@/lib/utils";
 import { catalogQueries, patientQueries, visitQueries } from "@/lib/queries";
 

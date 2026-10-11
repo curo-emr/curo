@@ -2,7 +2,7 @@ import { isAbnormalResult } from "@curo/web/clinical";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
 import type { LabResult } from "@/lib/api/lab";
 import { cn } from "@/lib/utils";
-import { ResultFlagBadge } from "./ResultFlagBadge";
+import { ResultFlagBadge } from "@curo/web/ui/result-flag-badge";
 
 // One filed report's values, out-of-range ones in bold with their flag, then the lab's conclusion.
 export function ResultsTable({ result }: { result: LabResult }) {

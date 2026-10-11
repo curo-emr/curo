@@ -9,7 +9,8 @@ import { EmptyState } from "@curo/web/ui/empty-state";
 import { formatDate } from "@/lib/utils";
 import { formatStatus } from "@curo/web/format";
 import { formatFileSize } from "@curo/web/ui/file-input";
-import { openDocument, type DocumentRef } from "@/lib/api/documents";
+import { openDocument } from "@curo/web/api";
+import type { DocumentRef } from "@/lib/api/documents";
 
 interface Props {
   documents: DocumentRef[];

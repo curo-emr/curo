@@ -10,7 +10,8 @@ import { Textarea } from "@curo/web/ui/textarea";
 import { FileInput, formatFileSize } from "@curo/web/ui/file-input";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { formatDate } from "@/lib/utils";
-import { uploadDocument, openDocument } from "@/lib/api/documents";
+import { openDocument } from "@curo/web/api";
+import { uploadDocument } from "@/lib/api/documents";
 import { LAB_REPORT_DOCUMENT } from "@/lib/api/lab";
 import { orderQueries } from "@/lib/queries";
 

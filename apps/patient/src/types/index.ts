@@ -1,203 +1,93 @@
-export interface Name {
-  first: string;
-  last: string;
-  full: string;
-}
+// The signed-in patient's own record, as the patient portal shows it.
 
-export interface Address {
-  line1: string;
-  line2: string;
-  city: string;
-  district: string;
-  postalCode: string;
-  country: string;
-}
-
-export interface EmergencyContact {
-  name: string;
-  relationship: string;
-  phone: string;
-}
-
-export interface Insurance {
-  provider: string;
-  policyNumber: string;
-  groupNumber: string;
-  expiryDate: string;
-  holderName: string;
-  relationship: string;
-}
+export type { Allergy, LabReport, LabResultValue } from '@curo/web/fhir';
 
 export interface Patient {
   id: string;
+  /** The clinic's patient number. */
   mrn: string;
-  phn?: string;
-  nic?: string;
-  name: Name;
+  phn: string;
+  nic: string;
+  name: { first: string; last: string; full: string };
   dob: string;
-  sex: 'male' | 'female' | 'other';
+  sex: string;
   bloodType: string;
-  nationality?: string;
-  maritalStatus?: string;
-  occupation?: string;
   phone: string;
   email: string;
-  address: Address;
-  emergencyContact: EmergencyContact;
-  insurance?: Insurance;
-  allergies: string[];
-  problemList: string[];
-  currentMedications: string[];
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
+  address: string;
+  emergencyContact: { name: string; relationship: string; phone: string };
 }
 
-export type { Allergy } from '@curo/web/fhir';
-
-export interface Problem {
+export interface Condition {
   id: string;
-  patientId: string;
-  icdCode: string;
   name: string;
+  icdCode: string;
   status: 'active' | 'resolved' | 'inactive';
-  onsetDate: string;
-  notes: string;
+  /** When it began, or else when the doctor recorded it (YYYY-MM-DD). */
+  since: string;
 }
+
+export type AppointmentStatus = 'scheduled' | 'arrived' | 'completed' | 'cancelled' | 'no_show';
 
 export interface Appointment {
   id: string;
-  date: string;
-  time: string;
+  /** ISO instant. */
+  start: string;
   doctorId: string;
-  patientId: string;
-  reason: string;
   visitType: string;
-  status: 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-  room: string;
-  notes: string;
+  reason: string;
+  status: AppointmentStatus;
 }
 
-export interface SOAP {
-  subjective: string;
-  objective: string;
-  assessment: string;
-  plan: string;
-}
-
-export interface Vitals {
-  pulseBpm: number;
-  respirationRpm: number;
-  bpSystolic: number;
-  bpDiastolic: number;
-  temperatureC: number;
-  spo2Percent: number;
-  heightCm: number;
-  weightKg: number;
-}
-
-export interface Diagnosis {
-  icdCode: string;
-  name: string;
-  isPrimary: boolean;
-}
-
-export interface Encounter {
+export interface Visit {
   id: string;
-  patientId: string;
   doctorId: string;
-  appointmentId: string;
+  /** ISO instant. */
+  start: string;
+  reason: string;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  startedAt: string;
-  endedAt: string | null;
-  chiefComplaint: string;
-  soap: SOAP;
-  vitals: Partial<Vitals>;
-  diagnoses: Diagnosis[];
-  prescriptionIds: string[];
-  labOrderIds: string[];
-  auditTrailIds: string[];
 }
 
-export interface Medication {
+export type MedicineStatus = 'to_collect' | 'on_hold' | 'collected' | 'stopped';
+
+/** One medicine on a prescription. */
+export interface Medicine {
   id: string;
+  visitId: string;
+  doctorId: string;
+  /** The pharmacy the doctor sent it to. */
+  pharmacyId: string;
   name: string;
-  genericName: string;
-  form: string;
-  strength: string;
-  atc: string;
-  commonSubstitutes: string[];
-}
-
-export interface PrescriptionItemSubstitute {
-  medicationId: string;
-  displayName: string;
-  notes: string;
-}
-
-export interface PrescriptionItem {
-  id: string;
-  medicationId: string;
-  displayName: string;
+  /** How much to take, as the doctor wrote it, e.g. "1 tablet". */
   dose: string;
-  route: string;
+  /** Prescription shorthand, e.g. "BID"; read it with `frequencyLabel`. */
   frequency: string;
-  durationDays: number;
-  quantity: number;
-  instructions: string;
-  substitutes: PrescriptionItemSubstitute[];
+  route: string;
+  durationDays: number | null;
+  /** How much the pharmacy hands over, e.g. "60 tablets". */
+  quantity: string;
+  note: string;
+  prescribedAt: string;
+  status: MedicineStatus;
+  /** Why the pharmacy is holding it. */
+  holdReason: string;
 }
 
-export interface Prescription {
+export type LabTestStatus = 'ordered' | 'in_lab' | 'done' | 'cancelled';
+
+/** A lab order: one or more tests sent to a lab together. */
+export interface LabTest {
   id: string;
-  patientId: string;
-  encounterId: string;
+  visitId: string;
   doctorId: string;
-  status: 'draft' | 'sent_to_pharmacy';
-  createdAt: string;
-  sentAt: string | null;
-  items: PrescriptionItem[];
-  notesToPharmacy: string;
-}
-
-export interface LabTestCatalogItem {
-  id: string;
-  code: string;
   name: string;
-  category: string;
+  orderedAt: string;
+  status: LabTestStatus;
 }
 
-export interface LabOrderTest {
-  testId: string;
-  status: 'ordered' | 'collected' | 'completed' | 'results_available';
-  result: string | null;
-}
-
-export interface LabOrderReview {
-  isReviewed: boolean;
-  reviewedAt: string | null;
-  reviewedBy: string | null;
-}
-
-export interface LabOrder {
+/** A doctor or pharmacy, to name it. */
+export interface Named {
   id: string;
-  patientId: string;
-  encounterId: string;
-  doctorId: string;
-  priority: 'routine' | 'urgent' | 'stat';
-  status: 'draft' | 'sent_to_lab' | 'results_pending' | 'completed';
-  createdAt: string;
-  sentToLabAt: string | null;
-  notesToLab: string;
-  tests: LabOrderTest[];
-  review: LabOrderReview;
-  showResultsToPatient: boolean;
-}
-
-export interface Doctor {
-  id: string;
-  name: Name;
-  specialty: string;
-  phone: string;
-  email: string;
+  name: { full: string };
+  phone?: string;
 }

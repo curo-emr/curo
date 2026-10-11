@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { InitialsAvatar } from "../ui/initials-avatar";
 import { SectionCard } from "../ui/section-card";
 import { Skeleton } from "../ui/skeleton";
+import { DEFAULT_CONTACT } from "./contact";
 
 export interface AccountField {
   label: string;
@@ -14,11 +15,13 @@ interface AccountProfileProps {
   fields: AccountField[];
   /** While the profile loads, a field with no value yet shows a placeholder. */
   loading?: boolean;
+  /** Who to ask for a change, e.g. "the clinic's reception" for patients. */
+  contact?: string;
   onSignOut: () => void;
 }
 
 // The signed-in user's profile, read-only: an administrator manages accounts and passwords.
-export function AccountProfile({ name, fields, loading, onSignOut }: AccountProfileProps) {
+export function AccountProfile({ name, fields, loading, contact = DEFAULT_CONTACT, onSignOut }: AccountProfileProps) {
   return (
     <>
       <SectionCard icon={UserRound} title="Profile">
@@ -37,7 +40,7 @@ export function AccountProfile({ name, fields, loading, onSignOut }: AccountProf
         </div>
         <p className="mt-6 flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground">
           <Info className="mt-0.5 size-4 shrink-0" />
-          Profile details and passwords are managed by your clinic administrator. Contact them to make changes.
+          To change your details or your password, ask {contact}.
         </p>
       </SectionCard>
 

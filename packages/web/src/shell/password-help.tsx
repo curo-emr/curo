@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { ArrowLeft, KeyRound } from "lucide-react";
 import { Button } from "../ui/button";
+import { DEFAULT_CONTACT } from "./contact";
+
+interface PasswordHelpProps {
+  signInHref?: string;
+  /** Who to ask, e.g. "the clinic's reception" for patients. */
+  contact?: string;
+}
 
 // What to do about a forgotten password. There is no self-service reset: an
 // administrator sets a new password from the admin portal.
-export function PasswordHelp({ signInHref = "/login" }: { signInHref?: string }) {
+export function PasswordHelp({ signInHref = "/login", contact = DEFAULT_CONTACT }: PasswordHelpProps) {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-4">
@@ -14,8 +21,7 @@ export function PasswordHelp({ signInHref = "/login" }: { signInHref?: string })
         <div className="flex flex-col gap-1.5">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Forgot your password?</h1>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Your clinic administrator can set a new one for you. Ask them to reset your password, then sign in with
-            the password they give you.
+            Ask {contact} to have your password reset, then sign in with the new password you&apos;re given.
           </p>
         </div>
       </div>

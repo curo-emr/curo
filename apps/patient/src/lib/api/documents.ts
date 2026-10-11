@@ -9,6 +9,8 @@ export interface DocumentRef {
   size?: number;
   date?: string;
   encounterId?: string;
+  /** The lab order a lab's report file belongs to. */
+  orderId?: string;
 }
 
 // The fields of the document service's FHIR DocumentReference that the UI reads.
@@ -26,7 +28,8 @@ interface FhirDocumentReference {
 
 function mapFhirDocument(d: FhirDocumentReference): DocumentRef {
   const attachment = d.content?.[0]?.attachment ?? {};
-  const encounterRef: string | undefined = d.context?.encounter?.[0]?.reference;
+  const idIn = (refs: { reference: string }[] | undefined, type: string) =>
+    refs?.find(r => r.reference.startsWith(`${type}/`))?.reference.split('/')[1];
   return {
     id: d.id,
     type: d.type,
@@ -35,7 +38,8 @@ function mapFhirDocument(d: FhirDocumentReference): DocumentRef {
     contentType: attachment.contentType,
     size: attachment.size,
     date: d.date,
-    encounterId: encounterRef ? encounterRef.split('/')[1] : undefined,
+    encounterId: idIn(d.context?.encounter, 'Encounter'),
+    orderId: idIn(d.context?.related, 'ServiceRequest'),
   };
 }
 
@@ -43,12 +47,4 @@ function mapFhirDocument(d: FhirDocumentReference): DocumentRef {
 export async function getMyDocuments(): Promise<DocumentRef[]> {
   const res = await apiClient.get<FhirDocumentReference[]>('/documents/me');
   return res.data.map(mapFhirDocument);
-}
-
-/** Fetch document bytes via the authenticated client and open them. */
-export async function openDocument(id: string): Promise<void> {
-  const res = await apiClient.get(`/documents/${id}/content`, { responseType: 'blob' });
-  const url = URL.createObjectURL(res.data as Blob);
-  window.open(url, '_blank', 'noopener,noreferrer');
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

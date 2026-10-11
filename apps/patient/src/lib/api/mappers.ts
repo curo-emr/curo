@@ -1,414 +1,213 @@
+import { mapFhirPatientDetails, type FhirPatientDetails } from '@curo/web/fhir';
 import type {
-  Patient, Problem, Appointment, Encounter, Prescription,
-  LabOrder,
+  Appointment, AppointmentStatus, Condition, LabTest, LabTestStatus, Medicine, MedicineStatus, Patient, Visit,
 } from '@/types';
 
-export { mapFhirAllergy, type FhirAllergy } from '@curo/web/fhir';
+export { mapFhirAllergy, mapFhirReport, type FhirAllergy, type FhirDiagnosticReport } from '@curo/web/fhir';
 
-interface Task {
+// ─── FHIR shapes: the fields the services send that this portal reads ─────────
+
+type Reference = { reference?: string };
+type Coding = { code?: string; display?: string };
+
+export interface FhirPatient extends FhirPatientDetails {
   id: string;
-  doctorId: string;
-  title: string;
-  description: string;
-  dueDate: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'open' | 'in_progress' | 'completed';
-  relatedPatientId?: string;
-  createdAt: string;
-}
-
-// ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
-
-export interface FhirPatient {
-  resourceType: 'Patient';
-  id: string;
-  meta?: { lastUpdated?: string };
   identifier?: Array<{ system: string; value: string }>;
-  active?: boolean;
   name?: Array<{ family?: string; given?: string[] }>;
   gender?: string;
   birthDate?: string;
-  telecom?: Array<{ system: string; value: string; use?: string }>;
-  address?: Array<{
-    line?: string[];
-    city?: string;
-    state?: string;
-    postalCode?: string;
-    country?: string;
-  }>;
+  telecom?: Array<{ system: string; value: string }>;
+  address?: Array<{ line?: string[]; city?: string | null; state?: string | null; postalCode?: string | null; country?: string | null }>;
   contact?: Array<{
     name?: { text?: string };
-    telecom?: Array<{ system: string; value: string }>;
+    telecom?: Array<{ value: string }>;
     relationship?: Array<{ text?: string }>;
-  }>;
-  extension?: Array<{
-    url: string;
-    valueString?: string;
-    valueCode?: string;
   }>;
 }
 
 export interface FhirCondition {
-  resourceType: 'Condition';
   id: string;
-  meta?: { lastUpdated?: string };
-  subject?: { reference?: string };
-  code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
-  clinicalStatus?: { coding?: Array<{ code?: string }> };
-  onsetDateTime?: string;
-  note?: Array<{ text?: string }>;
+  code?: { text?: string; coding?: Coding[] };
+  clinicalStatus?: { coding?: Coding[] };
+  onsetDateTime?: string | null;
+  recordedDate?: string | null;
 }
 
 export interface FhirAppointment {
-  resourceType: 'Appointment';
   id: string;
-  meta?: { lastUpdated?: string };
   status: string;
   start?: string;
-  end?: string;
-  serviceType?: Array<{ coding?: Array<{ code?: string }> }>;
+  serviceType?: Array<{ coding?: Coding[] }>;
   reasonCode?: Array<{ text?: string }>;
-  description?: string;
-  comment?: string;
-  participant?: Array<{
-    actor?: { reference?: string };
-    status?: string;
-  }>;
-  extension?: Array<{
-    url: string;
-    valueInteger?: number;
-    valueBoolean?: boolean;
-    valueString?: string;
-  }>;
+  participant?: Array<{ actor?: Reference }>;
 }
 
 export interface FhirEncounter {
-  resourceType: 'Encounter';
   id: string;
-  meta?: { lastUpdated?: string };
   status: string;
-  subject?: { reference?: string };
-  participant?: Array<{ individual?: { reference?: string } }>;
-  appointment?: Array<{ reference?: string }>;
-  period?: { start?: string; end?: string };
+  participant?: Array<{ individual?: Reference }>;
+  period?: { start?: string | null };
   reasonCode?: Array<{ text?: string }>;
-  extension?: Array<{
-    url: string;
-    valueString?: string;
-  }>;
 }
 
 export interface FhirMedicationRequest {
-  resourceType: 'MedicationRequest';
   id: string;
-  meta?: { lastUpdated?: string };
   status: string;
-  subject?: { reference?: string };
-  requester?: { reference?: string };
-  encounter?: { reference?: string };
-  medicationCodeableConcept?: {
-    text?: string;
-    coding?: Array<{ code?: string; display?: string }>;
-  };
-  dosageInstruction?: Array<{
-    text?: string;
-    timing?: {
-      code?: { text?: string };
-      repeat?: { frequency?: number; period?: number; periodUnit?: string };
-    };
-    route?: { text?: string };
-    doseAndRate?: Array<{
-      doseQuantity?: { value?: number; unit?: string };
-    }>;
-  }>;
+  statusReason?: { text?: string };
+  medicationCodeableConcept?: { text?: string; coding?: Coding[] };
+  requester?: Reference;
+  encounter?: Reference;
+  authoredOn?: string;
+  dosageInstruction?: Array<{ text?: string; route?: { text?: string }; timing?: { code?: { text?: string } } }>;
   dispenseRequest?: {
-    quantity?: { value?: number };
-    validityPeriod?: { end?: string };
+    performer?: Reference;
+    quantity?: { value?: number; unit?: string };
+    expectedSupplyDuration?: { value?: number };
   };
   note?: Array<{ text?: string }>;
-  extension?: Array<{ url: string; valueString?: string; valueInteger?: number }>;
 }
 
 export interface FhirServiceRequest {
-  resourceType: 'ServiceRequest';
   id: string;
-  meta?: { lastUpdated?: string };
   status: string;
-  priority?: string;
-  subject?: { reference?: string };
-  requester?: { reference?: string };
-  encounter?: { reference?: string };
-  code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
-  note?: Array<{ text?: string }>;
-  extension?: Array<{ url: string; valueString?: string }>;
-}
-
-export interface FhirTask {
-  resourceType: 'Task';
-  id: string;
-  meta?: { lastUpdated?: string };
-  status: string;
-  priority?: string;
-  for?: { reference?: string };
-  description?: string;
-  note?: Array<{ text?: string }>;
-  restriction?: { period?: { end?: string } };
-  extension?: Array<{ url: string; valueString?: string }>;
+  code?: { text?: string; coding?: Coding[] };
+  testPanel?: Coding[] | null;
+  requester?: Reference;
+  encounter?: Reference;
+  authoredOn?: string;
+  receivedAt?: string | null;
 }
 
 // ─── Mappers ─────────────────────────────────────────────────────────────────
 
+/** The id in a reference such as "Practitioner/abc". */
+const idOf = (ref?: Reference) => ref?.reference?.split('/')[1] ?? '';
+
 export function mapFhirPatient(fhir: FhirPatient): Patient {
-  const givenNames = fhir.name?.[0]?.given ?? [];
-  const familyName = fhir.name?.[0]?.family ?? '';
-  const firstName = givenNames[0] ?? '';
-  const middleName = givenNames[1] ?? '';
-  const lastName = familyName;
-
-  const patientCode = fhir.identifier?.find(i => i.system === 'urn:curo:patient-code')?.value ?? '';
-  const phn = fhir.identifier?.find(i => i.system === 'urn:curo:phn')?.value ?? '';
-  const nic = fhir.identifier?.find(i => i.system === 'urn:curo:nic')?.value ?? '';
-
-  const phone = fhir.telecom?.find(t => t.system === 'phone')?.value ?? '';
-  const email = fhir.telecom?.find(t => t.system === 'email')?.value ?? '';
-
+  const identifier = (system: string) => fhir.identifier?.find(i => i.system === `urn:curo:${system}`)?.value ?? '';
+  const telecom = (system: string) => fhir.telecom?.find(t => t.system === system)?.value ?? '';
+  const [first = '', ...middle] = fhir.name?.[0]?.given ?? [];
+  const last = fhir.name?.[0]?.family ?? '';
   const addr = fhir.address?.[0];
-  const ext = fhir.extension ?? [];
-  const bloodType = ext.find(e => e.url === 'urn:curo:bloodType')?.valueString ?? '';
-  const nationality = ext.find(e => e.url === 'urn:curo:nationality')?.valueString ?? '';
-  const occupation = ext.find(e => e.url === 'urn:curo:occupation')?.valueString ?? '';
-  const maritalStatus = (ext.find(e => e.url === 'urn:curo:maritalStatus')?.valueString ?? 'single') as Patient['maritalStatus'];
-
-  const emergencyContact = fhir.contact?.[0];
-  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
+  const contact = fhir.contact?.[0];
 
   return {
     id: fhir.id,
-    mrn: patientCode,
-    phn,
-    nic,
-    name: {
-      first: firstName,
-      last: lastName,
-      full: fullName,
-    },
+    mrn: identifier('patient-code'),
+    phn: identifier('phn'),
+    nic: identifier('nic'),
+    name: { first, last, full: [first, ...middle, last].filter(Boolean).join(' ') },
     dob: fhir.birthDate ?? '',
-    sex: (fhir.gender as Patient['sex']) ?? 'other',
-    bloodType,
-    nationality,
-    maritalStatus: maritalStatus ?? 'single',
-    occupation,
-    phone,
-    email,
-    address: {
-      line1: addr?.line?.[0] ?? '',
-      line2: addr?.line?.[1] ?? '',
-      city: addr?.city ?? '',
-      district: addr?.state ?? '',
-      postalCode: addr?.postalCode ?? '',
-      country: addr?.country ?? '',
-    },
+    sex: fhir.gender ?? '',
+    bloodType: mapFhirPatientDetails(fhir).bloodType,
+    phone: telecom('phone'),
+    email: telecom('email'),
+    address: [...(addr?.line ?? []), addr?.city, addr?.state, addr?.postalCode, addr?.country].filter(Boolean).join(', '),
     emergencyContact: {
-      name: emergencyContact?.name?.text ?? '',
-      relationship: emergencyContact?.relationship?.[0]?.text ?? '',
-      phone: emergencyContact?.telecom?.[0]?.value ?? '',
+      name: contact?.name?.text ?? '',
+      relationship: contact?.relationship?.[0]?.text ?? '',
+      phone: contact?.telecom?.[0]?.value ?? '',
     },
-    insurance: undefined,
-    allergies: [],
-    problemList: [],
-    currentMedications: [],
-    tags: [],
-    createdAt: fhir.meta?.lastUpdated ?? '',
-    updatedAt: fhir.meta?.lastUpdated ?? '',
   };
 }
 
-export function mapFhirCondition(fhir: FhirCondition): Problem {
-  const patientRef = fhir.subject?.reference?.split('/')?.[1] ?? '';
-  const icdCode = fhir.code?.coding?.[0]?.code ?? '';
-  const name = fhir.code?.text ?? fhir.code?.coding?.[0]?.display ?? '';
-  const statusCode = fhir.clinicalStatus?.coding?.[0]?.code ?? 'active';
-  const statusMap: Record<string, Problem['status']> = {
-    active: 'active', resolved: 'resolved', inactive: 'inactive', remission: 'resolved',
-  };
+const CONDITION_STATUS: Record<string, Condition['status']> = {
+  active: 'active', recurrence: 'active', relapse: 'active',
+  resolved: 'resolved', remission: 'resolved', inactive: 'inactive',
+};
 
+export function mapFhirCondition(fhir: FhirCondition): Condition {
+  const coding = fhir.code?.coding?.[0];
   return {
     id: fhir.id,
-    patientId: patientRef,
-    icdCode,
-    name,
-    status: statusMap[statusCode] ?? 'active',
-    onsetDate: fhir.onsetDateTime?.slice(0, 10) ?? '',
-    notes: fhir.note?.[0]?.text ?? '',
+    name: fhir.code?.text ?? coding?.display ?? '',
+    icdCode: coding?.code ?? '',
+    status: CONDITION_STATUS[fhir.clinicalStatus?.coding?.[0]?.code ?? 'active'] ?? 'active',
+    since: (fhir.onsetDateTime ?? fhir.recordedDate ?? '').slice(0, 10),
   };
 }
 
-const FHIR_APPT_STATUS_MAP: Record<string, Appointment['status']> = {
-  booked: 'scheduled',
-  pending: 'scheduled',
-  arrived: 'arrived',
+const APPOINTMENT_STATUS: Record<string, AppointmentStatus> = {
+  booked: 'scheduled', pending: 'scheduled', proposed: 'scheduled', waitlist: 'scheduled',
+  arrived: 'arrived', 'checked-in': 'arrived',
   fulfilled: 'completed',
-  cancelled: 'cancelled',
+  cancelled: 'cancelled', 'entered-in-error': 'cancelled',
   noshow: 'no_show',
-  'entered-in-error': 'cancelled',
-  waitlist: 'waiting',
-  'checked-in': 'arrived',
 };
 
 export function mapFhirAppointment(fhir: FhirAppointment): Appointment {
-  const start = fhir.start ? new Date(fhir.start) : new Date();
-  const date = start.toISOString().slice(0, 10);
-  const time = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-  const patientRef = fhir.participant?.find(p => p.actor?.reference?.startsWith('Patient/'));
-  const practitionerRef = fhir.participant?.find(p => p.actor?.reference?.startsWith('Practitioner/'));
-
-  const patientId = patientRef?.actor?.reference?.replace('Patient/', '') ?? '';
-  const practitionerId = practitionerRef?.actor?.reference?.replace('Practitioner/', '') ?? '';
-
+  const doctor = fhir.participant?.find(p => p.actor?.reference?.startsWith('Practitioner/'));
   return {
     id: fhir.id,
-    date,
-    time,
-    doctorId: practitionerId,
-    patientId,
-    reason: fhir.reasonCode?.[0]?.text ?? fhir.description ?? '',
+    start: fhir.start ?? '',
+    doctorId: idOf(doctor?.actor),
     visitType: fhir.serviceType?.[0]?.coding?.[0]?.code ?? '',
-    status: FHIR_APPT_STATUS_MAP[fhir.status] ?? 'scheduled',
-    room: '',
-    notes: fhir.comment ?? '',
+    reason: fhir.reasonCode?.[0]?.text ?? '',
+    status: APPOINTMENT_STATUS[fhir.status] ?? 'scheduled',
   };
 }
 
-const ENCOUNTER_STATUS_MAP: Record<string, Encounter['status']> = {
-  planned: 'scheduled',
-  arrived: 'scheduled',
-  triaged: 'scheduled',
-  'in-progress': 'in_progress',
-  onleave: 'in_progress',
-  finished: 'completed',
-  cancelled: 'cancelled',
+const VISIT_STATUS: Record<string, Visit['status']> = {
+  planned: 'scheduled', arrived: 'scheduled', triaged: 'scheduled',
+  'in-progress': 'in_progress', onleave: 'in_progress',
+  finished: 'completed', completed: 'completed',
+  cancelled: 'cancelled', 'entered-in-error': 'cancelled',
 };
 
-export function mapFhirEncounter(fhir: FhirEncounter): Encounter {
-  const patientId = fhir.subject?.reference?.replace('Patient/', '') ?? '';
-  const practitionerId = fhir.participant?.[0]?.individual?.reference?.replace('Practitioner/', '') ?? '';
-  const appointmentId = fhir.appointment?.[0]?.reference?.replace('Appointment/', '') ?? '';
-  const ext = fhir.extension ?? [];
-
+export function mapFhirEncounter(fhir: FhirEncounter): Visit {
   return {
     id: fhir.id,
-    patientId,
-    doctorId: practitionerId,
-    appointmentId,
-    status: ENCOUNTER_STATUS_MAP[fhir.status] ?? 'scheduled',
-    startedAt: fhir.period?.start ?? '',
-    endedAt: fhir.period?.end ?? null,
-    chiefComplaint: ext.find(e => e.url === 'urn:curo:chiefComplaint')?.valueString ?? fhir.reasonCode?.[0]?.text ?? '',
-    soap: {
-      subjective: ext.find(e => e.url === 'urn:curo:soap:subjective')?.valueString ?? '',
-      objective: ext.find(e => e.url === 'urn:curo:soap:objective')?.valueString ?? '',
-      assessment: ext.find(e => e.url === 'urn:curo:soap:assessment')?.valueString ?? '',
-      plan: ext.find(e => e.url === 'urn:curo:soap:plan')?.valueString ?? '',
-    },
-    vitals: {},
-    diagnoses: [],
-    prescriptionIds: [],
-    labOrderIds: [],
-    auditTrailIds: [],
+    doctorId: idOf(fhir.participant?.[0]?.individual),
+    start: fhir.period?.start ?? '',
+    reason: fhir.reasonCode?.[0]?.text ?? '',
+    status: VISIT_STATUS[fhir.status] ?? 'scheduled',
   };
 }
 
-export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescription {
-  const patientId = fhir.subject?.reference?.replace('Patient/', '') ?? '';
-  const encounterId = fhir.encounter?.reference?.replace('Encounter/', '') ?? '';
-  const doctorId = fhir.requester?.reference?.replace('Practitioner/', '') ?? '';
-  const ext = fhir.extension ?? [];
-  const statusMap: Record<string, Prescription['status']> = {
-    draft: 'draft', active: 'sent_to_pharmacy', completed: 'sent_to_pharmacy',
-    cancelled: 'draft', stopped: 'draft',
-  };
+const MEDICINE_STATUS: Record<string, MedicineStatus> = {
+  active: 'to_collect', 'on-hold': 'on_hold', completed: 'collected',
+  cancelled: 'stopped', stopped: 'stopped', 'entered-in-error': 'stopped',
+};
 
+/** A prescribed medicine; undefined for a draft the doctor hasn't sent. */
+export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Medicine | undefined {
+  const status = MEDICINE_STATUS[fhir.status];
+  if (!status) return undefined;
   const dosage = fhir.dosageInstruction?.[0];
-  const dose = dosage?.doseAndRate?.[0]?.doseQuantity;
-  const qty = fhir.dispenseRequest?.quantity?.value ?? 1;
-
+  const quantity = fhir.dispenseRequest?.quantity;
   return {
     id: fhir.id,
-    patientId,
-    encounterId,
-    doctorId,
-    status: statusMap[fhir.status] ?? 'draft',
-    createdAt: fhir.meta?.lastUpdated ?? '',
-    sentAt: fhir.status === 'active' ? (fhir.meta?.lastUpdated ?? null) : null,
-    items: [{
-      id: fhir.id,
-      medicationId: fhir.medicationCodeableConcept?.coding?.[0]?.code ?? '',
-      displayName: fhir.medicationCodeableConcept?.text ?? fhir.medicationCodeableConcept?.coding?.[0]?.display ?? '',
-      dose: dose ? `${dose.value} ${dose.unit}` : (dosage?.text ?? ''),
-      route: dosage?.route?.text ?? 'oral',
-      frequency: dosage?.timing?.code?.text ?? '',
-      durationDays: parseInt(ext.find(e => e.url === 'urn:curo:durationDays')?.valueString ?? '7'),
-      quantity: qty,
-      instructions: dosage?.text ?? '',
-      substitutes: [],
-    }],
-    notesToPharmacy: fhir.note?.[0]?.text ?? '',
+    visitId: idOf(fhir.encounter),
+    doctorId: idOf(fhir.requester),
+    pharmacyId: idOf(fhir.dispenseRequest?.performer),
+    name: fhir.medicationCodeableConcept?.text ?? fhir.medicationCodeableConcept?.coding?.[0]?.display ?? '',
+    dose: dosage?.text ?? '',
+    frequency: dosage?.timing?.code?.text ?? '',
+    route: dosage?.route?.text ?? '',
+    durationDays: fhir.dispenseRequest?.expectedSupplyDuration?.value ?? null,
+    quantity: quantity?.value ? [quantity.value, quantity.unit].filter(Boolean).join(' ') : '',
+    note: fhir.note?.[0]?.text ?? '',
+    prescribedAt: fhir.authoredOn ?? '',
+    status,
+    holdReason: fhir.statusReason?.text ?? '',
   };
 }
 
-export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabOrder {
-  const patientId = fhir.subject?.reference?.replace('Patient/', '') ?? '';
-  const encounterId = fhir.encounter?.reference?.replace('Encounter/', '') ?? '';
-  const doctorId = fhir.requester?.reference?.replace('Practitioner/', '') ?? '';
-  const statusMap: Record<string, LabOrder['status']> = {
-    draft: 'draft', active: 'sent_to_lab', completed: 'completed',
-    revoked: 'draft', 'entered-in-error': 'draft', unknown: 'draft',
-  };
-  const priorityMap: Record<string, LabOrder['priority']> = {
-    routine: 'routine', urgent: 'urgent', stat: 'stat', asap: 'stat',
-  };
-
+/** A lab order; undefined for a draft the doctor hasn't sent. */
+export function mapFhirServiceRequest(fhir: FhirServiceRequest): LabTest | undefined {
+  const status: LabTestStatus | undefined =
+    fhir.status === 'active' ? (fhir.receivedAt ? 'in_lab' : 'ordered')
+    : fhir.status === 'completed' ? 'done'
+    : fhir.status === 'revoked' ? 'cancelled'
+    : undefined;
+  if (!status) return undefined;
+  const tests = fhir.testPanel?.length ? fhir.testPanel : fhir.code?.coding ?? [];
   return {
     id: fhir.id,
-    patientId,
-    encounterId,
-    doctorId,
-    priority: priorityMap[fhir.priority ?? 'routine'] ?? 'routine',
-    status: statusMap[fhir.status] ?? 'draft',
-    createdAt: fhir.meta?.lastUpdated ?? '',
-    sentToLabAt: fhir.status !== 'draft' ? (fhir.meta?.lastUpdated ?? null) : null,
-    notesToLab: fhir.note?.[0]?.text ?? '',
-    tests: (fhir.code?.coding ?? []).map(c => ({
-      testId: c.code ?? '',
-      status: 'ordered' as const,
-      result: null,
-    })),
-    review: { isReviewed: false, reviewedAt: null, reviewedBy: null },
-    showResultsToPatient: false,
-  };
-}
-
-export function mapFhirTask(fhir: FhirTask): Task {
-  const patientId = fhir.for?.reference?.replace('Patient/', '') ?? undefined;
-  const ext = fhir.extension ?? [];
-  const statusMap: Record<string, Task['status']> = {
-    requested: 'open', accepted: 'in_progress', received: 'open',
-    'in-progress': 'in_progress', completed: 'completed', cancelled: 'open', failed: 'open',
-  };
-  const priorityMap: Record<string, Task['priority']> = {
-    routine: 'low', urgent: 'medium', asap: 'high', stat: 'high',
-  };
-
-  return {
-    id: fhir.id,
-    doctorId: ext.find(e => e.url === 'urn:curo:ownerId')?.valueString ?? '',
-    title: fhir.description ?? '',
-    description: fhir.note?.[0]?.text ?? '',
-    dueDate: fhir.restriction?.period?.end?.slice(0, 10) ?? '',
-    priority: priorityMap[fhir.priority ?? 'routine'] ?? 'low',
-    status: statusMap[fhir.status] ?? 'open',
-    relatedPatientId: patientId,
-    createdAt: fhir.meta?.lastUpdated ?? '',
+    visitId: idOf(fhir.encounter),
+    doctorId: idOf(fhir.requester),
+    name: fhir.code?.text ?? tests.map(t => t.display || t.code).join(', '),
+    orderedAt: fhir.authoredOn ?? '',
+    status,
   };
 }
