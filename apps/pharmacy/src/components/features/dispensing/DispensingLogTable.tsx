@@ -13,7 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ROUTES } from "@/lib/constants";
 import { getDispensingRecordsPage } from "@/lib/api/pharmacy";
 import { getPatientsByIds } from "@/lib/api/patients";
-import { getPatientName, formatDateTime, formatCurrency } from "@/lib/utils";
+import { getPatientName, formatDateTime } from "@/lib/utils";
+import { formatMoney } from "@curo/web/format";
 
 /** This pharmacy's dispenses, latest first, paged and searched on the server. */
 export function DispensingLogTable() {
@@ -86,7 +87,7 @@ export function DispensingLogTable() {
                     ))}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{record.dispensedBy}</TableCell>
-                  <TableCell className="text-right font-medium tabular-nums text-foreground">{formatCurrency(record.totalAmount)}</TableCell>
+                  <TableCell className="text-right font-medium tabular-nums text-foreground">{formatMoney(record.totalAmount)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -17,11 +17,13 @@ interface AccountProfileProps {
   loading?: boolean;
   /** Who to ask for a change, e.g. "the clinic's reception" for patients. */
   contact?: string;
+  /** Says how to change details instead of "ask {contact}", e.g. for the super admin, who has no one to ask. */
+  help?: React.ReactNode;
   onSignOut: () => void;
 }
 
 // The signed-in user's profile, read-only: an administrator manages accounts and passwords.
-export function AccountProfile({ name, fields, loading, contact = DEFAULT_CONTACT, onSignOut }: AccountProfileProps) {
+export function AccountProfile({ name, fields, loading, contact = DEFAULT_CONTACT, help, onSignOut }: AccountProfileProps) {
   return (
     <>
       <SectionCard icon={UserRound} title="Profile">
@@ -40,7 +42,7 @@ export function AccountProfile({ name, fields, loading, contact = DEFAULT_CONTAC
         </div>
         <p className="mt-6 flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground">
           <Info className="mt-0.5 size-4 shrink-0" />
-          To change your details or your password, ask {contact}.
+          <span>{help ?? <>To change your details or your password, ask {contact}.</>}</span>
         </p>
       </SectionCard>
 

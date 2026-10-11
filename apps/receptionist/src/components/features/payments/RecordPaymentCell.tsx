@@ -15,11 +15,7 @@ import {
 import { toast } from "sonner";
 import { createPayment, type Payment } from "@/lib/api/payments";
 import { apiErrorMessage } from "@curo/web/api";
-
-function formatMoney(amount: number, currency = "LKR") {
-  const formatted = Number(amount).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return currency === "LKR" ? `Rs. ${formatted}` : `${currency} ${formatted}`;
-}
+import { formatMoney } from "@curo/web/format";
 
 interface RecordPaymentCellProps {
   appointmentId: string;

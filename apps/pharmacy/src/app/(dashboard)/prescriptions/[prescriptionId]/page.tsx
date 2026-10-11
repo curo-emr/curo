@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { CircleCheck, CircleX, ClipboardList, Info, Loader2, PackageCheck, Pill, ShieldAlert, TriangleAlert, type LucideIcon } from "lucide-react";
 import { apiErrorMessage } from "@curo/web/api";
 import { allergyAlerts, describeAllergyAlert } from "@curo/web/clinical";
-import { formatStatus } from "@curo/web/format";
+import { formatMoney, formatStatus } from "@curo/web/format";
 import { QueryContent, allOf, dataOrNull } from "@curo/web/query";
 import { AllergyConfirmDialog } from "@curo/web/ui/allergy-confirm-dialog";
 import { workplaceQueries } from "@curo/web/workplace";
@@ -20,7 +20,7 @@ import { StatusBadge, toneClass, type Tone } from "@curo/web/ui/status-badge";
 import { PatientSummaryCard } from "@/components/features/patients/PatientSummaryCard";
 import { DispenseRecordCard } from "@/components/features/dispensing/DispenseRecordCard";
 import { HeldNotice, HoldPrescriptionDialog } from "@/components/features/prescriptions/PrescriptionHold";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { dispense } from "@/lib/api/pharmacy";
 import { medicineName } from "@/lib/prescriptions";
@@ -73,7 +73,7 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
     mutationFn: () => dispense(prescription.id),
     onSuccess: record => {
       toast.success(`Dispensed ${name}`, {
-        description: `Receipt ${record.receiptNumber} · ${formatCurrency(record.totalAmount)}`,
+        description: `Receipt ${record.receiptNumber} · ${formatMoney(record.totalAmount)}`,
       });
       return invalidateAfterDispense(queryClient, patientId);
     },

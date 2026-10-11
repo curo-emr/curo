@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export interface BarListItem {
   /** Tells apart items that share a label; the label by default. */
   id?: string;
@@ -5,6 +7,8 @@ export interface BarListItem {
   value: number;
   /** The value as shown beside the label, e.g. "12 units"; the plain number by default. */
   display?: string;
+  /** Makes the label a link, e.g. to the person the bar is about. */
+  href?: string;
 }
 
 // Labelled bars, each as long as its value against the largest, e.g. the most-ordered tests.
@@ -15,7 +19,11 @@ export function BarList({ items }: { items: BarListItem[] }) {
       {items.map(item => (
         <li key={item.id ?? item.label}>
           <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-            <span className="truncate text-foreground">{item.label}</span>
+            {item.href ? (
+              <Link href={item.href} className="truncate font-medium text-foreground hover:text-primary hover:underline">{item.label}</Link>
+            ) : (
+              <span className="truncate text-foreground">{item.label}</span>
+            )}
             <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{item.display ?? item.value}</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-muted">

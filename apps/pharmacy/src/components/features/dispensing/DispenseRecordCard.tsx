@@ -1,5 +1,6 @@
 import { Card } from "@curo/web/ui/card";
-import { formatDateTime, formatCurrency } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
+import { formatMoney } from "@curo/web/format";
 import type { DispenseRecord } from "@/lib/api/pharmacy";
 
 /** One dispense as its receipt reads: what was handed over, by whom, and the amount. */
@@ -20,7 +21,7 @@ export function DispenseRecordCard({ record }: { record: DispenseRecord }) {
       </ul>
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>Dispensed by {record.dispensedBy}</span>
-        <span className="text-sm font-medium tabular-nums text-foreground">{formatCurrency(record.totalAmount)}</span>
+        <span className="text-sm font-medium tabular-nums text-foreground">{formatMoney(record.totalAmount)}</span>
       </div>
     </Card>
   );
