@@ -1,6 +1,6 @@
 import type { Diagnosis, PrescriptionItem, SOAP, Vitals } from "@/types";
 import { completeVisit } from "@/lib/api/encounters";
-import { VITALS_MAP } from "@/lib/api/clinical";
+import { VITAL_FIELDS } from "@curo/web/clinical";
 import { updateAppointment } from "@/lib/api/appointments";
 import { changedVitalKeys } from "@/lib/utils";
 
@@ -69,11 +69,11 @@ export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ 
       plan: plan || undefined,
       additionalNotes: visit.chiefComplaint,
     },
-    vitals: VITALS_MAP.filter(v => changedVitals.includes(v.key)).map(v => ({
-      code: v.code,
-      display: v.display,
-      valueQuantity: visit.vitals[v.key] as number,
-      valueUnit: v.unit,
+    vitals: VITAL_FIELDS.filter(f => changedVitals.includes(f.key)).map(f => ({
+      code: f.code,
+      display: f.display,
+      valueQuantity: visit.vitals[f.key] as number,
+      valueUnit: f.ucum,
     })),
     diagnoses: visit.diagnoses.map(d => ({ code: d.icdCode, display: d.name, isPrimary: d.isPrimary })),
     prescriptions: visit.prescriptions.map(rx => ({

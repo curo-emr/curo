@@ -1,36 +1,16 @@
 import { apiClient } from '@curo/web/api';
 import type { Vitals } from '@/types';
-import { VITAL_FIELDS } from '@/lib/vitals';
-
-interface FhirObservation {
-  code?: { coding?: Array<{ code?: string }> };
-  valueQuantity?: { value?: number };
-  effectiveDateTime?: string;
-}
-
-const KEY_BY_CODE = new Map(VITAL_FIELDS.map(f => [f.code, f.key]));
-const observedAt = (o: FhirObservation) => new Date(o.effectiveDateTime ?? 0).getTime();
-
-// Collapse observations into one Vitals object; the most recent value per LOINC code wins.
-function collapseVitals(observations: FhirObservation[]): Partial<Vitals> {
-  const vitals: Partial<Vitals> = {};
-  for (const o of [...observations].sort((a, b) => observedAt(a) - observedAt(b))) {
-    const key = KEY_BY_CODE.get(o.code?.coding?.[0]?.code ?? '');
-    const value = o.valueQuantity?.value;
-    if (key && typeof value === 'number') vitals[key] = value;
-  }
-  return vitals;
-}
+import { VITAL_FIELDS, collapseVitals, type VitalObservation } from '@curo/web/clinical';
 
 // Vitals already recorded for this visit (when a nurse re-opens triage).
 export async function getVisitVitals(appointmentId: string): Promise<Partial<Vitals>> {
-  const res = await apiClient.get<FhirObservation[]>('/vitals', { params: { appointmentId } });
+  const res = await apiClient.get<VitalObservation[]>('/vitals', { params: { appointmentId } });
   return collapseVitals(res.data ?? []);
 }
 
 // The patient's most recent value for each vital — shown as a reference while triaging.
 export async function getLatestVitals(patientId: string): Promise<Partial<Vitals>> {
-  const res = await apiClient.get<FhirObservation[]>(`/vitals/patient/${patientId}`);
+  const res = await apiClient.get<VitalObservation[]>(`/vitals/patient/${patientId}`);
   return collapseVitals(res.data ?? []);
 }
 
