@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { JwtPayload } from '@curo/shared/auth';
+import { AuditLog } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import { startService, type ServiceUnderTest } from '@curo/testing';
 import { AppModule } from '../src/app.module';
@@ -270,6 +271,35 @@ describe('Sign-in', () => {
       await expect(
         svc.db.getRepository(User).findOneByOrFail({ id: sub }),
       ).resolves.toMatchObject({ isActive: true });
+    });
+
+    it('records a suspension and a reactivation, and nothing for a change to the same value', async () => {
+      const admin = await signedIn(svc, UserRole.SUPER_ADMIN);
+      const created = await svc.api
+        .post('/auth/users')
+        .set(admin.headers)
+        .send(newStaff())
+        .expect(201);
+      const { id } = created.body as { id: string };
+      const setActive = (isActive: boolean) =>
+        svc.api
+          .patch(`/auth/users/${id}`)
+          .set(admin.headers)
+          .send({ isActive })
+          .expect(200);
+
+      await setActive(false);
+      await setActive(false);
+      await setActive(true);
+
+      const entries = await svc.db.getRepository(AuditLog).find({
+        where: { resourceId: id, action: 'UPDATE' },
+        order: { createdAt: 'ASC' },
+      });
+      expect(entries.map((e) => e.outcomeDescription)).toEqual([
+        'Admin suspended the account',
+        'Admin reactivated the account',
+      ]);
     });
   });
 

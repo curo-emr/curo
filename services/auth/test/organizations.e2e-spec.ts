@@ -208,6 +208,19 @@ describe('Organizations', () => {
         .expect(400);
 
       expect(await workplaceOf(practitionerId)).toBe(kandy.id);
+      await expect(
+        svc.db
+          .getRepository(AuditLog)
+          .findBy({ resourceId: id, action: 'UPDATE' }),
+      ).resolves.toMatchObject([
+        {
+          changes: {
+            before: { organizationId: colombo.id },
+            after: { organizationId: kandy.id },
+          },
+          outcomeDescription: `Admin moved them from ${colombo.name} to ${kandy.name}`,
+        },
+      ]);
     });
   });
 

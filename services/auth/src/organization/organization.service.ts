@@ -91,20 +91,21 @@ export class OrganizationService {
 
   /**
    * Checks that staff with `role` can be assigned to `organizationId`: it is
-   * active and the kind of place the role works at. Throws 400 otherwise, or
-   * when the role needs a workplace and none is given.
+   * active and the kind of place the role works at, and returns it (null when
+   * none is given). Throws 400 otherwise, or when the role needs a workplace
+   * and none is given.
    */
   async checkWorkplace(
     role: UserRole,
     organizationId: string | undefined,
-  ): Promise<void> {
+  ): Promise<Organization | null> {
     const types = workplaceTypes(role);
     if (!organizationId) {
       if (requiresWorkplace(role))
         throw new BadRequestException(
           `A ${roleName(role)} must be assigned to a ${types.join(' or ')}`,
         );
-      return;
+      return null;
     }
     if (!types.length)
       throw new BadRequestException(
@@ -122,6 +123,7 @@ export class OrganizationService {
         `A ${roleName(role)} works at a ${types.join(' or ')}, ` +
           `and ${org.name} is a ${org.type}`,
       );
+    return org;
   }
 }
 
