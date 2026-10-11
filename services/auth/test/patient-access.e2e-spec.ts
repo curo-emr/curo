@@ -13,8 +13,8 @@ interface Tokens {
   refreshToken: string;
 }
 
-const PASSWORD = 'k7mp-x3qa-9tnd';
-const NEW_PASSWORD = 'w4hc-8rbe-2ufy';
+const PASSWORD = 'Correct-Horse-9';
+const NEW_PASSWORD = 'Battery-Staple-7';
 
 describe('Patient portal access', () => {
   let svc: ServiceUnderTest;
