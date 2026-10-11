@@ -5,14 +5,14 @@ import {
   NotificationEventType,
   UserRole,
 } from '@curo/shared/enums';
-import { startService, type ServiceUnderTest } from '@curo/testing';
+import {
+  daysFromToday,
+  startService,
+  type ServiceUnderTest,
+} from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { MedicationDispense } from '../src/entities/medication-dispense.entity';
 import { Stock } from '../src/entities/stock.entity';
-
-/** An ISO date `days` from today (negative for the past). */
-const daysFromToday = (days: number) =>
-  new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
 describe('POST /dispense', () => {
   let svc: ServiceUnderTest;

@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { UserRole } from '@curo/shared/enums';
-import { startService, type ServiceUnderTest } from '@curo/testing';
+import {
+  daysFromToday,
+  startService,
+  type ServiceUnderTest,
+} from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { MedicationCatalog } from '../src/entities/medication-catalog.entity';
 import { Stock } from '../src/entities/stock.entity';
 import type { StockGroup } from '../src/pharmacy/pharmacy.service';
-
-/** An ISO date `days` from today (negative for the past). */
-const daysFromToday = (days: number) =>
-  new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
 describe('stock', () => {
   let svc: ServiceUnderTest;
