@@ -8,13 +8,14 @@ import {
   MinLength,
 } from 'class-validator';
 import { Gender, UserRole } from '@curo/shared/enums';
+import { MIN_PASSWORD_LENGTH } from '../../auth/passwords';
 
 export class CreateUserDto {
   @IsEmail()
   email: string;
 
   @IsString()
-  @MinLength(8)
+  @MinLength(MIN_PASSWORD_LENGTH)
   password: string;
 
   @IsEnum(UserRole)
@@ -36,7 +37,7 @@ export class CreateUserDto {
   @IsString()
   phone?: string;
 
-  // Practitioner-only attributes (ignored for PATIENT role)
+  // Practitioner attributes
   @IsOptional()
   @IsString()
   specialization?: string;
@@ -53,9 +54,4 @@ export class CreateUserDto {
   @IsOptional()
   @IsUUID()
   organizationId?: string;
-
-  // For PATIENT role: optionally link the login to an existing patient record.
-  @IsOptional()
-  @IsString()
-  patientId?: string;
 }

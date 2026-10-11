@@ -7,6 +7,7 @@ import { User } from '../src/entities/user.entity';
 import { Practitioner } from '../src/entities/practitioner.entity';
 import { LOGIN_LIMITS } from '../src/auth/login-attempts';
 import { signedIn } from './signed-in';
+import { nextSecond } from './sessions';
 
 interface Tokens {
   accessToken: string;
@@ -163,6 +164,20 @@ describe('Sign-in', () => {
   });
 
   describe('POST /auth/users', () => {
+    it('refuses a patient: reception gives patients portal access', async () => {
+      const patient = { ...newStaff(), role: UserRole.PATIENT };
+
+      await svc.api
+        .post('/auth/users')
+        .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
+        .send(patient)
+        .expect(400);
+
+      await expect(
+        svc.db.getRepository(User).countBy({ email: patient.email }),
+      ).resolves.toBe(0);
+    });
+
     it('refuses an email that already has an account', async () => {
       const staff = await onboard();
 
@@ -204,10 +219,6 @@ describe('Sign-in', () => {
 
     const refresh = (refreshToken: string) =>
       svc.api.post('/auth/refresh').send({ refreshToken });
-
-    /** Tokens carry whole seconds, and those from the reset's own second still work. */
-    const nextSecond = () =>
-      new Promise((resolve) => setTimeout(resolve, 1000 - (Date.now() % 1000)));
 
     it('ends the sessions signed in before it', async () => {
       const staff = await onboard();
