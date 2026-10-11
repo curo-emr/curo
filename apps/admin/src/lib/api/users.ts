@@ -14,7 +14,6 @@ export interface CreateUserInput {
   qualification?: string;
   licenseNumber?: string;
   organizationId?: string;
-  patientId?: string;
 }
 
 export interface UpdateUserInput {
