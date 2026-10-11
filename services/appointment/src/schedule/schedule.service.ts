@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
+import type { AuthUser } from '@curo/shared/auth';
+import { AuditLog } from '@curo/shared/database';
 import { DoctorSession } from '../entities/doctor-session.entity';
 import { SessionDto } from './dto/set-sessions.dto';
-import { sessionProblem } from './sessions';
+import { sessionProblem, weekChange } from './sessions';
 
 /** A session as the API gives it: clock times as "HH:MM". */
 function toSession(s: DoctorSession) {
@@ -17,6 +19,20 @@ function toSession(s: DoctorSession) {
   };
 }
 
+/** `list` on any repository, so `replace` can read a week inside its transaction. */
+async function weeksOf(
+  repo: Repository<DoctorSession>,
+  practitionerIds: string[] = [],
+) {
+  const sessions = await repo.find({
+    where: practitionerIds.length
+      ? { practitionerId: In(practitionerIds) }
+      : {},
+    order: { practitionerId: 'ASC', weekday: 'ASC', startTime: 'ASC' },
+  });
+  return sessions.map(toSession);
+}
+
 @Injectable()
 export class ScheduleService {
   constructor(
@@ -26,23 +42,25 @@ export class ScheduleService {
   ) {}
 
   /** The weekly sessions of the doctors asked for, or of every doctor. */
-  async list(practitionerIds: string[] = []) {
-    const sessions = await this.sessionsRepo.find({
-      where: practitionerIds.length
-        ? { practitionerId: In(practitionerIds) }
-        : {},
-      order: { practitionerId: 'ASC', weekday: 'ASC', startTime: 'ASC' },
-    });
-    return sessions.map(toSession);
+  list(practitionerIds: string[] = []) {
+    return weeksOf(this.sessionsRepo, practitionerIds);
   }
 
-  /** Replaces a doctor's week with `sessions`, all or nothing. */
-  async replace(practitionerId: string, sessions: SessionDto[]) {
+  /**
+   * Replaces a doctor's week with `sessions`, all or nothing, and records the
+   * change in the audit log in the same transaction.
+   */
+  async replace(
+    practitionerId: string,
+    sessions: SessionDto[],
+    actor: AuthUser,
+  ) {
     const problem = sessionProblem(sessions);
     if (problem) throw new BadRequestException(problem);
 
     await this.dataSource.transaction(async (tx) => {
       const repo = tx.getRepository(DoctorSession);
+      const before = await weeksOf(repo, [practitionerId]);
       await repo.delete({ practitionerId });
       await repo.save(
         sessions.map((s) =>
@@ -55,6 +73,23 @@ export class ScheduleService {
             room: s.room?.trim() || null,
           }),
         ),
+      );
+      const after = await weeksOf(repo, [practitionerId]);
+      const change = weekChange(before, after);
+      if (!change) return;
+
+      const audit = tx.getRepository(AuditLog);
+      await audit.save(
+        audit.create({
+          userId: actor.userId,
+          userRole: actor.role,
+          action: 'UPDATE',
+          resourceType: 'Schedule',
+          resourceId: practitionerId,
+          changes: { before, after },
+          outcome: 'success',
+          outcomeDescription: `Admin ${change}`,
+        }),
       );
     });
     return this.list([practitionerId]);
