@@ -22,6 +22,7 @@ import {
   RolesGuard,
   Roles,
   CurrentUser,
+  readablePatient,
   type AuthUser,
 } from '@curo/shared/auth';
 import { PatientIdsQueryDto } from '@curo/shared/dto';
@@ -129,8 +130,8 @@ export class PatientController {
     'PHARMACIST',
   )
   @Header('Content-Type', 'application/fhir+json')
-  getAllergies(@Param('id') id: string) {
-    return this.patientService.getAllergies(id);
+  getAllergies(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.patientService.getAllergies(readablePatient(user, id));
   }
 
   // Reception records the allergies a patient reports; only doctors change or retire them.
@@ -160,8 +161,8 @@ export class PatientController {
   @Get(':id/conditions')
   @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getConditions(@Param('id') id: string) {
-    return this.patientService.getConditions(id);
+  getConditions(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.patientService.getConditions(readablePatient(user, id));
   }
 
   @Post(':id/conditions')
@@ -179,8 +180,8 @@ export class PatientController {
   @Get(':id/vitals')
   @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getVitals(@Param('id') id: string) {
-    return this.patientService.getVitals(id);
+  getVitals(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.patientService.getVitals(readablePatient(user, id));
   }
 
   @Get(':id/vitals/trend')

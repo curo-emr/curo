@@ -27,6 +27,8 @@ import {
   Roles,
   CurrentUser,
   actorId,
+  patientScope,
+  readablePatient,
   type AuthUser,
 } from '@curo/shared/auth';
 import { PatientIdsQueryDto } from '@curo/shared/dto';
@@ -71,22 +73,30 @@ export class ClinicalController {
   @Get('encounters')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getEncounters(@Query('patientId') patientId?: string) {
-    return this.clinicalService.getEncounters(patientId);
+  getEncounters(
+    @CurrentUser() user: AuthUser,
+    @Query('patientId') patientId?: string,
+  ) {
+    return this.clinicalService.getEncounters(readablePatient(user, patientId));
   }
 
   @Get('encounters/patient/:patientId')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getPatientEncounters(@Param('patientId') patientId: string) {
-    return this.clinicalService.getPatientEncounters(patientId);
+  getPatientEncounters(
+    @Param('patientId') patientId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.getPatientEncounters(
+      readablePatient(user, patientId),
+    );
   }
 
   @Get('encounters/:id')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getEncounter(@Param('id') id: string) {
-    return this.clinicalService.getEncounter(id);
+  getEncounter(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.clinicalService.getEncounter(id, patientScope(user));
   }
 
   @Put('encounters/:id/status')
@@ -108,14 +118,26 @@ export class ClinicalController {
 
   @Get('notes')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
-  getNotes(@Query('encounterId') encounterId: string) {
-    return this.clinicalService.getEncounterNotes(encounterId);
+  getNotes(
+    @Query('encounterId') encounterId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.getEncounterNotes(
+      encounterId,
+      patientScope(user),
+    );
   }
 
   @Get('notes/encounter/:encounterId')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
-  getEncounterNotes(@Param('encounterId') encounterId: string) {
-    return this.clinicalService.getEncounterNotes(encounterId);
+  getEncounterNotes(
+    @Param('encounterId') encounterId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.getEncounterNotes(
+      encounterId,
+      patientScope(user),
+    );
   }
 
   @Get('notes/patient/:patientId')
@@ -137,17 +159,26 @@ export class ClinicalController {
   @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getVitalsByQuery(
+    @CurrentUser() user: AuthUser,
     @Query('patientId') patientId?: string,
     @Query('appointmentId') appointmentId?: string,
   ) {
-    return this.clinicalService.getVitals({ patientId, appointmentId });
+    return this.clinicalService.getVitals({
+      patientId: readablePatient(user, patientId),
+      appointmentId,
+    });
   }
 
   @Get('vitals/patient/:patientId')
   @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getVitals(@Param('patientId') patientId: string) {
-    return this.clinicalService.getVitals({ patientId });
+  getVitals(
+    @Param('patientId') patientId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.getVitals({
+      patientId: readablePatient(user, patientId),
+    });
   }
 
   @Get('vitals/patient/:patientId/trend')
@@ -167,9 +198,10 @@ export class ClinicalController {
   getObservationsTrend(
     @Param('patientId') patientId: string,
     @Query('codes') codes: string,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.clinicalService.getObservationsTrend(
-      patientId,
+      readablePatient(user, patientId),
       (codes || '')
         .split(',')
         .map((c) => c.trim())
@@ -191,15 +223,25 @@ export class ClinicalController {
   @Get('prescriptions')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  getPrescriptions(@Query('patientId') patientId?: string) {
-    return this.clinicalService.getPrescriptions(patientId);
+  getPrescriptions(
+    @CurrentUser() user: AuthUser,
+    @Query('patientId') patientId?: string,
+  ) {
+    return this.clinicalService.getPrescriptions(
+      readablePatient(user, patientId),
+    );
   }
 
   @Get('prescriptions/patient/:patientId')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  getPatientPrescriptions(@Param('patientId') patientId: string) {
-    return this.clinicalService.getPatientPrescriptions(patientId);
+  getPatientPrescriptions(
+    @Param('patientId') patientId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.getPatientPrescriptions(
+      readablePatient(user, patientId),
+    );
   }
 
   @Get('prescriptions/pending')
@@ -269,15 +311,18 @@ export class ClinicalController {
   @Get('lab-orders')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getLabOrders(@Query('patientId') patientId?: string) {
-    return this.clinicalService.getLabOrders(patientId);
+  getLabOrders(
+    @CurrentUser() user: AuthUser,
+    @Query('patientId') patientId?: string,
+  ) {
+    return this.clinicalService.getLabOrders(readablePatient(user, patientId));
   }
 
   @Get('lab-orders/:id')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getLabOrder(@Param('id') id: string) {
-    return this.clinicalService.getLabOrder(id);
+  getLabOrder(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.clinicalService.getLabOrder(id, patientScope(user));
   }
 
   // The patient's slip for the visit's lab tests: its QR leads each lab to its own.

@@ -18,6 +18,7 @@ import {
   RolesGuard,
   Roles,
   CurrentUser,
+  readablePatient,
   type AuthUser,
 } from '@curo/shared/auth';
 import type { PaginationQuery } from '@curo/shared/fhir';
@@ -103,7 +104,11 @@ export class LabController {
   ) {
     return this.labService.getReports(
       user,
-      { patientId, encounterId, serviceRequestId },
+      {
+        patientId: readablePatient(user, patientId),
+        encounterId,
+        serviceRequestId,
+      },
       query,
     );
   }

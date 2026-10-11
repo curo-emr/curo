@@ -21,6 +21,8 @@ import {
   RolesGuard,
   Roles,
   CurrentUser,
+  patientScope,
+  readablePatient,
   type AuthUser,
 } from '@curo/shared/auth';
 import type { PaginationQuery } from '@curo/shared/fhir';
@@ -78,15 +80,20 @@ export class AppointmentController {
   @Get('patient/:patientId')
   @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
-  getPatientAppointments(@Param('patientId') patientId: string) {
-    return this.appointmentService.getPatientAppointments(patientId);
+  getPatientAppointments(
+    @Param('patientId') patientId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.appointmentService.getPatientAppointments(
+      readablePatient(user, patientId),
+    );
   }
 
   @Get(':id')
   @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT', 'NURSE')
   @Header('Content-Type', 'application/fhir+json')
-  findOne(@Param('id') id: string) {
-    return this.appointmentService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.appointmentService.findOne(id, patientScope(user));
   }
 
   @Put(':id')

@@ -18,7 +18,7 @@ import {
   ObservationStatus,
   NotificationEventType,
 } from '@curo/shared/enums';
-import { actorId, type AuthUser } from '@curo/shared/auth';
+import { actorId, patientScope, type AuthUser } from '@curo/shared/auth';
 import { notifyPractitioner } from '@curo/shared/notifications';
 import { clinicDate } from '@curo/shared/config';
 import {
@@ -505,10 +505,14 @@ export class LabService {
     return toFhirReport(r);
   }
 
-  /** `user`'s view of the orders: lab staff see only their own lab's. */
+  /** `user`'s view of the orders: lab staff see only their own lab's, a patient only their own. */
   private scopeOf(user: AuthUser): FindOptionsWhere<ServiceRequest> {
     const lab = labScope(user);
-    return lab ? { performerOrganizationId: lab } : {};
+    const patientId = patientScope(user);
+    return {
+      ...(lab && { performerOrganizationId: lab }),
+      ...(patientId && { patientId }),
+    };
   }
 
   /** `user`'s view of the instruments: lab staff see only their own lab's. */
@@ -526,14 +530,16 @@ export class LabService {
     return order;
   }
 
-  /** Reports, joined to their orders as `o`, limited to the ones `user` may see. */
+  /** Reports, joined to their orders as `o`, limited to the ones `user` may see (lab staff: their lab's; a patient: their own). */
   private reportsQuery(user: AuthUser) {
     // A report's serviceRequestId is text; an order's id is a uuid.
     const query = this.reportsRepo
       .createQueryBuilder('r')
       .innerJoin(ServiceRequest, 'o', 'o.id::text = r.serviceRequestId');
     const lab = labScope(user);
-    if (lab) query.where('o.performerOrganizationId = :lab', { lab });
+    if (lab) query.andWhere('o.performerOrganizationId = :lab', { lab });
+    const patientId = patientScope(user);
+    if (patientId) query.andWhere('r.patientId = :own', { own: patientId });
     return query;
   }
 

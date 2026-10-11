@@ -20,7 +20,7 @@ import {
 } from '@curo/shared/fhir';
 import { AppointmentStatus, QueueStage } from '../enums';
 import { assertQueueTransition, queueStageForStatus } from './queue-stage';
-import type { AuthUser } from '@curo/shared/auth';
+import { patientScope, type AuthUser } from '@curo/shared/auth';
 
 function toFhirAppointment(a: Appointment) {
   return {
@@ -126,11 +126,8 @@ export class AppointmentService {
       query.where('a.practitionerId = :pid', {
         pid: requestingUser.practitionerId,
       });
-    } else if (
-      requestingUser.role === UserRole.PATIENT &&
-      requestingUser.patientId
-    ) {
-      query.where('a.patientId = :pid', { pid: requestingUser.patientId });
+    } else if (requestingUser.role === UserRole.PATIENT) {
+      query.where('a.patientId = :pid', { pid: patientScope(requestingUser) });
     }
 
     const from = filters?.date ?? filters?.from;
@@ -171,8 +168,11 @@ export class AppointmentService {
     });
   }
 
-  async findOne(id: string) {
-    const a = await this.appointmentsRepo.findOne({ where: { id } });
+  /** One appointment; with `patientId`, only that patient's (another's is as good as missing). */
+  async findOne(id: string, patientId?: string) {
+    const a = await this.appointmentsRepo.findOne({
+      where: { id, ...(patientId && { patientId }) },
+    });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);
     return toFhirAppointment(a);
   }
