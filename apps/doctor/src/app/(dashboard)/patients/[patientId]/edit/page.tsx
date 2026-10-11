@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { LoadError } from "@curo/web/ui/load-error";
 import { PageHeader } from "@curo/web/ui/page-header";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { PageSkeleton } from "@curo/web/ui/page-skeleton";
 import { PatientEditForm } from "@/components/features/patients/PatientEditForm";
 import { ROUTES } from "@/lib/constants";
 import { patientQueries } from "@/lib/queries";
