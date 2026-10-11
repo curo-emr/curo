@@ -35,6 +35,10 @@ export class User {
   @Column({ nullable: true })
   refreshToken: string;
 
+  /** When a password reset ended every session signed in before it. */
+  @Column({ type: 'timestamptz', nullable: true })
+  sessionsEndedAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

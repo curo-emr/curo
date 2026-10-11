@@ -18,6 +18,8 @@ export interface JwtPayload {
   name?: string | null;
   /** Where staff work (a pharmacist's pharmacy, a technician's lab); absent when unassigned. */
   organizationId?: string | null;
+  /** When the token was signed, in whole seconds; added by the signer. */
+  iat?: number;
 }
 
 /** The user attached to `request.user` once the access token is verified. */

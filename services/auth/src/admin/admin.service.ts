@@ -274,6 +274,8 @@ export class AdminService {
     const user = await this.usersRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException(`User ${id} not found`);
     user.passwordHash = await bcrypt.hash(newPassword, 12);
+    // Signs out every session, in case someone else has the old password.
+    user.sessionsEndedAt = new Date();
     await this.usersRepo.save(user);
     // Whoever asked for a reset has often locked themselves out guessing.
     this.loginAttempts.clearFailures(user.email);

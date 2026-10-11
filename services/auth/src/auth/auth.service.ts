@@ -7,6 +7,7 @@ import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
 import { LoginDto } from './dto/login.dto';
 import { LoginAttempts } from './login-attempts';
+import { sessionIsLive } from './session';
 import {
   jwtSecret,
   jwtRefreshSecret,
@@ -57,7 +58,7 @@ export class AuthService {
         secret: this.refreshSecret,
       });
       const user = await this.usersRepo.findOne({ where: { id: payload.sub } });
-      if (!user || !user.isActive) throw new UnauthorizedException();
+      if (!sessionIsLive(user, payload.iat)) throw new UnauthorizedException();
       return await this.issueTokens(user);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
