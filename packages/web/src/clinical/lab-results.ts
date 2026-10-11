@@ -75,3 +75,24 @@ export function referenceRangeFor(
 export function formatRange(low?: number | string | null, high?: number | string | null): string {
   return [low, high].filter(v => v != null && v !== "").join(" - ");
 }
+
+/** One value to enter for an order, under the test it belongs to. */
+export interface AnalyteToReport {
+  test: { code: string; name: string };
+  analyte: LabAnalyte;
+}
+
+/**
+ * What an order's results are: each ordered test's analytes from the lab's catalog, in
+ * order. A test the catalog doesn't list, or lists without analytes, is one value itself.
+ */
+export function analytesToReport(
+  tests: readonly { code: string; name: string }[],
+  catalog: readonly { code: string; analytes: readonly LabAnalyte[] }[],
+): AnalyteToReport[] {
+  return tests.flatMap(test => {
+    const analytes = catalog.find(c => c.code === test.code)?.analytes ?? [];
+    const reported = analytes.length ? analytes : [{ code: test.code, display: test.name, unit: "" }];
+    return reported.map(analyte => ({ test, analyte }));
+  });
+}

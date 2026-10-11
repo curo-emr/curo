@@ -1,7 +1,7 @@
 import type { Patient, Problem, LabOrder } from '@/types';
 
 export { mapFhirAllergy, type FhirAllergy } from '@curo/web/fhir';
-import { resultFlag } from '@curo/web/clinical';
+import { formatRange, resultFlag } from '@curo/web/clinical';
 import type { LabResult } from './lab';
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
@@ -243,10 +243,7 @@ function referenceId(reference?: string): string {
 function getReferenceRange(item: NonNullable<FhirDiagnosticReport['result']>[number]): string | undefined {
   if (item.referenceRange) return item.referenceRange;
   if (item.referenceRangeText) return item.referenceRangeText;
-  if (item.referenceRangeLow || item.referenceRangeHigh) {
-    return [item.referenceRangeLow, item.referenceRangeHigh].filter(Boolean).join(' - ');
-  }
-  return undefined;
+  return formatRange(item.referenceRangeLow, item.referenceRangeHigh) || undefined;
 }
 
 export function mapFhirDiagnosticReport(fhir: FhirDiagnosticReport): LabResult {

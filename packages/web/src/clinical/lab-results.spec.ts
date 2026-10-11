@@ -1,4 +1,4 @@
-import { formatRange, isAbnormalResult, referenceRangeFor, resultFlag, type LabAnalyte } from "./index";
+import { analytesToReport, formatRange, isAbnormalResult, referenceRangeFor, resultFlag, type LabAnalyte } from "./index";
 
 describe("resultFlag", () => {
   it("reads the FHIR interpretation codes", () => {
@@ -62,5 +62,25 @@ describe("formatRange", () => {
     expect(formatRange(12, 17.5)).toBe("12 - 17.5");
     expect(formatRange("0.4", "")).toBe("0.4");
     expect(formatRange(null, undefined)).toBe("");
+  });
+});
+
+describe("analytesToReport", () => {
+  const fbc = { code: "58410-2", name: "Full Blood Count" };
+  const tsh = { code: "3016-3", name: "TSH" };
+  const hb: LabAnalyte = { code: "718-7", display: "Hemoglobin", unit: "g/dL", low: 12, high: 16 };
+  const plt: LabAnalyte = { code: "777-3", display: "Platelets", unit: "10^3/µL", low: 150, high: 400 };
+
+  it("expands each ordered test into its catalog analytes, in order", () => {
+    expect(analytesToReport([fbc], [{ code: fbc.code, analytes: [hb, plt] }])).toEqual([
+      { test: fbc, analyte: hb },
+      { test: fbc, analyte: plt },
+    ]);
+  });
+
+  it("makes a test the catalog has no analytes for one value of its own", () => {
+    const own = { code: tsh.code, display: tsh.name, unit: "" };
+    expect(analytesToReport([tsh], [])).toEqual([{ test: tsh, analyte: own }]);
+    expect(analytesToReport([tsh], [{ code: tsh.code, analytes: [] }])).toEqual([{ test: tsh, analyte: own }]);
   });
 });

@@ -1,3 +1,5 @@
+import type { LabAnalyte } from '@curo/web/clinical';
+
 export interface Name {
   first: string;
   last: string;
@@ -81,6 +83,8 @@ export interface LabTestCatalogItem {
   /** As the lab names it, e.g. "Whole Blood". */
   specimen?: string;
   price?: number;
+  /** What the test reports, each with its unit and reference range. */
+  analytes: LabAnalyte[];
 }
 
 // --- Lab Orders (FHIR-mapped) ---

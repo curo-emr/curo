@@ -12,7 +12,7 @@ import {
 import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
 import type { LabOrder } from '@/types';
 import type { LabStaff, LabTestCatalogItem, QCLog, QCStatus } from '@/types';
-import type { ResultFlag } from '@curo/web/clinical';
+import type { LabAnalyte, ResultFlag } from '@curo/web/clinical';
 import { interpret, parseNumeric } from '@/lib/result-flag';
 
 // ─── Lab Orders ───────────────────────────────────────────────────────────────
@@ -115,6 +115,7 @@ interface ApiCatalogItem {
   category?: string | null;
   specimen?: string | null;
   price?: number | string | null;
+  analytes?: LabAnalyte[] | null;
 }
 
 function mapCatalogItem(item: ApiCatalogItem): LabTestCatalogItem {
@@ -125,6 +126,7 @@ function mapCatalogItem(item: ApiCatalogItem): LabTestCatalogItem {
     category: item.category ?? undefined,
     specimen: item.specimen ?? undefined,
     price: item.price == null ? undefined : Number(item.price),
+    analytes: item.analytes ?? [],
   };
 }
 
