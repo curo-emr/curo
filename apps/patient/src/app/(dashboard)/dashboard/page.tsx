@@ -1,221 +1,88 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { Calendar, Pill, FlaskConical, HeartPulse, AlertTriangle, ArrowRight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
-import { Badge } from "@curo/web/ui/badge";
-import { Button } from "@curo/web/ui/button";
 import Link from "next/link";
-import { ROUTES } from "@/lib/constants";
-import { formatDate, formatTime } from "@/lib/utils";
-import { StatusBadge } from "@curo/web/ui/status-badge";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronRight, FlaskConical, HeartPulse, Pill, type LucideIcon } from "lucide-react";
+import { greeting } from "@curo/web/format";
 import { QueryContent, allOf } from "@curo/web/query";
+import { SectionCard } from "@curo/web/ui/section-card";
 import { MyRecord } from "@/components/features/MyRecord";
+import { NextAppointmentCard } from "@/components/features/NextAppointmentCard";
+import { splitAppointments } from "@/lib/appointments";
+import { ROUTES } from "@/lib/constants";
+import { plural } from "@/lib/format";
 import { myQueries } from "@/lib/queries";
-import type { Patient, Appointment, Allergy, Problem, Prescription, LabOrder } from "@/types";
-import { visitTypeLabel } from "@curo/web/appointments";
+import type { Allergy, Appointment, LabTest, Medicine, Patient } from "@/types";
 
-export default function DashboardPage() {
-  return <MyRecord>{patient => <Dashboard patient={patient} />}</MyRecord>;
+export default function HomePage() {
+  return <MyRecord>{patient => <Home patient={patient} />}</MyRecord>;
 }
 
-function Dashboard({ patient }: { patient: Patient }) {
+function Home({ patient }: { patient: Patient }) {
   const record = allOf(
     useQuery(myQueries.appointments()),
+    useQuery(myQueries.medicines(patient.id)),
+    useQuery(myQueries.labTests(patient.id)),
     useQuery(myQueries.allergies(patient.id)),
-    useQuery(myQueries.conditions(patient.id)),
-    useQuery(myQueries.prescriptions(patient.id)),
-    useQuery(myQueries.labOrders(patient.id)),
   );
 
   return (
-    <QueryContent query={record} what="your dashboard">
-      {([appointments, allergies, problems, prescriptions, labOrders]) => (
-        <Summary patient={patient} appointments={appointments} allergies={allergies} problems={problems} prescriptions={prescriptions} labOrders={labOrders} />
-      )}
-    </QueryContent>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        {greeting()}, {patient.name.first}
+      </h1>
+      <QueryContent query={record} what="your record">
+        {([appointments, medicines, tests, allergies]) => (
+          <Summary appointments={appointments} medicines={medicines} tests={tests} allergies={allergies} />
+        )}
+      </QueryContent>
+    </div>
   );
 }
 
 interface SummaryProps {
-  patient: Patient;
   appointments: Appointment[];
+  medicines: Medicine[];
+  tests: LabTest[];
   allergies: Allergy[];
-  problems: Problem[];
-  prescriptions: Prescription[];
-  labOrders: LabOrder[];
 }
 
-function Summary({ patient, appointments, allergies, problems, prescriptions, labOrders }: SummaryProps) {
-  const today = new Date().toISOString().split('T')[0];
-  const upcomingAppts = appointments.filter(a => a.date >= today && a.status === 'scheduled')
-    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-  const activeProblems = problems.filter(p => p.status === "active");
-  const pendingLabs = labOrders.filter(l => l.status === "results_pending" || l.status === "sent_to_lab");
-
-  const dateHeading = new Date().toLocaleDateString("en-US", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
-
-  const statCards = [
-    { label: "Upcoming Appointments", value: upcomingAppts.length, color: "text-primary bg-primary/10 border-primary/20", icon: Calendar },
-    { label: "Active Conditions", value: activeProblems.length, color: "text-status-warning-text bg-status-warning-bg border-status-warning-border", icon: HeartPulse },
-    { label: "Active Prescriptions", value: prescriptions.length, color: "text-status-success-text bg-status-success-bg border-status-success-border", icon: Pill },
-    { label: "Pending Lab Results", value: pendingLabs.length, color: "text-indigo-700 bg-indigo-50 border-indigo-200", icon: FlaskConical },
-  ];
+function Summary({ appointments, medicines, tests, allergies }: SummaryProps) {
+  const [next] = splitAppointments(appointments).upcoming;
+  const toCollect = medicines.filter(m => m.status === "to_collect" || m.status === "on_hold").length;
+  const waiting = tests.filter(t => t.status === "ordered" || t.status === "in_lab").length;
+  const ready = tests.filter(t => t.status === "done").length;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome back, {patient.name.first}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{dateHeading}</p>
-      </div>
+    <>
+      <NextAppointmentCard appointment={next} />
+      <SectionCard title="Your record" noPadding>
+        <ul className="divide-y">
+          <SummaryRow icon={Pill} href={ROUTES.MEDICINES} title="Medicines"
+            detail={toCollect ? `${plural(toCollect, "medicine")} to collect` : "Nothing to collect"} />
+          <SummaryRow icon={FlaskConical} href={ROUTES.TEST_RESULTS} title="Test results"
+            detail={[ready && `${plural(ready, "result")} in`, waiting && `${waiting} waiting`].filter(Boolean).join(" · ") || "No lab tests yet"} />
+          <SummaryRow icon={HeartPulse} href={ROUTES.MY_HEALTH} title="My health"
+            detail={allergies.length ? `Allergies: ${allergies.map(a => a.substance).join(", ")}` : "No known allergies"} />
+        </ul>
+      </SectionCard>
+    </>
+  );
+}
 
-      {allergies.length > 0 && (
-        <div className="flex items-start gap-3 p-4 rounded-lg border border-status-error-border bg-status-error-bg">
-          <AlertTriangle className="h-5 w-5 text-status-error-text mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-status-error-text">Known Allergies</p>
-            <p className="text-sm text-status-error-text mt-0.5">{allergies.map(a => `${a.substance} (${a.severity})`).join(", ")}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {statCards.map(stat => (
-          <div key={stat.label} className={`rounded-lg border p-4 ${stat.color}`}>
-            <div className="flex items-center gap-2 mb-1">
-              <stat.icon className="h-4 w-4 opacity-70" />
-              <p className="text-xs font-medium opacity-80">{stat.label}</p>
-            </div>
-            <p className="text-2xl font-bold">{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="shadow-sm border">
-            <CardHeader className="bg-muted/50 border-b">
-              <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center gap-2 text-lg"><Calendar className="h-5 w-5 text-primary" />Upcoming Appointments</CardTitle>
-                <Link href={ROUTES.APPOINTMENTS}><Button variant="ghost" size="sm" className="text-xs text-primary">View All <ArrowRight className="h-3.5 w-3.5 ml-1" /></Button></Link>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {upcomingAppts.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">No upcoming appointments.</div>
-                ) : (
-                  upcomingAppts.slice(0, 3).map(apt => (
-                    <div key={apt.id} className="p-4 hover:bg-muted transition-colors">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-4 min-w-0">
-                          <div className="w-16 shrink-0 flex flex-col items-center justify-center p-2 rounded-lg bg-primary/10 text-primary">
-                            <span className="text-xs font-medium">{formatDate(apt.date).split(",")[0]}</span>
-                            <span className="text-sm font-semibold">{formatTime(apt.time)}</span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-sm">{apt.reason}</p>
-                            <p className="text-sm text-muted-foreground mt-0.5">{visitTypeLabel(apt.visitType)}</p>
-                          </div>
-                        </div>
-                        <StatusBadge status={apt.status} />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm border">
-            <CardHeader className="bg-muted/50 border-b">
-              <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center gap-2 text-lg"><Pill className="h-5 w-5 text-status-success-text" />Recent Prescriptions</CardTitle>
-                <Link href={ROUTES.PRESCRIPTIONS}><Button variant="ghost" size="sm" className="text-xs text-primary">View All <ArrowRight className="h-3.5 w-3.5 ml-1" /></Button></Link>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {prescriptions.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">No prescriptions found.</div>
-                ) : (
-                  prescriptions.slice(0, 2).map(rx => (
-                    <Link key={rx.id} href={ROUTES.PRESCRIPTION(rx.id)} className="block p-4 hover:bg-muted transition-colors">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="font-medium text-sm">{rx.items.map(i => i.displayName).join(", ")}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{formatDate(rx.createdAt)}</p>
-                        </div>
-                        <Badge variant="outline" className="text-status-success-text border-status-success-border bg-status-success-bg shrink-0">
-                          {rx.items.length} item{rx.items.length !== 1 ? "s" : ""}
-                        </Badge>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card className="shadow-sm border">
-            <CardHeader className="bg-muted/50 border-b pb-3">
-              <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center gap-2 text-base"><HeartPulse className="h-4 w-4 text-status-warning-text" />Active Conditions</CardTitle>
-                {activeProblems.length > 0 && <Badge variant="secondary" className="bg-status-warning-bg text-status-warning-text">{activeProblems.length}</Badge>}
-              </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              {activeProblems.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-2">No active conditions.</p>
-              ) : (
-                <div className="space-y-3">
-                  {activeProblems.map(p => (
-                    <div key={p.id} className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">Since {formatDate(p.onsetDate)}</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs shrink-0">{p.icdCode}</Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <Link href={ROUTES.HEALTH_RECORDS} className="block mt-3">
-                <Button variant="outline" size="sm" className="w-full text-xs">View Health Records</Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {pendingLabs.length > 0 && (
-            <Card className="shadow-sm border">
-              <CardHeader className="bg-muted/50 border-b pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FlaskConical className="h-4 w-4 text-indigo-500" />
-                  Pending Lab Results
-                  <Badge variant="secondary" className="ml-auto bg-indigo-50 text-indigo-700">{pendingLabs.length}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  {pendingLabs.map(lab => (
-                    <div key={lab.id} className="text-sm">
-                      <p className="font-medium">{lab.tests.length} test{lab.tests.length !== 1 ? "s" : ""} pending</p>
-                      <p className="text-xs text-muted-foreground">Ordered {formatDate(lab.createdAt)}</p>
-                    </div>
-                  ))}
-                </div>
-                <Link href={ROUTES.LAB_REPORTS} className="block mt-3">
-                  <Button variant="outline" size="sm" className="w-full text-xs">View Lab Reports</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
-    </div>
+function SummaryRow({ icon: Icon, href, title, detail }: { icon: LucideIcon; href: string; title: string; detail: string }) {
+  return (
+    <li>
+      <Link href={href} className="flex items-center gap-4 p-4 transition-colors hover:bg-muted/50">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium text-foreground">{title}</span>
+          <span className="block truncate text-sm text-muted-foreground">{detail}</span>
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+      </Link>
+    </li>
   );
 }

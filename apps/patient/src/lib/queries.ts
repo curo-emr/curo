@@ -1,10 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
-  getDoctors, getMyAllergies, getMyAppointments, getMyConditions, getMyEncounters, getMyLabOrders,
-  getMyPrescriptions, getMyProfile,
+  getDoctors, getMyAllergies, getMyAppointments, getMyConditions, getMyLabReports, getMyLabTests, getMyMedicines,
+  getMyProfile, getMyVisits, getPharmacies,
 } from "@/lib/api/patient-portal";
 import { getMyDocuments } from "@/lib/api/documents";
-import { getLabTestCatalog } from "@/lib/api/catalog";
 
 // The signed-in patient's own record. Parts read by patient id take it from the profile.
 
@@ -13,18 +12,9 @@ const DIRECTORY_STALE_MS = 5 * 60_000;
 
 export const myQueries = {
   all: ["me"] as const,
-  profile: () => queryOptions({
-    queryKey: [...myQueries.all, "profile"],
-    queryFn: getMyProfile,
-  }),
-  appointments: () => queryOptions({
-    queryKey: [...myQueries.all, "appointments"],
-    queryFn: getMyAppointments,
-  }),
-  documents: () => queryOptions({
-    queryKey: [...myQueries.all, "documents"],
-    queryFn: getMyDocuments,
-  }),
+  profile: () => queryOptions({ queryKey: [...myQueries.all, "profile"], queryFn: getMyProfile }),
+  appointments: () => queryOptions({ queryKey: [...myQueries.all, "appointments"], queryFn: getMyAppointments }),
+  documents: () => queryOptions({ queryKey: [...myQueries.all, "documents"], queryFn: getMyDocuments }),
   allergies: (patientId: string) => queryOptions({
     queryKey: [...myQueries.all, "allergies", patientId],
     queryFn: () => getMyAllergies(patientId),
@@ -33,29 +23,25 @@ export const myQueries = {
     queryKey: [...myQueries.all, "conditions", patientId],
     queryFn: () => getMyConditions(patientId),
   }),
-  prescriptions: (patientId: string) => queryOptions({
-    queryKey: [...myQueries.all, "prescriptions", patientId],
-    queryFn: () => getMyPrescriptions(patientId),
+  medicines: (patientId: string) => queryOptions({
+    queryKey: [...myQueries.all, "medicines", patientId],
+    queryFn: () => getMyMedicines(patientId),
   }),
-  labOrders: (patientId: string) => queryOptions({
-    queryKey: [...myQueries.all, "lab-orders", patientId],
-    queryFn: () => getMyLabOrders(patientId),
+  labTests: (patientId: string) => queryOptions({
+    queryKey: [...myQueries.all, "lab-tests", patientId],
+    queryFn: () => getMyLabTests(patientId),
   }),
-  encounters: (patientId: string) => queryOptions({
-    queryKey: [...myQueries.all, "encounters", patientId],
-    queryFn: () => getMyEncounters(patientId),
+  labReports: (patientId: string) => queryOptions({
+    queryKey: [...myQueries.all, "lab-reports", patientId],
+    queryFn: () => getMyLabReports(patientId),
+  }),
+  visits: (patientId: string) => queryOptions({
+    queryKey: [...myQueries.all, "visits", patientId],
+    queryFn: () => getMyVisits(patientId),
   }),
 };
 
 export const directoryQueries = {
-  doctors: () => queryOptions({
-    queryKey: ["doctors"],
-    queryFn: getDoctors,
-    staleTime: DIRECTORY_STALE_MS,
-  }),
-  labTests: () => queryOptions({
-    queryKey: ["catalog", "lab-tests"],
-    queryFn: () => getLabTestCatalog(),
-    staleTime: DIRECTORY_STALE_MS,
-  }),
+  doctors: () => queryOptions({ queryKey: ["doctors"], queryFn: getDoctors, staleTime: DIRECTORY_STALE_MS }),
+  pharmacies: () => queryOptions({ queryKey: ["pharmacies"], queryFn: getPharmacies, staleTime: DIRECTORY_STALE_MS }),
 };

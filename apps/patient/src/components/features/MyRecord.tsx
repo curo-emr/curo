@@ -2,7 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { UserRoundX } from "lucide-react";
 import { QueryContent } from "@curo/web/query";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { RECEPTION } from "@/lib/constants";
 import { myQueries } from "@/lib/queries";
 import type { Patient } from "@/types";
 
@@ -11,7 +14,13 @@ export function MyRecord({ children }: { children: (patient: Patient) => ReactNo
   const profile = useQuery(myQueries.profile());
   return (
     <QueryContent query={profile} what="your record">
-      {patient => patient ? children(patient) : <div className="text-center py-12 text-muted-foreground">Patient data not found.</div>}
+      {patient => patient ? children(patient) : (
+        <EmptyState
+          icon={UserRoundX}
+          title="We couldn't find your record"
+          description={`Your sign-in isn't linked to a patient record yet. Ask ${RECEPTION} to link it.`}
+        />
+      )}
     </QueryContent>
   );
 }
