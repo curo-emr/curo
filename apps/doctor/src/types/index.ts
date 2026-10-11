@@ -183,26 +183,7 @@ export interface Lab {
 }
 
 /** One test result in a lab report. */
-export interface LabResultValue {
-  code: string;
-  display: string;
-  value: string;
-  unit?: string;
-  referenceRange?: string;
-  /** H, L, HH, LL or N, as the lab flagged it. */
-  interpretation?: string;
-}
-
-/** What a lab reported for an order: typed values and/or a generated PDF. */
-export interface LabReport {
-  id: string;
-  orderId: string;
-  issued: string | null;
-  conclusion?: string;
-  results: LabResultValue[];
-  /** The PDF made from the typed values, as base64; absent when only a file was uploaded. */
-  pdfBase64?: string;
-}
+export type { LabReport, LabResultValue } from '@curo/web/fhir';
 
 export interface LabOrderTest {
   testId: string;

@@ -91,10 +91,17 @@ export function statusClassName(status: Status) {
   return cn(TONES[style.tone], style.strikethrough && "line-through");
 }
 
-export function StatusBadge({ status, className }: { status: Status; className?: string }) {
+interface StatusBadgeProps {
+  status: Status;
+  /** Other words for the same status, e.g. "To collect" for `pending` in the patient portal. */
+  label?: string;
+  className?: string;
+}
+
+export function StatusBadge({ status, label, className }: StatusBadgeProps) {
   return (
     <Badge variant="outline" className={cn(statusClassName(status), className)}>
-      {statusLabel(status)}
+      {label ?? statusLabel(status)}
     </Badge>
   );
 }

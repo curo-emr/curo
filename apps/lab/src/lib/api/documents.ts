@@ -79,11 +79,3 @@ export async function uploadDocument(input: UploadDocumentInput): Promise<Docume
   });
   return mapFhirDocument(res.data);
 }
-
-/** Fetch document bytes via the authenticated client and open them. */
-export async function openDocument(id: string): Promise<void> {
-  const res = await apiClient.get(`/documents/${id}/content`, { responseType: 'blob' });
-  const url = URL.createObjectURL(res.data as Blob);
-  window.open(url, '_blank', 'noopener,noreferrer');
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
-}

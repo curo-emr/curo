@@ -12,7 +12,7 @@ import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { Textarea } from "@curo/web/ui/textarea";
-import { ResultFlagBadge } from "@/components/features/orders/ResultFlagBadge";
+import { ResultFlagBadge } from "@curo/web/ui/result-flag-badge";
 import { enterResults, type ResultEntry } from "@/lib/api/lab";
 import { ROUTES } from "@/lib/constants";
 import { invalidateOrder, orderQueries } from "@/lib/queries";

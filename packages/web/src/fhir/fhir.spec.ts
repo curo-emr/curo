@@ -1,4 +1,4 @@
-import { mapFhirAllergy, mapFhirPatientDetails, type FhirAllergy } from "./index";
+import { mapFhirAllergy, mapFhirPatientDetails, mapFhirReport, type FhirAllergy, type FhirDiagnosticReport } from "./index";
 
 const allergy = (overrides: Partial<FhirAllergy> = {}): FhirAllergy => ({
   resourceType: "AllergyIntolerance",
@@ -74,5 +74,33 @@ describe("mapFhirPatientDetails", () => {
 
   it("shows marital status codes without a form option as other", () => {
     expect(mapFhirPatientDetails({ maritalStatus: { coding: [{ code: "L" }] } }).maritalStatus).toBe("other");
+  });
+});
+
+describe("mapFhirReport", () => {
+  const report = (result: NonNullable<FhirDiagnosticReport["result"]>): FhirDiagnosticReport => ({
+    id: "r1",
+    basedOn: [{ reference: "ServiceRequest/o1" }],
+    issued: "2026-10-10T08:00:00Z",
+    result,
+    presentedForm: [{ contentType: "application/pdf", data: "JVBER" }],
+  });
+
+  it("reads each value with its unit, range and flag, and the PDF", () => {
+    const mapped = mapFhirReport(report([
+      { code: "3016-3", display: "TSH", value: 8.2, unit: "mIU/L", referenceRangeLow: "0.4", referenceRangeHigh: "4.0", interpretation: "H" },
+    ]));
+    expect(mapped).toMatchObject({
+      orderId: "o1",
+      pdfBase64: "JVBER",
+      results: [{ display: "TSH", value: "8.2", unit: "mIU/L", referenceRange: "0.4–4.0", interpretation: "H" }],
+    });
+  });
+
+  it("keeps a text value and a written range", () => {
+    const [r] = mapFhirReport(report([
+      { code: "x", display: "Culture", valueString: "No growth", referenceRangeText: "No growth" },
+    ])).results;
+    expect(r).toMatchObject({ value: "No growth", referenceRange: "No growth", unit: undefined });
   });
 });
