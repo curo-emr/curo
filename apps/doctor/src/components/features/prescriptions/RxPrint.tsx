@@ -1,5 +1,6 @@
 import type { Patient, PrescriptionItem } from "@/types";
-import { calculateAge, formatDate, formatSex } from "@/lib/utils";
+import { calculateAge, formatStatus } from "@curo/web/format";
+import { formatDate } from "@/lib/utils";
 
 interface RxPrintProps {
   patient: Patient;
@@ -22,7 +23,7 @@ export function RxPrint({ patient, items, prescriber, date }: RxPrintProps) {
         <div style={{ marginBottom: 16, fontSize: 13 }}>
           <p style={{ margin: 0 }}><strong>Patient:</strong> {patient.name.full}</p>
           <p style={{ margin: "2px 0" }}><strong>MRN:</strong> {patient.mrn}{patient.phn ? `  ·  PHN: ${patient.phn}` : ""}</p>
-          <p style={{ margin: 0 }}><strong>Age/Sex:</strong> {calculateAge(patient.dob)} / {formatSex(patient.sex)}</p>
+          <p style={{ margin: 0 }}><strong>Age/Sex:</strong> {calculateAge(patient.dob) ?? "—"} / {formatStatus(patient.sex)}</p>
         </div>
         <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px" }}>℞ Medications</h2>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>

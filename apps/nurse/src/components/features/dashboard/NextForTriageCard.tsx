@@ -7,7 +7,8 @@ import { toneClass, waitTone } from "@curo/web/ui/status-badge";
 import type { QueueEntry } from "@/lib/hooks/useTodayQueue";
 import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { patientName } from "@/components/features/queue/QueueRow";
-import { calculateAge, cn, formatPhn, formatTime, minutesSince } from "@/lib/utils";
+import { formatAgeSex } from "@curo/web/format";
+import { cn, formatPhn, formatTime, minutesSince } from "@/lib/utils";
 
 interface Props {
   entry: QueueEntry | null;
@@ -53,7 +54,7 @@ export function NextForTriageCard({ entry, pending, onOpen, onSkip, children }: 
           </div>
           <p className="truncate text-xl font-semibold tracking-tight text-foreground">{name}</p>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-            {patient && <span>{calculateAge(patient.dob)}y · <span className="capitalize">{patient.sex}</span></span>}
+            {patient && <span>{formatAgeSex(patient.dob, patient.sex)}</span>}
             {patient?.phn && <span className="font-mono text-xs">PHN {formatPhn(patient.phn)}</span>}
           </p>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
