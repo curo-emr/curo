@@ -106,7 +106,7 @@ export function ResultsEntryForm({ order, patient, catalog }: ResultsEntryFormPr
         title="Results"
         count={entries.length}
         description={adultRangesApply(patient.dob)
-          ? "Units and ranges are your catalog's, for this patient's sex; change them if your analyser's differ. Numbers are flagged as you type."
+          ? "Units and ranges come from your catalog, by sex where they differ; change them if your analyser's differ. Numbers are flagged as you type."
           : "The catalog's ranges are for adults, so enter this patient's ranges yourself. Numbers are flagged as you type."}
         noPadding
       >
