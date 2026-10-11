@@ -1,3 +1,5 @@
+import type { Tone } from "@curo/web/ui/status-badge";
+
 // Route paths (super-admin portal)
 export const ROUTES = {
   LOGIN: "/login",
@@ -36,6 +38,17 @@ export const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
 };
 
+// Each role's badge colour in the users list.
+export const ROLE_TONE: Record<UserRole, Tone> = {
+  DOCTOR: "info",
+  RECEPTIONIST: "teal",
+  PHARMACIST: "purple",
+  LAB_STAFF: "warning",
+  NURSE: "success",
+  PATIENT: "neutral",
+  SUPER_ADMIN: "error",
+};
+
 export const GENDERS = ["male", "female", "other", "unknown"] as const;
 
 // Organizations: clinics, hospitals, pharmacies and laboratories.
@@ -59,6 +72,9 @@ export const WORKPLACE_TYPES: Partial<Record<UserRole, readonly OrganizationType
   PHARMACIST: ["pharmacy"],
   LAB_STAFF: ["laboratory"],
 };
+
+// Roles that hold a professional qualification and licence.
+export const PROFESSIONAL_ROLES: readonly UserRole[] = ["DOCTOR", "NURSE", "PHARMACIST", "LAB_STAFF"];
 
 // Roles that can't work until assigned: pharmacists dispense from their pharmacy's
 // stock, and lab staff work only on the tests sent to their lab.

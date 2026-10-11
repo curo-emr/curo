@@ -1,75 +1,54 @@
 "use client";
 
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-} from "recharts";
-import { Users as UsersIcon, UserCheck, Wallet } from "lucide-react";
+import { Users } from "lucide-react";
+import { useAuth } from "@curo/web/auth";
+import { formatMoney, greeting } from "@curo/web/format";
 import { QueryContent, allOf } from "@curo/web/query";
+import { BarList } from "@curo/web/ui/bar-list";
 import { PageHeader } from "@curo/web/ui/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { SectionCard } from "@curo/web/ui/section-card";
+import { Stat, StatStrip } from "@curo/web/ui/stat";
+import { NeedsAttention } from "@/components/features/dashboard/NeedsAttention";
+import type { PaymentTotals } from "@/lib/api/payments";
 import type { UserSummary } from "@/lib/api/users";
-import { paymentQueries, userQueries } from "@/lib/queries";
 import { ROLE_LABELS } from "@/lib/constants";
-
-function money(amount: number, currency = "LKR") {
-  const f = Number(amount).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return currency === "LKR" ? `Rs. ${f}` : `${currency} ${f}`;
-}
+import { paymentQueries, userQueries } from "@/lib/queries";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const overview = allOf(useQuery(userQueries.summary()), useQuery(paymentQueries.totals()));
+  const firstName = user?.name?.split(" ")[0];
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <PageHeader title="Overview" description="System-wide users and income at a glance." />
-
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PageHeader title={firstName ? `${greeting()}, ${firstName}` : greeting()} description="Accounts and income across every portal." />
+      <NeedsAttention />
       <QueryContent query={overview} what="the overview">
-        {([users, totals]) => <Overview users={users} totalIncome={totals.total} />}
+        {([users, income]) => <Overview users={users} income={income} />}
       </QueryContent>
     </div>
   );
 }
 
-function Overview({ users, totalIncome }: { users: UserSummary; totalIncome: number }) {
-  const byRole = useMemo(
-    () => Object.entries(users.byRole).map(([role, count]) => ({ role: ROLE_LABELS[role] ?? role, count })),
-    [users],
-  );
-  const activeCount = users.active;
+function Overview({ users, income }: { users: UserSummary; income: PaymentTotals }) {
+  const patients = users.byRole.PATIENT ?? 0;
+  const roles = Object.entries(users.byRole)
+    .map(([role, count]) => ({ label: ROLE_LABELS[role] ?? role, value: count }))
+    .sort((a, b) => b.value - a.value);
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="shadow-sm border"><CardContent className="p-5 flex items-center gap-4">
-          <div className="h-11 w-11 rounded-full bg-status-info-bg text-status-info-text flex items-center justify-center"><UsersIcon className="h-5 w-5" /></div>
-          <div><p className="text-xs text-muted-foreground">Total users</p><p className="text-xl font-bold">{users.total}</p></div>
-        </CardContent></Card>
-        <Card className="shadow-sm border"><CardContent className="p-5 flex items-center gap-4">
-          <div className="h-11 w-11 rounded-full bg-status-success-bg text-status-success-text flex items-center justify-center"><UserCheck className="h-5 w-5" /></div>
-          <div><p className="text-xs text-muted-foreground">Active accounts</p><p className="text-xl font-bold">{activeCount}</p></div>
-        </CardContent></Card>
-        <Card className="shadow-sm border"><CardContent className="p-5 flex items-center gap-4">
-          <div className="h-11 w-11 rounded-full bg-status-purple-bg text-status-purple-text flex items-center justify-center"><Wallet className="h-5 w-5" /></div>
-          <div><p className="text-xs text-muted-foreground">Total income</p><p className="text-xl font-bold">{money(totalIncome)}</p></div>
-        </CardContent></Card>
-      </div>
+      <StatStrip>
+        <Stat label="Staff" value={String(users.total - patients)} />
+        <Stat label="Patients with a login" value={String(patients)} />
+        <Stat label="Suspended" value={String(users.total - users.active)} />
+        <Stat label="Income collected" value={formatMoney(income.total, income.currency)} detail={`${income.count} payments`} />
+      </StatStrip>
 
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-3"><CardTitle className="text-base">Users by role</CardTitle></CardHeader>
-        <CardContent className="p-5">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={byRole} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="role" tick={{ fontSize: 12 }} stroke="var(--muted-foreground)" />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="var(--muted-foreground)" />
-              <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8 }} />
-              <Bar dataKey="count" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <SectionCard icon={Users} iconClassName="text-primary" title="Users by role">
+        <BarList items={roles} />
+      </SectionCard>
     </>
   );
 }
