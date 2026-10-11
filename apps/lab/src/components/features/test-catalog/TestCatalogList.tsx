@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { FlaskConical, SearchX } from "lucide-react";
+import { formatRange, type LabAnalyte } from "@curo/web/clinical";
 import { formatMoney } from "@curo/web/format";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { SearchInput } from "@curo/web/ui/search-input";
@@ -25,7 +26,7 @@ export function TestCatalogList({ tests }: { tests: LabTestCatalogItem[] }) {
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     return tests.filter(t =>
-      (!q || t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q)) &&
+      (!q || [t.name, t.code, ...t.analytes.map(a => a.display)].some(text => text.toLowerCase().includes(q))) &&
       (category === ALL || t.category === category) &&
       (specimen === ALL || t.specimen === specimen),
     );
@@ -42,7 +43,7 @@ export function TestCatalogList({ tests }: { tests: LabTestCatalogItem[] }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <SearchInput value={query} onChange={setQuery} placeholder="Test name or LOINC code…" className="min-w-0 flex-1" />
+        <SearchInput value={query} onChange={setQuery} placeholder="Test, what it reports, or LOINC code…" className="min-w-0 flex-1" />
         <div className="flex gap-2">
           <FilterSelect label="Category" anyLabel="Any category" value={category} onChange={setCategory} options={categories} />
           <FilterSelect label="Specimen" anyLabel="Any specimen" value={specimen} onChange={setSpecimen} options={specimens} />
@@ -58,21 +59,26 @@ export function TestCatalogList({ tests }: { tests: LabTestCatalogItem[] }) {
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   <TableHead>Test</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Specimen</TableHead>
+                  <TableHead className="hidden sm:table-cell">Category</TableHead>
+                  <TableHead className="hidden sm:table-cell">Specimen</TableHead>
                   <TableHead className="text-right">Price</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map(test => (
                   <TableRow key={test.id}>
-                    <TableCell>
+                    <TableCell className="whitespace-normal">
                       <span className="block font-medium text-foreground">{test.name}</span>
                       <span className="block font-mono text-xs text-muted-foreground">{test.code}</span>
+                      {test.analytes.length > 0 && (
+                        <ul className="mt-2 space-y-1 text-sm">
+                          {test.analytes.map(a => <AnalyteLine key={a.code} analyte={a} />)}
+                        </ul>
+                      )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{test.category ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{test.specimen ?? "—"}</TableCell>
-                    <TableCell className="whitespace-nowrap text-right tabular-nums text-foreground">
+                    <TableCell className="hidden align-top text-muted-foreground sm:table-cell">{test.category ?? "—"}</TableCell>
+                    <TableCell className="hidden align-top text-muted-foreground sm:table-cell">{test.specimen ?? "—"}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right align-top tabular-nums text-foreground">
                       {test.price == null ? "—" : formatMoney(test.price)}
                     </TableCell>
                   </TableRow>
@@ -86,6 +92,23 @@ export function TestCatalogList({ tests }: { tests: LabTestCatalogItem[] }) {
         {filtered.length} of {tests.length} tests
       </p>
     </div>
+  );
+}
+
+/** An analyte, its adult range and unit ("Hemoglobin 12 - 16 g/dL"), and its ranges by sex where they differ. */
+function AnalyteLine({ analyte: a }: { analyte: LabAnalyte }) {
+  const bySex = [
+    a.male && `Male ${formatRange(a.male.low, a.male.high)}`,
+    a.female && `Female ${formatRange(a.female.low, a.female.high)}`,
+  ].filter(Boolean).join(" · ");
+  return (
+    <li>
+      <span className="text-foreground">{a.display}</span>{" "}
+      <span className="whitespace-nowrap tabular-nums text-muted-foreground">
+        {formatRange(a.low, a.high) || "no range"}{a.unit && ` ${a.unit}`}
+      </span>
+      {bySex && <span className="block text-xs tabular-nums text-muted-foreground">{bySex}</span>}
+    </li>
   );
 }
 

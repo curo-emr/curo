@@ -7,7 +7,12 @@ import {
   generatePatientCode,
   generatePhn,
 } from '../packages/shared/src/identifiers';
-import { seedLabCatalog, seedLabOrders, type SeededLabs } from './seed-labs';
+import {
+  ensureLabAnalytes,
+  seedLabCatalog,
+  seedLabOrders,
+  type SeededLabs,
+} from './seed-labs';
 import { drug, ensureMedicationCatalog, seedStock } from './seed-medications';
 
 // The seed writes raw SQL against the schema created by `npm run db:migrate`.
@@ -240,6 +245,8 @@ async function topUps(db: DataSource) {
     );
   }
   console.log(`✅ ${icd10Codes.length} ICD-10 codes ensured`);
+
+  await ensureLabAnalytes(db);
 }
 
 async function seed() {

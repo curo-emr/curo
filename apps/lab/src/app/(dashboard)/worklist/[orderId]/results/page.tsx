@@ -4,10 +4,11 @@ import { use } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { QueryContent } from "@curo/web/query";
+import { QueryContent, allOf } from "@curo/web/query";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { ResultsEntryForm } from "@/components/features/worklist/ResultsEntryForm";
 import { LabReportUpload } from "@/components/features/worklist/LabReportUpload";
+import { useMyCatalog } from "@/lib/catalog";
 import { ROUTES } from "@/lib/constants";
 import { orderNumber } from "@/lib/orders";
 import { orderQueries, patientQueries } from "@/lib/queries";
@@ -29,10 +30,11 @@ export default function ResultsEntryPage({ params }: { params: Promise<{ orderId
 
 function ResultsEntry({ order }: { order: LabOrder }) {
   const patient = useQuery(patientQueries.detail(order.patientId));
+  const catalog = useMyCatalog();
 
   return (
-    <QueryContent query={patient} what="this order's patient">
-      {p => {
+    <QueryContent query={allOf(patient, catalog)} what="this order's patient and your test catalog">
+      {([p, tests]) => {
         if (!p) notFound();
         return (
           <div className="mx-auto max-w-4xl space-y-6">
@@ -43,7 +45,7 @@ function ResultsEntry({ order }: { order: LabOrder }) {
             />
 
             {order.status === "sent_to_lab" ? (
-              <ResultsEntryForm order={order} />
+              <ResultsEntryForm order={order} patient={p} catalog={tests} />
             ) : (
               <>
                 <p className="rounded-lg border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">

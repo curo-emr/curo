@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { CheckCircle, FlaskConical, Loader2, MessageSquareText } from "lucide-react";
-import { resultFlag } from "@curo/web/clinical";
+import { adultRangesApply, analytesToReport, referenceRangeFor, resultFlag } from "@curo/web/clinical";
 import { Button } from "@curo/web/ui/button";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
@@ -17,32 +17,55 @@ import { enterResults, type ResultEntry } from "@/lib/api/lab";
 import { ROUTES } from "@/lib/constants";
 import { invalidateOrder, orderQueries } from "@/lib/queries";
 import { interpret } from "@/lib/result-flag";
-import type { LabOrder } from "@/types";
+import type { LabOrder, LabTestCatalogItem, Patient } from "@/types";
 import { LabReportUpload } from "./LabReportUpload";
 
+/** A value to enter, under the test it reports for. */
+type ResultRow = ResultEntry & { testCode: string; testName: string };
+
 /**
- * One row per ordered test, and the report files uploaded for the order.
- * Submitting files the results and completes the order. The results are a
- * value for every test, or an uploaded report with no values typed (the
- * report holds them), or both.
+ * A row for every value the ordered tests report (a full blood count has three), with
+ * the unit and the patient's reference range from the lab's catalog filled in.
  */
-export function ResultsEntryForm({ order }: { order: LabOrder }) {
+function blankRows(order: LabOrder, catalog: LabTestCatalogItem[], patient: Patient): ResultRow[] {
+  const tests = order.tests.map(t => ({ code: t.testId, name: t.name }));
+  return analytesToReport(tests, catalog).map(({ test, analyte }) => {
+    const range = referenceRangeFor(analyte, patient);
+    return {
+      testCode: test.code,
+      testName: test.name,
+      code: analyte.code,
+      display: analyte.display,
+      value: "",
+      unit: analyte.unit,
+      referenceRangeLow: range ? String(range.low) : "",
+      referenceRangeHigh: range ? String(range.high) : "",
+    };
+  });
+}
+
+interface ResultsEntryFormProps {
+  order: LabOrder;
+  patient: Patient;
+  /** Your lab's tests, for what each one reports. */
+  catalog: LabTestCatalogItem[];
+}
+
+/**
+ * A row per value the order reports, and the report files uploaded for the order.
+ * Submitting files the results and completes the order. The results are every
+ * value, or an uploaded report with no values typed (the report holds them), or both.
+ */
+export function ResultsEntryForm({ order, patient, catalog }: ResultsEntryFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [entries, setEntries] = useState<ResultEntry[]>(() =>
-    order.tests.map(test => ({
-      code: test.testId,
-      display: test.name,
-      value: "",
-      unit: "",
-      referenceRangeLow: "",
-      referenceRangeHigh: "",
-    })),
-  );
+  const [entries, setEntries] = useState(() => blankRows(order, catalog, patient));
   const [conclusion, setConclusion] = useState("");
   // Uploading a report refreshes this list, so the form knows it can be submitted without typed values.
   const reportCount = useQuery(orderQueries.reports(order.id)).data?.length ?? 0;
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const panelSize = (testCode: string) => entries.filter(entry => entry.testCode === testCode).length;
 
   const update = (index: number, field: keyof ResultEntry, value: string) => {
     setEntries(prev => prev.map((entry, i) => (i === index ? { ...entry, [field]: value } : entry)));
@@ -52,8 +75,8 @@ export function ResultsEntryForm({ order }: { order: LabOrder }) {
   const allTyped = entries.length > 0 && typedCount === entries.length;
   const canSubmit = allTyped || (typedCount === 0 && reportCount > 0);
   const hint = typedCount > 0
-    ? "Enter a result for every test, or clear them and submit the uploaded report."
-    : "Enter a result for every test, or upload the report, to submit.";
+    ? "Enter every value, or clear them and submit the uploaded report."
+    : "Enter every value, or upload the report, to submit.";
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -82,7 +105,9 @@ export function ResultsEntryForm({ order }: { order: LabOrder }) {
         iconClassName="text-primary"
         title="Results"
         count={entries.length}
-        description="Numbers are flagged against the reference range as you type."
+        description={adultRangesApply(patient.dob)
+          ? "Units and ranges come from your catalog, by sex where they differ; change them if your analyser's differ. Numbers are flagged as you type."
+          : "The catalog's ranges are for adults, so enter this patient's ranges yourself. Numbers are flagged as you type."}
         noPadding
       >
         <div className="hidden grid-cols-12 gap-3 px-5 pt-3 text-xs font-medium text-muted-foreground md:grid">
@@ -95,45 +120,51 @@ export function ResultsEntryForm({ order }: { order: LabOrder }) {
         <div className="divide-y">
           {entries.map((entry, i) => {
             const flag = resultFlag(interpret(entry.value, entry.referenceRangeLow, entry.referenceRangeHigh));
+            const startsPanel = (i === 0 || entries[i - 1].testCode !== entry.testCode) && panelSize(entry.testCode) > 1;
             return (
-              <div key={`${entry.code}:${i}`} className="grid grid-cols-2 items-center gap-3 px-5 py-3 md:grid-cols-12">
-                <div className="col-span-2 md:col-span-3">
-                  <Label htmlFor={`value-${i}`} className="text-sm font-medium text-foreground">{entry.display}</Label>
-                  <p className="font-mono text-xs text-muted-foreground">{entry.code}</p>
-                </div>
-                <Input
-                  id={`value-${i}`}
-                  placeholder="Value"
-                  value={entry.value}
-                  onChange={e => update(i, "value", e.target.value)}
-                  className="md:col-span-3"
-                />
-                <Input
-                  aria-label={`${entry.display} unit`}
-                  placeholder="Unit"
-                  value={entry.unit}
-                  onChange={e => update(i, "unit", e.target.value)}
-                  className="md:col-span-2"
-                />
-                <div className="flex items-center gap-2 md:col-span-3">
+              <Fragment key={`${entry.testCode}:${entry.code}:${i}`}>
+                {startsPanel && (
+                  <p className="bg-muted/40 px-5 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{entry.testName}</p>
+                )}
+                <div className="grid grid-cols-2 items-center gap-3 px-5 py-3 md:grid-cols-12">
+                  <div className="col-span-2 md:col-span-3">
+                    <Label htmlFor={`value-${i}`} className="text-sm font-medium text-foreground">{entry.display}</Label>
+                    <p className="font-mono text-xs text-muted-foreground">{entry.code}</p>
+                  </div>
                   <Input
-                    aria-label={`${entry.display} reference range low`}
-                    placeholder="Low"
-                    inputMode="decimal"
-                    value={entry.referenceRangeLow}
-                    onChange={e => update(i, "referenceRangeLow", e.target.value)}
+                    id={`value-${i}`}
+                    placeholder="Value"
+                    value={entry.value}
+                    onChange={e => update(i, "value", e.target.value)}
+                    className="md:col-span-3"
                   />
-                  <span className="text-muted-foreground">–</span>
                   <Input
-                    aria-label={`${entry.display} reference range high`}
-                    placeholder="High"
-                    inputMode="decimal"
-                    value={entry.referenceRangeHigh}
-                    onChange={e => update(i, "referenceRangeHigh", e.target.value)}
+                    aria-label={`${entry.display} unit`}
+                    placeholder="Unit"
+                    value={entry.unit}
+                    onChange={e => update(i, "unit", e.target.value)}
+                    className="md:col-span-2"
                   />
+                  <div className="flex items-center gap-2 md:col-span-3">
+                    <Input
+                      aria-label={`${entry.display} reference range low`}
+                      placeholder="Low"
+                      inputMode="decimal"
+                      value={entry.referenceRangeLow}
+                      onChange={e => update(i, "referenceRangeLow", e.target.value)}
+                    />
+                    <span className="text-muted-foreground">–</span>
+                    <Input
+                      aria-label={`${entry.display} reference range high`}
+                      placeholder="High"
+                      inputMode="decimal"
+                      value={entry.referenceRangeHigh}
+                      onChange={e => update(i, "referenceRangeHigh", e.target.value)}
+                    />
+                  </div>
+                  <div className="md:col-span-1">{flag && <ResultFlagBadge flag={flag} />}</div>
                 </div>
-                <div className="md:col-span-1">{flag && <ResultFlagBadge flag={flag} />}</div>
-              </div>
+              </Fragment>
             );
           })}
         </div>
