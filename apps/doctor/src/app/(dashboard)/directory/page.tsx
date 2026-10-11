@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { formatMoney } from "@curo/web/format";
 import { LoadError } from "@curo/web/ui/load-error";
 import { FlaskConical, Pill, Search } from "lucide-react";
 import { Card } from "@curo/web/ui/card";
@@ -56,7 +57,7 @@ export default function DirectoryPage() {
               { header: "Test", cell: t => <><span className="font-medium text-foreground">{t.name}</span> <span className="font-mono text-xs text-muted-foreground">{t.code}</span></> },
               { header: "Category", cell: t => t.category },
               { header: "Specimen", cell: t => t.specimen },
-              { header: "Price", cell: t => (t.price != null ? `Rs. ${Number(t.price).toFixed(2)}` : "—"), align: "right" },
+              { header: "Price", cell: t => (t.price != null ? formatMoney(t.price) : "—"), align: "right" },
             ]}
           />
         </TabsContent>

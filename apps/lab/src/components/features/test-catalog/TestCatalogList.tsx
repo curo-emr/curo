@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { FlaskConical, SearchX } from "lucide-react";
+import { formatMoney } from "@curo/web/format";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { SearchInput } from "@curo/web/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
@@ -72,7 +73,7 @@ export function TestCatalogList({ tests }: { tests: LabTestCatalogItem[] }) {
                     <TableCell className="text-muted-foreground">{test.category ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{test.specimen ?? "—"}</TableCell>
                     <TableCell className="whitespace-nowrap text-right tabular-nums text-foreground">
-                      {test.price == null ? "—" : `Rs. ${test.price.toLocaleString()}`}
+                      {test.price == null ? "—" : formatMoney(test.price)}
                     </TableCell>
                   </TableRow>
                 ))}
