@@ -59,31 +59,26 @@ export function TestCatalogList({ tests }: { tests: LabTestCatalogItem[] }) {
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   <TableHead>Test</TableHead>
-                  <TableHead>Reports</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Specimen</TableHead>
+                  <TableHead className="hidden sm:table-cell">Category</TableHead>
+                  <TableHead className="hidden sm:table-cell">Specimen</TableHead>
                   <TableHead className="text-right">Price</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map(test => (
                   <TableRow key={test.id}>
-                    <TableCell>
+                    <TableCell className="whitespace-normal">
                       <span className="block font-medium text-foreground">{test.name}</span>
                       <span className="block font-mono text-xs text-muted-foreground">{test.code}</span>
-                    </TableCell>
-                    <TableCell className="min-w-56">
-                      {test.analytes.length === 0 ? (
-                        <span className="text-muted-foreground">—</span>
-                      ) : (
-                        <ul className="space-y-1 text-sm">
+                      {test.analytes.length > 0 && (
+                        <ul className="mt-2 space-y-1 text-sm">
                           {test.analytes.map(a => <AnalyteLine key={a.code} analyte={a} />)}
                         </ul>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{test.category ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{test.specimen ?? "—"}</TableCell>
-                    <TableCell className="whitespace-nowrap text-right tabular-nums text-foreground">
+                    <TableCell className="hidden align-top text-muted-foreground sm:table-cell">{test.category ?? "—"}</TableCell>
+                    <TableCell className="hidden align-top text-muted-foreground sm:table-cell">{test.specimen ?? "—"}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right align-top tabular-nums text-foreground">
                       {test.price == null ? "—" : formatMoney(test.price)}
                     </TableCell>
                   </TableRow>
@@ -100,19 +95,19 @@ export function TestCatalogList({ tests }: { tests: LabTestCatalogItem[] }) {
   );
 }
 
-/** "Hemoglobin 12 - 16 · M 13.5 - 17.5 · F 12 - 15.5 g/dL": an analyte's adult ranges, then its unit. */
+/** An analyte, its adult range and unit ("Hemoglobin 12 - 16 g/dL"), and its ranges by sex where they differ. */
 function AnalyteLine({ analyte: a }: { analyte: LabAnalyte }) {
-  const range = [
-    formatRange(a.low, a.high),
-    a.male && `M ${formatRange(a.male.low, a.male.high)}`,
-    a.female && `F ${formatRange(a.female.low, a.female.high)}`,
+  const bySex = [
+    a.male && `Male ${formatRange(a.male.low, a.male.high)}`,
+    a.female && `Female ${formatRange(a.female.low, a.female.high)}`,
   ].filter(Boolean).join(" · ");
   return (
     <li>
       <span className="text-foreground">{a.display}</span>{" "}
       <span className="whitespace-nowrap tabular-nums text-muted-foreground">
-        {range || "no range"}{a.unit && ` ${a.unit}`}
+        {formatRange(a.low, a.high) || "no range"}{a.unit && ` ${a.unit}`}
       </span>
+      {bySex && <span className="block text-xs tabular-nums text-muted-foreground">{bySex}</span>}
     </li>
   );
 }
