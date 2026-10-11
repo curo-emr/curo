@@ -191,21 +191,55 @@ describe('Sign-in', () => {
   describe('POST /auth/users/:id/reset-password', () => {
     const NEW_PASSWORD = 'Battery-Staple-7';
 
+    async function reset(email: string) {
+      const { id } = await svc.db
+        .getRepository(User)
+        .findOneByOrFail({ email });
+      await svc.api
+        .post(`/auth/users/${id}/reset-password`)
+        .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
+        .send({ newPassword: NEW_PASSWORD })
+        .expect(201);
+    }
+
+    const refresh = (refreshToken: string) =>
+      svc.api.post('/auth/refresh').send({ refreshToken });
+
+    /** Tokens carry whole seconds, and those from the reset's own second still work. */
+    const nextSecond = () =>
+      new Promise((resolve) => setTimeout(resolve, 1000 - (Date.now() % 1000)));
+
+    it('ends the sessions signed in before it', async () => {
+      const staff = await onboard();
+      const before = (await login(staff.email, PASSWORD).expect(200))
+        .body as Tokens;
+      await nextSecond();
+
+      await reset(staff.email);
+
+      await refresh(before.refreshToken).expect(401);
+      await profile(before.accessToken).expect(401);
+    });
+
+    it('keeps a session signed in straight after it', async () => {
+      const staff = await onboard();
+      await reset(staff.email);
+
+      const after = (await login(staff.email, NEW_PASSWORD).expect(200))
+        .body as Tokens;
+
+      await refresh(after.refreshToken).expect(200);
+      await profile(after.accessToken).expect(200);
+    });
+
     it('lets someone locked out sign in with the new password straight away', async () => {
       const staff = await onboard();
       for (let i = 0; i < LOGIN_LIMITS.perAccount; i++) {
         await login(staff.email, 'not-the-password').expect(401);
       }
       await login(staff.email, PASSWORD).expect(429);
-      const { id } = await svc.db
-        .getRepository(User)
-        .findOneByOrFail({ email: staff.email });
 
-      await svc.api
-        .post(`/auth/users/${id}/reset-password`)
-        .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
-        .send({ newPassword: NEW_PASSWORD })
-        .expect(201);
+      await reset(staff.email);
 
       await login(staff.email, NEW_PASSWORD).expect(200);
     });
