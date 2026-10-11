@@ -6,13 +6,21 @@ import { labSampleUrl } from '../packages/shared/src/lab/lab-qr';
 // The labs' test catalog, and lab orders for the seeded visits, built from one
 // list of tests so the catalog, the orders and their reports always agree.
 
-/** A value a test reports, and the range a normal result falls in. */
-interface Analyte {
+interface Range {
+  low: number;
+  high: number;
+}
+
+/**
+ * A value a test reports, and the adult range a normal result falls in, with a
+ * range per sex where the sexes differ. Stored on the catalog as it is here.
+ */
+interface Analyte extends Range {
   code: string; // LOINC
   display: string;
   unit: string;
-  low: number;
-  high: number;
+  male?: Range;
+  female?: Range;
 }
 
 /** A test the labs offer and doctors order, with the values it reports. */
@@ -33,7 +41,15 @@ const LAB_TESTS: LabTest[] = [
     specimen: 'Whole Blood',
     price: 900,
     analytes: [
-      { code: '718-7', display: 'Hemoglobin', unit: 'g/dL', low: 12, high: 16 },
+      {
+        code: '718-7',
+        display: 'Hemoglobin',
+        unit: 'g/dL',
+        low: 12,
+        high: 16,
+        male: { low: 13.5, high: 17.5 },
+        female: { low: 12, high: 15.5 },
+      },
       {
         code: '6690-2',
         display: 'White Blood Cells',
@@ -126,6 +142,8 @@ const LAB_TESTS: LabTest[] = [
         unit: 'mg/dL',
         low: 0.6,
         high: 1.2,
+        male: { low: 0.7, high: 1.3 },
+        female: { low: 0.6, high: 1.1 },
       },
       {
         code: '6299-2',
@@ -216,14 +234,32 @@ export async function seedLabCatalog(db: DataSource, labs: SeededLabs) {
     );
     for (const t of offered) {
       await db.query(
-        `INSERT INTO lab_test_catalog ("organizationId", code, name, category, specimen, price, active)
-         VALUES ($1, $2, $3, $4, $5, $6, true)`,
-        [labId, t.code, t.name, t.category, t.specimen, t.price],
+        `INSERT INTO lab_test_catalog ("organizationId", code, name, category, specimen, price, analytes, active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
+        [
+          labId,
+          t.code,
+          t.name,
+          t.category,
+          t.specimen,
+          t.price,
+          JSON.stringify(t.analytes),
+        ],
       );
       count++;
     }
   }
   console.log(`✅ ${count} lab catalog tests created`);
+}
+
+/** What each test reports, on catalogs seeded before the catalog said. */
+export async function ensureLabAnalytes(db: DataSource) {
+  for (const t of LAB_TESTS)
+    await db.query(
+      `UPDATE lab_test_catalog SET analytes = $2 WHERE code = $1 AND analytes IS NULL`,
+      [t.code, JSON.stringify(t.analytes)],
+    );
+  console.log('✅ lab catalog analytes ensured');
 }
 
 // Where each reported value sits in its range: 0 is the low end, 1 the high
