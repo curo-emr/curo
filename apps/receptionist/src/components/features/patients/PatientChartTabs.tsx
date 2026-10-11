@@ -9,6 +9,7 @@ import type { Patient } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curo/web/ui/tabs";
 import { DemographicsTab } from "./tabs/DemographicsTab";
 import { AppointmentsTab } from "./tabs/AppointmentsTab";
+import { PortalAccessCard } from "./PortalAccessCard";
 
 export function PatientChartTabs({ patient }: { patient: Patient }) {
   const [activeTab, setActiveTab] = useState("demographics");
@@ -35,6 +36,7 @@ export function PatientChartTabs({ patient }: { patient: Patient }) {
       <div className="mt-6">
         <TabsContent value="demographics" className="space-y-6 outline-none">
           <DemographicsTab patient={patient} />
+          <PortalAccessCard patient={patient} />
         </TabsContent>
 
         <TabsContent value="appointments" className="outline-none">
