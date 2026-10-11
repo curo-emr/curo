@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LoginAttempts } from './login-attempts';
+import { Passwords } from './passwords';
 import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
 import { Patient } from '@curo/shared/database';
@@ -26,7 +27,8 @@ import { jwtSecret } from '@curo/shared/auth';
     JwtStrategy,
     // One per app, with the default limits.
     { provide: LoginAttempts, useFactory: () => new LoginAttempts() },
+    Passwords,
   ],
-  exports: [AuthService, JwtModule, LoginAttempts],
+  exports: [AuthService, JwtModule, LoginAttempts, Passwords],
 })
 export class AuthModule {}

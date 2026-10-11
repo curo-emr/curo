@@ -1,0 +1,4 @@
+# Known false positives, by gitleaks fingerprint (commit:file:rule:line).
+# Made-up test passwords in an e2e spec, replaced in the next commit.
+0812d552fa8a706d3a6998682923374130e11df4:services/auth/test/patient-access.e2e-spec.ts:generic-api-key:16
+0812d552fa8a706d3a6998682923374130e11df4:services/auth/test/patient-access.e2e-spec.ts:generic-api-key:17

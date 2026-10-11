@@ -17,7 +17,7 @@ import { WorkplaceSelect } from "@/components/features/organizations/WorkplaceSe
 import { createUser } from "@/lib/api/users";
 import { GENDERS, PROFESSIONAL_ROLES, ROLE_LABELS, ROUTES, USER_ROLES, WORKPLACE_TYPES } from "@/lib/constants";
 import { createUserSchema, type CreateUserInput } from "@/lib/validations/user";
-import { PasswordInput } from "./PasswordInput";
+import { PasswordInput } from "@curo/web/ui/password";
 
 // Patients are registered by reception, which gives them their PHN, so only staff are created here.
 const CREATABLE_ROLES = USER_ROLES.filter(r => r !== "PATIENT");

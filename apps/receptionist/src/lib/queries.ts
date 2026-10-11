@@ -4,6 +4,7 @@ import { POLL_QUEUE_MS } from "@curo/web/query";
 import { getAllergies, getPatientById, getPatientsByIds, searchPatients } from "@/lib/api/patients";
 import { getAppointments, getSchedule } from "@/lib/api/appointments";
 import { getDoctors } from "@/lib/api/practitioners";
+import { getPortalAccess } from "@/lib/api/portal-access";
 import { getIncomeSummary } from "@/lib/api/payments";
 import { FLOW_STAGES } from "@curo/web/flow";
 import type { Appointment } from "@/types";
@@ -42,6 +43,11 @@ export const patientQueries = {
   allergies: (patientId: string) => queryOptions({
     queryKey: [...patientQueries.record(patientId), "allergies"],
     queryFn: () => getAllergies(patientId),
+  }),
+  /** Whether they can sign in to the patient portal, and with which email. */
+  portalAccess: (patientId: string) => queryOptions({
+    queryKey: [...patientQueries.record(patientId), "portal-access"],
+    queryFn: () => getPortalAccess(patientId),
   }),
 };
 

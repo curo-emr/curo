@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
 import { OrganizationModule } from './organization/organization.module';
+import { PatientAccessModule } from './patient-access/patient-access.module';
 import { User } from './entities/user.entity';
 import { Practitioner } from './entities/practitioner.entity';
 import { Patient, AuditLog, databaseOptions } from '@curo/shared/database';
@@ -18,6 +19,7 @@ import { Organization } from './entities/organization.entity';
     AuthModule,
     AdminModule,
     OrganizationModule,
+    PatientAccessModule,
   ],
 })
 export class AppModule {}
