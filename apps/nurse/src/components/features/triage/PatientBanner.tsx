@@ -3,7 +3,8 @@ import type { Allergy, Appointment, Patient, Problem } from "@/types";
 import type { Practitioner } from "@/lib/api/practitioners";
 import { Badge } from "@curo/web/ui/badge";
 import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
-import { calculateAge, cn, formatPhn, formatTime } from "@/lib/utils";
+import { calculateAge } from "@curo/web/format";
+import { cn, formatPhn, formatTime } from "@/lib/utils";
 
 interface PatientBannerProps {
   patient: Patient;
@@ -23,6 +24,7 @@ const ALLERGY_CLASSES: Record<Allergy["severity"], string> = {
 export function PatientBanner({ patient, appointment, doctor, allergies, conditions }: PatientBannerProps) {
   const activeConditions = conditions?.filter(c => c.status === "active") ?? null;
   const hasSevereAllergy = allergies?.some(a => a.severity === "severe") ?? false;
+  const age = calculateAge(patient.dob);
 
   return (
     <section className="rounded-xl border bg-card shadow-sm">
@@ -31,7 +33,7 @@ export function PatientBanner({ patient, appointment, doctor, allergies, conditi
         <div className="min-w-0 flex-1 space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground truncate">{patient.name.full}</h1>
           <p className="text-sm text-muted-foreground">
-            <span className="capitalize">{patient.sex}</span> · {calculateAge(patient.dob)} years
+            <span className="capitalize">{patient.sex}</span>{age !== null && <> · {age} years</>}
             {patient.phn && <> · <span className="font-mono">PHN {formatPhn(patient.phn)}</span></>}
             {patient.bloodType && <> · Blood {patient.bloodType}</>}
           </p>

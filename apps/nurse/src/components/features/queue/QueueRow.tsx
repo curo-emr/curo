@@ -1,7 +1,8 @@
 import { ArrowRight, Clock, Loader2, Stethoscope } from "lucide-react";
 import { Button } from "@curo/web/ui/button";
 import { Badge } from "@curo/web/ui/badge";
-import { calculateAge, cn, formatPhn, formatTime, minutesSince } from "@/lib/utils";
+import { formatAgeSex } from "@curo/web/format";
+import { cn, formatPhn, formatTime, minutesSince } from "@/lib/utils";
 import { toneClass, waitTone } from "@curo/web/ui/status-badge";
 import type { QueueEntry } from "@/lib/hooks/useTodayQueue";
 import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
@@ -32,6 +33,7 @@ export function QueueRow({ entry, pending, onOpen, onSkip, primary = false }: Qu
   const minutes = minutesSince(appointment.stageSince);
   const isWaiting = stage === "waiting_nurse";
   const sent = stage === "ready_for_doctor";
+  const ageSex = patient ? formatAgeSex(patient.dob, patient.sex) : "";
 
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center hover:bg-muted/40 transition-colors">
@@ -40,7 +42,7 @@ export function QueueRow({ entry, pending, onOpen, onSkip, primary = false }: Qu
         <div className="min-w-0">
           <p className="font-semibold text-foreground truncate">{patientName(entry)}</p>
           <p className="text-xs text-muted-foreground truncate">
-            {patient && <>{calculateAge(patient.dob)}y · <span className="capitalize">{patient.sex}</span> · </>}
+            {ageSex && <>{ageSex} · </>}
             {patient?.phn ? <span className="font-mono">PHN {formatPhn(patient.phn)}</span> : "No PHN"}
           </p>
         </div>

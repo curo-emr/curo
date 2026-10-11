@@ -10,7 +10,7 @@ import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { AppointmentRow } from "@/components/features/visits/AppointmentRow";
 import { CuroCalendar, calendarRange, formatDateStr, getRelativeDayLabel, type CalendarEvent, type CalendarEventColor } from "@curo/web/ui/curo-calendar";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { PageSkeleton } from "@curo/web/ui/page-skeleton";
 import { appointmentQueries, patientQueries } from "@/lib/queries";
 import { getQueueGroup, type QueueGroup } from "@/lib/visit";
 

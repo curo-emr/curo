@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { QueryContent } from "@curo/web/query";
 import { useAuth } from "@/contexts/AuthContext";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { PageSkeleton } from "@curo/web/ui/page-skeleton";
 import { PatientHeader } from "@/components/features/patients/PatientHeader";
 import { PatientChartTabs } from "@/components/features/patients/PatientChartTabs";
 import { appointmentQueries, patientQueries } from "@/lib/queries";

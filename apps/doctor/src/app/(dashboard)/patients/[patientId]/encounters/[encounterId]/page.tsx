@@ -9,7 +9,7 @@ import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { LoadError } from "@curo/web/ui/load-error";
 import { PageHeader } from "@curo/web/ui/page-header";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { PageSkeleton } from "@curo/web/ui/page-skeleton";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { RX_PRINT_ID, RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";

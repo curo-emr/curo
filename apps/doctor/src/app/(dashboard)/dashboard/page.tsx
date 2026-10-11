@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { LoadError } from "@curo/web/ui/load-error";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@curo/web/ui/page-header";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { PageSkeleton } from "@curo/web/ui/page-skeleton";
 import { DayOverview } from "@/components/features/dashboard/DayOverview";
 import { UpNextCard } from "@/components/features/dashboard/UpNextCard";
 import { QueueList } from "@/components/features/dashboard/QueueList";

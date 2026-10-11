@@ -1,4 +1,4 @@
-import { VITAL_FIELD, adultRangesApply, assessVital, isPlausible, worstLevel } from "./index";
+import { VITAL_FIELD, adultRangesApply, assessVital, collapseVitals, isPlausible, worstLevel } from "./index";
 
 describe("assessVital", () => {
   it("is normal inside the reference band, edges included", () => {
@@ -52,5 +52,27 @@ describe("adultRangesApply", () => {
     expect(adultRangesApply(undefined, today)).toBe(false);
     expect(adultRangesApply("", today)).toBe(false);
     expect(adultRangesApply("unknown", today)).toBe(false);
+  });
+});
+
+describe("collapseVitals", () => {
+  const reading = (code: string, value: number | undefined, at: string) =>
+    ({ code: { coding: [{ code }] }, valueQuantity: { value }, effectiveDateTime: at });
+
+  it("keys readings by LOINC code, the latest one winning", () => {
+    const vitals = collapseVitals([
+      reading(VITAL_FIELD.pulseBpm.code, 88, "2026-10-11T09:30:00Z"),
+      reading(VITAL_FIELD.pulseBpm.code, 72, "2026-10-11T09:00:00Z"),
+      reading(VITAL_FIELD.temperatureC.code, 37.2, "2026-10-11T09:00:00Z"),
+    ]);
+    expect(vitals).toEqual({ pulseBpm: 88, temperatureC: 37.2 });
+  });
+
+  it("skips unknown codes and readings without a value", () => {
+    expect(collapseVitals([
+      reading("0000-0", 5, "2026-10-11T09:00:00Z"),
+      reading(VITAL_FIELD.weightKg.code, undefined, "2026-10-11T09:00:00Z"),
+      {},
+    ])).toEqual({});
   });
 });

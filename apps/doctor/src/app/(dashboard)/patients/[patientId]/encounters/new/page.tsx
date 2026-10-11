@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { QueryContent } from "@curo/web/query";
 import { EncounterEditor } from "@/components/features/encounters/EncounterEditor";
 import { EmptyState } from "@curo/web/ui/empty-state";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { PageSkeleton } from "@curo/web/ui/page-skeleton";
 import { appointmentQueries, catalogQueries, directoryQueries, patientQueries } from "@/lib/queries";
 import { getTodayString } from "@/lib/utils";
 

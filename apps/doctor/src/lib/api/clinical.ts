@@ -5,19 +5,7 @@ import {
   type FhirMedicationRequest, type FhirServiceRequest,
 } from './mappers';
 import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
-
-// Shared LOINC ⇄ Vitals-field map, used both to write vitals (one observation per
-// field) and to read them back. Keyed by LOINC code; display/unit are for the write path.
-export const VITALS_MAP = [
-  { key: 'bpSystolic' as keyof Vitals, code: '8480-6', display: 'Blood Pressure Systolic', unit: 'mmHg' },
-  { key: 'bpDiastolic' as keyof Vitals, code: '8462-4', display: 'Blood Pressure Diastolic', unit: 'mmHg' },
-  { key: 'pulseBpm' as keyof Vitals, code: '8867-4', display: 'Heart rate', unit: 'bpm' },
-  { key: 'temperatureC' as keyof Vitals, code: '8310-5', display: 'Body temperature', unit: 'Cel' },
-  { key: 'spo2Percent' as keyof Vitals, code: '2708-6', display: 'Oxygen saturation', unit: '%' },
-  { key: 'respirationRpm' as keyof Vitals, code: '9279-1', display: 'Respiratory rate', unit: '/min' },
-  { key: 'heightCm' as keyof Vitals, code: '8302-2', display: 'Body height', unit: 'cm' },
-  { key: 'weightKg' as keyof Vitals, code: '29463-7', display: 'Body weight', unit: 'kg' },
-];
+import { collapseVitals } from '@curo/web/clinical';
 
 // ─── Notes ───────────────────────────────────────────────────────────────────
 
@@ -58,23 +46,9 @@ interface FhirObservation {
   extension?: Array<{ url: string; valueString?: string }>;
 }
 
-const VITAL_KEY_BY_CODE = new Map(VITALS_MAP.map(v => [v.code, v.key]));
 const observedAt = (o: FhirObservation) => new Date(o.effectiveDateTime ?? 0).getTime();
 const isNurseRecorded = (o: FhirObservation) =>
   o.extension?.some(e => e.url === 'urn:curo:performerRole' && e.valueString === 'NURSE') ?? false;
-
-// Collapse observations into one Vitals object, keyed strictly by LOINC code (DB
-// displays/units vary, e.g. bpm vs /min). When a field was measured more than once
-// (nurse at triage, then the doctor), the most recent value wins.
-function collapseVitals(observations: FhirObservation[]): Partial<Vitals> {
-  const vitals: Partial<Vitals> = {};
-  for (const o of [...observations].sort((a, b) => observedAt(a) - observedAt(b))) {
-    const key = VITAL_KEY_BY_CODE.get(o?.code?.coding?.[0]?.code ?? '');
-    const value = o?.valueQuantity?.value;
-    if (key && typeof value === 'number') vitals[key] = value;
-  }
-  return vitals;
-}
 
 export interface EncounterVitals {
   vitals: Partial<Vitals>;

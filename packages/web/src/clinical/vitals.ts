@@ -43,6 +43,32 @@ export const VITAL_FIELDS: VitalField[] = [
 
 export const VITAL_FIELD = Object.fromEntries(VITAL_FIELDS.map(f => [f.key, f])) as Record<VitalKey, VitalField>;
 
+// ─── Reading stored observations ────────────────────────────────────────────
+
+/** The parts of a stored vitals Observation that `collapseVitals` reads. */
+export interface VitalObservation {
+  code?: { coding?: Array<{ code?: string }> };
+  valueQuantity?: { value?: number };
+  effectiveDateTime?: string;
+}
+
+const KEY_BY_CODE = new Map(VITAL_FIELDS.map(f => [f.code, f.key]));
+const observedAt = (o: VitalObservation) => new Date(o.effectiveDateTime ?? 0).getTime();
+
+/**
+ * One value per vital from a set of observations, matched by LOINC code (stored displays and
+ * units vary, e.g. bpm vs /min). A vital measured more than once keeps its most recent value.
+ */
+export function collapseVitals(observations: readonly VitalObservation[]): Partial<Record<VitalKey, number>> {
+  const vitals: Partial<Record<VitalKey, number>> = {};
+  for (const o of [...observations].sort((a, b) => observedAt(a) - observedAt(b))) {
+    const key = KEY_BY_CODE.get(o.code?.coding?.[0]?.code ?? "");
+    const value = o.valueQuantity?.value;
+    if (key && typeof value === "number") vitals[key] = value;
+  }
+  return vitals;
+}
+
 // ─── Assessment ─────────────────────────────────────────────────────────────
 
 export type VitalLevel = "normal" | "alert" | "critical";
