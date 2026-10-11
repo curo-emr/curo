@@ -1,35 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@curo/web/ui/table";
+import { KeyRound, Loader2, Users } from "lucide-react";
+import { useDebouncedValue, useServerPagination } from "@curo/web/hooks";
 import { Badge } from "@curo/web/ui/badge";
-import { Input } from "@curo/web/ui/input";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@curo/web/ui/select";
+import { Button } from "@curo/web/ui/button";
+import { EmptyState } from "@curo/web/ui/empty-state";
+import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
+import { LoadError } from "@curo/web/ui/load-error";
 import { Pagination } from "@curo/web/ui/pagination";
-import { Search, Loader2 } from "lucide-react";
-import { ROUTES, ROLE_LABELS, USER_ROLES } from "@/lib/constants";
+import { SearchInput } from "@curo/web/ui/search-input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
+import { toneClass } from "@curo/web/ui/status-badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
+import { ActiveBadge } from "@/components/ui/ActiveBadge";
 import { getUsersPaginated } from "@/lib/api/users";
+import { ROLE_LABELS, ROLE_TONE, ROUTES, USER_ROLES, type UserRole } from "@/lib/constants";
+import { ResetPasswordDialog } from "./ResetPasswordDialog";
 
-const roleBadgeClass: Record<string, string> = {
-  DOCTOR: "bg-status-info-bg text-status-info-text border-status-info-border",
-  RECEPTIONIST: "bg-status-teal-bg text-status-teal-text border-status-teal-border",
-  PHARMACIST: "bg-status-purple-bg text-status-purple-text border-status-purple-border",
-  LAB_STAFF: "bg-status-warning-bg text-status-warning-text border-status-warning-border",
-  NURSE: "bg-status-success-bg text-status-success-text border-status-success-border",
-  PATIENT: "bg-status-neutral-bg text-status-neutral-text border-status-neutral-border",
-  SUPER_ADMIN: "bg-status-error-bg text-status-error-text border-status-error-border",
-};
-
-export function UserList({ initialQuery = "" }: { initialQuery?: string }) {
-  const router = useRouter();
-  const [query, setQuery] = useState(initialQuery);
+export function UserList() {
+  const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const search = useDebouncedValue(query);
 
@@ -43,85 +34,85 @@ export function UserList({ initialQuery = "" }: { initialQuery?: string }) {
       }),
     [search, roleFilter],
   );
+  const filtered = !!search || roleFilter !== "all";
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, email, or role..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-9 bg-muted border"
-          />
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <SearchInput value={query} onChange={setQuery} placeholder="Search by name, email or role…" className="sm:max-w-md sm:flex-1" />
         <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-48 bg-muted border"><SelectValue placeholder="All roles" /></SelectTrigger>
+          <SelectTrigger className="sm:w-48" aria-label="Role"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All roles</SelectItem>
-            {USER_ROLES.map((r) => (
-              <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
-            ))}
+            {USER_ROLES.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="bg-white rounded-md border overflow-hidden shadow-sm">
-        <Table>
-          <TableHeader className="bg-muted">
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-10"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />Loading users…</TableCell></TableRow>
-            ) : isError ? (
-              <TableRow><TableCell colSpan={4} className="text-center text-destructive py-10">Failed to load users.</TableCell></TableRow>
-            ) : users.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-10">No users found.</TableCell></TableRow>
-            ) : (
-              users.map((u) => (
-                <TableRow
-                  key={u.id}
-                  className="hover:bg-muted/50 cursor-pointer"
-                  onClick={() => router.push(ROUTES.USER(u.id))}
-                >
-                  <TableCell>
-                    <Link href={ROUTES.USER(u.id)} className="font-medium text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
-                      {u.name}
-                    </Link>
-                    {u.specialization && <p className="text-xs text-muted-foreground">{u.specialization}</p>}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={roleBadgeClass[u.role] ?? ""}>{ROLE_LABELS[u.role] ?? u.role}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {u.isActive ? (
-                      <Badge variant="outline" className="bg-status-success-bg text-status-success-text border-status-success-border">Active</Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-status-neutral-bg text-status-neutral-text border-status-neutral-border">Suspended</Badge>
-                    )}
-                  </TableCell>
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        {isLoading ? (
+          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 size-5 animate-spin text-primary" /> Loading users…
+          </div>
+        ) : isError ? (
+          <LoadError what="users" />
+        ) : users.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={filtered ? "No users match" : "No users yet"}
+            description={filtered ? "Check the spelling, or try another role." : undefined}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead><span className="sr-only">Actions</span></TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              </TableHeader>
+              <TableBody>
+                {users.map(u => (
+                  <TableRow key={u.id}>
+                    <TableCell>
+                      <Link href={ROUTES.USER(u.id)} className="group flex items-center gap-3">
+                        <InitialsAvatar name={u.name} size="sm" />
+                        <span className="min-w-0">
+                          <span className="block font-medium text-foreground group-hover:text-primary">{u.name}</span>
+                          <span className="block text-xs text-muted-foreground">{u.email}</span>
+                        </span>
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={toneClass(ROLE_TONE[u.role as UserRole] ?? "neutral")}>
+                        {ROLE_LABELS[u.role] ?? u.role}
+                      </Badge>
+                      {u.specialization && <p className="mt-1 text-xs text-muted-foreground">{u.specialization}</p>}
+                    </TableCell>
+                    <TableCell><ActiveBadge active={u.isActive} /></TableCell>
+                    <TableCell className="text-right">
+                      <ResetPasswordDialog
+                        user={u}
+                        trigger={
+                          <Button variant="ghost" size="sm" aria-label={`Reset ${u.name}'s password`}>
+                            <KeyRound /> <span className="hidden md:inline">Reset password</span>
+                          </Button>
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-      />
+      {total > 0 && (
+        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} onPageSizeChange={setPageSize} />
+      )}
     </div>
   );
 }

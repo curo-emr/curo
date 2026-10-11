@@ -61,3 +61,12 @@ export function greeting(now: Date = new Date()): string {
   if (hour < 17) return "Good afternoon";
   return "Good evening";
 }
+
+/**
+ * An amount with two decimals, the way the clinic writes money: "Rs. 1,500.00".
+ * Other currencies keep their code in front: "USD 12.50". Amounts from the API may arrive as strings.
+ */
+export function formatMoney(amount: number | string, currency = "LKR"): string {
+  const digits = Number(amount).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${currency === "LKR" ? "Rs." : currency} ${digits}`;
+}

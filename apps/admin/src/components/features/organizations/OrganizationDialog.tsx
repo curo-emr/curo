@@ -78,7 +78,7 @@ export function OrganizationDialog({ open, onOpenChange, organization, onSaved }
       onSaved(saved);
       onOpenChange(false);
     } catch (err) {
-      toast.error(apiErrorMessage(err, "Failed to save organization"));
+      toast.error(apiErrorMessage(err, "The organization couldn't be saved"));
     } finally {
       setSaving(false);
     }
@@ -123,8 +123,9 @@ export function OrganizationDialog({ open, onOpenChange, organization, onSaved }
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-            <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : isEdit ? "Save" : "Create"}
+            <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="animate-spin" />}
+              {isEdit ? "Save" : "Create"}
             </Button>
           </DialogFooter>
         </form>

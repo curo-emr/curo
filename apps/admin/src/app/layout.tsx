@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${outfitSans.variable} ${geistMono.variable}`}>
-      <body className="antialiased h-screen overflow-hidden flex bg-muted/20">
+      <body className="antialiased h-screen overflow-hidden flex bg-surface" suppressHydrationWarning>
         <QueryProvider>
           <AuthProvider>
             {children}

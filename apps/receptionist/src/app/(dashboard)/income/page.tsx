@@ -20,13 +20,9 @@ import {
 } from "@curo/web/ui/table";
 import { getMyPaymentsPage } from "@/lib/api/payments";
 import { paymentQueries } from "@/lib/queries";
+import { formatMoney } from "@curo/web/format";
 
 type Period = "day" | "week" | "month";
-
-function formatMoney(amount: number, currency = "LKR") {
-  const formatted = amount.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return currency === "LKR" ? `Rs. ${formatted}` : `${currency} ${formatted}`;
-}
 
 function bucketLabel(iso: string, period: Period) {
   try {

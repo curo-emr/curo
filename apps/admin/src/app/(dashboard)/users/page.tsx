@@ -1,35 +1,19 @@
-"use client";
-
-import { Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { Button } from "@curo/web/ui/button";
 import { UserList } from "@/components/features/users/UserList";
 import { ROUTES } from "@/lib/constants";
 
-function UsersPageInner() {
-  const searchParams = useSearchParams();
-  const initialQuery = searchParams.get("q") ?? "";
-  return <UserList initialQuery={initialQuery} />;
-}
-
 export default function UsersPage() {
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <PageHeader title="Users" description="Manage accounts and roles for every portal.">
-        <Link href={ROUTES.NEW_USER}>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <UserPlus className="h-4 w-4 mr-2" /> Add User
-          </Button>
-        </Link>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader title="Users" description="Accounts for every portal. Reset a password from any row.">
+        <Button asChild>
+          <Link href={ROUTES.NEW_USER}><UserPlus /> Add user</Link>
+        </Button>
       </PageHeader>
-
-      {/* UserList fetches its own paginated data (useSearchParams needs Suspense). */}
-      <Suspense fallback={<div className="py-20 text-center text-slate-500">Loading users…</div>}>
-        <UsersPageInner />
-      </Suspense>
+      <UserList />
     </div>
   );
 }

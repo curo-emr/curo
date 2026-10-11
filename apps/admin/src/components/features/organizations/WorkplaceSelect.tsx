@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Label } from "@curo/web/ui/label";
+import { Field, FieldError, FieldLabel } from "@curo/web/ui/field";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@curo/web/ui/select";
@@ -32,19 +32,19 @@ export function WorkplaceSelect({ role, value, onChange, disabled, error }: Work
     : options.length ? `Choose a ${kinds}` : `No active ${kinds} yet`;
 
   return (
-    <div className="space-y-1.5">
-      <Label>
-        Workplace {WORKPLACE_REQUIRED.includes(role) ? "" : <span className="text-muted-foreground font-normal">(optional)</span>}
-      </Label>
+    <Field>
+      <FieldLabel htmlFor="workplace">
+        Workplace {!WORKPLACE_REQUIRED.includes(role) && <span className="font-normal text-muted-foreground">(optional)</span>}
+      </FieldLabel>
       <Select value={value ?? ""} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
+        <SelectTrigger id="workplace"><SelectValue placeholder={placeholder} /></SelectTrigger>
         <SelectContent>
           {options.map((o) => (
             <SelectItem key={o.id} value={o.id}>{o.name}{o.city ? ` · ${o.city}` : ""}</SelectItem>
           ))}
         </SelectContent>
       </Select>
-      {error && <p className="text-xs text-status-error-text">{error}</p>}
-    </div>
+      {error && <FieldError>{error}</FieldError>}
+    </Field>
   );
 }

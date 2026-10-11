@@ -188,6 +188,46 @@ describe('Sign-in', () => {
     });
   });
 
+  describe('POST /auth/users/:id/reset-password', () => {
+    const NEW_PASSWORD = 'Battery-Staple-7';
+
+    it('lets someone locked out sign in with the new password straight away', async () => {
+      const staff = await onboard();
+      for (let i = 0; i < LOGIN_LIMITS.perAccount; i++) {
+        await login(staff.email, 'not-the-password').expect(401);
+      }
+      await login(staff.email, PASSWORD).expect(429);
+      const { id } = await svc.db
+        .getRepository(User)
+        .findOneByOrFail({ email: staff.email });
+
+      await svc.api
+        .post(`/auth/users/${id}/reset-password`)
+        .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
+        .send({ newPassword: NEW_PASSWORD })
+        .expect(201);
+
+      await login(staff.email, NEW_PASSWORD).expect(200);
+    });
+  });
+
+  describe('PATCH /auth/users/:id', () => {
+    it("refuses to suspend the super admin's own account", async () => {
+      const admin = await signedIn(svc, UserRole.SUPER_ADMIN);
+      const { sub } = admin;
+
+      await svc.api
+        .patch(`/auth/users/${sub}`)
+        .set(admin.headers)
+        .send({ isActive: false })
+        .expect(400);
+
+      await expect(
+        svc.db.getRepository(User).findOneByOrFail({ id: sub }),
+      ).resolves.toMatchObject({ isActive: true });
+    });
+  });
+
   describe('GET /auth/users/summary', () => {
     const summary = async () =>
       (

@@ -16,10 +16,6 @@ export function formatDateTime(dateStr: string): string {
   });
 }
 
-export function formatCurrency(amount: number): string {
-  return `Rs. ${amount.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
 export function formatAllergies(allergies: { substance: string; severity: string }[]): string {
   return allergies.map(a => `${a.substance} (${a.severity})`).join(', ');
 }

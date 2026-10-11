@@ -5,8 +5,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoadError } from "@curo/web/ui/load-error";
 import { toast } from "sonner";
 import { Building2, Loader2, Plus } from "lucide-react";
-import { Badge } from "@curo/web/ui/badge";
 import { Button } from "@curo/web/ui/button";
+import { ConfirmAction } from "@curo/web/ui/confirm-action";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageHeader } from "@curo/web/ui/page-header";
 import {
@@ -20,6 +20,7 @@ import { organizationQueries } from "@/lib/queries";
 import { apiErrorMessage } from "@curo/web/api";
 import { ORGANIZATION_TYPES, ORGANIZATION_TYPE_LABELS } from "@/lib/constants";
 import type { Organization } from "@/types";
+import { ActiveBadge } from "@/components/ui/ActiveBadge";
 import { OrganizationDialog } from "./OrganizationDialog";
 
 const byName = (a: Organization, b: Organization) => a.name.localeCompare(b.name);
@@ -43,49 +44,51 @@ export function OrganizationList() {
     void queryClient.invalidateQueries({ queryKey: organizationQueries.all });
   };
 
-  const toggleActive = async (org: Organization) => {
+  const setActive = async (org: Organization, active: boolean) => {
     try {
-      const saved = await updateOrganization(org.id, { active: !org.active });
+      const saved = await updateOrganization(org.id, { active });
       upsert(saved);
       toast.success(saved.active ? "Organization reactivated" : "Organization deactivated", { description: saved.name });
     } catch (err) {
-      toast.error(apiErrorMessage(err, "Failed to update organization"));
+      toast.error(apiErrorMessage(err, "The organization couldn't be changed"));
     }
   };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Organizations" description="Clinics, pharmacies and laboratories, and where staff are assigned.">
-        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setEditing(null)}>
-          <Plus className="h-4 w-4 mr-2" /> Add Organization
+      <PageHeader title="Organizations" description="The clinics, pharmacies and laboratories staff work at.">
+        <Button onClick={() => setEditing(null)}>
+          <Plus /> Add organization
         </Button>
       </PageHeader>
 
       <Select value={typeFilter} onValueChange={setTypeFilter}>
-        <SelectTrigger className="w-48 bg-muted border"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="sm:w-48" aria-label="Type"><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All types</SelectItem>
           {ORGANIZATION_TYPES.map((t) => <SelectItem key={t} value={t}>{ORGANIZATION_TYPE_LABELS[t]}</SelectItem>)}
         </SelectContent>
       </Select>
 
-      <div className="bg-white rounded-md border overflow-x-auto shadow-sm">
+      <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
         {!list.data && list.isError ? (
           <LoadError what="organizations" onRetry={() => void list.refetch()} retrying={list.isFetching} />
         ) : !list.data ? (
-          <div className="py-10 text-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2 text-primary" />Loading organizations…</div>
+          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 size-5 animate-spin text-primary" /> Loading organizations…
+          </div>
         ) : shown.length === 0 ? (
-          <EmptyState icon={Building2} title="No organizations" description="Add a pharmacy before assigning pharmacists to it." action={<Button variant="outline" size="sm" onClick={() => setEditing(null)}>Add Organization</Button>} />
+          <EmptyState icon={Building2} title="No organizations" description="Add a pharmacy before assigning pharmacists to it." action={<Button variant="outline" size="sm" onClick={() => setEditing(null)}>Add organization</Button>} />
         ) : (
           <Table>
-            <TableHeader className="bg-muted">
+            <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>City</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead><span className="sr-only">Actions</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -95,14 +98,21 @@ export function OrganizationList() {
                   <TableCell>{ORGANIZATION_TYPE_LABELS[o.type] ?? o.type}</TableCell>
                   <TableCell className="text-muted-foreground">{o.city ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{o.phone ?? "—"}</TableCell>
-                  <TableCell>
-                    {o.active
-                      ? <Badge variant="outline" className="bg-status-success-bg text-status-success-text border-status-success-border">Active</Badge>
-                      : <Badge variant="outline" className="bg-status-neutral-bg text-status-neutral-text border-status-neutral-border">Inactive</Badge>}
-                  </TableCell>
-                  <TableCell className="text-right space-x-1 whitespace-nowrap">
+                  <TableCell><ActiveBadge active={o.active} inactiveLabel="Inactive" /></TableCell>
+                  <TableCell className="space-x-1 whitespace-nowrap text-right">
                     <Button variant="ghost" size="sm" onClick={() => setEditing(o)}>Edit</Button>
-                    <Button variant="ghost" size="sm" onClick={() => toggleActive(o)}>{o.active ? "Deactivate" : "Reactivate"}</Button>
+                    {o.active ? (
+                      <ConfirmAction
+                        trigger={<Button variant="ghost" size="sm">Deactivate</Button>}
+                        title={`Deactivate ${o.name}?`}
+                        description="It's no longer offered when choosing a workplace, a pharmacy or a lab. Staff who work there now aren't moved. You can reactivate it at any time."
+                        confirmLabel="Deactivate"
+                        destructive
+                        onConfirm={() => setActive(o, false)}
+                      />
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => setActive(o, true)}>Reactivate</Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

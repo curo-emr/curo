@@ -1,21 +1,40 @@
 "use client";
 
+import Link from "next/link";
 import { PageHeader } from "@curo/web/ui/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
+import { AccountProfile } from "@curo/web/shell";
 import { useAuth } from "@curo/web/auth";
+import { ROUTES } from "@/lib/constants";
 
-export default function SettingsPage() {
-  const { user } = useAuth();
+export default function AccountPage() {
+  const { user, logout } = useAuth();
+  const name = user?.name || "Administrator";
+
+  const fields = [
+    { label: "Full name", value: user?.name },
+    { label: "Role", value: "Super admin" },
+    { label: "Email", value: user?.email },
+  ];
+
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <PageHeader title="Settings" description="Your administrator account." />
-      <Card className="shadow-sm border">
-        <CardHeader className="bg-muted/50 border-b pb-3"><CardTitle className="text-base">Account</CardTitle></CardHeader>
-        <CardContent className="p-5 space-y-2 text-sm">
-          <p><span className="text-muted-foreground">Email: </span>{user?.email ?? "—"}</p>
-          <p><span className="text-muted-foreground">Role: </span>{user?.role ?? "—"}</p>
-        </CardContent>
-      </Card>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader title="Account" description="Your administrator account." />
+      <AccountProfile
+        name={name}
+        fields={fields}
+        help={
+          user && (
+            <>
+              To change your password, use Reset password on{" "}
+              <Link href={ROUTES.USER(user.id)} className="font-medium text-foreground underline underline-offset-2">
+                your own user page
+              </Link>
+              .
+            </>
+          )
+        }
+        onSignOut={logout}
+      />
     </div>
   );
 }

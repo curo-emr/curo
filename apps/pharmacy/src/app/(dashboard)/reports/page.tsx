@@ -10,7 +10,7 @@ import { SectionCard } from "@curo/web/ui/section-card";
 import { StackedBar, StackedBarLegend, type BarSegment } from "@curo/web/ui/stacked-bar";
 import { Stat, StatStrip } from "@curo/web/ui/stat";
 import { statusLabel } from "@curo/web/ui/status-badge";
-import { formatCurrency } from "@/lib/utils";
+import { formatMoney } from "@curo/web/format";
 import { dispensingQueries, prescriptionQueries, stockQueries } from "@/lib/queries";
 import { stockLevel } from "@/lib/stock";
 import type { DispenseSummary, GroupedStock } from "@/lib/api/pharmacy";
@@ -57,7 +57,7 @@ function Reports({ dispensing, waiting, stock }: ReportsProps) {
     <div className="space-y-6">
       <StatStrip>
         <Stat label="Dispenses" value={dispensing.count.toLocaleString()} />
-        <Stat label="Taken in" value={formatCurrency(dispensing.revenue)} />
+        <Stat label="Taken in" value={formatMoney(dispensing.revenue)} />
         <Stat label="Prescriptions waiting" value={waiting.length.toLocaleString()} />
         <Stat label="Medicines to reorder" value={stock.filter(d => d.low).length.toLocaleString()} />
       </StatStrip>

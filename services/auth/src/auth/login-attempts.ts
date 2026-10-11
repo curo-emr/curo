@@ -59,8 +59,8 @@ export class LoginAttempts {
     this.countFailure(ipKey(ip));
   }
 
-  /** A correct password clears the account's failures; the IP's stay counted. */
-  recordSuccess(email: string): void {
+  /** A correct password, or a new one set by an admin, clears the account's failures; the IP's stay counted. */
+  clearFailures(email: string): void {
     this.windows.delete(accountKey(email));
   }
 
