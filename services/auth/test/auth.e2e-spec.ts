@@ -303,6 +303,44 @@ describe('Sign-in', () => {
     });
   });
 
+  describe('GET /auth/users by id', () => {
+    it('lists the accounts named by user or practitioner id, in one request', async () => {
+      const admin = await signedIn(svc, UserRole.SUPER_ADMIN);
+      const onboarded = async () =>
+        (
+          await svc.api
+            .post('/auth/users')
+            .set(admin.headers)
+            .send(newStaff())
+            .expect(201)
+        ).body as { id: string; practitionerId: string };
+      const [byUser, byPractitioner, other] = [
+        await onboarded(),
+        await onboarded(),
+        await onboarded(),
+      ];
+
+      const listed = async (query: object) =>
+        (
+          (
+            await svc.api
+              .get('/auth/users')
+              .query(query)
+              .set(admin.headers)
+              .expect(200)
+          ).body as { entry: { resource: { id: string } }[] }
+        ).entry.map((e) => e.resource.id);
+
+      const named = await listed({
+        ids: byUser.id,
+        practitionerIds: byPractitioner.practitionerId,
+      });
+      expect(named.sort()).toEqual([byUser.id, byPractitioner.id].sort());
+      expect(named).not.toContain(other.id);
+      expect(await listed({ ids: 'not-a-uuid' })).toEqual([]);
+    });
+  });
+
   describe('GET /auth/users/summary', () => {
     const summary = async () =>
       (

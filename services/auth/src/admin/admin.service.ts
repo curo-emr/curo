@@ -12,6 +12,7 @@ import { Patient } from '@curo/shared/database';
 import { Gender, UserRole } from '@curo/shared/enums';
 import {
   parsePagination,
+  parseUuidList,
   toSearchset,
   PaginationQuery,
 } from '@curo/shared/fhir';
@@ -140,12 +141,31 @@ export class AdminService {
   }
 
   async listUsers(
-    filters: { search?: string; role?: string },
+    filters: {
+      search?: string;
+      role?: string;
+      ids?: string;
+      practitionerIds?: string;
+    },
     pagination: PaginationQuery = {},
   ) {
     const { page, pageSize, skip, take } = parsePagination(pagination);
     const qb = this.usersRepo.createQueryBuilder('u');
     if (filters.role) qb.andWhere('u.role = :role', { role: filters.role });
+
+    // The accounts named by user or practitioner id; none when no id is valid.
+    if (filters.ids != null || filters.practitionerIds != null) {
+      const userIds = parseUuidList(filters.ids);
+      const namedPracIds = parseUuidList(filters.practitionerIds);
+      const named = [
+        userIds.length ? 'u.id IN (:...userIds)' : '',
+        namedPracIds.length ? 'u.practitionerId IN (:...namedPracIds)' : '',
+      ].filter(Boolean);
+      qb.andWhere(named.length ? `(${named.join(' OR ')})` : 'FALSE', {
+        userIds,
+        namedPracIds,
+      });
+    }
 
     // Names live on practitioner/patient. Pre-resolve matching ids there, then
     // filter the (single-table) user query by id — pushing search into SQL so we

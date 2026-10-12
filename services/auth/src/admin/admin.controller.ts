@@ -34,13 +34,22 @@ export class AdminController {
     return this.adminService.createUser(dto, user);
   }
 
+  /**
+   * `ids` and `practitionerIds` (comma-separated) list the accounts with any of
+   * those user or practitioner ids, e.g. everyone on a page of the audit log.
+   */
   @Get()
   listUsers(
     @Query('search') search?: string,
     @Query('role') role?: string,
+    @Query('ids') ids?: string,
+    @Query('practitionerIds') practitionerIds?: string,
     @Query() query?: PaginationQuery,
   ) {
-    return this.adminService.listUsers({ search, role }, query);
+    return this.adminService.listUsers(
+      { search, role, ids, practitionerIds },
+      query,
+    );
   }
 
   @Get('summary')
