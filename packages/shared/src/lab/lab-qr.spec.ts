@@ -46,6 +46,15 @@ describe('parseLabQr', () => {
       parseLabQr(`http://localhost:3000/lab/visits/${ENCOUNTER_ID}`),
     ).toEqual({ kind: 'visit', encounterId: ENCOUNTER_ID });
   });
+
+  it.each([
+    ['any other text', 'hello world'],
+    ['a URL that names no order', 'https://example.com/menu'],
+    ['an order URL without an id', 'http://localhost:3000/lab/orders/abc'],
+    ['a visit URL without an id', 'http://localhost:3000/lab/visits/abc'],
+  ])('reads nothing from %s', (_, raw) => {
+    expect(parseLabQr(raw)).toBeNull();
+  });
 });
 
 describe('the printed URLs', () => {

@@ -21,6 +21,8 @@ export type LabQrTarget =
 
 const base = () => process.env.GATEWAY_URL || 'http://localhost:3000';
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** The URL on a sample label: the order's, or one test's in a panel. */
 export function labSampleUrl(orderId: string, test?: LabelledTest): string {
   const url = `${base()}/lab/orders/${orderId}`;
@@ -37,9 +39,9 @@ export function labVisitUrl(encounterId: string): string {
 /**
  * Reads the data scanned from a sample label or a visit slip, whatever host or
  * path prefix it was printed with. A bare id, typed in by hand, is read as an
- * order.
+ * order. Null when it names no order or visit, so isn't a Curo lab code.
  */
-export function parseLabQr(raw: string): LabQrTarget {
+export function parseLabQr(raw: string): LabQrTarget | null {
   const [path, qs] = raw.trim().split('?');
   const segs = path.split('/').filter(Boolean);
   const after = (name: string) => {
@@ -48,9 +50,11 @@ export function parseLabQr(raw: string): LabQrTarget {
   };
 
   const encounterId = after('visits');
-  if (encounterId) return { kind: 'visit', encounterId };
+  if (encounterId)
+    return UUID.test(encounterId) ? { kind: 'visit', encounterId } : null;
 
   const orderId = after('orders') ?? segs[segs.length - 1] ?? '';
+  if (!UUID.test(orderId)) return null;
   const params = new URLSearchParams(qs ?? '');
   const testCode = params.get('test') ?? undefined;
   const i = params.get('i');

@@ -9,12 +9,16 @@ export function apiErrorStatus(err: unknown): number | undefined {
   return (err as { response?: { status?: number } })?.response?.status;
 }
 
-/** The request's result, or null when the API answers 404. Any other failure still throws. */
+/**
+ * A record fetched by id, or null when there is none: the API answers 404, or 400
+ * for an id it can't read (a mistyped URL). Any other failure still throws.
+ */
 export async function nullIfNotFound<T>(request: Promise<T>): Promise<T | null> {
   try {
     return await request;
   } catch (err) {
-    if (apiErrorStatus(err) === 404) return null;
+    const status = apiErrorStatus(err);
+    if (status === 404 || status === 400) return null;
     throw err;
   }
 }

@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { INestApplication, Type, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { registerHealthCheck } from '../health';
+import { MalformedInputFilter } from './malformed-input.filter';
 
 export interface ServiceInfo {
   title: string;
@@ -14,8 +15,8 @@ interface ExpressSettings {
 }
 
 /**
- * The request handling every Curo backend shares: validation pipes, CORS and
- * `/health`. The API tests apply it too, so they see what production sees.
+ * The request handling every Curo backend shares: validation pipes, `400` for
+ * values the database can't read, CORS and `/health`. The API tests apply it too, so they see what production sees.
  */
 export function configureApp(app: INestApplication): void {
   // Requests arrive through the API gateway, which sets X-Forwarded-For to the
@@ -24,6 +25,7 @@ export function configureApp(app: INestApplication): void {
   const express = app.getHttpAdapter().getInstance() as ExpressSettings;
   express.set('trust proxy', 1);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalFilters(new MalformedInputFilter(app.getHttpAdapter()));
   app.enableCors();
   registerHealthCheck(app);
 }

@@ -160,6 +160,17 @@ describe('Patient records', () => {
       await expect(savedPatient(body.lastName)).resolves.toBeNull();
     });
 
+    it('rejects a birth date that is not a date', async () => {
+      const body = newPatient({ birthDate: 'not-a-date' });
+
+      const res = await register(body).expect(400);
+
+      expect(res.body).toMatchObject({
+        message: ['birthDate must be a valid ISO 8601 date string'],
+      });
+      await expect(savedPatient(body.lastName)).resolves.toBeNull();
+    });
+
     it('is refused to patients and lab staff', async () => {
       for (const role of [UserRole.PATIENT, UserRole.LAB_STAFF]) {
         const body = newPatient();
@@ -207,6 +218,19 @@ describe('Patient records', () => {
         }
       },
     );
+  });
+
+  describe('GET /patients/:id', () => {
+    it("answers 400, saying why, to an id that isn't a uuid", async () => {
+      const res = await svc.api
+        .get('/patients/not-a-uuid')
+        .set(receptionist.headers)
+        .expect(400);
+
+      expect(res.body).toMatchObject({
+        message: 'invalid input syntax for type uuid: "not-a-uuid"',
+      });
+    });
   });
 
   describe('POST /patients/:id/allergies', () => {

@@ -33,8 +33,7 @@ export class CreatePatientDto {
   @IsString()
   middleName?: string;
 
-  @IsNotEmpty()
-  @IsString()
+  @IsDateString()
   birthDate: string; // YYYY-MM-DD
 
   @IsEnum(Gender)
