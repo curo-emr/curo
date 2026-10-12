@@ -4,14 +4,13 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
-  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Readable } from 'stream';
 import { randomUUID } from 'crypto';
 import { DocumentReference } from '../entities/document-reference.entity';
-import { AuditLog } from '@curo/shared/database';
+import { AuditTrail } from '@curo/shared/audit';
 import { STORAGE_PROVIDER } from '../storage/storage.provider';
 import type { StorageProvider } from '../storage/storage.provider';
 import { CreateDocumentDto } from './dto/create-document.dto';
@@ -35,14 +34,21 @@ interface LabOrderRow {
   encounterId: string | null;
 }
 
+/** The audit entry's record and patient for a document. */
+function auditedDocument(doc: DocumentReference) {
+  return {
+    resourceType: 'DocumentReference',
+    resourceId: doc.id,
+    patientId: doc.patientId,
+  };
+}
+
 @Injectable()
 export class DocumentService {
-  private readonly logger = new Logger(DocumentService.name);
-
   constructor(
     @InjectRepository(DocumentReference)
     private docRepo: Repository<DocumentReference>,
-    @InjectRepository(AuditLog) private auditRepo: Repository<AuditLog>,
+    private auditTrail: AuditTrail,
     @Inject(STORAGE_PROVIDER) private storage: StorageProvider,
   ) {}
 
@@ -82,9 +88,10 @@ export class DocumentService {
       date: new Date(),
     });
     const saved = await this.docRepo.save(doc);
-    await this.audit(user, 'CREATE', saved, {
-      fileName: saved.fileName,
-      type: saved.type,
+    await this.auditTrail.record(user, {
+      ...auditedDocument(saved),
+      action: 'CREATE',
+      changes: { after: { fileName: saved.fileName, type: saved.type } },
     });
     return this.toFhir(saved);
   }
@@ -125,7 +132,10 @@ export class DocumentService {
     if (!doc) throw new NotFoundException('Document not found');
 
     const stream = await this.storage.getStream(doc.filePath);
-    await this.audit(user, 'READ', doc);
+    await this.auditTrail.record(user, {
+      ...auditedDocument(doc),
+      action: 'READ',
+    });
     return { doc, stream };
   }
 
@@ -191,31 +201,6 @@ export class DocumentService {
 
   private sanitize(name: string): string {
     return (name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
-  }
-
-  private async audit(
-    user: AuthUser,
-    action: 'CREATE' | 'READ',
-    doc: DocumentReference,
-    changes?: Record<string, unknown>,
-  ) {
-    try {
-      await this.auditRepo.save(
-        this.auditRepo.create({
-          userId: user.userId,
-          userRole: user.role,
-          action,
-          resourceType: 'DocumentReference',
-          resourceId: doc.id,
-          patientId: doc.patientId,
-          changes: changes ? { after: changes } : undefined,
-          outcome: 'SUCCESS',
-        }),
-      );
-    } catch (err) {
-      // Audit is best-effort; never block the primary operation.
-      this.logger.warn(`Audit write failed: ${(err as Error).message}`);
-    }
   }
 
   private toFhir(doc: DocumentReference) {

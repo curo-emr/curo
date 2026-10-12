@@ -11,7 +11,7 @@ import {
   Organization,
   OrganizationType,
 } from '../entities/organization.entity';
-import { AuditTrail } from '../audit/audit-trail';
+import { AuditTrail } from '@curo/shared/audit';
 import {
   CreateOrganizationDto,
   UpdateOrganizationDto,

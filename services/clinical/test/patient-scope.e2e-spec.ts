@@ -6,6 +6,7 @@ import {
 } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import {
+  auditOf,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -113,6 +114,26 @@ describe('A patient reads only their own clinical record', () => {
     await get(`/lab-orders/${other.labOrderId}`, patient).expect(404);
     await get(`/encounters/${own.encounterId}`, patient).expect(200);
     await get(`/lab-orders/${own.labOrderId}`, patient).expect(200);
+  });
+
+  it("audits a patient opening their own visit, not a refused look at another's", async () => {
+    const readsBy = async (actor: TestActor, resourceId: string) =>
+      (await auditOf(svc, resourceId)).filter(
+        (e) => e.userId === actor.sub && e.action === 'READ',
+      );
+
+    // A sign-in of their own, so earlier tests' reads aren't counted.
+    const me = svc.as(UserRole.PATIENT, { patientId: own.patientId });
+
+    await get(`/encounters/${other.encounterId}`, me).expect(404);
+    await get(`/encounters/${own.encounterId}`, me).expect(200);
+    await get(`/encounters?patientId=${other.patientId}`, me).expect(403);
+
+    expect(await readsBy(me, other.encounterId)).toEqual([]);
+    expect(await readsBy(me, other.patientId)).toEqual([]);
+    expect(await readsBy(me, own.encounterId)).toEqual([
+      expect.objectContaining({ patientId: own.patientId }),
+    ]);
   });
 
   it("reads no notes of another patient's visit", async () => {

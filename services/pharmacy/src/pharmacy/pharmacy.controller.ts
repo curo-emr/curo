@@ -80,8 +80,8 @@ export class PharmacyController {
   @Get('dispense/:id')
   @Roles('PHARMACIST', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  getDispense(@Param('id') id: string) {
-    return this.pharmacyService.getDispense(id);
+  getDispense(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.pharmacyService.getDispense(id, user);
   }
 
   @Get('stock')

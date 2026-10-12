@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, Repository } from 'typeorm';
 import { MedicationRequest } from '@curo/shared/database';
+import { AuditTrail, auditTarget } from '@curo/shared/audit';
 import {
   MedicationRequestStatus,
   NotificationEventType,
@@ -138,6 +139,7 @@ export class PharmacyService {
     private stockRepo: Repository<Stock>,
     @InjectRepository(MedicationCatalog)
     private catalogRepo: Repository<MedicationCatalog>,
+    private auditTrail: AuditTrail,
   ) {}
 
   // Prescribing reference catalog — searchable, paginated FHIR searchset Bundle.
@@ -273,7 +275,7 @@ export class PharmacyService {
         draws.reduce((sum, d) => sum + d.quantity * d.unitPrice, 0),
       );
 
-      return em.save(
+      const dispensed = await em.save(
         em.create(MedicationDispense, {
           medicationRequestId: prescription.id,
           patientId: prescription.patientId,
@@ -298,6 +300,23 @@ export class PharmacyService {
           whenHandedOver: new Date(),
         }),
       );
+      await this.auditTrail.record(
+        pharmacist,
+        [
+          { action: 'CREATE', ...auditTarget('MedicationDispense', dispensed) },
+          {
+            action: 'UPDATE',
+            ...auditTarget('MedicationRequest', prescription),
+            changes: {
+              before: { status: MedicationRequestStatus.ACTIVE },
+              after: { status: MedicationRequestStatus.COMPLETED },
+            },
+            outcomeDescription: 'Pharmacy dispensed the prescription',
+          },
+        ],
+        em,
+      );
+      return dispensed;
     });
 
     return toFhirDispense(saved);
@@ -351,6 +370,7 @@ export class PharmacyService {
       .skip(skip)
       .take(take)
       .getManyAndCount();
+    await this.auditTrail.readPatient(user, patientId, 'dispenses');
     return toSearchset(dispenses.map(toFhirDispense), total, {
       page,
       pageSize,
@@ -390,9 +410,10 @@ export class PharmacyService {
     };
   }
 
-  async getDispense(id: string) {
+  async getDispense(id: string, user: AuthUser) {
     const d = await this.dispenseRepo.findOne({ where: { id } });
     if (!d) throw new NotFoundException(`Dispense record ${id} not found`);
+    await this.auditTrail.read(user, auditTarget('MedicationDispense', d));
     return toFhirDispense(d);
   }
 

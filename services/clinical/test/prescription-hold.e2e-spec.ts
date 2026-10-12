@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { MedicationRequest, Notification } from '@curo/shared/database';
 import { MedicationRequestStatus, UserRole } from '@curo/shared/enums';
-import { startService, type ServiceUnderTest } from '@curo/testing';
+import { auditOf, startService, type ServiceUnderTest } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 
 describe('prescription holds', () => {
@@ -115,6 +115,34 @@ describe('prescription holds', () => {
     expect(res.body).toMatchObject({ status: 'active' });
     expect(res.body).not.toHaveProperty('statusReason');
     expect(await listed('/prescriptions/pending')).toContain(rx.id);
+  });
+
+  it('audits the hold and the release, with the status each moved from and to', async () => {
+    const rx = await prescription();
+    const failed = await prescription(MedicationRequestStatus.COMPLETED);
+
+    await hold(rx, 'Out of stock').expect(200);
+    await release(rx).expect(200);
+    await hold(failed).expect(409);
+
+    await expect(auditOf(svc, rx.id)).resolves.toEqual([
+      expect.objectContaining({
+        action: 'UPDATE',
+        patientId: rx.patientId,
+        changes: {
+          before: { status: 'active' },
+          after: { status: 'on-hold', statusReason: 'Out of stock' },
+        },
+      }),
+      expect.objectContaining({
+        action: 'UPDATE',
+        changes: {
+          before: { status: 'on-hold' },
+          after: { status: 'active', statusReason: null },
+        },
+      }),
+    ]);
+    await expect(auditOf(svc, failed.id)).resolves.toEqual([]);
   });
 
   it('wants a reason', async () => {

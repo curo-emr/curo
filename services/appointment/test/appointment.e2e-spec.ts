@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { UserRole } from '@curo/shared/enums';
 import {
+  auditOf,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -144,6 +145,38 @@ describe('Appointments and the patient queue', () => {
       status: AppointmentStatus.CANCELLED,
       queueStage: null,
     });
+  });
+
+  it('audits the booking, and each change with what it was and became', async () => {
+    const id = await book();
+
+    await setStatus(id, AppointmentStatus.ARRIVED).expect(200);
+    await moveTo(id, QueueStage.WITH_NURSE, nurse).expect(200);
+
+    const { patientId } = await saved(id);
+    const by = (actor: TestActor) => ({ userId: actor.sub, patientId });
+    await expect(auditOf(svc, id)).resolves.toEqual([
+      expect.objectContaining({ ...by(receptionist), action: 'CREATE' }),
+      expect.objectContaining({
+        ...by(receptionist),
+        action: 'UPDATE',
+        changes: {
+          before: { status: AppointmentStatus.BOOKED, queueStage: null },
+          after: {
+            status: AppointmentStatus.ARRIVED,
+            queueStage: QueueStage.WAITING_NURSE,
+          },
+        },
+      }),
+      expect.objectContaining({
+        ...by(nurse),
+        action: 'UPDATE',
+        changes: {
+          before: { queueStage: QueueStage.WAITING_NURSE },
+          after: { queueStage: QueueStage.WITH_NURSE },
+        },
+      }),
+    ]);
   });
 
   describe('double booking', () => {

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Patient } from '@curo/shared/database';
 import { AuthModule } from '../auth/auth.module';
-import { AuditTrailModule } from '../audit/audit-trail';
+import { AuditTrailModule } from '@curo/shared/audit';
 import { User } from '../entities/user.entity';
 import { PatientAccessController } from './patient-access.controller';
 import { PatientAccessService } from './patient-access.service';

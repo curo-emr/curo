@@ -21,7 +21,6 @@ import {
   RolesGuard,
   Roles,
   CurrentUser,
-  patientScope,
   readablePatient,
   type AuthUser,
 } from '@curo/shared/auth';
@@ -36,8 +35,8 @@ export class AppointmentController {
   @Post()
   @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  create(@Body() dto: CreateAppointmentDto) {
-    return this.appointmentService.create(dto);
+  create(@Body() dto: CreateAppointmentDto, @CurrentUser() user: AuthUser) {
+    return this.appointmentService.create(dto, user);
   }
 
   @Get()
@@ -86,6 +85,7 @@ export class AppointmentController {
   ) {
     return this.appointmentService.getPatientAppointments(
       readablePatient(user, patientId),
+      user,
     );
   }
 
@@ -93,14 +93,18 @@ export class AppointmentController {
   @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR', 'PATIENT', 'NURSE')
   @Header('Content-Type', 'application/fhir+json')
   findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.appointmentService.findOne(id, patientScope(user));
+    return this.appointmentService.findOne(id, user);
   }
 
   @Put(':id')
   @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
-  update(@Param('id') id: string, @Body() dto: UpdateAppointmentDto) {
-    return this.appointmentService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAppointmentDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.appointmentService.update(id, dto, user);
   }
 
   // Moves a checked-in patient through the day's flow (nurse triage → doctor).

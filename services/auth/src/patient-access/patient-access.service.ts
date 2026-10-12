@@ -11,7 +11,7 @@ import { UserRole } from '@curo/shared/enums';
 import type { AuthUser } from '@curo/shared/auth';
 import { User } from '../entities/user.entity';
 import { Passwords } from '../auth/passwords';
-import { AuditTrail } from '../audit/audit-trail';
+import { AuditTrail } from '@curo/shared/audit';
 
 /** A patient's sign-in to the patient portal, if they have one. */
 export interface PortalAccess {

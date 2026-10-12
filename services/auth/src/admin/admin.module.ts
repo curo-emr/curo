@@ -6,7 +6,7 @@ import { AuthModule } from '../auth/auth.module';
 import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
 import { Patient } from '@curo/shared/database';
-import { AuditTrailModule } from '../audit/audit-trail';
+import { AuditTrailModule } from '@curo/shared/audit';
 import { OrganizationModule } from '../organization/organization.module';
 
 @Module({

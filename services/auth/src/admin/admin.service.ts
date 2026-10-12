@@ -19,7 +19,7 @@ import {
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import type { AuthUser } from '@curo/shared/auth';
-import { AuditTrail } from '../audit/audit-trail';
+import { AuditTrail } from '@curo/shared/audit';
 import { OrganizationService } from '../organization/organization.service';
 import { Passwords } from '../auth/passwords';
 import { accountChange, accountFields } from './account-change';

@@ -10,6 +10,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
+  EntityManager,
   FindOptionsWhere,
   Repository,
   In,
@@ -32,7 +33,13 @@ import {
   UserRole,
 } from '@curo/shared/enums';
 import { notifyPractitioner } from '@curo/shared/notifications';
-import { workplaceOf, type AuthUser } from '@curo/shared/auth';
+import {
+  actorId,
+  patientScope,
+  workplaceOf,
+  type AuthUser,
+} from '@curo/shared/auth';
+import { AuditTrail, auditTarget, changeOf } from '@curo/shared/audit';
 import {
   parsePagination,
   toSearchset,
@@ -118,6 +125,7 @@ export class ClinicalService implements OnModuleInit {
     @InjectRepository(Icd10Code)
     private icd10Repo: Repository<Icd10Code>,
     private dataSource: DataSource,
+    private auditTrail: AuditTrail,
   ) {}
 
   // ICD-10 diagnosis catalog (DB-backed) — searchable + paginated FHIR searchset.
@@ -172,87 +180,111 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // Encounters
-  async createEncounter(dto: CreateEncounterDto, practitionerId: string) {
+  async createEncounter(dto: CreateEncounterDto, user: AuthUser) {
     const saved = await this.dataSource.transaction(async (em) => {
       const encounter = await em.save(
         Encounter,
-        newEncounter(dto, practitionerId),
+        newEncounter(dto, actorId(user)),
       );
       if (dto.appointmentId)
         await linkTriageVitals(em, dto.appointmentId, encounter.id);
+      await this.auditTrail.record(
+        user,
+        { action: 'CREATE', ...auditTarget('Encounter', encounter) },
+        em,
+      );
       return encounter;
     });
     return toFhirEncounter(saved);
   }
 
-  async getPatientEncounters(patientId: string) {
-    const encounters = await this.encountersRepo.find({
-      where: { patientId },
-      order: { createdAt: 'DESC' },
-    });
-    return encounters.map(toFhirEncounter);
-  }
-
-  // List encounters, optionally filtered by patient (GET /encounters?patientId=)
-  async getEncounters(patientId?: string) {
+  /** Encounters, of one patient's when `patientId` is given. */
+  async getEncounters(user: AuthUser, patientId?: string) {
     const encounters = await this.encountersRepo.find({
       where: patientId ? { patientId } : {},
       order: { createdAt: 'DESC' },
     });
+    await this.auditTrail.readPatient(user, patientId, 'visits');
     return encounters.map(toFhirEncounter);
   }
 
-  /** One visit; with `patientId`, only that patient's (another's is as good as missing). */
-  async getEncounter(id: string, patientId?: string) {
+  /** One visit; a patient's own only, for a patient (another's is as good as missing). */
+  async getEncounter(id: string, user: AuthUser) {
+    const patientId = patientScope(user);
     const e = await this.encountersRepo.findOne({
       where: { id, ...(patientId && { patientId }) },
     });
     if (!e) throw new NotFoundException(`Encounter ${id} not found`);
+    await this.auditTrail.read(user, auditTarget('Encounter', e));
     return toFhirEncounter(e);
   }
 
-  async updateEncounterStatus(id: string, status: EncounterStatus) {
+  async updateEncounterStatus(
+    id: string,
+    status: EncounterStatus,
+    user: AuthUser,
+  ) {
     const e = await this.encountersRepo.findOne({ where: { id } });
     if (!e) throw new NotFoundException(`Encounter ${id} not found`);
+    const changes = changeOf(e, { status });
     e.status = status;
     if (status === EncounterStatus.COMPLETED) e.periodEnd = new Date();
     const saved = await this.encountersRepo.save(e);
+    await this.auditTrail.record(user, {
+      action: 'UPDATE',
+      ...auditTarget('Encounter', saved),
+      changes,
+    });
     return toFhirEncounter(saved);
   }
 
   // Clinical Notes
-  async createNote(dto: CreateNoteDto, practitionerId: string) {
-    const note = this.notesRepo.create({ ...dto, practitionerId });
-    return this.notesRepo.save(note);
+  async createNote(dto: CreateNoteDto, user: AuthUser) {
+    const note = await this.notesRepo.save(
+      this.notesRepo.create({ ...dto, practitionerId: actorId(user) }),
+    );
+    await this.auditTrail.record(user, {
+      action: 'CREATE',
+      ...auditTarget('ClinicalNote', note),
+    });
+    return note;
   }
 
-  /** A visit's notes; with `patientId`, only if the visit is that patient's. */
-  async getEncounterNotes(encounterId: string, patientId?: string) {
-    return this.notesRepo.find({
+  /** A visit's notes; a patient's own visit's only, for a patient. */
+  async getEncounterNotes(encounterId: string, user: AuthUser) {
+    const patientId = patientScope(user);
+    const notes = await this.notesRepo.find({
       where: { encounterId, ...(patientId && { patientId }) },
     });
+    await this.auditTrail.readPatient(user, notes[0]?.patientId, 'visit notes');
+    return notes;
   }
 
-  async getPatientNotes(patientId: string) {
-    return this.notesRepo.find({
+  async getPatientNotes(patientId: string, user: AuthUser) {
+    const notes = await this.notesRepo.find({
       where: { patientId },
       order: { createdAt: 'DESC' },
     });
+    await this.auditTrail.readPatient(user, patientId, 'visit notes');
+    return notes;
   }
 
   // Vitals
-  async addVitals(
-    dto: CreateVitalsDto,
-    practitionerId: string,
-    performerRole: string,
-  ) {
+  async addVitals(dto: CreateVitalsDto, user: AuthUser) {
     const saved = await this.observationsRepo.save(
-      newVital(dto, practitionerId, performerRole),
+      newVital(dto, actorId(user), user.role),
     );
+    await this.auditTrail.record(user, {
+      action: 'CREATE',
+      ...auditTarget('Observation', saved),
+    });
     return toFhirObservation(saved);
   }
 
-  async getVitals(filter: { patientId?: string; appointmentId?: string }) {
+  async getVitals(
+    user: AuthUser,
+    filter: { patientId?: string; appointmentId?: string },
+  ) {
     if (!filter.patientId && !filter.appointmentId) {
       throw new BadRequestException('patientId or appointmentId is required');
     }
@@ -265,14 +297,20 @@ export class ClinicalService implements OnModuleInit {
       where,
       order: { effectiveDateTime: 'DESC' },
     });
+    await this.auditTrail.readPatient(
+      user,
+      filter.patientId ?? obs[0]?.patientId,
+      'vital signs',
+    );
     return obs.map(toFhirObservation);
   }
 
-  async getVitalsTrend(patientId: string, code: string) {
+  async getVitalsTrend(patientId: string, code: string, user: AuthUser) {
     const obs = await this.observationsRepo.find({
       where: { patientId, code, category: 'vital-signs' },
       order: { effectiveDateTime: 'ASC' },
     });
+    await this.auditTrail.readPatient(user, patientId, 'vital signs');
     return obs.map(toFhirObservation);
   }
 
@@ -281,7 +319,11 @@ export class ClinicalService implements OnModuleInit {
    * this does NOT filter by category, so it also returns lab-sourced values
    * (e.g. glucose, cholesterol) for charting alongside vitals like blood pressure.
    */
-  async getObservationsTrend(patientId: string, codes: string[]) {
+  async getObservationsTrend(
+    patientId: string,
+    codes: string[],
+    user: AuthUser,
+  ) {
     const where: FindOptionsWhere<Observation> = {
       patientId,
       ...(codes.length && { code: In(codes) }),
@@ -290,39 +332,39 @@ export class ClinicalService implements OnModuleInit {
       where,
       order: { effectiveDateTime: 'ASC' },
     });
+    await this.auditTrail.readPatient(user, patientId, 'observations');
     return obs.map(toFhirObservation);
   }
 
   // Prescriptions
-  async createPrescription(dto: CreatePrescriptionDto, practitionerId: string) {
-    const [saved] = await savePrescriptions(
-      this.medsRepo.manager,
-      [dto],
-      practitionerId,
-    );
+  async createPrescription(dto: CreatePrescriptionDto, user: AuthUser) {
+    const saved = await this.dataSource.transaction(async (em) => {
+      const [med] = await savePrescriptions(em, [dto], actorId(user));
+      await this.auditTrail.record(
+        user,
+        { action: 'CREATE', ...auditTarget('MedicationRequest', med) },
+        em,
+      );
+      return med;
+    });
     return toFhirMedRequest(saved);
   }
 
-  async getPatientPrescriptions(patientId: string) {
-    const meds = await this.medsRepo.find({
-      where: { patientId },
-      order: { authoredOn: 'DESC' },
-    });
-    return meds.map(toFhirMedRequest);
-  }
-
-  async getPrescriptions(patientId?: string) {
+  /** Prescriptions, of one patient's when `patientId` is given. */
+  async getPrescriptions(user: AuthUser, patientId?: string) {
     const where = patientId ? { patientId } : {};
     const meds = await this.medsRepo.find({
       where,
       order: { authoredOn: 'DESC' },
     });
+    await this.auditTrail.readPatient(user, patientId, 'prescriptions');
     return meds.map(toFhirMedRequest);
   }
 
-  async getPrescription(id: string) {
+  async getPrescription(id: string, user: AuthUser) {
     const med = await this.medsRepo.findOne({ where: { id } });
     if (!med) throw new NotFoundException(`Prescription ${id} not found`);
+    await this.auditTrail.read(user, auditTarget('MedicationRequest', med));
     return toFhirMedRequest(med);
   }
 
@@ -362,7 +404,7 @@ export class ClinicalService implements OnModuleInit {
     const statusReason = reason.trim();
     const med = await this.dataSource.transaction(async (em) => {
       const held = await this.changeStatus(
-        em.getRepository(MedicationRequest),
+        em,
         id,
         pharmacist,
         MedicationRequestStatus.ACTIVE,
@@ -382,12 +424,11 @@ export class ClinicalService implements OnModuleInit {
 
   /** Returns a held prescription to the ones waiting to be dispensed. */
   async releasePrescription(id: string, pharmacist: AuthUser) {
-    const med = await this.changeStatus(
-      this.medsRepo,
-      id,
-      pharmacist,
-      MedicationRequestStatus.ON_HOLD,
-      { status: MedicationRequestStatus.ACTIVE, statusReason: null },
+    const med = await this.dataSource.transaction((em) =>
+      this.changeStatus(em, id, pharmacist, MedicationRequestStatus.ON_HOLD, {
+        status: MedicationRequestStatus.ACTIVE,
+        statusReason: null,
+      }),
     );
     return toFhirMedRequest(med);
   }
@@ -395,15 +436,16 @@ export class ClinicalService implements OnModuleInit {
   /**
    * Moves a prescription of the pharmacist's own pharmacy (or one that names
    * none) out of `from`, only if it is still in it, so a dispense or another
-   * hold racing this one can't be overwritten.
+   * hold racing this one can't be overwritten. Audited in `em`'s transaction.
    */
   private async changeStatus(
-    repo: Repository<MedicationRequest>,
+    em: EntityManager,
     id: string,
     pharmacist: AuthUser,
     from: MedicationRequestStatus,
     change: Pick<MedicationRequest, 'status' | 'statusReason'>,
   ) {
+    const repo = em.getRepository(MedicationRequest);
     const pharmacy = workplaceOf(pharmacist, 'pharmacy');
     const sentTo = await repo.findOne({
       where: { id },
@@ -421,6 +463,15 @@ export class ClinicalService implements OnModuleInit {
     const med = await repo.findOneByOrFail({ id });
     if (!affected)
       throw new ConflictException(`This prescription is ${med.status}`);
+    await this.auditTrail.record(
+      pharmacist,
+      {
+        action: 'UPDATE',
+        ...auditTarget('MedicationRequest', med),
+        changes: { before: { status: from }, after: change },
+      },
+      em,
+    );
     return med;
   }
 
@@ -451,10 +502,16 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // Lab Orders
-  async createLabOrder(dto: CreateLabOrderDto, practitionerId: string) {
-    const { order, qr } = await this.dataSource.transaction((em) =>
-      saveLabOrder(em, dto, practitionerId),
-    );
+  async createLabOrder(dto: CreateLabOrderDto, user: AuthUser) {
+    const { order, qr } = await this.dataSource.transaction(async (em) => {
+      const saved = await saveLabOrder(em, dto, actorId(user));
+      await this.auditTrail.record(
+        user,
+        { action: 'CREATE', ...auditTarget('ServiceRequest', saved.order) },
+        em,
+      );
+      return saved;
+    });
     return {
       ...toFhirServiceRequest(order),
       qrCode: { id: qr.id, imageBase64: qr.imageBase64 },
@@ -505,21 +562,25 @@ export class ClinicalService implements OnModuleInit {
     return out;
   }
 
-  async getLabOrders(patientId?: string) {
+  /** Lab orders, of one patient's when `patientId` is given. */
+  async getLabOrders(user: AuthUser, patientId?: string) {
     const where = patientId ? { patientId } : {};
     const orders = await this.labOrdersRepo.find({
       where,
       order: { authoredOn: 'DESC' },
     });
+    await this.auditTrail.readPatient(user, patientId, 'lab orders');
     return orders.map(toFhirServiceRequest);
   }
 
-  /** One lab order; with `patientId`, only that patient's (another's is as good as missing). */
-  async getLabOrder(id: string, patientId?: string) {
+  /** One lab order; a patient's own only, for a patient (another's is as good as missing). */
+  async getLabOrder(id: string, user: AuthUser) {
+    const patientId = patientScope(user);
     const order = await this.labOrdersRepo.findOne({
       where: { id, ...(patientId && { patientId }) },
     });
     if (!order) throw new NotFoundException(`Lab order ${id} not found`);
+    await this.auditTrail.read(user, auditTarget('ServiceRequest', order));
     const qr = order.qrCodeId
       ? await this.qrCodesRepo.findOne({ where: { id: order.qrCodeId } })
       : null;
@@ -537,13 +598,19 @@ export class ClinicalService implements OnModuleInit {
   }
 
   // Tasks
-  async createTask(dto: CreateTaskDto, ownerId: string): Promise<Task> {
-    const task = this.tasksRepo.create({
-      ...dto,
-      ownerId,
-      authoredOn: new Date(),
+  async createTask(dto: CreateTaskDto, user: AuthUser): Promise<Task> {
+    const task = await this.tasksRepo.save(
+      this.tasksRepo.create({
+        ...dto,
+        ownerId: actorId(user),
+        authoredOn: new Date(),
+      }),
+    );
+    await this.auditTrail.record(user, {
+      action: 'CREATE',
+      ...auditTarget('Task', task),
     });
-    return this.tasksRepo.save(task);
+    return task;
   }
 
   async getDoctorTasks(ownerId: string): Promise<Task[]> {
@@ -567,10 +634,21 @@ export class ClinicalService implements OnModuleInit {
     return this.tasksRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 
-  async updateTask(id: string, update: UpdateTaskDto): Promise<Task> {
+  async updateTask(
+    id: string,
+    update: UpdateTaskDto,
+    user: AuthUser,
+  ): Promise<Task> {
     const task = await this.tasksRepo.findOne({ where: { id } });
     if (!task) throw new NotFoundException(`Task ${id} not found`);
+    const changes = changeOf(task, update);
     Object.assign(task, update, { lastModified: new Date() });
-    return this.tasksRepo.save(task);
+    const saved = await this.tasksRepo.save(task);
+    await this.auditTrail.record(user, {
+      action: 'UPDATE',
+      ...auditTarget('Task', saved),
+      changes,
+    });
+    return saved;
   }
 }

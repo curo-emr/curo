@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, In } from 'typeorm';
 import { Payment } from '../entities/payment.entity';
-import { AuditLog } from '@curo/shared/database';
+import { AuditTrail } from '@curo/shared/audit';
 import {
   dayBounds,
   parseList,
@@ -28,8 +28,7 @@ export class PaymentService {
   constructor(
     @InjectRepository(Payment)
     private paymentsRepo: Repository<Payment>,
-    @InjectRepository(AuditLog)
-    private auditRepo: Repository<AuditLog>,
+    private auditTrail: AuditTrail,
   ) {}
 
   /** Query over the payments that count as income, aliased `p`. */
@@ -75,25 +74,20 @@ export class PaymentService {
     });
     const saved = await this.paymentsRepo.save(payment);
 
-    await this.auditRepo.save(
-      this.auditRepo.create({
-        userId: user.userId,
-        userRole: user.role,
-        action: 'CREATE',
-        resourceType: 'Payment',
-        resourceId: saved.id,
-        patientId: saved.patientId,
-        changes: {
-          after: {
-            amount: saved.amount,
-            currency: saved.currency,
-            receiptNumber: saved.receiptNumber,
-          },
+    await this.auditTrail.record(user, {
+      action: 'CREATE',
+      resourceType: 'Payment',
+      resourceId: saved.id,
+      patientId: saved.patientId,
+      changes: {
+        after: {
+          amount: saved.amount,
+          currency: saved.currency,
+          receiptNumber: saved.receiptNumber,
         },
-        outcome: 'success',
-        outcomeDescription: 'Receptionist recorded a visit payment',
-      }),
-    );
+      },
+      outcomeDescription: 'Receptionist recorded a visit payment',
+    });
 
     return saved;
   }
@@ -272,27 +266,22 @@ export class PaymentService {
 
     const saved = await this.paymentsRepo.save(payment);
 
-    await this.auditRepo.save(
-      this.auditRepo.create({
-        userId: user.userId,
-        userRole: user.role,
-        action: 'UPDATE',
-        resourceType: 'Payment',
-        resourceId: id,
-        patientId: payment.patientId,
-        changes: {
-          before,
-          after: {
-            amount: saved.amount,
-            paymentMethod: saved.paymentMethod,
-            status: saved.status,
-            notes: saved.notes,
-          },
+    await this.auditTrail.record(user, {
+      action: 'UPDATE',
+      resourceType: 'Payment',
+      resourceId: id,
+      patientId: payment.patientId,
+      changes: {
+        before,
+        after: {
+          amount: saved.amount,
+          paymentMethod: saved.paymentMethod,
+          status: saved.status,
+          notes: saved.notes,
         },
-        outcome: 'success',
-        outcomeDescription: 'Admin corrected a recorded payment',
-      }),
-    );
+      },
+      outcomeDescription: 'Admin corrected a recorded payment',
+    });
 
     return saved;
   }

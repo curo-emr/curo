@@ -5,3 +5,4 @@ export {
   type TestActor,
 } from './start-service';
 export { daysFromToday } from './clinic-days';
+export { auditOf } from './audit';

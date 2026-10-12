@@ -3,6 +3,7 @@ import { Condition, Patient } from '@curo/shared/database';
 import { ConditionClinicalStatus, Gender, UserRole } from '@curo/shared/enums';
 import { luhnCheckDigit } from '@curo/shared/identifiers';
 import {
+  auditOf,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -512,6 +513,80 @@ describe('Patient records', () => {
         .set(receptionist.headers)
         .expect(200);
       expect((res.body as { total: number }).total).toBe(2);
+    });
+  });
+
+  describe('audit trail', () => {
+    /** Registers a patient with one allergy; returns the ids of both. */
+    async function registeredWithAllergy() {
+      const res = await register(
+        newPatient({ allergies: [{ code: 'latex', display: 'Latex' }] }),
+      ).expect(201);
+      const { id } = res.body as { id: string };
+      const [allergy] = await svc.db
+        .getRepository(AllergyIntolerance)
+        .findBy({ patientId: id });
+      return { patientId: id, allergyId: allergy.id };
+    }
+
+    it('records the registration, and each allergy taken down with it', async () => {
+      const { patientId, allergyId } = await registeredWithAllergy();
+
+      const by = { userId: receptionist.sub, patientId, action: 'CREATE' };
+      await expect(auditOf(svc, patientId)).resolves.toEqual([
+        expect.objectContaining({ ...by, resourceType: 'Patient' }),
+      ]);
+      await expect(auditOf(svc, allergyId)).resolves.toEqual([
+        expect.objectContaining({ ...by, resourceType: 'AllergyIntolerance' }),
+      ]);
+    });
+
+    it('records a change with what it was and what it became', async () => {
+      const { patientId } = await registeredWithAllergy();
+
+      await svc.api
+        .patch(`/patients/${patientId}`)
+        .set(receptionist.headers)
+        .send({ occupation: 'Farmer' })
+        .expect(200);
+
+      const entries = await auditOf(svc, patientId);
+      expect(entries.at(-1)).toMatchObject({
+        action: 'UPDATE',
+        changes: {
+          before: { occupation: null },
+          after: { occupation: 'Farmer' },
+        },
+      });
+    });
+
+    it("records reads of the patient and of their chart, not a patient's refused read of another", async () => {
+      const { patientId } = await registeredWithAllergy();
+      const nurse = svc.as(UserRole.NURSE);
+
+      await svc.api
+        .get(`/patients/${patientId}`)
+        .set(nurse.headers)
+        .expect(200);
+      await svc.api
+        .get(`/patients/${patientId}/allergies`)
+        .set(nurse.headers)
+        .expect(200);
+      await svc.api
+        .get(`/patients/${patientId}/allergies`)
+        .set(svc.as(UserRole.PATIENT).headers)
+        .expect(403);
+
+      const reads = (await auditOf(svc, patientId)).filter(
+        (e) => e.action === 'READ',
+      );
+      expect(reads).toEqual([
+        expect.objectContaining({ userId: nurse.sub, patientId }),
+        expect.objectContaining({
+          userId: nurse.sub,
+          outcomeDescription: "Read the patient's allergies",
+        }),
+      ]);
     });
   });
 });

@@ -20,6 +20,7 @@ import {
 } from '@curo/shared/enums';
 import { actorId, patientScope, type AuthUser } from '@curo/shared/auth';
 import { notifyPractitioner } from '@curo/shared/notifications';
+import { AuditTrail, auditTarget, changeOf } from '@curo/shared/audit';
 import { clinicDate } from '@curo/shared/config';
 import {
   escapeLike,
@@ -114,6 +115,7 @@ export class LabService {
     @InjectRepository(QCLog)
     private qcLogRepo: Repository<QCLog>,
     private dataSource: DataSource,
+    private auditTrail: AuditTrail,
   ) {}
 
   // Tests a given lab offers (doctors browse before ordering).
@@ -262,6 +264,7 @@ export class LabService {
   /** An order with the labels to print for its samples: one per test in a panel, else the order's own. */
   async getOrder(id: string, user: AuthUser) {
     const order = await this.findOrder(id, user);
+    await this.auditTrail.read(user, auditTarget('ServiceRequest', order));
     const qrs = await this.qrRepo.find({ where: { serviceRequestId: id } });
     const orderQr = qrs.find((q) => q.id === order.qrCodeId) ?? null;
     const byKey = new Map(
@@ -334,11 +337,7 @@ export class LabService {
       await this.qrRepo.save(qr);
     }
 
-    if (!order.receivedAt) {
-      order.receivedAt = new Date();
-      order.performerId = performerId;
-      await this.ordersRepo.save(order);
-    }
+    if (!order.receivedAt) await this.receive(order, user);
 
     const scannedTest =
       testCode != null
@@ -355,10 +354,21 @@ export class LabService {
 
   async receiveOrder(id: string, user: AuthUser) {
     const order = await this.findOrder(id, user);
-    order.receivedAt = new Date();
-    order.performerId = actorId(user);
-    const saved = await this.ordersRepo.save(order);
-    return toFhirServiceRequest(saved);
+    return toFhirServiceRequest(await this.receive(order, user));
+  }
+
+  /** Marks `order`'s sample received at `user`'s lab. */
+  private async receive(order: ServiceRequest, user: AuthUser) {
+    const received = { receivedAt: new Date(), performerId: actorId(user) };
+    const changes = changeOf(order, received);
+    const saved = await this.ordersRepo.save(Object.assign(order, received));
+    await this.auditTrail.record(user, {
+      action: 'UPDATE',
+      ...auditTarget('ServiceRequest', saved),
+      changes,
+      outcomeDescription: 'Lab received the sample',
+    });
+    return saved;
   }
 
   /**
@@ -453,6 +463,22 @@ export class LabService {
         issued: now,
       });
 
+      await this.auditTrail.record(
+        performer,
+        [
+          { action: 'CREATE', ...auditTarget('DiagnosticReport', report) },
+          {
+            action: 'UPDATE',
+            ...auditTarget('ServiceRequest', order),
+            changes: {
+              before: { status: ServiceRequestStatus.ACTIVE },
+              after: { status: ServiceRequestStatus.COMPLETED },
+            },
+            outcomeDescription: 'Lab reported the results',
+          },
+        ],
+        em,
+      );
       await notifyPractitioner(em, order.requesterId, {
         eventType: NotificationEventType.LAB_RESULTS_READY,
         title: 'Lab results ready',
@@ -489,6 +515,16 @@ export class LabService {
       .skip(skip)
       .take(take)
       .getManyAndCount();
+    // A visit's or an order's reports are all one patient's.
+    const onePatient =
+      filter.encounterId || filter.serviceRequestId
+        ? reports[0]?.patientId
+        : undefined;
+    await this.auditTrail.readPatient(
+      user,
+      filter.patientId ?? onePatient,
+      'lab reports',
+    );
     return toSearchset(reports.map(toFhirReport), total, {
       page,
       pageSize,
@@ -502,6 +538,7 @@ export class LabService {
       .andWhere('r.id = :id', { id })
       .getOne();
     if (!r) throw new NotFoundException(`Report ${id} not found`);
+    await this.auditTrail.read(user, auditTarget('DiagnosticReport', r));
     return toFhirReport(r);
   }
 

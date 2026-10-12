@@ -34,12 +34,17 @@ import {
   toFhirObservation,
 } from './fhir.mapper';
 import { actorId, type AuthUser } from '@curo/shared/auth';
+import { AuditTrail, auditTarget, changeOf } from '@curo/shared/audit';
 
 // Who may change or retire an allergy once recorded; anyone who records them may add one.
 const ALLERGY_EDITORS = new Set<string>([
   UserRole.DOCTOR,
   UserRole.SUPER_ADMIN,
 ]);
+
+/** A patient as an audit target: the record is the patient's own. */
+const patientRecord = (p: Patient) =>
+  auditTarget('Patient', { id: p.id, patientId: p.id });
 
 @Injectable()
 export class PatientService implements OnModuleInit {
@@ -55,6 +60,7 @@ export class PatientService implements OnModuleInit {
     @InjectRepository(Observation)
     private observationsRepo: Repository<Observation>,
     private dataSource: DataSource,
+    private auditTrail: AuditTrail,
   ) {}
 
   private async generateUniquePhn(): Promise<string> {
@@ -90,8 +96,8 @@ export class PatientService implements OnModuleInit {
     }
   }
 
-  /** Registers a patient, with any allergies recorded by `recorderId`, in one transaction. */
-  async create(dto: CreatePatientDto, recorderId: string) {
+  /** Registers a patient, with any allergies `recorder` took down, in one transaction. */
+  async create(dto: CreatePatientDto, recorder: AuthUser) {
     const { allergies = [], ...fields } = dto;
     // Generate unique patient code
     let patientCode: string;
@@ -109,7 +115,12 @@ export class PatientService implements OnModuleInit {
       const saved = await em.save(
         em.create(Patient, { ...fields, patientCode, personalHealthNumber }),
       );
-      await this.addAllergies(em, saved.id, allergies, recorderId);
+      await this.auditTrail.record(
+        recorder,
+        { action: 'CREATE', ...patientRecord(saved) },
+        em,
+      );
+      await this.addAllergies(em, saved.id, allergies, recorder);
       return toFhirPatient(saved);
     });
   }
@@ -172,10 +183,7 @@ export class PatientService implements OnModuleInit {
     });
   }
 
-  async findOne(
-    id: string,
-    requestingUser: Pick<AuthUser, 'role' | 'userId' | 'patientId'>,
-  ) {
+  async findOne(id: string, requestingUser: AuthUser) {
     const patient = await this.patientsRepo.findOne({ where: { id } });
     if (!patient) throw new NotFoundException(`Patient ${id} not found`);
 
@@ -187,15 +195,12 @@ export class PatientService implements OnModuleInit {
         throw new ForbiddenException('Patients can only view their own record');
       }
     }
+    await this.auditTrail.read(requestingUser, patientRecord(patient));
     return toFhirPatient(patient, requestingUser.role);
   }
 
   /** Updates the patient and their allergies together: a failed allergy change saves nothing. */
-  async update(
-    id: string,
-    dto: UpdatePatientDto,
-    requestingUser: Pick<AuthUser, 'role' | 'userId' | 'practitionerId'>,
-  ) {
+  async update(id: string, dto: UpdatePatientDto, requestingUser: AuthUser) {
     if (requestingUser.role === UserRole.PATIENT) {
       throw new ForbiddenException(
         'Patients cannot update records via this endpoint',
@@ -211,33 +216,44 @@ export class PatientService implements OnModuleInit {
     return this.dataSource.transaction(async (em) => {
       const patient = await em.findOne(Patient, { where: { id } });
       if (!patient) throw new NotFoundException(`Patient ${id} not found`);
+      const changes = changeOf(patient, fields);
       Object.assign(patient, fields);
       const saved = await em.save(patient);
-      await this.addAllergies(em, id, newAllergies, actorId(requestingUser));
-      await this.changeAllergies(em, id, allergyUpdates);
+      await this.auditTrail.record(
+        requestingUser,
+        { action: 'UPDATE', ...patientRecord(saved), changes },
+        em,
+      );
+      await this.addAllergies(em, id, newAllergies, requestingUser);
+      await this.changeAllergies(em, id, allergyUpdates, requestingUser);
       return toFhirPatient(saved);
     });
   }
 
-  async findByCode(code: string, role?: string) {
+  async findByCode(code: string, user: AuthUser) {
     const patient = await this.patientsRepo.findOne({
       where: { patientCode: code },
     });
     if (!patient)
       throw new NotFoundException(`Patient with code ${code} not found`);
-    return toFhirPatient(patient, role);
+    await this.auditTrail.read(user, patientRecord(patient));
+    return toFhirPatient(patient, user.role);
   }
 
-  async findMyRecord(userId: string) {
-    const patient = await this.patientsRepo.findOne({ where: { userId } });
+  async findMyRecord(user: AuthUser) {
+    const patient = await this.patientsRepo.findOne({
+      where: { userId: user.userId },
+    });
     if (!patient)
       throw new NotFoundException('Patient record not found for this user');
+    await this.auditTrail.read(user, patientRecord(patient));
     return toFhirPatient(patient);
   }
 
   // Allergies: the patient's current ones; retired ones stay on record but aren't listed.
-  async getAllergies(patientId: string) {
+  async getAllergies(patientId: string, user: AuthUser) {
     const allergies = await this.allergiesRepo.find({ where: { patientId } });
+    await this.auditTrail.readPatient(user, patientId, 'allergies');
     return allergies.filter(isCurrentAllergy).map(toFhirAllergy);
   }
 
@@ -248,16 +264,12 @@ export class PatientService implements OnModuleInit {
     return allergies.filter(isCurrentAllergy).map(toFhirAllergy);
   }
 
-  async addAllergy(
-    patientId: string,
-    dto: CreateAllergyDto,
-    recorderId: string,
-  ) {
+  async addAllergy(patientId: string, dto: CreateAllergyDto, user: AuthUser) {
     return this.dataSource.transaction(async (em) => {
       if (!(await em.exists(Patient, { where: { id: patientId } }))) {
         throw new NotFoundException(`Patient ${patientId} not found`);
       }
-      const [saved] = await this.addAllergies(em, patientId, [dto], recorderId);
+      const [saved] = await this.addAllergies(em, patientId, [dto], user);
       return toFhirAllergy(saved);
     });
   }
@@ -267,31 +279,44 @@ export class PatientService implements OnModuleInit {
     patientId: string,
     allergyId: string,
     dto: UpdateAllergyDto,
+    user: AuthUser,
   ) {
     return this.dataSource.transaction(async (em) => {
-      const [saved] = await this.changeAllergies(em, patientId, [
-        { ...dto, id: allergyId },
-      ]);
+      const [saved] = await this.changeAllergies(
+        em,
+        patientId,
+        [{ ...dto, id: allergyId }],
+        user,
+      );
       return toFhirAllergy(saved);
     });
   }
 
-  private addAllergies(
+  private async addAllergies(
     em: EntityManager,
     patientId: string,
     dtos: CreateAllergyDto[],
-    recorderId: string,
+    recorder: AuthUser,
   ) {
-    return em.save(
+    const saved = await em.save(
       dtos.map((dto) =>
         em.create(AllergyIntolerance, {
           clinicalStatus: 'active',
           ...allergyColumns(dto),
           patientId,
-          practitionerId: recorderId,
+          practitionerId: actorId(recorder),
         }),
       ),
     );
+    await this.auditTrail.record(
+      recorder,
+      saved.map((a) => ({
+        action: 'CREATE',
+        ...auditTarget('AllergyIntolerance', a),
+      })),
+      em,
+    );
+    return saved;
   }
 
   /**
@@ -302,62 +327,83 @@ export class PatientService implements OnModuleInit {
     em: EntityManager,
     patientId: string,
     updates: AllergyUpdateDto[],
+    user: AuthUser,
   ) {
     if (!updates.length) return [];
     const recorded = await em.find(AllergyIntolerance, {
       where: { patientId, id: In(updates.map((u) => u.id)) },
     });
-    return em.save(
-      updates.map((update) => {
-        const allergy = recorded.find((a) => a.id === update.id);
-        if (!allergy) {
-          throw new NotFoundException(
-            `Allergy ${update.id} not found for patient ${patientId}`,
-          );
-        }
-        return Object.assign(allergy, allergyColumns(update, allergy));
-      }),
+    const changed = updates.map((update) => {
+      const allergy = recorded.find((a) => a.id === update.id);
+      if (!allergy) {
+        throw new NotFoundException(
+          `Allergy ${update.id} not found for patient ${patientId}`,
+        );
+      }
+      const columns = allergyColumns(update, allergy);
+      return { allergy, changes: changeOf(allergy, columns), columns };
+    });
+    const saved = await em.save(
+      changed.map(({ allergy, columns }) => Object.assign(allergy, columns)),
     );
+    await this.auditTrail.record(
+      user,
+      changed.map(({ allergy, changes }) => ({
+        action: 'UPDATE',
+        ...auditTarget('AllergyIntolerance', allergy),
+        changes,
+      })),
+      em,
+    );
+    return saved;
   }
 
   // Conditions
-  async getConditions(patientId: string) {
+  async getConditions(patientId: string, user: AuthUser) {
     const conditions = await this.conditionsRepo.find({ where: { patientId } });
+    await this.auditTrail.readPatient(user, patientId, 'conditions');
     return conditions.map(toFhirCondition);
   }
 
   async addCondition(
     patientId: string,
     dto: CreateConditionDto,
-    practitionerId: string,
+    user: AuthUser,
   ) {
     const patient = await this.patientsRepo.findOne({
       where: { id: patientId },
     });
     if (!patient) throw new NotFoundException(`Patient ${patientId} not found`);
-    const condition = this.conditionsRepo.create({
-      ...dto,
-      patientId,
-      practitionerId,
+    const saved = await this.conditionsRepo.save(
+      this.conditionsRepo.create({
+        ...dto,
+        patientId,
+        practitionerId: actorId(user),
+      }),
+    );
+    await this.auditTrail.record(user, {
+      action: 'CREATE',
+      ...auditTarget('Condition', saved),
     });
-    const saved = await this.conditionsRepo.save(condition);
     return toFhirCondition(saved);
   }
 
   // Vitals / Observations
-  async getVitals(patientId: string) {
+  async getVitals(patientId: string, user: AuthUser) {
     const obs = await this.observationsRepo.find({
       where: { patientId, category: 'vital-signs' },
       order: { effectiveDateTime: 'DESC' },
     });
+    await this.auditTrail.readPatient(user, patientId, 'vital signs');
     return obs.map(toFhirObservation);
   }
 
-  async getVitalsTrend(patientId: string, code: string) {
+  async getVitalsTrend(patientId: string, code: string, user: AuthUser) {
     const obs = await this.observationsRepo.find({
       where: { patientId, category: 'vital-signs', code },
       order: { effectiveDateTime: 'ASC' },
     });
+    await this.auditTrail.readPatient(user, patientId, 'vital signs');
     return obs.map(toFhirObservation);
   }
 }

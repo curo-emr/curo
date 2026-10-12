@@ -1,10 +1,14 @@
 {
   "name": "@curo/shared",
   "version": "1.0.0",
-  "description": "Shared kernel for Curo EMR backends: auth guards, cross-service entities, enums and DTOs, FHIR helpers, patient identifiers, system notifications, env secrets, health check and service bootstrap",
+  "description": "Shared kernel for Curo EMR backends: audit trail, auth guards, cross-service entities, enums and DTOs, FHIR helpers, patient identifiers, system notifications, env secrets, health check and service bootstrap",
   "private": true,
   "license": "AGPL-3.0-or-later",
   "exports": {
+    "./audit": {
+      "types": "./dist/audit/index.d.ts",
+      "default": "./dist/audit/index.js"
+    },
     "./auth": {
       "types": "./dist/auth/index.d.ts",
       "default": "./dist/auth/index.js"

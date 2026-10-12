@@ -9,6 +9,7 @@ import {
 } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import type { AuthUser } from '@curo/shared/auth';
+import type { AuditTrail } from '@curo/shared/audit';
 import { Encounter } from '../entities/encounter.entity';
 import { ClinicalNote } from '../entities/clinical-note.entity';
 import { EncounterStatus } from '../enums';
@@ -83,7 +84,13 @@ function setup(existing: Encounter | null = null) {
   } as unknown as DataSource;
   const rowsOf = <T>(target: EntityTarget<T>) =>
     (saved.get(target as EntityTarget<object>) ?? []) as Partial<T>[];
-  return { em, rowsOf, service: new VisitService(dataSource) };
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
+  return {
+    em,
+    audit,
+    rowsOf,
+    service: new VisitService(dataSource, audit as unknown as AuditTrail),
+  };
 }
 
 describe('VisitService.complete', () => {
@@ -137,6 +144,35 @@ describe('VisitService.complete', () => {
     ]);
   });
 
+  it('audits the signed visit as one entry on the encounter, in its transaction', async () => {
+    const { em, audit, rowsOf, service } = setup();
+
+    await service.complete(visit(), doctor);
+
+    const ids = (target: EntityTarget<{ id?: string }>) =>
+      rowsOf(target).map((r) => r.id);
+    expect(audit.record).toHaveBeenCalledTimes(1);
+    expect(audit.record).toHaveBeenCalledWith(
+      doctor,
+      expect.objectContaining({
+        action: 'CREATE',
+        resourceType: 'Encounter',
+        resourceId: ENCOUNTER_ID,
+        patientId: PATIENT_ID,
+        changes: {
+          after: {
+            note: ids(ClinicalNote)[0],
+            vitals: ids(Observation),
+            diagnoses: ids(Condition),
+            prescriptions: ids(MedicationRequest),
+            labOrders: ids(ServiceRequest),
+          },
+        },
+      }),
+      em,
+    );
+  });
+
   it("links the appointment's triage vitals to the encounter", async () => {
     const { em, service } = setup();
 
@@ -155,13 +191,14 @@ describe('VisitService.complete', () => {
       patientId: PATIENT_ID,
       status: EncounterStatus.COMPLETED,
     });
-    const { em, service } = setup(recorded);
+    const { em, audit, service } = setup(recorded);
 
     const result = await service.complete(visit(), doctor);
 
     expect(result).toMatchObject({ id: ENCOUNTER_ID, status: 'completed' });
     expect(em.save).not.toHaveBeenCalled();
     expect(em.update).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
   });
 
   it("refuses an id that is already another patient's encounter", async () => {

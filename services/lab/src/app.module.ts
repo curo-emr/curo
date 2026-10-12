@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LabModule } from './lab/lab.module';
 import {
+  AuditLog,
   ServiceRequest,
   Observation,
   Notification,
@@ -31,6 +32,7 @@ import { JwtAuthModule } from '@curo/shared/auth';
         LabInstrument,
         LabTestCatalog,
         QCLog,
+        AuditLog,
       ]),
     ),
     LabModule,

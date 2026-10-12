@@ -12,6 +12,7 @@ import {
   UserRole,
 } from '@curo/shared/enums';
 import {
+  auditOf,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -180,6 +181,23 @@ describe('Lab specimens and results', () => {
       });
     });
 
+    it('audits the receipt once, against the patient', async () => {
+      const { order, labels } = await orderLabs();
+
+      await scan(labels[0].encodedUrl).expect(201);
+      await scan(labels[1].encodedUrl).expect(201);
+
+      await expect(auditOf(svc, order.id)).resolves.toEqual([
+        expect.objectContaining({
+          userId: labStaff.sub,
+          action: 'UPDATE',
+          resourceType: 'ServiceRequest',
+          patientId: order.patientId,
+          outcomeDescription: 'Lab received the sample',
+        }),
+      ]);
+    });
+
     it("refuses another lab's sample, saying which lab it is for", async () => {
       const galle = await laboratory('Curo Diagnostics — Galle');
       const { order, labels } = await orderLabs(undefined, {
@@ -276,6 +294,36 @@ describe('Lab specimens and results', () => {
         completedAt: expect.any(Date) as unknown,
       });
       expect(report.performerId).toBe(labStaff.practitionerId);
+    });
+
+    it('audits the report, and the order it completes', async () => {
+      const { order } = await orderLabs();
+
+      const res = await enterResults({
+        serviceRequestId: order.id,
+        results: [fbc],
+      }).expect(201);
+      const reportId = (res.body as { id: string }).id;
+
+      const by = { userId: labStaff.sub, patientId: order.patientId };
+      await expect(auditOf(svc, reportId)).resolves.toEqual([
+        expect.objectContaining({
+          ...by,
+          action: 'CREATE',
+          resourceType: 'DiagnosticReport',
+        }),
+      ]);
+      await expect(auditOf(svc, order.id)).resolves.toEqual([
+        expect.objectContaining({
+          ...by,
+          action: 'UPDATE',
+          resourceType: 'ServiceRequest',
+          changes: {
+            before: { status: 'active' },
+            after: { status: 'completed' },
+          },
+        }),
+      ]);
     });
 
     it("notifies the ordering doctor's account that the results are ready", async () => {
