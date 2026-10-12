@@ -1,50 +1,7 @@
 import type { LabAnalyte } from '@curo/web/clinical';
+import type { PersonName } from '@curo/web/fhir';
 
-export interface Name {
-  first: string;
-  last: string;
-  full: string;
-}
-
-export interface Address {
-  line1: string;
-  line2: string;
-  city: string;
-  district: string;
-  postalCode: string;
-  country: string;
-}
-
-export interface EmergencyContact {
-  name: string;
-  relationship: string;
-  phone: string;
-}
-
-export interface Patient {
-  id: string;
-  mrn: string;
-  phn?: string;
-  nic?: string;
-  name: Name;
-  dob: string;
-  sex: 'male' | 'female' | 'other';
-  bloodType: string;
-  nationality?: string;
-  maritalStatus?: string;
-  phone: string;
-  email: string;
-  address: Address;
-  emergencyContact: EmergencyContact;
-  allergies: string[];
-  problemList: string[];
-  currentMedications: string[];
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type { Allergy } from '@curo/web/fhir';
+export type { Allergy, Patient } from '@curo/web/fhir';
 
 export interface Problem {
   id: string;
@@ -62,7 +19,7 @@ export type LabStaffRole = 'senior_technician' | 'technician' | 'pathologist' | 
 
 export interface LabStaff {
   id: string;
-  name: Name;
+  name: PersonName;
   role: LabStaffRole;
   department: string;
   employeeId: string;

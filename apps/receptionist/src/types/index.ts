@@ -1,59 +1,11 @@
-import type { Insurance, MaritalStatus } from '@curo/web/fhir';
+import type { PersonName } from '@curo/web/fhir';
 import type { DoctorSession } from '@curo/web/schedule';
 import type { QueueStage } from '@curo/web/flow';
 
-export type { Allergy, Insurance } from '@curo/web/fhir';
+export type { Allergy, Insurance, Patient } from '@curo/web/fhir';
 // Where a checked-in patient is in the day's flow (nurse triage → doctor).
 export type { QueueStage };
 export type { Appointment } from '@curo/web/appointments';
-
-export interface Name {
-  first: string;
-  last: string;
-  full: string;
-}
-
-export interface Address {
-  line1: string;
-  line2: string;
-  city: string;
-  district: string;
-  postalCode: string;
-  country: string;
-}
-
-export interface EmergencyContact {
-  name: string;
-  relationship: string;
-  phone: string;
-}
-
-export interface Patient {
-  id: string;
-  mrn: string;
-  phn: string;
-  nic: string;
-  name: Name;
-  dob: string;
-  sex: 'male' | 'female' | 'other';
-  bloodType: string;
-  nationality: string;
-  maritalStatus?: MaritalStatus;
-  occupation: string;
-  phone: string;
-  email: string;
-  address: Address;
-  emergencyContact: EmergencyContact;
-  insurance: Insurance | null;
-  allergies: string[];
-  problemList: string[];
-  currentMedications: string[];
-  tags: string[];
-  registeredBy: string;
-  registeredAt: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface Problem {
   id: string;
@@ -67,7 +19,7 @@ export interface Problem {
 
 export interface Doctor {
   id: string;
-  name: Name;
+  name: PersonName;
   specialty: string;
   phone: string;
   email: string;
