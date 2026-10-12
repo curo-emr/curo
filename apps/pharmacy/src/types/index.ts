@@ -1,47 +1,6 @@
-export interface Name {
-  first: string;
-  last: string;
-  full: string;
-}
+import type { PersonName } from '@curo/web/fhir';
 
-export interface Address {
-  line1: string;
-  line2: string;
-  city: string;
-  district: string;
-  postalCode: string;
-  country: string;
-}
-
-export interface EmergencyContact {
-  name: string;
-  relationship: string;
-  phone: string;
-}
-
-export interface Patient {
-  id: string;
-  mrn: string;
-  phn: string;
-  nic: string;
-  name: Name;
-  dob: string;
-  sex: 'male' | 'female' | 'other';
-  bloodType: string;
-  nationality?: string;
-  maritalStatus?: string;
-  occupation?: string;
-  phone: string;
-  email: string;
-  address: Address;
-  emergencyContact: EmergencyContact;
-  insurance?: { provider: string; policyNumber: string } | null;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type { Allergy } from '@curo/web/fhir';
+export type { Allergy, Patient } from '@curo/web/fhir';
 
 export interface Problem {
   id: string;
@@ -59,7 +18,7 @@ export type PharmacyStaffRole = 'chief_pharmacist' | 'pharmacist' | 'pharmacy_te
 
 export interface PharmacyStaff {
   id: string;
-  name: Name;
+  name: PersonName;
   role: PharmacyStaffRole;
   employeeId: string;
   email: string;

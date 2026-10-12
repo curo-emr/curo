@@ -1,4 +1,7 @@
-import { mapFhirAllergy, mapFhirPatientDetails, mapFhirReport, type FhirAllergy, type FhirDiagnosticReport } from "./index";
+import {
+  mapFhirAllergy, mapFhirPatient, mapFhirPatientDetails, mapFhirReport,
+  type FhirAllergy, type FhirDiagnosticReport, type FhirPatient,
+} from "./index";
 
 const allergy = (overrides: Partial<FhirAllergy> = {}): FhirAllergy => ({
   resourceType: "AllergyIntolerance",
@@ -74,6 +77,70 @@ describe("mapFhirPatientDetails", () => {
 
   it("shows marital status codes without a form option as other", () => {
     expect(mapFhirPatientDetails({ maritalStatus: { coding: [{ code: "L" }] } }).maritalStatus).toBe("other");
+  });
+});
+
+describe("mapFhirPatient", () => {
+  // What pharmacy and lab staff get: identity only.
+  const minimized: FhirPatient = {
+    resourceType: "Patient",
+    id: "p1",
+    meta: { lastUpdated: "2026-10-12T03:40:00Z" },
+    identifier: [
+      { system: "urn:curo:phn", value: "PHN-1" },
+      { system: "urn:curo:patient-code", value: "CUR-0001" },
+    ],
+    name: [{ family: "Perera", given: ["Nimal", "Kumara"] }],
+    gender: "male",
+    birthDate: "1990-05-01",
+  };
+
+  it("reads the identity, contact, address and details", () => {
+    expect(mapFhirPatient({
+      ...minimized,
+      identifier: [...minimized.identifier!, { system: "urn:curo:nic", value: "901220000V" }],
+      telecom: [{ system: "email", value: "nimal@example.com" }, { system: "phone", value: "0771234567" }],
+      address: [{ line: ["12 Galle Rd", "Flat 3"], city: "Colombo", state: "Western", postalCode: "00300", country: "Sri Lanka" }],
+      contact: [{ name: { text: "Kamala Perera" }, relationship: [{ text: "Mother" }], telecom: [{ system: "phone", value: "0711111111" }] }],
+      maritalStatus: { coding: [{ code: "M" }] },
+      extension: [{ url: "urn:curo:bloodType", valueString: "O+" }],
+    })).toEqual({
+      id: "p1",
+      mrn: "CUR-0001",
+      phn: "PHN-1",
+      nic: "901220000V",
+      name: { first: "Nimal", last: "Perera", full: "Nimal Kumara Perera" },
+      dob: "1990-05-01",
+      sex: "male",
+      bloodType: "O+",
+      nationality: "",
+      occupation: "",
+      maritalStatus: "married",
+      tags: [],
+      insurance: null,
+      phone: "0771234567",
+      email: "nimal@example.com",
+      address: { line1: "12 Galle Rd", line2: "Flat 3", city: "Colombo", district: "Western", postalCode: "00300", country: "Sri Lanka" },
+      emergencyContact: { name: "Kamala Perera", relationship: "Mother", phone: "0711111111" },
+      updatedAt: "2026-10-12T03:40:00Z",
+    });
+  });
+
+  it("leaves out what a minimized patient doesn't have", () => {
+    expect(mapFhirPatient(minimized)).toMatchObject({
+      nic: "",
+      phone: "",
+      address: { line1: "", city: "" },
+      emergencyContact: { name: "", phone: "" },
+      maritalStatus: undefined,
+      insurance: null,
+    });
+  });
+
+  it("is blank, not undefined, without a name or gender", () => {
+    const patient = mapFhirPatient({ resourceType: "Patient", id: "p2" });
+    expect(patient.name).toEqual({ first: "", last: "", full: "" });
+    expect(patient.sex).toBe("other");
   });
 });
 

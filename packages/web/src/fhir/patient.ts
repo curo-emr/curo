@@ -81,3 +81,109 @@ export function mapFhirPatientDetails(fhir: FhirPatientDetails) {
     insurance: insuranceOf(extensions),
   };
 }
+
+/**
+ * A patient as the API returns it. Pharmacy and lab staff get a minimized one:
+ * identity only, with no contact, address, NIC or details.
+ */
+export interface FhirPatient extends FhirPatientDetails {
+  resourceType: "Patient";
+  id: string;
+  meta?: { lastUpdated?: string };
+  identifier?: Array<{ system: string; value: string }>;
+  active?: boolean;
+  name?: Array<{ family?: string; given?: string[] }>;
+  gender?: string;
+  birthDate?: string;
+  telecom?: Array<{ system: string; value: string; use?: string }>;
+  address?: Array<{
+    line?: string[];
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  }>;
+  contact?: Array<{
+    name?: { text?: string };
+    telecom?: Array<{ system: string; value: string }>;
+    relationship?: Array<{ text?: string }>;
+  }>;
+}
+
+/** A person's name as the portals show it; `full` includes any middle name. */
+export interface PersonName {
+  first: string;
+  last: string;
+  full: string;
+}
+
+/** A patient as the staff portals show them. Anything the API left out is blank. */
+export interface Patient {
+  id: string;
+  /** The clinic's patient code. */
+  mrn: string;
+  phn: string;
+  nic: string;
+  name: PersonName;
+  dob: string;
+  sex: "male" | "female" | "other";
+  bloodType: string;
+  nationality: string;
+  occupation: string;
+  maritalStatus?: MaritalStatus;
+  phone: string;
+  email: string;
+  address: {
+    line1: string;
+    line2: string;
+    city: string;
+    district: string;
+    postalCode: string;
+    country: string;
+  };
+  emergencyContact: { name: string; relationship: string; phone: string };
+  insurance: Insurance | null;
+  tags: string[];
+  /** The last change to the record; the API doesn't send when it was created. */
+  updatedAt: string;
+}
+
+const identifierOf = (fhir: FhirPatient, system: string) =>
+  fhir.identifier?.find((i) => i.system === system)?.value ?? "";
+
+const telecomOf = (fhir: FhirPatient, system: string) =>
+  fhir.telecom?.find((t) => t.system === system)?.value ?? "";
+
+export function mapFhirPatient(fhir: FhirPatient): Patient {
+  const [first = "", middle = ""] = fhir.name?.[0]?.given ?? [];
+  const last = fhir.name?.[0]?.family ?? "";
+  const address = fhir.address?.[0];
+  const contact = fhir.contact?.[0];
+
+  return {
+    id: fhir.id,
+    mrn: identifierOf(fhir, "urn:curo:patient-code"),
+    phn: identifierOf(fhir, "urn:curo:phn"),
+    nic: identifierOf(fhir, "urn:curo:nic"),
+    name: { first, last, full: [first, middle, last].filter(Boolean).join(" ") },
+    dob: fhir.birthDate ?? "",
+    sex: (fhir.gender as Patient["sex"]) ?? "other",
+    ...mapFhirPatientDetails(fhir),
+    phone: telecomOf(fhir, "phone"),
+    email: telecomOf(fhir, "email"),
+    address: {
+      line1: address?.line?.[0] ?? "",
+      line2: address?.line?.[1] ?? "",
+      city: address?.city ?? "",
+      district: address?.state ?? "",
+      postalCode: address?.postalCode ?? "",
+      country: address?.country ?? "",
+    },
+    emergencyContact: {
+      name: contact?.name?.text ?? "",
+      relationship: contact?.relationship?.[0]?.text ?? "",
+      phone: contact?.telecom?.[0]?.value ?? "",
+    },
+    updatedAt: fhir.meta?.lastUpdated ?? "",
+  };
+}
