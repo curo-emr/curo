@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@curo/web/auth";
-import { greeting } from "@curo/web/format";
+import { formatDay, greeting } from "@curo/web/format";
 import { QueryContent } from "@curo/web/query";
 import { NextToDispenseCard } from "@/components/features/dashboard/NextToDispenseCard";
 import { StockWatch } from "@/components/features/dashboard/StockWatch";
@@ -16,7 +16,7 @@ export default function DashboardPage() {
   const pending = useQuery(prescriptionQueries.pending());
   const stock = useQuery(stockQueries.grouped());
 
-  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const today = formatDay();
   const firstName = user?.name?.split(" ")[0];
 
   return (

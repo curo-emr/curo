@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@curo/web/auth";
-import { greeting } from "@curo/web/format";
+import { formatDay, greeting } from "@curo/web/format";
 import { QueryContent, allOf } from "@curo/web/query";
 import { BenchWatch } from "@/components/features/dashboard/BenchWatch";
 import { NextOrderCard } from "@/components/features/dashboard/NextOrderCard";
@@ -17,7 +17,7 @@ export default function DashboardPage() {
   const waiting = useQuery(orderQueries.page({ page: 1, pageSize: 1, status: "sent_to_lab", sort: "priority" }));
   const bench = allOf(useQuery(labQueries.qcAlerts(QC_ALERT_LIMIT)), useQuery(labQueries.instruments()));
 
-  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const today = formatDay();
   const firstName = user?.name?.split(" ")[0];
 
   return (

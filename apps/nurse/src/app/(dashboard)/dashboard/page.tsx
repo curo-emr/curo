@@ -13,7 +13,7 @@ import { useCurrentPractitioner } from "@/lib/hooks/useCurrentPractitioner";
 import { FLOW_STAGES, FlowOverview, countStages } from "@curo/web/flow";
 import { nextForTriage } from "@/lib/queue";
 import { ROUTES } from "@/lib/constants";
-import { greeting } from "@curo/web/format";
+import { formatDay, greeting } from "@curo/web/format";
 import { minutesSince } from "@/lib/utils";
 
 // The day at a glance and the one patient to take next; the full list is the triage queue.
@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const counts = countStages(entries.map(e => e.appointment.queueStage));
   const next = nextForTriage(entries);
 
-  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const today = formatDay();
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
