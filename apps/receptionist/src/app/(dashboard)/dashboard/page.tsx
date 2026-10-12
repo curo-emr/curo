@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarCheck, CalendarPlus, CalendarX, UserPlus } from "lucide-react";
 import { useAuth } from "@curo/web/auth";
 import { FlowOverview, countStages } from "@curo/web/flow";
-import { greeting } from "@curo/web/format";
+import { formatDay, greeting } from "@curo/web/format";
 import { QueryContent } from "@curo/web/query";
 import { Button } from "@curo/web/ui/button";
 import { Card } from "@curo/web/ui/card";
@@ -27,7 +27,7 @@ const NONE: Patient[] = [];
 export default function DashboardPage() {
   const { user } = useAuth();
   const today = useQuery(appointmentQueries.day(getTodayString()));
-  const dateLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const dateLabel = formatDay();
   const firstName = user?.name?.split(" ")[0];
 
   return (

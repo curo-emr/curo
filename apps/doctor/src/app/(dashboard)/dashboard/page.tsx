@@ -11,7 +11,7 @@ import { UpNextCard } from "@/components/features/dashboard/UpNextCard";
 import { QueueList } from "@/components/features/dashboard/QueueList";
 import { NeedsAttention } from "@/components/features/dashboard/NeedsAttention";
 import { appointmentQueries, labResultQueries, patientQueries } from "@/lib/queries";
-import { greeting } from "@curo/web/format";
+import { formatDay, greeting } from "@curo/web/format";
 import { getTodayString } from "@/lib/utils";
 import { countQueueGroups, getQueueGroup, hasDraft, visitDraftKey } from "@/lib/visit";
 import type { Appointment, LabOrder } from "@/types";
@@ -47,7 +47,7 @@ export default function TodayPage() {
   // Cancellations and no-shows are neither seen nor still to see, so they're counted apart.
   const counts = countQueueGroups(appointments);
   const expected = appointments.length - counts.missed;
-  const dateLabel = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const dateLabel = formatDay();
 
   return (
     <div className="space-y-6">

@@ -2,12 +2,7 @@ import { getTodayString } from "@curo/web/format";
 
 // Dates as a patient reads them, in the browser's (the clinic's) time zone.
 
-export { formatDate, formatTime } from "@curo/web/format";
-
-/** "Tuesday, October 7". */
-export function formatDay(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-}
+export { formatDate, formatDay, formatTime } from "@curo/web/format";
 
 /** The local calendar day of an instant (YYYY-MM-DD), to compare with `getTodayString()`. */
 export const dayOf = (iso: string) => getTodayString(new Date(iso));

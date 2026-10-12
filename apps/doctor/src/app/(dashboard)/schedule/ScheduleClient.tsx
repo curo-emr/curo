@@ -10,6 +10,7 @@ import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { AppointmentRow } from "@/components/features/visits/AppointmentRow";
 import { CuroCalendar, calendarRange, formatDateStr, getRelativeDayLabel, type CalendarEvent, type CalendarEventColor } from "@curo/web/ui/curo-calendar";
+import { formatDay } from "@curo/web/format";
 import { PageSkeleton } from "@curo/web/ui/page-skeleton";
 import { appointmentQueries, patientQueries } from "@/lib/queries";
 import { getQueueGroup, type QueueGroup } from "@/lib/visit";
@@ -67,7 +68,7 @@ export function ScheduleClient() {
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-            {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            {formatDay(selectedDate)}
             {relative && (
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-primary">{relative}</span>
             )}

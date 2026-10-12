@@ -1,4 +1,4 @@
-import { formatDate, formatDateTime, formatTime, minutesSince } from "./index";
+import { formatDate, formatDateTime, formatDay, formatTime, minutesSince } from "./index";
 
 // Instants are built from local dates, so these pass in any time zone.
 const local = (...parts: [number, number, number, number?, number?]) => new Date(...parts).toISOString();
@@ -16,6 +16,21 @@ describe("formatDate", () => {
   it("is empty for none", () => {
     expect(formatDate("")).toBe("");
     expect(formatDate(null)).toBe("");
+  });
+});
+
+describe("formatDay", () => {
+  it("names the weekday, month and day", () => {
+    expect(formatDay(new Date(2026, 9, 12, 23, 59))).toBe("Monday, October 12");
+    expect(formatDay(local(2026, 9, 7, 0, 30))).toBe("Wednesday, October 7");
+  });
+
+  it("reads a calendar date as that day", () => {
+    expect(formatDay("2026-10-07")).toBe("Wednesday, October 7");
+  });
+
+  it("is today by default", () => {
+    expect(formatDay()).toBe(formatDay(new Date()));
   });
 });
 

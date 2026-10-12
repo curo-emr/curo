@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { formatAgeSex } from "@curo/web/format";
+import { formatAgeSex, formatDay } from "@curo/web/format";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { LoadError } from "@curo/web/ui/load-error";
@@ -149,11 +149,7 @@ function DayAppointments({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
           <h2 className="text-base font-semibold text-foreground">
-            {selectedDate.toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
+            {formatDay(selectedDate)}
           </h2>
           {relativeLabel && (
             <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-widest text-primary">
