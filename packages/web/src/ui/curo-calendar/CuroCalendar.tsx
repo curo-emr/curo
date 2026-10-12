@@ -4,8 +4,8 @@ import { useState, useMemo, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "cn";
 import type { CalendarEvent, CalendarEventColor } from "./types";
+import { getTodayString } from "../../format";
 import {
-  formatDateStr,
   getCalendarDays,
   isToday,
   isSameDay,
@@ -226,7 +226,7 @@ export function CuroCalendar({
         style={{ gridTemplateRows: "repeat(6, minmax(110px, 1fr))" }}
       >
         {days.map((date, idx) => {
-          const dateStr = formatDateStr(date);
+          const dateStr = getTodayString(date);
           const dayEvents = eventMap[dateStr] ?? [];
           const isCurrentMonth = date.getMonth() === month;
           const isSelected = selectedDate ? isSameDay(date, selectedDate) : false;

@@ -1,14 +1,11 @@
+import { getTodayString } from "../../format";
+
 export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 export const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ] as const;
-
-/** Format a Date to YYYY-MM-DD using local time. */
-export function formatDateStr(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
 
 /**
  * Returns an array of exactly 42 Date objects (6 rows × 7 columns) that
@@ -45,7 +42,7 @@ export function getCalendarDays(year: number, month: number): Date[] {
 /** The first and last days (YYYY-MM-DD) of the grid for `month`'s month, padding included. */
 export function calendarRange(month: Date): { from: string; to: string } {
   const days = getCalendarDays(month.getFullYear(), month.getMonth());
-  return { from: formatDateStr(days[0]), to: formatDateStr(days[days.length - 1]) };
+  return { from: getTodayString(days[0]), to: getTodayString(days[days.length - 1]) };
 }
 
 /** Returns true if the given date is today (local time). */

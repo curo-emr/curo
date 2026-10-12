@@ -44,8 +44,8 @@ function getDateRangeBounds(range: DateRange): { start: string; end: string } {
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     return {
-      start: formatDateStr(startOfWeek),
-      end: formatDateStr(endOfWeek),
+      start: getTodayString(startOfWeek),
+      end: getTodayString(endOfWeek),
     };
   }
 
@@ -53,13 +53,9 @@ function getDateRangeBounds(range: DateRange): { start: string; end: string } {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return {
-    start: formatDateStr(startOfMonth),
-    end: formatDateStr(endOfMonth),
+    start: getTodayString(startOfMonth),
+    end: getTodayString(endOfMonth),
   };
-}
-
-function formatDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 // Empty data for "not loaded yet", so the memos below don't recompute on every render.
