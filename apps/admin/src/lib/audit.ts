@@ -31,6 +31,20 @@ export function describeAuditEntry({ action, resourceType }: AuditEntry): string
   return `${verb} ${RECORDS[resourceType] ?? resourceType}`;
 }
 
-/** The accounts an entry mentions: who acted and, for a user account, whose. */
-export const auditUserIds = (entry: AuditEntry) =>
-  entry.resourceType === "User" ? [entry.userId, entry.resourceId] : [entry.userId];
+/** The account an entry is about, if any: a user account, or the doctor whose weekly sessions changed. */
+export function auditSubject({ resourceType, resourceId }: AuditEntry): { by: "id" | "practitionerId"; id: string } | null {
+  if (resourceType === "User") return { by: "id", id: resourceId };
+  if (resourceType === "Schedule") return { by: "practitionerId", id: resourceId };
+  return null;
+}
+
+/** The accounts a page of entries mentions, by user and by practitioner id, to look up in one request. */
+export function auditAccounts(entries: AuditEntry[]): { ids: string[]; practitionerIds: string[] } {
+  const ids = new Set(entries.map(e => e.userId));
+  const practitionerIds = new Set<string>();
+  for (const entry of entries) {
+    const subject = auditSubject(entry);
+    if (subject) (subject.by === "id" ? ids : practitionerIds).add(subject.id);
+  }
+  return { ids: [...ids].sort(), practitionerIds: [...practitionerIds].sort() };
+}

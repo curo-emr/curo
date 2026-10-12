@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { getUser, getUserSummary, getUsersByRole } from "@/lib/api/users";
+import { getUser, getUserSummary, getUsersByRole, getUsersNamed } from "@/lib/api/users";
 import { getPaymentTotals } from "@/lib/api/payments";
 import { getOrganizations } from "@/lib/api/organizations";
 import { getSessions } from "@/lib/api/schedules";
@@ -17,6 +17,12 @@ export const userQueries = {
   detail: (userId: string) => queryOptions({
     queryKey: [...userQueries.all, userId],
     queryFn: () => getUser(userId),
+  }),
+  /** The accounts with these user or practitioner ids. */
+  named: (ids: string[], practitionerIds: string[]) => queryOptions({
+    queryKey: [...userQueries.all, "named", ids, practitionerIds],
+    queryFn: () => getUsersNamed(ids, practitionerIds),
+    enabled: ids.length + practitionerIds.length > 0,
   }),
 };
 

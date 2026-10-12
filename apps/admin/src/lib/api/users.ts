@@ -55,6 +55,11 @@ export async function getUsersPaginated(
   return { items: resources, total, page: params.page ?? 1, pageSize: params.pageSize ?? 25 };
 }
 
+/** The accounts with any of these user or practitioner ids, in one request. */
+export async function getUsersNamed(ids: string[], practitionerIds: string[] = []): Promise<AdminUser[]> {
+  return getAllPages<AdminUser>("/auth/users", { ids: ids.join(","), practitionerIds: practitionerIds.join(",") });
+}
+
 export async function getUser(id: string): Promise<AdminUser | null> {
   const res = await nullIfNotFound(apiClient.get<AdminUser>(`/auth/users/${id}`));
   return res && res.data;
