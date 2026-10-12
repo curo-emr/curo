@@ -34,15 +34,17 @@ import {
   formatTime,
   getTodayString,
 } from "@/lib/utils";
-import { statusClassName, statusLabel } from "@curo/web/ui/status-badge";
+import { StatusBadge, statusClassName, statusLabel } from "@curo/web/ui/status-badge";
+import { ConfirmAction } from "@curo/web/ui/confirm-action";
 import { ROUTES } from "@/lib/constants";
 import { updateAppointmentStatus } from "@/lib/actions/appointment-actions";
 import { RecordPaymentCell } from "@/components/features/payments/RecordPaymentCell";
 import { getMyPaymentsForAppointments, type Payment } from "@/lib/api/payments";
 import { getAppointmentsPage } from "@/lib/api/appointments";
 import { getPatientsByIds } from "@/lib/api/patients";
+import { isMissed } from "@/lib/queue";
 import { toast } from "sonner";
-import { visitTypeLabel } from "@curo/web/appointments";
+import { isClosedAppointmentStatus, nextAppointmentStatuses, visitTypeLabel } from "@curo/web/appointments";
 
 type AppointmentStatus = 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
 
@@ -50,7 +52,7 @@ interface AppointmentListProps {
   doctors: Doctor[];
 }
 
-// Every status the desk can set, in workflow order; the filter adds "All statuses".
+// Every status, in workflow order, to filter by; the filter adds "All statuses".
 const ALL_STATUSES: AppointmentStatus[] = [
   "scheduled", "not_arrived", "arrived", "waiting", "in_progress", "completed", "cancelled", "no_show",
 ];
@@ -59,6 +61,34 @@ const STATUS_OPTIONS = [
   { label: "All statuses", value: "all" },
   ...ALL_STATUSES.filter(s => s !== "not_arrived").map(value => ({ label: statusLabel(value), value })),
 ];
+
+// The question asked before a change that closes an appointment for good.
+const CLOSE_CONFIRMS: Partial<Record<AppointmentStatus, {
+  title: (patientName: string) => string;
+  description: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+}>> = {
+  completed: {
+    title: name => `Mark ${name}'s visit complete?`,
+    description: "They leave today's queue. A completed visit can't be reopened.",
+    confirmLabel: "Complete visit",
+  },
+  cancelled: {
+    title: name => `Cancel ${name}'s appointment?`,
+    description: "The slot is freed for another booking. A cancelled appointment can't be reopened; book a new one if they still need it.",
+    confirmLabel: "Cancel appointment",
+    cancelLabel: "Keep appointment",
+    destructive: true,
+  },
+  no_show: {
+    title: name => `Mark ${name} as a no-show?`,
+    description: "The slot is freed for another booking. This can't be undone; book a new appointment if they come later.",
+    confirmLabel: "Mark no-show",
+    destructive: true,
+  },
+};
 
 /** Appointments, latest first, paged and filtered on the server. */
 export function AppointmentList({ doctors }: AppointmentListProps) {
@@ -69,6 +99,9 @@ export function AppointmentList({ doctors }: AppointmentListProps) {
   // Changes made here, shown before (and in place of) what the page was loaded with.
   const [statusOverrides, setStatusOverrides] = useState<Record<string, AppointmentStatus>>({});
   const [recordedPayments, setRecordedPayments] = useState<Record<string, Payment>>({});
+  // A closing change waiting for the desk to confirm it.
+  const [confirming, setConfirming] = useState<{ id: string; patientName: string; status: AppointmentStatus } | null>(null);
+  const confirmCopy = confirming && CLOSE_CONFIRMS[confirming.status];
 
   const { data, items, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
     async (page, pageSize) => {
@@ -220,6 +253,7 @@ export function AppointmentList({ doctors }: AppointmentListProps) {
               {appointments.map((apt) => {
                 const isPending = pendingIds.has(apt.id);
                 const status = apt.status as AppointmentStatus;
+                const patientName = getPatientName(apt.patientId, patients);
                 return (
                   <TableRow key={apt.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="text-foreground font-medium">
@@ -233,7 +267,7 @@ export function AppointmentList({ doctors }: AppointmentListProps) {
                         href={ROUTES.PATIENT(apt.patientId)}
                         className="text-primary hover:text-primary hover:underline font-medium"
                       >
-                        {getPatientName(apt.patientId, patients)}
+                        {patientName}
                       </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
@@ -244,42 +278,30 @@ export function AppointmentList({ doctors }: AppointmentListProps) {
                       {apt.reason}
                     </TableCell>
                     <TableCell>
-                      <Select
-                        value={status}
-                        onValueChange={(val) => handleStatusChange(apt.id, val as AppointmentStatus)}
-                        disabled={isPending}
-                      >
-                        <SelectTrigger
-                          className={cn(
-                            "h-7 w-auto min-w-[110px] text-xs font-medium border rounded-full px-2.5 focus:ring-0 focus:ring-offset-0",
-                            statusClassName(status),
-                          )}
-                        >
-                          {isPending ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <SelectValue>{statusLabel(status)}</SelectValue>
-                          )}
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ALL_STATUSES.map((value) => (
-                            <SelectItem key={value} value={value}>
-                              {statusLabel(value)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <StatusMenu
+                        status={status}
+                        pending={isPending}
+                        onChange={(next) => {
+                          if (CLOSE_CONFIRMS[next]) setConfirming({ id: apt.id, patientName, status: next });
+                          else void handleStatusChange(apt.id, next);
+                        }}
+                      />
                     </TableCell>
                     <TableCell>
-                      <RecordPaymentCell
-                        appointmentId={apt.id}
-                        patientId={apt.patientId}
-                        patientName={getPatientName(apt.patientId, patients)}
-                        existingPayment={paymentsByAppt[apt.id]}
-                        onRecorded={(payment) =>
-                          setRecordedPayments((prev) => ({ ...prev, [apt.id]: payment }))
-                        }
-                      />
+                      {/* Nothing to pay for a visit that didn't happen, unless it was paid already. */}
+                      {isMissed(apt) && !paymentsByAppt[apt.id] ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : (
+                        <RecordPaymentCell
+                          appointmentId={apt.id}
+                          patientId={apt.patientId}
+                          patientName={patientName}
+                          existingPayment={paymentsByAppt[apt.id]}
+                          onRecorded={(payment) =>
+                            setRecordedPayments((prev) => ({ ...prev, [apt.id]: payment }))
+                          }
+                        />
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -288,6 +310,19 @@ export function AppointmentList({ doctors }: AppointmentListProps) {
           </Table>
         )}
       </div>
+
+      {confirming && confirmCopy && (
+        <ConfirmAction
+          open
+          onOpenChange={(open) => { if (!open) setConfirming(null); }}
+          title={confirmCopy.title(confirming.patientName)}
+          description={confirmCopy.description}
+          confirmLabel={confirmCopy.confirmLabel}
+          cancelLabel={confirmCopy.cancelLabel}
+          destructive={confirmCopy.destructive}
+          onConfirm={() => void handleStatusChange(confirming.id, confirming.status)}
+        />
+      )}
 
       {total > 0 && (
         <Pagination
@@ -299,5 +334,37 @@ export function AppointmentList({ doctors }: AppointmentListProps) {
         />
       )}
     </div>
+  );
+}
+
+/** A row's status: a menu of the changes it can still make, or just the badge once it's closed. */
+function StatusMenu({ status, pending, onChange }: {
+  status: AppointmentStatus;
+  pending: boolean;
+  onChange: (status: AppointmentStatus) => void;
+}) {
+  if (isClosedAppointmentStatus(status)) return <StatusBadge status={status} className="h-7 rounded-full px-2.5" />;
+  return (
+    <Select value={status} onValueChange={(val) => onChange(val as AppointmentStatus)} disabled={pending}>
+      <SelectTrigger
+        className={cn(
+          "h-7 w-auto min-w-[110px] text-xs font-medium border rounded-full px-2.5 focus:ring-0 focus:ring-offset-0",
+          statusClassName(status),
+        )}
+      >
+        {pending ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <SelectValue>{statusLabel(status)}</SelectValue>
+        )}
+      </SelectTrigger>
+      <SelectContent>
+        {[status, ...nextAppointmentStatuses(status)].map((value) => (
+          <SelectItem key={value} value={value}>
+            {statusLabel(value)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

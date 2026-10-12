@@ -1,4 +1,7 @@
-import { appointmentStatusOf, fhirAppointmentStatusesOf, mapFhirAppointment, type FhirAppointment } from "./appointment";
+import {
+  appointmentStatusOf, fhirAppointmentStatusesOf, isClosedAppointmentStatus, mapFhirAppointment, nextAppointmentStatuses,
+  type FhirAppointment,
+} from "./appointment";
 
 // Starts are built from local dates, so these pass in any time zone.
 const fhir = (overrides: Partial<FhirAppointment> = {}): FhirAppointment => ({
@@ -74,5 +77,20 @@ describe("fhirAppointmentStatusesOf", () => {
     expect(fhirAppointmentStatusesOf("scheduled").sort()).toEqual(["booked", "pending", "proposed"]);
     expect(fhirAppointmentStatusesOf("cancelled").sort()).toEqual(["cancelled", "entered-in-error"]);
     expect(fhirAppointmentStatusesOf("in_progress")).toEqual([]);
+  });
+});
+
+describe("nextAppointmentStatuses", () => {
+  it("checks in, cancels or misses a booking, and completes or cancels a checked-in visit", () => {
+    expect(nextAppointmentStatuses("scheduled")).toEqual(["arrived", "cancelled", "no_show"]);
+    expect(nextAppointmentStatuses("arrived")).toEqual(["completed", "cancelled"]);
+  });
+
+  it("offers nothing once the appointment is closed", () => {
+    for (const status of ["completed", "cancelled", "no_show"] as const) {
+      expect(nextAppointmentStatuses(status)).toEqual([]);
+      expect(isClosedAppointmentStatus(status)).toBe(true);
+    }
+    expect(isClosedAppointmentStatus("arrived")).toBe(false);
   });
 });
