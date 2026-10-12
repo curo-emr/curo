@@ -93,7 +93,7 @@ export function AppShell({ portal, home, nav, account, search, actions, sidebarO
                 <div className="min-w-0 flex-1">{search}</div>
               </>
             )}
-            {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+            {actions && <div className="ml-auto flex min-w-0 items-center gap-2">{actions}</div>}
           </header>
           <div id="main" className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-8 lg:py-8">{children}</div>
