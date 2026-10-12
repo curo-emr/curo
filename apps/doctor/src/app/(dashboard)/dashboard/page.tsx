@@ -13,7 +13,7 @@ import { NeedsAttention } from "@/components/features/dashboard/NeedsAttention";
 import { appointmentQueries, labResultQueries, patientQueries } from "@/lib/queries";
 import { greeting } from "@curo/web/format";
 import { getTodayString } from "@/lib/utils";
-import { getQueueGroup, hasDraft, isMissed, visitDraftKey } from "@/lib/visit";
+import { countQueueGroups, getQueueGroup, hasDraft, visitDraftKey } from "@/lib/visit";
 import type { Appointment, LabOrder } from "@/types";
 
 // One empty list for "not loaded yet", so the memo below doesn't recompute on every render.
@@ -44,16 +44,23 @@ export default function TodayPage() {
 
   const upNext = appointments.find(a => getQueueGroup(a) === "consultation") ?? appointments.find(a => getQueueGroup(a) === "ready") ?? null;
   const nextUpcoming = appointments.find(a => getQueueGroup(a) === "upcoming") ?? null;
+  // Cancellations and no-shows are neither seen nor still to see, so they're counted apart.
+  const counts = countQueueGroups(appointments);
+  const expected = appointments.length - counts.missed;
   const dateLabel = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={`${greeting()}${user?.firstName ? `, Dr. ${user.firstName}` : ""}`}
-        description={`${dateLabel} · ${appointments.length} appointment${appointments.length === 1 ? "" : "s"} today`}
+        description={[
+          dateLabel,
+          `${expected} appointment${expected === 1 ? "" : "s"} today`,
+          counts.missed > 0 && `${counts.missed} cancelled or no-show`,
+        ].filter(Boolean).join(" · ")}
       />
 
-      {appointments.some(a => !isMissed(a)) && <DayOverview appointments={appointments} />}
+      {expected > 0 && <DayOverview counts={counts} expected={expected} />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
