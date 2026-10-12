@@ -44,7 +44,7 @@ describe('A patient reads only their own lab orders and reports', () => {
     svc = await startService(AppModule);
     own = await labWorkOf(randomUUID());
     other = await labWorkOf(randomUUID());
-    patient = svc.as(UserRole.PATIENT, { patientId: own.patientId });
+    patient = await svc.as(UserRole.PATIENT, { patientId: own.patientId });
   });
 
   afterAll(() => svc.close());
@@ -72,14 +72,15 @@ describe('A patient reads only their own lab orders and reports', () => {
   });
 
   it("still shows a doctor every patient's reports", async () => {
-    const doctor = svc.as(UserRole.DOCTOR);
+    const doctor = await svc.as(UserRole.DOCTOR);
     await get(`/reports/${other.reportId}`, doctor).expect(200);
     await get(`/orders/${other.orderId}`, doctor).expect(200);
   });
 
   it('turns away a patient login linked to no record', async () => {
-    await get('/reports', svc.as(UserRole.PATIENT, { patientId: null })).expect(
-      403,
-    );
+    await get(
+      '/reports',
+      await svc.as(UserRole.PATIENT, { patientId: null }),
+    ).expect(403);
   });
 });

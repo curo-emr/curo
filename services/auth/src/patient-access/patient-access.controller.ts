@@ -10,10 +10,10 @@ import {
 import {
   CurrentUser,
   Roles,
+  JwtAuthGuard,
   RolesGuard,
   type AuthUser,
 } from '@curo/shared/auth';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PatientAccessService } from './patient-access.service';
 import { PortalPasswordDto } from './portal-password.dto';
 

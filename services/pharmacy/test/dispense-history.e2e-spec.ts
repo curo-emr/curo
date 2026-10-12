@@ -11,19 +11,19 @@ import { MedicationDispenseStatus } from '../src/enums';
 
 describe('Dispense history', () => {
   let svc: ServiceUnderTest;
-
-  beforeAll(async () => {
-    svc = await startService(AppModule);
-  });
-
-  afterAll(() => svc.close());
-
   /** The pharmacy the tests' pharmacist works at; another is a branch elsewhere. */
   const pharmacy = randomUUID();
   const otherPharmacy = randomUUID();
+  let pharmacist: TestActor;
 
-  const pharmacist = () =>
-    svc.as(UserRole.PHARMACIST, { organizationId: pharmacy });
+  beforeAll(async () => {
+    svc = await startService(AppModule);
+    pharmacist = await svc.as(UserRole.PHARMACIST, {
+      organizationId: pharmacy,
+    });
+  });
+
+  afterAll(() => svc.close());
 
   /**
    * A completed dispense at the tests' pharmacy, with `fields` over a single
@@ -61,16 +61,16 @@ describe('Dispense history', () => {
       const here = await saveDispense();
       const elsewhere = await saveDispense({ organizationId: otherPharmacy });
 
-      const mine = await listed(pharmacist(), {
+      const mine = await listed(pharmacist, {
         search: here.medicationRequestId,
       });
       expect(mine).toEqual([here.id]);
       expect(
-        await listed(pharmacist(), { search: elsewhere.medicationRequestId }),
+        await listed(pharmacist, { search: elsewhere.medicationRequestId }),
       ).toEqual([]);
       // Even when they ask for another pharmacy's.
       expect(
-        await listed(pharmacist(), {
+        await listed(pharmacist, {
           organizationId: otherPharmacy,
           search: elsewhere.medicationRequestId,
         }),
@@ -85,18 +85,18 @@ describe('Dispense history', () => {
         organizationId: otherPharmacy,
       });
 
-      expect((await listed(pharmacist(), { patientId })).sort()).toEqual(
+      expect((await listed(pharmacist, { patientId })).sort()).toEqual(
         [here.id, elsewhere.id].sort(),
       );
       expect(
-        await listed(pharmacist(), {
+        await listed(pharmacist, {
           prescriptionId: elsewhere.medicationRequestId,
         }),
       ).toEqual([elsewhere.id]);
     });
 
     it("lists the super admin every pharmacy's dispenses, or one pharmacy's", async () => {
-      const admin = svc.as(UserRole.SUPER_ADMIN);
+      const admin = await svc.as(UserRole.SUPER_ADMIN);
       const tag = randomUUID();
       const here = await saveDispense({ medicationDisplay: tag });
       const elsewhere = await saveDispense({
@@ -121,7 +121,7 @@ describe('Dispense history', () => {
       const byPatient = await saveDispense();
       await saveDispense();
 
-      const ids = (query: object) => listed(pharmacist(), query);
+      const ids = (query: object) => listed(pharmacist, query);
 
       expect(
         await ids({
@@ -139,7 +139,7 @@ describe('Dispense history', () => {
   });
 
   describe('GET /dispense/summary', () => {
-    const summary = async (actor = pharmacist(), query: object = {}) =>
+    const summary = async (actor = pharmacist, query: object = {}) =>
       (
         await svc.api
           .get('/dispense/summary')
@@ -173,7 +173,7 @@ describe('Dispense history', () => {
     });
 
     it("counts only a pharmacist's own pharmacy's dispenses", async () => {
-      const admin = svc.as(UserRole.SUPER_ADMIN);
+      const admin = await svc.as(UserRole.SUPER_ADMIN);
       const elsewhere = { organizationId: otherPharmacy };
       const [mine, theirs] = [await summary(), await summary(admin, elsewhere)];
 
@@ -189,7 +189,7 @@ describe('Dispense history', () => {
     it('is refused to doctors', async () => {
       await svc.api
         .get('/dispense/summary')
-        .set(svc.as(UserRole.DOCTOR).headers)
+        .set((await svc.as(UserRole.DOCTOR)).headers)
         .expect(403);
     });
   });

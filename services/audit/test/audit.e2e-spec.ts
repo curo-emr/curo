@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { AuditLog } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
-import { startService, type ServiceUnderTest } from '@curo/testing';
+import {
+  startService,
+  type ServiceUnderTest,
+  type TestActor,
+} from '@curo/testing';
 import { AppModule } from '../src/app.module';
 
 interface Searchset {
@@ -12,9 +16,11 @@ interface Searchset {
 
 describe('Audit log', () => {
   let svc: ServiceUnderTest;
+  let doctor: TestActor;
 
   beforeAll(async () => {
     svc = await startService(AppModule);
+    doctor = await svc.as(UserRole.DOCTOR);
   });
 
   afterAll(() => svc.close());
@@ -27,8 +33,8 @@ describe('Audit log', () => {
     ...overrides,
   });
 
-  const record = (body: object, role = UserRole.DOCTOR) =>
-    svc.api.post('/audit').set(svc.as(role).headers).send(body);
+  const record = (body: object) =>
+    svc.api.post('/audit').set(doctor.headers).send(body);
 
   const savedFor = (patientId: string) =>
     svc.db.getRepository(AuditLog).findBy({ patientId });
@@ -36,7 +42,7 @@ describe('Audit log', () => {
   describe('POST /audit', () => {
     it('records who did it from the token, whatever the body claims', async () => {
       const patientId = randomUUID();
-      const nurse = svc.as(UserRole.NURSE);
+      const nurse = await svc.as(UserRole.NURSE);
 
       await svc.api
         .post('/audit')
@@ -79,7 +85,7 @@ describe('Audit log', () => {
       const res = await svc.api
         .get('/audit')
         .query({ patientId })
-        .set(svc.as(UserRole.SUPER_ADMIN).headers)
+        .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
         .expect(200);
 
       const bundle = res.body as Searchset;
@@ -100,7 +106,7 @@ describe('Audit log', () => {
       const res = await svc.api
         .get('/audit')
         .query({ patientId, resourceType: 'DocumentReference' })
-        .set(svc.as(UserRole.SUPER_ADMIN).headers)
+        .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
         .expect(200);
 
       expect(
@@ -110,7 +116,10 @@ describe('Audit log', () => {
 
     it('is refused to everyone but the super admin', async () => {
       for (const role of [UserRole.DOCTOR, UserRole.PATIENT])
-        await svc.api.get('/audit').set(svc.as(role).headers).expect(403);
+        await svc.api
+          .get('/audit')
+          .set((await svc.as(role)).headers)
+          .expect(403);
     });
   });
 });

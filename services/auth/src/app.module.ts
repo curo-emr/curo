@@ -8,6 +8,7 @@ import { PatientAccessModule } from './patient-access/patient-access.module';
 import { User } from './entities/user.entity';
 import { Practitioner } from './entities/practitioner.entity';
 import { Patient, AuditLog, databaseOptions } from '@curo/shared/database';
+import { JwtAuthModule } from '@curo/shared/auth';
 import { Organization } from './entities/organization.entity';
 
 @Module({
@@ -16,6 +17,7 @@ import { Organization } from './entities/organization.entity';
     TypeOrmModule.forRoot(
       databaseOptions([User, Practitioner, Patient, AuditLog, Organization]),
     ),
+    JwtAuthModule,
     AuthModule,
     AdminModule,
     OrganizationModule,

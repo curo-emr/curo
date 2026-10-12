@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { endSessions } from '@curo/shared/auth';
 import { User } from '../entities/user.entity';
 import { LoginAttempts } from './login-attempts';
 
@@ -27,7 +28,7 @@ export class Passwords {
    */
   async reset(user: User, newPassword: string): Promise<void> {
     user.passwordHash = await this.hash(newPassword);
-    user.sessionsEndedAt = new Date();
+    endSessions(user);
     await this.usersRepo.save(user);
     this.loginAttempts.clearFailures(user.email);
   }

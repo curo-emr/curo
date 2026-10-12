@@ -21,7 +21,7 @@ describe('Patient records', () => {
 
   beforeAll(async () => {
     svc = await startService(AppModule);
-    receptionist = svc.as(UserRole.RECEPTIONIST);
+    receptionist = await svc.as(UserRole.RECEPTIONIST);
   });
 
   afterAll(() => svc.close());
@@ -163,7 +163,7 @@ describe('Patient records', () => {
     it('is refused to patients and lab staff', async () => {
       for (const role of [UserRole.PATIENT, UserRole.LAB_STAFF]) {
         const body = newPatient();
-        await register(body, svc.as(role)).expect(403);
+        await register(body, await svc.as(role)).expect(403);
         await expect(savedPatient(body.lastName)).resolves.toBeNull();
       }
     });
@@ -189,7 +189,7 @@ describe('Patient records', () => {
         });
         await register(body).expect(201);
         const { id, patientCode } = (await savedPatient(body.lastName))!;
-        const actor = svc.as(role);
+        const actor = await svc.as(role);
 
         const reads = await Promise.all(
           [
@@ -219,7 +219,7 @@ describe('Patient records', () => {
 
     it("records an allergy on the patient's chart, by the doctor's practitioner record", async () => {
       const patientId = await registered();
-      const doctor = svc.as(UserRole.DOCTOR);
+      const doctor = await svc.as(UserRole.DOCTOR);
 
       const res = await svc.api
         .post(`/patients/${patientId}/allergies`)
@@ -256,7 +256,7 @@ describe('Patient records', () => {
 
       await svc.api
         .post(`/patients/${patientId}/allergies`)
-        .set(svc.as(UserRole.DOCTOR).headers)
+        .set((await svc.as(UserRole.DOCTOR)).headers)
         .send(penicillin)
         .expect(404);
 
@@ -268,8 +268,8 @@ describe('Patient records', () => {
 
   describe('changing a recorded allergy', () => {
     let doctor: TestActor;
-    beforeAll(() => {
-      doctor = svc.as(UserRole.DOCTOR);
+    beforeAll(async () => {
+      doctor = await svc.as(UserRole.DOCTOR);
     });
 
     /** A patient with one allergy, recorded by reception, and its id. */
@@ -463,7 +463,7 @@ describe('Patient records', () => {
   describe('POST /patients/:id/conditions', () => {
     it("records a condition on the patient's chart, by the doctor's practitioner record", async () => {
       const patientId = await registered();
-      const doctor = svc.as(UserRole.DOCTOR);
+      const doctor = await svc.as(UserRole.DOCTOR);
 
       await svc.api
         .post(`/patients/${patientId}/conditions`)
@@ -562,7 +562,7 @@ describe('Patient records', () => {
 
     it("records reads of the patient and of their chart, not a patient's refused read of another", async () => {
       const { patientId } = await registeredWithAllergy();
-      const nurse = svc.as(UserRole.NURSE);
+      const nurse = await svc.as(UserRole.NURSE);
 
       await svc.api
         .get(`/patients/${patientId}`)
@@ -574,7 +574,7 @@ describe('Patient records', () => {
         .expect(200);
       await svc.api
         .get(`/patients/${patientId}/allergies`)
-        .set(svc.as(UserRole.PATIENT).headers)
+        .set((await svc.as(UserRole.PATIENT)).headers)
         .expect(403);
 
       const reads = (await auditOf(svc, patientId)).filter(

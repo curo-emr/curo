@@ -18,7 +18,7 @@ import {
 } from '@curo/shared/fhir';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import type { AuthUser } from '@curo/shared/auth';
+import { endSessions, type AuthUser } from '@curo/shared/auth';
 import { AuditTrail } from '@curo/shared/audit';
 import { OrganizationService } from '../organization/organization.service';
 import { Passwords } from '../auth/passwords';
@@ -254,6 +254,8 @@ export class AdminService {
 
     if (dto.isActive != null) {
       user.isActive = dto.isActive;
+      // Reactivating later mustn't bring the sessions from before back.
+      if (!dto.isActive) endSessions(user);
       await this.usersRepo.save(user);
     }
 

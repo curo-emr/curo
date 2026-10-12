@@ -12,7 +12,6 @@ import {
   OrganizationType,
 } from '../src/entities/organization.entity';
 import { Practitioner } from '../src/entities/practitioner.entity';
-import { signedIn } from './signed-in';
 
 describe('Organizations', () => {
   let svc: ServiceUnderTest;
@@ -20,7 +19,7 @@ describe('Organizations', () => {
 
   beforeAll(async () => {
     svc = await startService(AppModule);
-    admin = await signedIn(svc, UserRole.SUPER_ADMIN);
+    admin = await svc.as(UserRole.SUPER_ADMIN);
   });
 
   afterAll(() => svc.close());
@@ -40,7 +39,7 @@ describe('Organizations', () => {
 
   /** The ids `GET /organizations` returns for `query`, as a doctor. */
   async function listed(query: object = {}) {
-    const doctor = await signedIn(svc, UserRole.DOCTOR);
+    const doctor = await svc.as(UserRole.DOCTOR);
     const res = await svc.api
       .get('/organizations')
       .query(query)
@@ -96,7 +95,7 @@ describe('Organizations', () => {
 
     it('is refused to everyone but the super admin', async () => {
       const pharmacy = await create(OrganizationType.PHARMACY);
-      const pharmacist = await signedIn(svc, UserRole.PHARMACIST);
+      const pharmacist = await svc.as(UserRole.PHARMACIST);
 
       await svc.api
         .post('/organizations')
@@ -227,7 +226,7 @@ describe('Organizations', () => {
   describe('GET /organizations/mine', () => {
     it('is where the token says the caller works', async () => {
       const pharmacy = await create(OrganizationType.PHARMACY);
-      const pharmacist = await signedIn(svc, UserRole.PHARMACIST, {
+      const pharmacist = await svc.as(UserRole.PHARMACIST, {
         organizationId: pharmacy.id,
       });
 

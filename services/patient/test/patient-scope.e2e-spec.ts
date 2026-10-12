@@ -17,7 +17,7 @@ describe("A patient reads only their own record's parts", () => {
     "serves their own %s and refuses another patient's",
     async (part) => {
       const ownId = randomUUID();
-      const patient = svc.as(UserRole.PATIENT, { patientId: ownId });
+      const patient = await svc.as(UserRole.PATIENT, { patientId: ownId });
 
       await svc.api
         .get(`/patients/${randomUUID()}/${part}`)
@@ -33,7 +33,7 @@ describe("A patient reads only their own record's parts", () => {
   it("still shows a doctor any patient's allergies", async () => {
     await svc.api
       .get(`/patients/${randomUUID()}/allergies`)
-      .set(svc.as(UserRole.DOCTOR).headers)
+      .set((await svc.as(UserRole.DOCTOR)).headers)
       .expect(200);
   });
 });

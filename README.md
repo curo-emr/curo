@@ -104,9 +104,10 @@ afterAll(() => svc.close());
 
 it('dispenses', async () => {
   const rx = await svc.db.getRepository(MedicationRequest).save({ ... }); // fixtures go straight in
+  const pharmacist = await svc.as(UserRole.PHARMACIST); // an account and a signed token, any role
   await svc.api
     .post('/dispense')
-    .set(svc.as(UserRole.PHARMACIST).headers) // a signed token for any role
+    .set(pharmacist.headers)
     .send({ medicationRequestId: rx.id })
     .expect(201);
 });

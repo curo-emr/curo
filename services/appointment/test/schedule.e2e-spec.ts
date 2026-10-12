@@ -15,8 +15,8 @@ describe("Doctors' weekly sessions", () => {
 
   beforeAll(async () => {
     svc = await startService(AppModule);
-    admin = svc.as(UserRole.SUPER_ADMIN);
-    receptionist = svc.as(UserRole.RECEPTIONIST);
+    admin = await svc.as(UserRole.SUPER_ADMIN);
+    receptionist = await svc.as(UserRole.RECEPTIONIST);
   });
 
   afterAll(() => svc.close());
@@ -46,7 +46,7 @@ describe("Doctors' weekly sessions", () => {
     ).body as object[];
 
   it("replaces a doctor's week, and lists it in day and time order", async () => {
-    const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
+    const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
     await setWeek(dr, [{ ...morning, weekday: 3 }]).expect(200);
 
     await setWeek(dr, [evening, morning]).expect(200);
@@ -58,7 +58,7 @@ describe("Doctors' weekly sessions", () => {
   });
 
   it('refuses overlapping sessions and keeps the week it had', async () => {
-    const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
+    const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
     await setWeek(dr, [morning]).expect(200);
 
     const res = await setWeek(dr, [
@@ -73,13 +73,13 @@ describe("Doctors' weekly sessions", () => {
   });
 
   it('refuses a time that is not a clock time, and a slot of no length', async () => {
-    const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
+    const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
     await setWeek(dr, [{ ...morning, start: '9am' }]).expect(400);
     await setWeek(dr, [{ ...morning, slotMinutes: 0 }]).expect(400);
   });
 
   it('lets only an administrator change a week', async () => {
-    const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
+    const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
     await setWeek(dr, [morning], receptionist).expect(403);
   });
 

@@ -45,7 +45,7 @@ describe('Lab specimens and results', () => {
   beforeAll(async () => {
     svc = await startService(AppModule);
     lab = await laboratory();
-    labStaff = technicianAt(lab);
+    labStaff = await technicianAt(lab);
   });
 
   afterAll(() => svc.close());
@@ -498,7 +498,7 @@ describe('Lab specimens and results', () => {
 
       await enterResults(
         { serviceRequestId: order.id, results: [fbc] },
-        svc.as(UserRole.DOCTOR),
+        await svc.as(UserRole.DOCTOR),
       ).expect(403);
 
       await expect(savedOrder(order.id)).resolves.toMatchObject({
@@ -542,7 +542,7 @@ describe('Lab specimens and results', () => {
       const res = await svc.api
         .get('/orders')
         .query(query)
-        .set(technicianAt(labId).headers)
+        .set((await technicianAt(labId)).headers)
         .expect(200);
       return (res.body as { entry: { resource: { id: string } }[] }).entry.map(
         (e) => e.resource.id,
@@ -653,7 +653,7 @@ describe('Lab specimens and results', () => {
 
       const res = await svc.api
         .get('/orders/summary')
-        .set(technicianAt(labId).headers)
+        .set((await technicianAt(labId)).headers)
         .expect(200);
       expect(res.body).toEqual({
         byStatus: { active: 2, completed: 1 },
@@ -678,7 +678,7 @@ describe('Lab specimens and results', () => {
       for (const { order } of [ours, theirs])
         await enterResults(
           { serviceRequestId: order.id, results: [fbc] },
-          svc.as(UserRole.SUPER_ADMIN),
+          await svc.as(UserRole.SUPER_ADMIN),
         ).expect(201);
 
       const ids = async (path: string, actor: TestActor) => {
@@ -703,9 +703,9 @@ describe('Lab specimens and results', () => {
         await reportOf(ours.order.id),
       ]);
       // The doctor sees the whole visit.
-      expect((await ids('/orders', svc.as(UserRole.DOCTOR))).sort()).toEqual(
-        [ours.order.id, theirs.order.id].sort(),
-      );
+      expect(
+        (await ids('/orders', await svc.as(UserRole.DOCTOR))).sort(),
+      ).toEqual([ours.order.id, theirs.order.id].sort());
       await svc.api
         .get(`/orders/${theirs.order.id}`)
         .set(labStaff.headers)
@@ -738,7 +738,7 @@ describe('Lab specimens and results', () => {
     it('refuses a technician who is not assigned to a lab', async () => {
       const res = await svc.api
         .get('/orders')
-        .set(svc.as(UserRole.LAB_STAFF).headers)
+        .set((await svc.as(UserRole.LAB_STAFF)).headers)
         .expect(403);
 
       expect(res.body).toMatchObject({
@@ -814,7 +814,7 @@ describe('Lab specimens and results', () => {
         qcLogIds(labStaff, { instrumentId: theirs.instrument.id }),
       ).resolves.toEqual([]);
       // The admin sees every lab's.
-      expect(await instrumentIds(svc.as(UserRole.SUPER_ADMIN))).toEqual(
+      expect(await instrumentIds(await svc.as(UserRole.SUPER_ADMIN))).toEqual(
         expect.arrayContaining([ours.instrument.id, theirs.instrument.id]),
       );
     });
@@ -878,7 +878,7 @@ describe('Lab specimens and results', () => {
         const theirs = await runQc(instrument.id, { status: QCStatus.FAIL });
 
         expect(await alertIds(labStaff)).not.toContain(theirs.id);
-        expect(await alertIds(svc.as(UserRole.SUPER_ADMIN))).toContain(
+        expect(await alertIds(await svc.as(UserRole.SUPER_ADMIN))).toContain(
           theirs.id,
         );
       });
@@ -910,7 +910,7 @@ describe('Lab specimens and results', () => {
     });
 
     it('has the admin name the active laboratory an instrument is in', async () => {
-      const admin = svc.as(UserRole.SUPER_ADMIN);
+      const admin = await svc.as(UserRole.SUPER_ADMIN);
 
       await addInstrument({ name: 'Beckman AU480' }, admin).expect(400);
       const res = await addInstrument(

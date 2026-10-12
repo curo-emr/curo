@@ -7,10 +7,10 @@ import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
 import { LoginDto } from './dto/login.dto';
 import { LoginAttempts } from './login-attempts';
-import { sessionIsLive } from './session';
 import {
   jwtSecret,
   jwtRefreshSecret,
+  sessionIsLive,
   type JwtPayload,
 } from '@curo/shared/auth';
 

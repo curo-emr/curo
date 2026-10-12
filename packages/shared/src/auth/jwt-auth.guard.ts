@@ -5,7 +5,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { DataSource } from 'typeorm';
 import { UserRole } from '../enums';
+import { sessionIsLive, type SessionState } from './session';
 
 /** Claims carried by access and refresh tokens (issued by the auth service). */
 export interface JwtPayload {
@@ -58,24 +60,38 @@ export function actorId(
   return user.practitionerId ?? user.userId;
 }
 
-/** Verifies the `Authorization: Bearer <token>` header and sets `request.user`. */
+/**
+ * Verifies the `Authorization: Bearer <token>` header and sets `request.user`.
+ * The token must also belong to a session that is still live: a suspension or
+ * a password reset ends the sessions signed in before it, everywhere at once.
+ */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly db: DataSource,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthRequest>();
     const authHeader = request.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) throw new UnauthorizedException();
 
+    let payload: JwtPayload;
     try {
-      const payload = this.jwtService.verify<JwtPayload>(
-        authHeader.split(' ')[1],
-      );
-      request.user = toAuthUser(payload);
-      return true;
+      payload = this.jwtService.verify<JwtPayload>(authHeader.split(' ')[1]);
     } catch {
       throw new UnauthorizedException();
     }
+
+    // Every service shares the database the auth service keeps accounts in.
+    const [account] = await this.db.query<SessionState[]>(
+      'SELECT "isActive", "sessionsEndedAt" FROM users WHERE id = $1',
+      [payload.sub],
+    );
+    if (!sessionIsLive(account, payload.iat)) throw new UnauthorizedException();
+
+    request.user = toAuthUser(payload);
+    return true;
   }
 }

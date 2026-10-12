@@ -4,6 +4,7 @@ import {
   daysFromToday,
   startService,
   type ServiceUnderTest,
+  type TestActor,
 } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { MedicationCatalog } from '../src/entities/medication-catalog.entity';
@@ -14,11 +15,13 @@ describe('stock', () => {
   let svc: ServiceUnderTest;
   const pharmacy = randomUUID();
   const otherPharmacy = randomUUID();
-  const pharmacist = (organizationId: string | null = pharmacy) =>
-    svc.as(UserRole.PHARMACIST, { organizationId });
+  let pharmacist: TestActor;
 
   beforeAll(async () => {
     svc = await startService(AppModule);
+    pharmacist = await svc.as(UserRole.PHARMACIST, {
+      organizationId: pharmacy,
+    });
   });
 
   afterAll(() => svc.close());
@@ -43,7 +46,7 @@ describe('stock', () => {
 
   /** The entries `path` returns for `codes`, keyed by drug, as the pharmacist. */
   async function entriesFor(path: string, ...codes: string[]) {
-    const res = await svc.api.get(path).set(pharmacist().headers).expect(200);
+    const res = await svc.api.get(path).set(pharmacist.headers).expect(200);
     const groups = res.body as StockGroup[];
     return Object.fromEntries(
       groups
@@ -101,7 +104,7 @@ describe('stock', () => {
     it('is refused to doctors', async () => {
       await svc.api
         .get('/stock/alerts')
-        .set(svc.as(UserRole.DOCTOR).headers)
+        .set((await svc.as(UserRole.DOCTOR)).headers)
         .expect(403);
     });
   });
@@ -137,7 +140,7 @@ describe('stock', () => {
       const res = await svc.api
         .get('/stock/grouped')
         .query({ organizationId: otherPharmacy })
-        .set(pharmacist().headers)
+        .set(pharmacist.headers)
         .expect(200);
 
       const groups = (res.body as StockGroup[]).filter(
@@ -161,7 +164,7 @@ describe('stock', () => {
         const res = await svc.api
           .get('/stock/grouped')
           .query(query)
-          .set(svc.as(UserRole.DOCTOR).headers)
+          .set((await svc.as(UserRole.DOCTOR)).headers)
           .expect(200);
         return (res.body as StockGroup[])
           .filter((g) => g.medicationCode === drug)
@@ -194,7 +197,7 @@ describe('stock', () => {
     it("receives stock into the pharmacist's pharmacy, not the one the body names", async () => {
       const res = await svc.api
         .post('/stock')
-        .set(pharmacist().headers)
+        .set(pharmacist.headers)
         .send({
           medicationCode: await catalogDrug(),
           quantity: 50,
@@ -212,7 +215,7 @@ describe('stock', () => {
     it('names received stock as the catalog does, whatever the body says', async () => {
       const res = await svc.api
         .post('/stock')
-        .set(pharmacist().headers)
+        .set(pharmacist.headers)
         .send({
           medicationCode: await catalogDrug(),
           medicationName: 'Something else',
@@ -233,7 +236,7 @@ describe('stock', () => {
       const receive = (body: object) =>
         svc.api
           .post('/stock')
-          .set(pharmacist().headers)
+          .set(pharmacist.headers)
           .send({ medicationCode, quantity: 10, ...body });
 
       await receive({ expiryDate: daysFromToday(-1) }).expect(400);
@@ -245,7 +248,7 @@ describe('stock', () => {
     it('turns away a drug that is not in the catalog', async () => {
       await svc.api
         .post('/stock')
-        .set(pharmacist().headers)
+        .set(pharmacist.headers)
         .send({ medicationCode: `TEST-${randomUUID()}`, quantity: 10 })
         .expect(400);
     });
@@ -260,7 +263,7 @@ describe('stock', () => {
 
       await svc.api
         .put(`/stock/${batch.id}`)
-        .set(pharmacist().headers)
+        .set(pharmacist.headers)
         .send({ quantity: 0 })
         .expect(404);
 
@@ -270,13 +273,14 @@ describe('stock', () => {
     });
 
     it('turns away a pharmacist not yet assigned to a pharmacy', async () => {
-      await svc.api
-        .get('/stock/grouped')
-        .set(pharmacist(null).headers)
-        .expect(403);
+      const unassigned = await svc.as(UserRole.PHARMACIST, {
+        organizationId: null,
+      });
+
+      await svc.api.get('/stock/grouped').set(unassigned.headers).expect(403);
       await svc.api
         .post('/stock')
-        .set(pharmacist(null).headers)
+        .set(unassigned.headers)
         .send({ medicationCode: 'X', quantity: 1 })
         .expect(403);
     });
@@ -284,7 +288,7 @@ describe('stock', () => {
     it('leaves receiving stock to pharmacists', async () => {
       await svc.api
         .post('/stock')
-        .set(svc.as(UserRole.SUPER_ADMIN).headers)
+        .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
         .send({ medicationCode: 'X', quantity: 1 })
         .expect(403);
     });
