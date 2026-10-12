@@ -66,6 +66,27 @@ export const appointmentStatusOf = (fhirStatus: string): Appointment["status"] =
 export const fhirAppointmentStatusesOf = (status: Appointment["status"]) =>
   FHIR_STATUSES.filter(fhirStatus => appointmentStatusOf(fhirStatus) === status);
 
+type AppointmentStatus = Appointment["status"];
+
+// The statuses an appointment can move to, one per status the API holds. The API refuses any
+// other change (appointment-status.ts in the appointment service); keep the two in step.
+const NEXT_STATUSES: Record<AppointmentStatus, AppointmentStatus[]> = {
+  scheduled: ["arrived", "cancelled", "no_show"],
+  not_arrived: ["arrived", "cancelled", "no_show"],
+  waiting: ["scheduled", "cancelled"],
+  arrived: ["completed", "cancelled"],
+  in_progress: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+  no_show: [],
+};
+
+/** What an appointment in `status` can be changed to; nothing once it's closed. */
+export const nextAppointmentStatuses = (status: AppointmentStatus) => NEXT_STATUSES[status];
+
+/** Whether `status` closes an appointment for good: completed, cancelled or no-show. */
+export const isClosedAppointmentStatus = (status: AppointmentStatus) => NEXT_STATUSES[status].length === 0;
+
 const QUEUE_STAGE_URL = "urn:curo:queueStage";
 
 // The id after "Patient/" or "Practitioner/" in the first participant of that kind.

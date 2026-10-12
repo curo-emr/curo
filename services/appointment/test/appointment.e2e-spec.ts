@@ -164,6 +164,64 @@ describe('Appointments and the patient queue', () => {
     });
   });
 
+  it('refuses to reopen a cancelled appointment, leaving it out of the queue', async () => {
+    const id = await book();
+    await setStatus(id, AppointmentStatus.CANCELLED).expect(200);
+
+    for (const status of [
+      AppointmentStatus.ARRIVED,
+      AppointmentStatus.FULFILLED,
+      AppointmentStatus.BOOKED,
+      AppointmentStatus.NOSHOW,
+    ]) {
+      await setStatus(id, status).expect(400);
+    }
+    await moveTo(id, QueueStage.WAITING_NURSE, receptionist).expect(400);
+
+    await expect(saved(id)).resolves.toMatchObject({
+      status: AppointmentStatus.CANCELLED,
+      queueStage: null,
+    });
+  });
+
+  it("refuses to complete a visit the patient hasn't arrived for", async () => {
+    const id = await book();
+
+    await setStatus(id, AppointmentStatus.FULFILLED).expect(400);
+
+    await expect(saved(id)).resolves.toMatchObject({
+      status: AppointmentStatus.BOOKED,
+    });
+  });
+
+  it('accepts the current status again, as a check-in that already happened', async () => {
+    const id = await book();
+    await setStatus(id, AppointmentStatus.ARRIVED).expect(200);
+    await moveTo(id, QueueStage.WITH_NURSE, nurse).expect(200);
+
+    await setStatus(id, AppointmentStatus.ARRIVED).expect(200);
+
+    await expect(saved(id)).resolves.toMatchObject({
+      status: AppointmentStatus.ARRIVED,
+      queueStage: QueueStage.WITH_NURSE,
+    });
+  });
+
+  it('checks in a patient the doctor sees without one, so the visit can be completed', async () => {
+    const id = await book();
+
+    await moveTo(id, QueueStage.WITH_DOCTOR, doctor).expect(200);
+    await expect(saved(id)).resolves.toMatchObject({
+      status: AppointmentStatus.ARRIVED,
+    });
+
+    await setStatus(id, AppointmentStatus.FULFILLED, doctor).expect(200);
+    await expect(saved(id)).resolves.toMatchObject({
+      status: AppointmentStatus.FULFILLED,
+      queueStage: QueueStage.DONE,
+    });
+  });
+
   it('audits the booking, and each change with what it was and became', async () => {
     const id = await book();
 
@@ -214,18 +272,13 @@ describe('Appointments and the patient queue', () => {
       await bookAt(dr, at(9, 30)).expect(201);
     });
 
-    it('frees a cancelled slot, and refuses to re-book the cancelled one over its replacement', async () => {
+    it('frees a cancelled slot for another booking', async () => {
       const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
       const first = await bookAt(dr, at(10)).expect(201);
       const firstId = (first.body as { id: string }).id;
       await setStatus(firstId, AppointmentStatus.CANCELLED).expect(200);
 
       await bookAt(dr, at(10)).expect(201);
-
-      await setStatus(firstId, AppointmentStatus.BOOKED).expect(409);
-      await expect(saved(firstId)).resolves.toMatchObject({
-        status: AppointmentStatus.CANCELLED,
-      });
     });
 
     it('refuses an appointment that ends before it starts', async () => {

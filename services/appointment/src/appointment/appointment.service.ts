@@ -20,6 +20,7 @@ import {
 } from '@curo/shared/fhir';
 import { AppointmentStatus, QueueStage } from '../enums';
 import { assertQueueTransition, queueStageForStatus } from './queue-stage';
+import { assertStatusTransition } from './appointment-status';
 import { patientScope, type AuthUser } from '@curo/shared/auth';
 import { AuditTrail, auditTarget, changeOf } from '@curo/shared/audit';
 
@@ -211,12 +212,12 @@ export class AppointmentService {
   async update(id: string, dto: UpdateAppointmentDto, user: AuthUser) {
     const a = await this.findToChange(id, user);
     const update: Partial<Appointment> = { ...dto };
-    if (dto.status && dto.status !== a.status) {
+    if (dto.status && assertStatusTransition(a.status, dto.status)) {
       const stage = queueStageForStatus(dto.status, a.queueStage);
       if (stage !== undefined) update.queueStage = stage;
     }
     const changes = changeOf(a, update);
-    // Re-booking a cancelled appointment takes its slot back, so it can clash too.
+    // Booking a proposed or wait-listed appointment takes a slot, so it can clash too.
     const saved = await this.save(Object.assign(a, update));
     await this.auditTrail.record(user, {
       action: 'UPDATE',
@@ -230,9 +231,14 @@ export class AppointmentService {
     const a = await this.findToChange(id, user);
     if (!assertQueueTransition(a.queueStage, stage, user.role))
       return toFhirAppointment(a);
-    const changes = changeOf(a, { queueStage: stage });
-    a.queueStage = stage;
-    const saved = await this.appointmentsRepo.save(a);
+    const update: Partial<Appointment> = { queueStage: stage };
+    // A patient in the day's flow is here: the move checks them in, and a
+    // closed appointment can't re-enter the flow.
+    if (assertStatusTransition(a.status, AppointmentStatus.ARRIVED)) {
+      update.status = AppointmentStatus.ARRIVED;
+    }
+    const changes = changeOf(a, update);
+    const saved = await this.appointmentsRepo.save(Object.assign(a, update));
     await this.auditTrail.record(user, {
       action: 'UPDATE',
       ...auditTarget('Appointment', saved),
