@@ -46,15 +46,17 @@ interface AppShellProps {
   account: React.ReactNode;
   /** The top bar beside the sidebar toggle: search, notifications and so on. */
   toolbar?: React.ReactNode;
+  /** Whether the sidebar starts open; a portal's layout reads it with `sidebarStartsOpen`. Open by default. */
+  sidebarOpen?: boolean;
   children: React.ReactNode;
 }
 
 // The frame every portal shares: a collapsible sidebar (a drawer on phones), a top bar
 // and a scrolling content area. A portal supplies its links, account menu and toolbar.
-export function AppShell({ portal, home, nav, account, toolbar, children }: AppShellProps) {
+export function AppShell({ portal, home, nav, account, toolbar, sidebarOpen, children }: AppShellProps) {
   return (
     <TooltipProvider>
-      <SidebarProvider className="h-svh overflow-hidden">
+      <SidebarProvider defaultOpen={sidebarOpen} className="h-svh overflow-hidden">
         <Sidebar collapsible="icon">
           <SidebarHeader>
             <SidebarMenu>

@@ -9,13 +9,14 @@ import { ROUTES } from "@/lib/constants";
 import { myQueries } from "@/lib/queries";
 import { NAV } from "./nav";
 
-export function PatientShell({ children }: { children: React.ReactNode }) {
+export function PatientShell({ children, sidebarOpen }: { children: React.ReactNode; sidebarOpen: boolean }) {
   const { user, logout } = useAuth();
   // A patient's sign-in carries no name; their record does.
   const name = useQuery(myQueries.profile()).data?.name.full;
 
   return (
     <AppShell
+      sidebarOpen={sidebarOpen}
       portal="Patient Portal"
       home={ROUTES.HOME}
       nav={NAV}
