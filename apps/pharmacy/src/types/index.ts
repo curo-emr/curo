@@ -53,37 +53,6 @@ export interface Problem {
   notes: string;
 }
 
-export interface SOAP {
-  subjective: string;
-  objective: string;
-  assessment: string;
-  plan: string;
-}
-
-export interface Encounter {
-  id: string;
-  patientId: string;
-  doctorId: string;
-  appointmentId: string;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  startedAt: string;
-  endedAt: string | null;
-  chiefComplaint: string;
-  soap: SOAP;
-}
-
-export interface Task {
-  id: string;
-  doctorId: string;
-  title: string;
-  description: string;
-  dueDate: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'open' | 'in_progress' | 'completed';
-  relatedPatientId?: string;
-  createdAt: string;
-}
-
 // --- Pharmacy Staff ---
 
 export type PharmacyStaffRole = 'chief_pharmacist' | 'pharmacist' | 'pharmacy_technician';
