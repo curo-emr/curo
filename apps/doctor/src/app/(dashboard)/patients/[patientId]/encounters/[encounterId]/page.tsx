@@ -12,6 +12,7 @@ import { PageHeader } from "@curo/web/ui/page-header";
 import { PageSkeleton } from "@curo/web/ui/page-skeleton";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { StatusBadge } from "@curo/web/ui/status-badge";
+import { HoldNote } from "@/components/features/prescriptions/HoldNote";
 import { RX_PRINT_ID, RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";
 import { LAB_SLIP_PRINT_ID, LabSlipPrint } from "@/components/features/labs/LabSlipPrint";
 import { VisitLabOrders, useVisitLabOrders } from "@/components/features/labs/VisitLabOrders";
@@ -185,6 +186,7 @@ export default function VisitSummaryPage({ params }: { params: Promise<{ patient
                         <StatusBadge status={rx.status} />
                       </div>
                       <p className="text-xs text-muted-foreground">{rxDirections(item)} · Qty {item.quantity}</p>
+                      <HoldNote rx={rx} />
                     </li>
                   )))}
                 </ul>

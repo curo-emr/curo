@@ -10,6 +10,7 @@ import { Checkbox } from "@curo/web/ui/checkbox";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { StatusBadge } from "@curo/web/ui/status-badge";
+import { HoldNote } from "@/components/features/prescriptions/HoldNote";
 import { RX_PRINT_ID, RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";
 import { useAuth } from "@/contexts/AuthContext";
 import { printOnly } from "@curo/web/print";
@@ -57,6 +58,7 @@ export function MedicationsTab({ patient }: { patient: Patient }) {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground">{item.displayName}</p>
                     <p className="text-xs text-muted-foreground">{rxDirections(item)} · Qty {item.quantity}</p>
+                    <HoldNote rx={rx} />
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <StatusBadge status={rx.status} />

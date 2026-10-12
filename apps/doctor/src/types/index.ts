@@ -159,7 +159,10 @@ export interface Prescription {
   patientId: string;
   encounterId: string;
   doctorId: string;
-  status: 'draft' | 'sent_to_pharmacy';
+  /** Where it is: written, with the pharmacy, held there, dispensed, or cancelled. */
+  status: 'draft' | 'sent_to_pharmacy' | 'on_hold' | 'dispensed' | 'cancelled';
+  /** Why the pharmacy is holding it; empty unless it's on hold. */
+  holdReason: string;
   createdAt: string;
   sentAt: string | null;
   items: PrescriptionItem[];

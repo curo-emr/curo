@@ -97,6 +97,8 @@ export interface FhirMedicationRequest {
   meta?: { lastUpdated?: string };
   authoredOn?: string;
   status: string;
+  /** Why the pharmacy is holding it, while it's on hold. */
+  statusReason?: { text?: string };
   subject?: { reference?: string };
   requester?: { reference?: string };
   encounter?: { reference?: string };
@@ -324,8 +326,8 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
   const doctorId = fhir.requester?.reference?.replace('Practitioner/', '') ?? '';
   const ext = fhir.extension ?? [];
   const statusMap: Record<string, Prescription['status']> = {
-    draft: 'draft', active: 'sent_to_pharmacy', completed: 'sent_to_pharmacy',
-    cancelled: 'draft', stopped: 'draft',
+    draft: 'draft', active: 'sent_to_pharmacy', 'on-hold': 'on_hold', completed: 'dispensed',
+    cancelled: 'cancelled', stopped: 'cancelled', 'entered-in-error': 'cancelled',
   };
 
   const dosage = fhir.dosageInstruction?.[0];
@@ -338,6 +340,7 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
     encounterId,
     doctorId,
     status: statusMap[fhir.status] ?? 'draft',
+    holdReason: fhir.statusReason?.text ?? '',
     createdAt: fhir.authoredOn ?? fhir.meta?.lastUpdated ?? '',
     sentAt: fhir.status === 'active' ? (fhir.meta?.lastUpdated ?? null) : null,
     items: [{
