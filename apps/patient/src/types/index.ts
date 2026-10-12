@@ -1,6 +1,6 @@
 // The signed-in patient's own record, as the patient portal shows it.
 
-export type { Allergy, LabReport, LabResultValue } from '@curo/web/fhir';
+export type { Allergy, LabReport } from '@curo/web/fhir';
 
 export interface Patient {
   id: string;

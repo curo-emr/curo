@@ -1,8 +1,5 @@
-import { isAbnormalResult } from "@curo/web/clinical";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
+import { LabResultList } from "@curo/web/ui/lab-results";
 import type { LabResult } from "@/lib/api/lab";
-import { cn } from "@/lib/utils";
-import { ResultFlagBadge } from "@curo/web/ui/result-flag-badge";
 
 // One filed report's values, out-of-range ones in bold with their flag, then the lab's conclusion.
 export function ResultsTable({ result }: { result: LabResult }) {
@@ -11,30 +8,7 @@ export function ResultsTable({ result }: { result: LabResult }) {
       {result.results.length === 0 ? (
         <p className="text-sm text-muted-foreground">The results are in the uploaded report file.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Test</TableHead>
-                <TableHead>Result</TableHead>
-                <TableHead>Reference range</TableHead>
-                <TableHead className="w-24">Flag</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.results.map((item, i) => (
-                <TableRow key={`${item.testCode}:${i}`}>
-                  <TableCell className="text-foreground">{item.testName}</TableCell>
-                  <TableCell className={cn("tabular-nums", isAbnormalResult(item.flag) && "font-semibold text-foreground")}>
-                    {item.value} {item.unit && <span className="text-xs font-normal text-muted-foreground">{item.unit}</span>}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{item.referenceRange || "—"}</TableCell>
-                  <TableCell>{isAbnormalResult(item.flag) && <ResultFlagBadge flag={item.flag} />}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <LabResultList results={result.results} />
       )}
       {result.conclusion && (
         <p className="rounded-lg bg-muted/50 px-4 py-3 text-sm text-foreground">{result.conclusion}</p>

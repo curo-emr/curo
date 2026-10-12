@@ -183,7 +183,7 @@ export interface Lab {
 }
 
 /** One test result in a lab report. */
-export type { LabReport, LabResultValue } from '@curo/web/fhir';
+export type { LabReport } from '@curo/web/fhir';
 
 export interface LabOrderTest {
   testId: string;

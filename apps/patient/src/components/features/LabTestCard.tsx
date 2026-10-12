@@ -2,17 +2,15 @@
 
 import { FileText, Loader2 } from "lucide-react";
 import { openDocument, openPdf } from "@curo/web/api";
-import { isAbnormalResult, resultFlag } from "@curo/web/clinical";
 import { Button } from "@curo/web/ui/button";
-import { ResultFlagBadge } from "@curo/web/ui/result-flag-badge";
+import { LabResultList } from "@curo/web/ui/lab-results";
 import { StatusBadge } from "@curo/web/ui/status-badge";
-import { cn } from "@curo/web/ui/utils";
 import type { DocumentRef } from "@/lib/api/documents";
 import { useDoctorName } from "@/lib/hooks/useDirectory";
 import { useOpener } from "@/lib/hooks/useOpener";
 import { formatDate } from "@/lib/format";
 import { LAB_TEST_STATUS } from "@/lib/status";
-import type { LabReport, LabResultValue, LabTest } from "@/types";
+import type { LabReport, LabTest } from "@/types";
 
 interface LabTestCardProps {
   test: LabTest;
@@ -39,36 +37,10 @@ export function LabTestCard({ test, report, files }: LabTestCardProps) {
         </div>
         <StatusBadge status={status} label={label} className="shrink-0" />
       </div>
-      {report && report.results.length > 0 && <ResultList results={report.results} />}
+      {report && report.results.length > 0 && <LabResultList results={report.results} />}
       {report?.conclusion && <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-foreground">{report.conclusion}</p>}
       <ReportFiles pdfBase64={report?.pdfBase64} files={files} />
     </li>
-  );
-}
-
-// Each value with its unit, its normal range and, when it's outside, a flag.
-function ResultList({ results }: { results: LabResultValue[] }) {
-  return (
-    <ul className="divide-y rounded-lg border">
-      {results.map((r, i) => {
-        const flag = resultFlag(r.interpretation);
-        const abnormal = isAbnormalResult(flag);
-        return (
-          <li key={`${r.code}:${i}`} className="flex items-start justify-between gap-3 px-3 py-2.5">
-            <div className="min-w-0">
-              <p className="text-sm text-foreground">{r.display}</p>
-              {r.referenceRange && <p className="text-xs text-muted-foreground">Normal range {r.referenceRange}{r.unit && ` ${r.unit}`}</p>}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <span className={cn("text-sm tabular-nums text-foreground", abnormal && "font-semibold")}>
-                {r.value} {r.unit && <span className="text-xs font-normal text-muted-foreground">{r.unit}</span>}
-              </span>
-              {abnormal && <ResultFlagBadge flag={flag} />}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 

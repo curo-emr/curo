@@ -9,10 +9,10 @@ import {
   type FhirDiagnosticReport,
   type FhirServiceRequest,
 } from './mappers';
-import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
+import { unwrapBundle, paginationParams, type FhirBundle, type LabResultValue, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
 import type { LabOrder } from '@/types';
 import type { LabStaff, LabTestCatalogItem, QCLog, QCStatus } from '@/types';
-import type { LabAnalyte, ResultFlag } from '@curo/web/clinical';
+import type { LabAnalyte } from '@curo/web/clinical';
 import { interpret, parseNumeric } from '@/lib/result-flag';
 
 // ─── Lab Orders ───────────────────────────────────────────────────────────────
@@ -162,22 +162,13 @@ export const LAB_REPORT_DOCUMENT = 'lab-report';
 
 // ─── Results ─────────────────────────────────────────────────────────────────
 
-export interface LabResultItem {
-  testCode: string;
-  testName: string;
-  value: string;
-  unit?: string;
-  referenceRange?: string;
-  flag?: ResultFlag;
-}
-
 export interface LabResult {
   id: string;
   orderId: string;
   patientId: string;
   performedAt: string;
   reportedAt?: string;
-  results: LabResultItem[];
+  results: LabResultValue[];
   conclusion?: string;
   status: string;
 }
