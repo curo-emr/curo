@@ -1,6 +1,6 @@
 import { apiClient, getByIds, nullIfNotFound } from '@curo/web/api';
-import type { Patient, Allergy, Problem } from '@/types';
-import { mapFhirPatient, mapFhirAllergy, mapFhirCondition, type FhirPatient, type FhirAllergy, type FhirCondition } from './mappers';
+import type { Patient, Allergy } from '@/types';
+import { mapFhirPatient, mapFhirAllergy, type FhirPatient, type FhirAllergy } from './mappers';
 import { unwrapBundle, paginationParams, type FhirBundle, type PaginatedResult, type PaginationParams } from '@curo/web/fhir';
 
 // Resolve the patients a list shows (FHIR `_id` search).
@@ -30,11 +30,6 @@ export async function getPatientById(id: string): Promise<Patient | null> {
 export async function getAllergies(patientId: string): Promise<Allergy[]> {
   const res = await apiClient.get<FhirAllergy[]>(`/patients/${patientId}/allergies`);
   return res.data.map(a => mapFhirAllergy({ ...a, patient: { reference: `Patient/${patientId}` } }));
-}
-
-export async function getConditions(patientId: string): Promise<Problem[]> {
-  const res = await apiClient.get<FhirCondition[]>(`/patients/${patientId}/conditions`);
-  return res.data.map(c => mapFhirCondition({ ...c, subject: { reference: `Patient/${patientId}` } }));
 }
 
 export async function createPatient(data: Record<string, unknown>): Promise<{ id: string; patientCode: string }> {

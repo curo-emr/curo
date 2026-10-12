@@ -1,6 +1,6 @@
 import {
-  mapFhirAllergy, mapFhirPatient, mapFhirPatientDetails, mapFhirReport,
-  type FhirAllergy, type FhirDiagnosticReport, type FhirPatient,
+  mapFhirAllergy, mapFhirCondition, mapFhirPatient, mapFhirPatientDetails, mapFhirReport,
+  type FhirAllergy, type FhirCondition, type FhirDiagnosticReport, type FhirPatient,
 } from "./index";
 
 const allergy = (overrides: Partial<FhirAllergy> = {}): FhirAllergy => ({
@@ -141,6 +141,54 @@ describe("mapFhirPatient", () => {
     const patient = mapFhirPatient({ resourceType: "Patient", id: "p2" });
     expect(patient.name).toEqual({ first: "", last: "", full: "" });
     expect(patient.sex).toBe("other");
+  });
+});
+
+describe("mapFhirCondition", () => {
+  const condition: FhirCondition = {
+    resourceType: "Condition",
+    id: "c1",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/e1" },
+    clinicalStatus: { coding: [{ code: "active" }] },
+    category: [{ coding: [{ code: "encounter-diagnosis" }] }],
+    code: { coding: [{ code: "J20.9", display: "Acute bronchitis" }] },
+    onsetDateTime: "2026-10-01",
+    recordedDate: "2026-10-02T04:00:00.000Z",
+    note: [{ text: "Primary diagnosis" }],
+  };
+
+  it("reads a visit's diagnosis", () => {
+    expect(mapFhirCondition(condition)).toEqual({
+      id: "c1",
+      patientId: "p1",
+      icdCode: "J20.9",
+      name: "Acute bronchitis",
+      status: "active",
+      onsetDate: "2026-10-01",
+      notes: "Primary diagnosis",
+      encounterId: "e1",
+      category: "encounter-diagnosis",
+      isPrimary: true,
+    });
+  });
+
+  it("dates it by when it was recorded if the onset isn't known", () => {
+    expect(mapFhirCondition({ ...condition, onsetDateTime: undefined }).onsetDate).toBe("2026-10-02");
+  });
+
+  it("counts remission as resolved, and anything unknown as active", () => {
+    const status = (code?: string) => mapFhirCondition({ ...condition, clinicalStatus: { coding: [{ code }] } }).status;
+    expect(status("remission")).toBe("resolved");
+    expect(status("relapse")).toBe("active");
+    expect(status(undefined)).toBe("active");
+  });
+
+  it("is blank, not undefined, for a bare condition", () => {
+    expect(mapFhirCondition({ resourceType: "Condition", id: "c2" })).toEqual({
+      id: "c2", patientId: "", icdCode: "", name: "", status: "active",
+      onsetDate: "", notes: "", encounterId: "", category: "", isPrimary: false,
+    });
   });
 });
 

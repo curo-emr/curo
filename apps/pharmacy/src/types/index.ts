@@ -2,16 +2,6 @@ import type { PersonName } from '@curo/web/fhir';
 
 export type { Allergy, Patient } from '@curo/web/fhir';
 
-export interface Problem {
-  id: string;
-  patientId: string;
-  icdCode: string;
-  name: string;
-  status: 'active' | 'resolved' | 'inactive';
-  onsetDate: string;
-  notes: string;
-}
-
 // --- Pharmacy Staff ---
 
 export type PharmacyStaffRole = 'chief_pharmacist' | 'pharmacist' | 'pharmacy_technician';

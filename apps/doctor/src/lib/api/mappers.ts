@@ -1,30 +1,14 @@
 import type {
-  Problem, Encounter, Prescription, LabOrder,
+  Encounter, Prescription, LabOrder,
   Task,
 } from '@/types';
 
-export { mapFhirAllergy, mapFhirPatient, type FhirAllergy, type FhirPatient } from '@curo/web/fhir';
+export {
+  mapFhirAllergy, mapFhirCondition, mapFhirPatient, type FhirAllergy, type FhirCondition, type FhirPatient,
+} from '@curo/web/fhir';
 export { mapFhirAppointment, type FhirAppointment } from '@curo/web/appointments';
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
-
-export interface FhirCondition {
-  resourceType: 'Condition';
-  id: string;
-  meta?: { lastUpdated?: string };
-  subject?: { reference?: string };
-  code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
-  clinicalStatus?: { coding?: Array<{ code?: string }> };
-  encounter?: { reference?: string };
-  category?: Array<{ coding?: Array<{ code?: string }> }>;
-  onsetDateTime?: string;
-  recordedDate?: string;
-  note?: Array<{ text?: string }>;
-}
-
-// The clinical service stores a visit's diagnoses as encounter-diagnosis Conditions;
-// the primary one carries PRIMARY_DIAGNOSIS_NOTE.
-export const PRIMARY_DIAGNOSIS_NOTE = 'Primary diagnosis';
 
 export interface FhirEncounter {
   resourceType: 'Encounter';
@@ -108,29 +92,6 @@ export interface FhirTask {
 }
 
 // ─── Mappers ─────────────────────────────────────────────────────────────────
-
-export function mapFhirCondition(fhir: FhirCondition): Problem {
-  const patientRef = fhir.subject?.reference?.split('/')?.[1] ?? '';
-  const icdCode = fhir.code?.coding?.[0]?.code ?? '';
-  const name = fhir.code?.text ?? fhir.code?.coding?.[0]?.display ?? '';
-  const statusCode = fhir.clinicalStatus?.coding?.[0]?.code ?? 'active';
-  const statusMap: Record<string, Problem['status']> = {
-    active: 'active', resolved: 'resolved', inactive: 'inactive', remission: 'resolved',
-  };
-
-  return {
-    id: fhir.id,
-    patientId: patientRef,
-    icdCode,
-    name,
-    status: statusMap[statusCode] ?? 'active',
-    onsetDate: fhir.onsetDateTime?.slice(0, 10) ?? fhir.recordedDate?.slice(0, 10) ?? '',
-    notes: fhir.note?.[0]?.text ?? '',
-    encounterId: fhir.encounter?.reference?.replace('Encounter/', '') ?? '',
-    category: fhir.category?.[0]?.coding?.[0]?.code ?? '',
-    isPrimary: fhir.note?.[0]?.text === PRIMARY_DIAGNOSIS_NOTE,
-  };
-}
 
 const ENCOUNTER_STATUS_MAP: Record<string, Encounter['status']> = {
   planned: 'scheduled',
