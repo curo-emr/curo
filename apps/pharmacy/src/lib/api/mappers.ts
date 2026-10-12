@@ -1,6 +1,4 @@
-import type {
-  Patient, Problem, Encounter, Prescription, Task,
-} from '@/types';
+import type { Patient, Problem, Prescription } from '@/types';
 
 export { mapFhirAllergy, type FhirAllergy } from '@curo/web/fhir';
 import type { DispenseRecord } from './pharmacy';
@@ -45,22 +43,6 @@ export interface FhirCondition {
   clinicalStatus?: { coding?: Array<{ code?: string }> };
   onsetDateTime?: string;
   note?: Array<{ text?: string }>;
-}
-
-export interface FhirEncounter {
-  resourceType: 'Encounter';
-  id: string;
-  meta?: { lastUpdated?: string };
-  status: string;
-  subject?: { reference?: string };
-  participant?: Array<{ individual?: { reference?: string } }>;
-  appointment?: Array<{ reference?: string }>;
-  period?: { start?: string; end?: string };
-  reasonCode?: Array<{ text?: string }>;
-  extension?: Array<{
-    url: string;
-    valueString?: string;
-  }>;
 }
 
 export interface FhirMedicationRequest {
@@ -119,33 +101,6 @@ export interface FhirMedicationDispense {
     valueInteger?: number;
     valueDecimal?: number | string;
   }>;
-}
-
-export interface FhirServiceRequest {
-  resourceType: 'ServiceRequest';
-  id: string;
-  meta?: { lastUpdated?: string };
-  status: string;
-  priority?: string;
-  subject?: { reference?: string };
-  requester?: { reference?: string };
-  encounter?: { reference?: string };
-  code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
-  note?: Array<{ text?: string }>;
-  extension?: Array<{ url: string; valueString?: string }>;
-}
-
-export interface FhirTask {
-  resourceType: 'Task';
-  id: string;
-  meta?: { lastUpdated?: string };
-  status: string;
-  priority?: string;
-  for?: { reference?: string };
-  description?: string;
-  note?: Array<{ text?: string }>;
-  restriction?: { period?: { end?: string } };
-  extension?: Array<{ url: string; valueString?: string }>;
 }
 
 // ─── Mappers ─────────────────────────────────────────────────────────────────
@@ -229,40 +184,6 @@ export function mapFhirCondition(fhir: FhirCondition): Problem {
     status: statusMap[statusCode] ?? 'active',
     onsetDate: fhir.onsetDateTime?.slice(0, 10) ?? '',
     notes: fhir.note?.[0]?.text ?? '',
-  };
-}
-
-const ENCOUNTER_STATUS_MAP: Record<string, Encounter['status']> = {
-  planned: 'scheduled',
-  arrived: 'scheduled',
-  triaged: 'scheduled',
-  'in-progress': 'in_progress',
-  onleave: 'in_progress',
-  finished: 'completed',
-  cancelled: 'cancelled',
-};
-
-export function mapFhirEncounter(fhir: FhirEncounter): Encounter {
-  const patientId = fhir.subject?.reference?.replace('Patient/', '') ?? '';
-  const practitionerId = fhir.participant?.[0]?.individual?.reference?.replace('Practitioner/', '') ?? '';
-  const appointmentId = fhir.appointment?.[0]?.reference?.replace('Appointment/', '') ?? '';
-  const ext = fhir.extension ?? [];
-
-  return {
-    id: fhir.id,
-    patientId,
-    doctorId: practitionerId,
-    appointmentId,
-    status: ENCOUNTER_STATUS_MAP[fhir.status] ?? 'scheduled',
-    startedAt: fhir.period?.start ?? '',
-    endedAt: fhir.period?.end ?? null,
-    chiefComplaint: ext.find(e => e.url === 'urn:curo:chiefComplaint')?.valueString ?? fhir.reasonCode?.[0]?.text ?? '',
-    soap: {
-      subjective: ext.find(e => e.url === 'urn:curo:soap:subjective')?.valueString ?? '',
-      objective: ext.find(e => e.url === 'urn:curo:soap:objective')?.valueString ?? '',
-      assessment: ext.find(e => e.url === 'urn:curo:soap:assessment')?.valueString ?? '',
-      plan: ext.find(e => e.url === 'urn:curo:soap:plan')?.valueString ?? '',
-    },
   };
 }
 
@@ -369,30 +290,5 @@ export function mapFhirMedicationDispense(fhir: FhirMedicationDispense | Dispens
       unitPrice,
       subtotal,
     }],
-  };
-}
-
-
-export function mapFhirTask(fhir: FhirTask): Task {
-  const patientId = fhir.for?.reference?.replace('Patient/', '') ?? undefined;
-  const ext = fhir.extension ?? [];
-  const statusMap: Record<string, Task['status']> = {
-    requested: 'open', accepted: 'in_progress', received: 'open',
-    'in-progress': 'in_progress', completed: 'completed', cancelled: 'open', failed: 'open',
-  };
-  const priorityMap: Record<string, Task['priority']> = {
-    routine: 'low', urgent: 'medium', asap: 'high', stat: 'high',
-  };
-
-  return {
-    id: fhir.id,
-    doctorId: ext.find(e => e.url === 'urn:curo:ownerId')?.valueString ?? '',
-    title: fhir.description ?? '',
-    description: fhir.note?.[0]?.text ?? '',
-    dueDate: fhir.restriction?.period?.end?.slice(0, 10) ?? '',
-    priority: priorityMap[fhir.priority ?? 'routine'] ?? 'low',
-    status: statusMap[fhir.status] ?? 'open',
-    relatedPatientId: patientId,
-    createdAt: fhir.meta?.lastUpdated ?? '',
   };
 }
