@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { Loader2, ScrollText } from "lucide-react";
 import { useServerPagination } from "@curo/web/hooks";
@@ -12,22 +12,20 @@ import { Pagination } from "@curo/web/ui/pagination";
 import { cn } from "@curo/web/ui/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@curo/web/ui/table";
 import { getAuditLogsPaginated } from "@/lib/api/audit";
-import { auditUserIds, describeAuditEntry } from "@/lib/audit";
+import { auditAccounts, auditSubject, describeAuditEntry } from "@/lib/audit";
 import { ROLE_LABELS, ROUTES } from "@/lib/constants";
 import { userQueries } from "@/lib/queries";
-import type { AdminUser } from "@/types";
+import type { AdminUser, AuditEntry } from "@/types";
 
 export default function AuditPage() {
   const { items: entries, total, isLoading, isError, page, setPage, pageSize, setPageSize } = useServerPagination(
     (page, pageSize) => getAuditLogsPaginated({ page, pageSize }),
   );
 
-  // The names behind the page's user ids; each user is looked up once and cached.
-  const ids = [...new Set(entries.flatMap(auditUserIds))];
-  const users = useQueries({
-    queries: ids.map(id => userQueries.detail(id)),
-    combine: results => new Map(results.flatMap(r => (r.data ? [[r.data.id, r.data] as const] : []))),
-  });
+  // Everyone the page mentions, in one request.
+  const { ids, practitionerIds } = auditAccounts(entries);
+  const accounts = useQuery(userQueries.named(ids, practitionerIds)).data ?? [];
+  const account = (by: "id" | "practitionerId", id: string) => accounts.find(a => a[by] === id);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -60,12 +58,12 @@ export default function AuditPage() {
                       {e.createdAt ? format(parseISO(e.createdAt), "d MMM, HH:mm") : "—"}
                     </TableCell>
                     <TableCell>
-                      <UserLink user={users.get(e.userId)} />
+                      <UserLink user={account("id", e.userId)} />
                       <p className="text-xs text-muted-foreground">{e.userRole ? ROLE_LABELS[e.userRole] ?? e.userRole : "—"}</p>
                     </TableCell>
                     <TableCell>
                       <p className="whitespace-nowrap text-foreground">{describeAuditEntry(e)}</p>
-                      {e.resourceType === "User" && <UserLink user={users.get(e.resourceId)} className="text-xs" />}
+                      <SubjectLink entry={e} account={account} />
                     </TableCell>
                     <TableCell className="min-w-64 whitespace-normal text-muted-foreground">{e.outcomeDescription ?? "—"}</TableCell>
                   </TableRow>
@@ -91,4 +89,13 @@ function UserLink({ user, className }: { user?: AdminUser; className?: string })
       {user.name}
     </Link>
   );
+}
+
+/** The account an entry is about, under what was done to it. */
+function SubjectLink({ entry, account }: {
+  entry: AuditEntry;
+  account: (by: "id" | "practitionerId", id: string) => AdminUser | undefined;
+}) {
+  const subject = auditSubject(entry);
+  return subject && <UserLink user={account(subject.by, subject.id)} className="text-xs" />;
 }
