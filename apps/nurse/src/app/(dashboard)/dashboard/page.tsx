@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowRight, HeartPulse, Loader2 } from "lucide-react";
+import { HeartPulse, Loader2 } from "lucide-react";
 import { Card } from "@curo/web/ui/card";
 import { Button } from "@curo/web/ui/button";
 import { EmptyState } from "@curo/web/ui/empty-state";
+import { NextUpSummary } from "@curo/web/ui/next-up-card";
 import { NextForTriageCard } from "@/components/features/dashboard/NextForTriageCard";
 import { patientName } from "@/components/features/queue/QueueRow";
 import { useTodayQueue, type QueueEntry } from "@/lib/hooks/useTodayQueue";
@@ -65,9 +65,8 @@ export default function DashboardPage() {
             pending={!!next && pendingId === next.appointment.id}
             onOpen={() => next && openTriage(next.appointment)}
             onSkip={() => next && skipToDoctor(next.appointment, patientName(next))}
-          >
-            {next && <WaitingRoom entries={entries} next={next} />}
-          </NextForTriageCard>
+            footer={next && <WaitingRoom entries={entries} next={next} />}
+          />
         </>
       )}
     </div>
@@ -84,23 +83,18 @@ function WaitingRoom({ entries, next }: { entries: QueueEntry[]; next: QueueEntr
   const average = waits.length ? Math.round(waits.reduce((sum, m) => sum + m, 0) / waits.length) : 0;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-sm">
-      <p className="text-muted-foreground">
-        {waits.length === 0 ? (
-          "No one else is waiting."
-        ) : (
-          <>
-            <span className="font-medium tabular-nums text-foreground">{waits.length}</span> more waiting
-            <span className="mx-2 text-border">·</span>
-            longest wait <span className="font-medium tabular-nums text-foreground">{longest}m</span>
-            <span className="mx-2 text-border">·</span>
-            average <span className="font-medium tabular-nums text-foreground">{average}m</span>
-          </>
-        )}
-      </p>
-      <Link href={ROUTES.TRIAGE_QUEUE} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
-        Open triage queue <ArrowRight className="size-3.5" />
-      </Link>
-    </div>
+    <NextUpSummary href={ROUTES.TRIAGE_QUEUE} linkLabel="Open triage queue">
+      {waits.length === 0 ? (
+        "No one else is waiting."
+      ) : (
+        <>
+          <b>{waits.length}</b> more waiting
+          <span className="mx-2 text-border">·</span>
+          longest wait <b>{longest}m</b>
+          <span className="mx-2 text-border">·</span>
+          average <b>{average}m</b>
+        </>
+      )}
+    </NextUpSummary>
   );
 }

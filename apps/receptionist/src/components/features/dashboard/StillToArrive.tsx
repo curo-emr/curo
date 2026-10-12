@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@curo/web/ui/button";
+import { NextUpSummary } from "@curo/web/ui/next-up-card";
 import { LateBadge } from "./LateBadge";
 import { ROUTES } from "@/lib/constants";
 import { formatTime } from "@/lib/utils";
@@ -17,20 +18,9 @@ interface Props {
 export function StillToArrive({ arrivals, pendingId, onCheckIn }: Props) {
   return (
     <div>
-      <div className="flex items-center justify-between gap-4 px-6 py-3 text-sm">
-        <p className="text-muted-foreground">
-          {arrivals.length === 0 ? (
-            "No one else is booked for today."
-          ) : (
-            <>
-              <span className="font-medium tabular-nums text-foreground">{arrivals.length}</span> more to arrive today
-            </>
-          )}
-        </p>
-        <Link href={ROUTES.QUEUE} className="inline-flex shrink-0 items-center gap-1 font-medium text-primary hover:underline">
-          Open queue board <ArrowRight className="size-3.5" />
-        </Link>
-      </div>
+      <NextUpSummary href={ROUTES.QUEUE} linkLabel="Open queue board">
+        {arrivals.length === 0 ? "No one else is booked for today." : <><b>{arrivals.length}</b> more to arrive today</>}
+      </NextUpSummary>
       {arrivals.length > 0 && (
         <ul className="divide-y border-t">
           {arrivals.map(arrival => {

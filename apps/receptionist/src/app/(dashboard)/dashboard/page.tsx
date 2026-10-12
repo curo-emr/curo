@@ -93,9 +93,12 @@ function Today({ appointments }: { appointments: Appointment[] }) {
         }
       />
       {expected.length > 0 ? (
-        <NextArrivalCard arrival={next} pending={pendingId === next.appointment.id} onCheckIn={() => onCheckIn(next)}>
-          <StillToArrive arrivals={later} pendingId={pendingId} onCheckIn={onCheckIn} />
-        </NextArrivalCard>
+        <NextArrivalCard
+          arrival={next}
+          pending={pendingId === next.appointment.id}
+          onCheckIn={() => onCheckIn(next)}
+          footer={<StillToArrive arrivals={later} pendingId={pendingId} onCheckIn={onCheckIn} />}
+        />
       ) : (
         <Card>
           <EmptyState
