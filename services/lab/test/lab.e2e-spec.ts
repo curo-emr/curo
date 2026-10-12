@@ -169,6 +169,14 @@ describe('Lab specimens and results', () => {
       });
     });
 
+    it("answers 400 to a code that isn't a Curo label or slip", async () => {
+      const res = await scan('hello world').expect(400);
+
+      expect(res.body).toMatchObject({
+        message: "This isn't a Curo sample label or visit slip.",
+      });
+    });
+
     it('keeps the first receipt time when the specimen is scanned again', async () => {
       const { order, labels } = await orderLabs();
       await scan(labels[0].encodedUrl).expect(201);

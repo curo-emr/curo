@@ -240,6 +240,18 @@ describe('POST /dispense', () => {
     await dispense(await sendTo(null)).expect(201);
   });
 
+  it("answers 400 to a prescription id that isn't a uuid", async () => {
+    const res = await svc.api
+      .post('/dispense')
+      .set(dispenser.headers)
+      .send({ medicationRequestId: 'null' })
+      .expect(400);
+
+    expect(res.body).toMatchObject({
+      message: ['medicationRequestId must be a UUID'],
+    });
+  });
+
   it('is refused to a pharmacist not yet assigned to a pharmacy', async () => {
     const rx = await prescribe(1, [{ batchNumber: 'B1', quantity: 5 }]);
 

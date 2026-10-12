@@ -1,4 +1,4 @@
-import { signInErrorMessage } from "./errors";
+import { nullIfNotFound, signInErrorMessage } from "./errors";
 
 const answer = (status: number, message?: string) => ({ response: { status, data: { message } } });
 
@@ -16,5 +16,19 @@ describe("signInErrorMessage", () => {
 
   it("says when the server couldn't be reached", () => {
     expect(signInErrorMessage(new Error("Network Error"))).toMatch(/^Couldn't reach the server/);
+  });
+});
+
+describe("nullIfNotFound", () => {
+  it("passes the record through", async () => {
+    await expect(nullIfNotFound(Promise.resolve("record"))).resolves.toBe("record");
+  });
+
+  it.each([404, 400])("reads a %d as no such record", async status => {
+    await expect(nullIfNotFound(Promise.reject(answer(status)))).resolves.toBeNull();
+  });
+
+  it("still throws any other failure", async () => {
+    await expect(nullIfNotFound(Promise.reject(answer(500)))).rejects.toEqual(answer(500));
   });
 });

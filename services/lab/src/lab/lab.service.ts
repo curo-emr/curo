@@ -302,6 +302,10 @@ export class LabService {
    */
   async scanQr(dto: ScanQrDto, user: AuthUser) {
     const target = parseLabQr(dto.qrData);
+    if (!target)
+      throw new BadRequestException(
+        "This isn't a Curo sample label or visit slip.",
+      );
     if (target.kind === 'visit')
       return this.getOrders(
         user,
