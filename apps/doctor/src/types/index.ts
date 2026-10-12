@@ -6,6 +6,7 @@ export type { Allergy, Insurance } from '@curo/web/fhir';
 export type { Vitals };
 // Where a checked-in patient is in the day's flow (nurse triage → doctor).
 export type { QueueStage };
+export type { Appointment } from '@curo/web/appointments';
 
 export interface Name {
   first: string;
@@ -64,20 +65,6 @@ export interface Problem {
   encounterId: string;
   category: string;
   isPrimary: boolean;
-}
-
-export interface Appointment {
-  id: string;
-  date: string;
-  time: string;
-  doctorId: string;
-  patientId: string;
-  reason: string;
-  visitType: string;
-  status: 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-  room: string;
-  notes: string;
-  queueStage?: QueueStage | null;
 }
 
 export interface SOAP {

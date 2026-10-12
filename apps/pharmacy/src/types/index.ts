@@ -53,19 +53,6 @@ export interface Problem {
   notes: string;
 }
 
-export interface Appointment {
-  id: string;
-  date: string;
-  time: string;
-  doctorId: string;
-  patientId: string;
-  reason: string;
-  visitType: string;
-  status: 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-  room: string;
-  notes: string;
-}
-
 export interface SOAP {
   subjective: string;
   objective: string;

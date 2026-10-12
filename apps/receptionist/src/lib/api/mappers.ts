@@ -1,10 +1,11 @@
 import { mapFhirPatientDetails, type FhirExtension, type FhirPatientDetails } from '@curo/web/fhir';
 import type {
-  Patient, Problem, Appointment, Encounter, Prescription,
-  LabOrder, Task, QueueStage,
+  Patient, Problem, Encounter, Prescription, LabOrder,
+  Task,
 } from '@/types';
 
 export { mapFhirAllergy, type FhirAllergy } from '@curo/web/fhir';
+export { appointmentStatusOf, fhirAppointmentStatusesOf, mapFhirAppointment, type FhirAppointment } from '@curo/web/appointments';
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
 
@@ -43,29 +44,6 @@ export interface FhirCondition {
   clinicalStatus?: { coding?: Array<{ code?: string }> };
   onsetDateTime?: string;
   note?: Array<{ text?: string }>;
-}
-
-export interface FhirAppointment {
-  resourceType: 'Appointment';
-  id: string;
-  meta?: { lastUpdated?: string };
-  status: string;
-  start?: string;
-  end?: string;
-  serviceType?: Array<{ coding?: Array<{ code?: string }> }>;
-  reasonCode?: Array<{ text?: string }>;
-  description?: string;
-  comment?: string;
-  participant?: Array<{
-    actor?: { reference?: string };
-    status?: string;
-  }>;
-  extension?: Array<{
-    url: string;
-    valueInteger?: number;
-    valueBoolean?: boolean;
-    valueString?: string;
-  }>;
 }
 
 export interface FhirEncounter {
@@ -218,54 +196,6 @@ export function mapFhirCondition(fhir: FhirCondition): Problem {
     status: statusMap[statusCode] ?? 'active',
     onsetDate: fhir.onsetDateTime?.slice(0, 10) ?? '',
     notes: fhir.note?.[0]?.text ?? '',
-  };
-}
-
-// FHIR Appointment status → what the desk sees. Any other status (proposed) reads as scheduled.
-const FHIR_APPT_STATUS_MAP: Record<string, Appointment['status']> = {
-  booked: 'scheduled',
-  pending: 'scheduled',
-  arrived: 'arrived',
-  fulfilled: 'completed',
-  cancelled: 'cancelled',
-  noshow: 'no_show',
-  'entered-in-error': 'cancelled',
-  waitlist: 'waiting',
-  'checked-in': 'arrived',
-};
-const FHIR_APPT_STATUSES = ['proposed', ...Object.keys(FHIR_APPT_STATUS_MAP)];
-
-export const appointmentStatusOf = (fhirStatus: string): Appointment['status'] =>
-  FHIR_APPT_STATUS_MAP[fhirStatus] ?? 'scheduled';
-
-/** The FHIR statuses that read as `status`, for asking the API for them. */
-export const fhirAppointmentStatusesOf = (status: Appointment['status']) =>
-  FHIR_APPT_STATUSES.filter(fhirStatus => appointmentStatusOf(fhirStatus) === status);
-
-export function mapFhirAppointment(fhir: FhirAppointment): Appointment {
-  const start = fhir.start ? new Date(fhir.start) : new Date();
-  const date = start.toISOString().slice(0, 10);
-  const time = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-  const patientRef = fhir.participant?.find(p => p.actor?.reference?.startsWith('Patient/'));
-  const practitionerRef = fhir.participant?.find(p => p.actor?.reference?.startsWith('Practitioner/'));
-
-  const patientId = patientRef?.actor?.reference?.replace('Patient/', '') ?? '';
-  const practitionerId = practitionerRef?.actor?.reference?.replace('Practitioner/', '') ?? '';
-
-  return {
-    id: fhir.id,
-    date,
-    time,
-    doctorId: practitionerId,
-    patientId,
-    reason: fhir.reasonCode?.[0]?.text ?? fhir.description ?? '',
-    visitType: fhir.serviceType?.[0]?.coding?.[0]?.code ?? '',
-    status: appointmentStatusOf(fhir.status),
-    room: '',
-    notes: fhir.comment ?? '',
-    queueStage: (fhir.extension?.find(e => e.url === 'urn:curo:queueStage')?.valueString as QueueStage | undefined) ?? null,
-    stageSince: fhir.meta?.lastUpdated ?? null,
   };
 }
 
