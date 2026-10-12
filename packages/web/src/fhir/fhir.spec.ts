@@ -103,7 +103,10 @@ describe("mapFhirPatient", () => {
       address: [{ line: ["12 Galle Rd", "Flat 3"], city: "Colombo", state: "Western", postalCode: "00300", country: "Sri Lanka" }],
       contact: [{ name: { text: "Kamala Perera" }, relationship: [{ text: "Mother" }], telecom: [{ system: "phone", value: "0711111111" }] }],
       maritalStatus: { coding: [{ code: "M" }] },
-      extension: [{ url: "urn:curo:bloodType", valueString: "O+" }],
+      extension: [
+        { url: "urn:curo:registeredAt", valueDateTime: "2026-01-05T04:30:00.000Z" },
+        { url: "urn:curo:bloodType", valueString: "O+" },
+      ],
     })).toEqual({
       id: "p1",
       mrn: "CUR-0001",
@@ -122,6 +125,7 @@ describe("mapFhirPatient", () => {
       email: "nimal@example.com",
       address: { line1: "12 Galle Rd", line2: "Flat 3", city: "Colombo", district: "Western", postalCode: "00300", country: "Sri Lanka" },
       emergencyContact: { name: "Kamala Perera", relationship: "Mother", phone: "0711111111" },
+      registeredAt: "2026-01-05T04:30:00.000Z",
       updatedAt: "2026-10-12T03:40:00Z",
     });
   });
@@ -134,6 +138,7 @@ describe("mapFhirPatient", () => {
       emergencyContact: { name: "", phone: "" },
       maritalStatus: undefined,
       insurance: null,
+      registeredAt: "",
     });
   });
 

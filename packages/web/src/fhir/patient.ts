@@ -18,6 +18,7 @@ export interface FhirExtension {
   valueString?: string;
   valueCode?: string;
   valueDate?: string;
+  valueDateTime?: string;
   extension?: FhirExtension[];
 }
 
@@ -43,7 +44,7 @@ function maritalStatusFromCode(code?: string): MaritalStatus | undefined {
 
 const valueOf = (extensions: FhirExtension[] | undefined, url: string) => {
   const ext = extensions?.find((e) => e.url === url);
-  return ext?.valueString ?? ext?.valueCode ?? ext?.valueDate ?? "";
+  return ext?.valueString ?? ext?.valueCode ?? ext?.valueDate ?? ext?.valueDateTime ?? "";
 };
 
 const isInsuranceRelationship = (value: string): value is InsuranceRelationship =>
@@ -144,7 +145,9 @@ export interface Patient {
   emergencyContact: { name: string; relationship: string; phone: string };
   insurance: Insurance | null;
   tags: string[];
-  /** The last change to the record; the API doesn't send when it was created. */
+  /** When the clinic registered them; empty in the minimized view pharmacy and lab get. */
+  registeredAt: string;
+  /** The last change to the record. */
   updatedAt: string;
 }
 
@@ -184,6 +187,7 @@ export function mapFhirPatient(fhir: FhirPatient): Patient {
       relationship: contact?.relationship?.[0]?.text ?? "",
       phone: contact?.telecom?.[0]?.value ?? "",
     },
+    registeredAt: valueOf(fhir.extension, "urn:curo:registeredAt"),
     updatedAt: fhir.meta?.lastUpdated ?? "",
   };
 }

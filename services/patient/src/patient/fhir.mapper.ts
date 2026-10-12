@@ -96,6 +96,8 @@ export function toFhirPatient(p: Patient, role?: string) {
         ]
       : [],
     extension: [
+      // FHIR's Patient has no registration date.
+      { url: 'urn:curo:registeredAt', valueDateTime: p.createdAt },
       { url: 'urn:curo:bloodType', valueString: p.bloodType },
       p.nationality && {
         url: 'urn:curo:nationality',
