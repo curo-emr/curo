@@ -1287,6 +1287,7 @@ async function seed() {
   console.log('✅ 2 lab instruments created');
 
   // ---- LAB QUALITY CONTROL LOGS ----
+  // Each run is by the technician at the instrument's lab, placed as above.
   const qcLogs = [
     {
       instrumentIdx: 0,
@@ -1296,7 +1297,6 @@ async function seed() {
       observedValue: 13.4,
       unit: 'g/dL',
       status: QCStatus.PASS,
-      staffIdx: 0,
       minutesAgo: 90,
       notes: '',
     },
@@ -1308,7 +1308,6 @@ async function seed() {
       observedValue: 438,
       unit: '10^3/uL',
       status: QCStatus.WARNING,
-      staffIdx: 1,
       minutesAgo: 80,
       notes: 'Outside preferred range; repeat control before patient samples.',
     },
@@ -1320,7 +1319,6 @@ async function seed() {
       observedValue: 94,
       unit: 'mg/dL',
       status: QCStatus.PASS,
-      staffIdx: 0,
       minutesAgo: 70,
       notes: '',
     },
@@ -1332,7 +1330,6 @@ async function seed() {
       observedValue: 6.1,
       unit: '%',
       status: QCStatus.FAIL,
-      staffIdx: 1,
       minutesAgo: 60,
       notes: 'Out of range. Hold HbA1c runs until calibration is verified.',
     },
@@ -1344,7 +1341,6 @@ async function seed() {
       observedValue: 238,
       unit: 'mg/dL',
       status: QCStatus.PASS,
-      staffIdx: 0,
       minutesAgo: 50,
       notes: '',
     },
@@ -1364,7 +1360,7 @@ async function seed() {
         log.observedValue,
         log.unit,
         log.status,
-        labStaffIds[log.staffIdx],
+        labStaffIds[log.instrumentIdx % labOrgIds.length],
         performedAt,
         log.notes,
       ],
