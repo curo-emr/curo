@@ -20,6 +20,7 @@ const GROUP_COLOR: Record<QueueGroup, CalendarEventColor> = {
   triage: "yellow",
   upcoming: "blue",
   done: "green",
+  missed: "gray",
 };
 
 // Stable "nothing yet" values, so the memo below doesn't recompute on every render.
@@ -42,7 +43,7 @@ export function ScheduleClient() {
       date: a.date,
       title: patients[a.patientId]?.name.full ?? "Patient",
       subtitle: a.time,
-      color: a.status === "cancelled" || a.status === "no_show" ? "gray" : GROUP_COLOR[getQueueGroup(a)],
+      color: GROUP_COLOR[getQueueGroup(a)],
     })),
     [appointments, patients],
   );

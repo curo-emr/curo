@@ -22,18 +22,21 @@ export function visitHref(patientId: string, appointmentId?: string) {
 
 // ─── Queue grouping ──────────────────────────────────────────────────────────
 
-export type QueueGroup = "consultation" | "ready" | "triage" | "upcoming" | "done";
+export type QueueGroup = "consultation" | "ready" | "triage" | "upcoming" | "done" | "missed";
 
 // In the order the doctor works through them; tones match the stage badges.
+// "missed" is last: closed without a visit, so it's neither seen nor still to see.
 export const QUEUE_GROUPS: { id: QueueGroup; label: string; tone: Tone }[] = [
   { id: "consultation", label: "In consultation", tone: "info" },
   { id: "ready", label: "Ready to see", tone: "success" },
   { id: "triage", label: "With nurse", tone: "warning" },
   { id: "upcoming", label: "Not arrived yet", tone: "neutral" },
   { id: "done", label: "Finished", tone: "purple" },
+  { id: "missed", label: "Cancelled or no-show", tone: "neutral" },
 ];
 
 export function getQueueGroup(a: Appointment): QueueGroup {
+  if (isMissed(a)) return "missed";
   if (isClosed(a)) return "done";
   if (isInConsultation(a)) return "consultation";
   if (a.queueStage === "ready_for_doctor") return "ready";
@@ -41,6 +44,12 @@ export function getQueueGroup(a: Appointment): QueueGroup {
   // Checked in by reception but not routed through the nurse queue: the doctor can see them.
   if (a.status === "arrived" || a.status === "waiting") return "ready";
   return "upcoming";
+}
+
+export function countQueueGroups(appointments: Appointment[]): Record<QueueGroup, number> {
+  const counts = Object.fromEntries(QUEUE_GROUPS.map(g => [g.id, 0])) as Record<QueueGroup, number>;
+  appointments.forEach(a => counts[getQueueGroup(a)]++);
+  return counts;
 }
 
 // ─── Primary action ──────────────────────────────────────────────────────────
@@ -65,7 +74,7 @@ export async function findTodaysAppointment(patientId: string): Promise<Appointm
   const today = getTodayString();
   const appts = await getAppointments({ date: today, patientId }).catch(() => [] as Appointment[]);
   const open = appts.filter(a => a.date === today && !isClosed(a));
-  const rank: Record<QueueGroup, number> = { consultation: 0, ready: 1, triage: 2, upcoming: 3, done: 4 };
+  const rank: Record<QueueGroup, number> = { consultation: 0, ready: 1, triage: 2, upcoming: 3, done: 4, missed: 5 };
   return open.sort((a, b) => rank[getQueueGroup(a)] - rank[getQueueGroup(b)] || a.time.localeCompare(b.time))[0] ?? null;
 }
 
