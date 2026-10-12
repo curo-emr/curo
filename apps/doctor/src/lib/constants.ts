@@ -43,12 +43,6 @@ export const LAB_ORDER_STATUS = {
   COMPLETED: "completed",
 } as const;
 
-// Prescription statuses
-export const PRESCRIPTION_STATUS = {
-  DRAFT: "draft",
-  SENT_TO_PHARMACY: "sent_to_pharmacy",
-} as const;
-
 // Priority levels
 export const PRIORITY = {
   ROUTINE: "routine",
