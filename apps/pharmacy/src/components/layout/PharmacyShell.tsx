@@ -13,11 +13,12 @@ import { NAV } from "./nav";
 const findPatients = async (text: string): Promise<PatientHit[]> =>
   (await getPatientsPaginated({ search: text, pageSize: 8 })).items.map(({ id, name, dob, sex, mrn }) => ({ id, name, dob, sex, mrn }));
 
-export function PharmacyShell({ children }: { children: React.ReactNode }) {
+export function PharmacyShell({ children, sidebarOpen }: { children: React.ReactNode; sidebarOpen: boolean }) {
   const { user, logout } = useAuth();
 
   return (
     <AppShell
+      sidebarOpen={sidebarOpen}
       portal="Pharmacy"
       home={ROUTES.DASHBOARD}
       nav={NAV}

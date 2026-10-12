@@ -8,11 +8,12 @@ import { getPatients } from "@/lib/api/patients";
 import { ROUTES } from "@/lib/constants";
 import { NAV } from "./nav";
 
-export function DoctorShell({ children }: { children: React.ReactNode }) {
+export function DoctorShell({ children, sidebarOpen }: { children: React.ReactNode; sidebarOpen: boolean }) {
   const { user, logout } = useAuth();
 
   return (
     <AppShell
+      sidebarOpen={sidebarOpen}
       portal="Doctor Portal"
       home={ROUTES.DASHBOARD}
       nav={NAV}

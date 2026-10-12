@@ -10,11 +10,12 @@ import { NAV } from "./nav";
 
 const findPatients = (text: string) => searchPatients(text, 8);
 
-export function ReceptionistShell({ children }: { children: React.ReactNode }) {
+export function ReceptionistShell({ children, sidebarOpen }: { children: React.ReactNode; sidebarOpen: boolean }) {
   const { user, logout } = useAuth();
 
   return (
     <AppShell
+      sidebarOpen={sidebarOpen}
       portal="Front Desk"
       home={ROUTES.DASHBOARD}
       nav={NAV}

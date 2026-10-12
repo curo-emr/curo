@@ -17,11 +17,12 @@ const findUsers = async (text: string): Promise<FinderHit[]> =>
     detail: `${ROLE_LABELS[role] ?? role} · ${email}`,
   }));
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({ children, sidebarOpen }: { children: React.ReactNode; sidebarOpen: boolean }) {
   const { user, logout } = useAuth();
 
   return (
     <AppShell
+      sidebarOpen={sidebarOpen}
       portal="Admin Portal"
       home={ROUTES.DASHBOARD}
       nav={NAV}

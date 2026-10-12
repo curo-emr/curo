@@ -19,6 +19,7 @@
     "./query": "./src/query/index.ts",
     "./schedule": "./src/schedule/index.ts",
     "./shell": "./src/shell/index.ts",
+    "./shell/sidebar-state": "./src/shell/sidebar-state.ts",
     "./workplace": "./src/workplace/index.ts",
     "./styles.css": "./src/styles.css",
     "./ui/curo-calendar": "./src/ui/curo-calendar/index.ts",

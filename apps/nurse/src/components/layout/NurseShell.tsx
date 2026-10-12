@@ -9,11 +9,12 @@ import { ROUTES } from "@/lib/constants";
 import { NAV } from "./nav";
 import { QueueSearch } from "./QueueSearch";
 
-export function NurseShell({ children }: { children: React.ReactNode }) {
+export function NurseShell({ children, sidebarOpen }: { children: React.ReactNode; sidebarOpen: boolean }) {
   const { user, logout } = useAuth();
 
   return (
     <AppShell
+      sidebarOpen={sidebarOpen}
       portal="Nurse Station"
       home={ROUTES.DASHBOARD}
       nav={NAV}
