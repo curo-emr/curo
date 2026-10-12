@@ -85,7 +85,7 @@ export function AppShell({ portal, home, nav, account, toolbar, sidebarOpen, chi
         <SidebarInset className="min-w-0 overflow-hidden bg-surface">
           <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4 lg:px-6">
             <SidebarTrigger className="-ml-1 text-muted-foreground" />
-            <Separator orientation="vertical" className="mr-1 data-[orientation=vertical]:h-5" />
+            <Separator orientation="vertical" className="mr-1 data-vertical:h-5 data-vertical:self-auto" />
             {toolbar}
           </header>
           <div id="main" className="flex-1 overflow-y-auto">
