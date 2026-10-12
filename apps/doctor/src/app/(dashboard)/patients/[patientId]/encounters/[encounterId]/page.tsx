@@ -21,7 +21,7 @@ import { ROUTES } from "@/lib/constants";
 import { encounterDiagnoses } from "@/lib/clinical";
 import { catalogQueries, patientQueries, visitQueries } from "@/lib/queries";
 import { printOnly } from "@curo/web/print";
-import { calculateBMI, formatDate } from "@/lib/utils";
+import { calculateBMI, formatDate, formatTime } from "@/lib/utils";
 
 const SOAP_LABELS = [
   { key: "subjective", label: "Subjective" },
@@ -71,7 +71,7 @@ export default function VisitSummaryPage({ params }: { params: Promise<{ patient
 
   const rxs = prescriptions.data ?? [];
   const rxItems = rxs.flatMap(rx => rx.items);
-  const time = visit.startedAt ? new Date(visit.startedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+  const time = formatTime(visit.startedAt);
 
   return (
     <div className="space-y-6">

@@ -4,13 +4,11 @@ import { HeartPulse, UserCheck } from "lucide-react";
 import type { Vitals } from "@/types";
 import {
   BMI_CATEGORY_LABELS, VITAL_FIELD, assessVital, bmiCategory, calculateBMI,
-  type BMICategory, type VitalAssessment, type VitalLevel,
+  type BMICategory, type VitalAssessment, type VitalKey, type VitalLevel,
 } from "@curo/web/clinical";
 import { cn } from "@/lib/utils";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { toneClass, type Tone } from "@curo/web/ui/status-badge";
-
-type VitalKey = keyof Vitals;
 
 const FIELDS: { key: VitalKey; label: string; unit: string; step?: string }[] = [
   { key: "pulseBpm", label: "Pulse", unit: "bpm" },

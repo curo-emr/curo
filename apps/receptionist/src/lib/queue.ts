@@ -1,5 +1,5 @@
 import type { Appointment, Patient } from "@/types";
-import { calculateWaitTime } from "@/lib/utils";
+import { minutesSince } from "@curo/web/format";
 
 // The front desk's view of the day: who is still to arrive, and how long the rest have waited.
 
@@ -19,7 +19,7 @@ export const isMissed = (a: Appointment) => a.status === "cancelled" || a.status
 export const isExpected = (a: Appointment) => a.status === "scheduled" || a.status === "not_arrived";
 
 /** Minutes since the patient entered their current stage of the flow. */
-export const minutesInStage = (a: Appointment) => (a.stageSince ? calculateWaitTime(a.stageSince) : 0);
+export const minutesInStage = (a: Appointment) => minutesSince(a.stageSince);
 
 /** Minutes past a same-day appointment's time ("HH:MM", local); 0 if it isn't due yet. */
 export function minutesLate(time: string, now: Date = new Date()): number {

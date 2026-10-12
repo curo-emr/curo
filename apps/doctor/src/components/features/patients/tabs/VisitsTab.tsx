@@ -9,7 +9,7 @@ import { SectionCard } from "@curo/web/ui/section-card";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { ROUTES } from "@/lib/constants";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatTime } from "@/lib/utils";
 import { encounterDiagnoses } from "@/lib/clinical";
 import { patientQueries } from "@/lib/queries";
 
@@ -20,7 +20,7 @@ export function VisitListItem({ encounter: e, problems, href }: { encounter: Enc
       <div className="w-24 shrink-0">
         <p className="text-sm font-medium text-foreground">{formatDate(e.startedAt)}</p>
         <p className="text-xs text-muted-foreground">
-          {e.startedAt ? new Date(e.startedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : ""}
+          {formatTime(e.startedAt)}
         </p>
       </div>
       <div className="min-w-0 flex-1 space-y-1">

@@ -1,7 +1,9 @@
 import type { Insurance, MaritalStatus } from '@curo/web/fhir';
+import type { Vitals } from '@curo/web/clinical';
 import type { QueueStage } from '@curo/web/flow';
 
 export type { Allergy, Insurance } from '@curo/web/fhir';
+export type { Vitals };
 // Where a checked-in patient is in the day's flow (nurse triage → doctor).
 export type { QueueStage };
 
@@ -83,17 +85,6 @@ export interface SOAP {
   objective: string;
   assessment: string;
   plan: string;
-}
-
-export interface Vitals {
-  pulseBpm: number;
-  respirationRpm: number;
-  bpSystolic: number;
-  bpDiastolic: number;
-  temperatureC: number;
-  spo2Percent: number;
-  heightCm: number;
-  weightKg: number;
 }
 
 export interface Diagnosis {

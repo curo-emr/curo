@@ -2,6 +2,7 @@
 import type { QueueStage } from "@curo/web/flow";
 
 export type { QueueStage };
+export type { Vitals } from "@curo/web/clinical";
 
 export interface Name {
   first: string;
@@ -86,16 +87,4 @@ export interface Appointment {
   notes: string;
   queueStage: QueueStage | null;
   stageSince: string | null; // last change to the appointment ≈ when it entered its current stage
-}
-
-// Vital signs captured at triage (one FHIR Observation per field).
-export interface Vitals {
-  bpSystolic: number;
-  bpDiastolic: number;
-  pulseBpm: number;
-  temperatureC: number;
-  spo2Percent: number;
-  respirationRpm: number;
-  heightCm: number;
-  weightKg: number;
 }

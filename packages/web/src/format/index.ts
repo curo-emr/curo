@@ -12,7 +12,46 @@ export function formatRelative(moment: string | number | Date): string {
   if (min < 60) return `${min} min ago`;
   const hours = Math.round(min / 60);
   if (hours < 24) return `${hours} h ago`;
+  return formatDate(date);
+}
+
+/**
+ * "Oct 7, 2026" for an instant or a calendar date; empty for none.
+ * A calendar date ("YYYY-MM-DD") is read as that day, not as UTC midnight.
+ */
+export function formatDate(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00` : value);
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** "7:00 PM" for a clock time ("19:00", "19") or an instant; empty for none, anything unreadable as it came. */
+export function formatTime(value: string | null | undefined): string {
+  if (!value) return "";
+  const [h, m] = hoursAndMinutes(value);
+  if (Number.isNaN(h) || Number.isNaN(m)) return value;
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
+// A clock time's hours and minutes as written, or an instant's on the local clock.
+function hoursAndMinutes(value: string): [number, number] {
+  if (/^\d{1,2}(:|$)/.test(value)) {
+    const [h, m = 0] = value.split(":").map(Number);
+    return [h, m];
+  }
+  const date = new Date(value);
+  return [date.getHours(), date.getMinutes()];
+}
+
+/** "Oct 7, 2026, 2:30 PM" for an instant; empty for none. */
+export function formatDateTime(value: string | null | undefined): string {
+  return value ? `${formatDate(value)}, ${formatTime(value)}` : "";
+}
+
+/** Whole minutes from an instant until now, never negative; 0 for none. */
+export function minutesSince(iso: string | null | undefined): number {
+  if (!iso) return 0;
+  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
 }
 
 type Named = { id: string; name: { full: string } };
