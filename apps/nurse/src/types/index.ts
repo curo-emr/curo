@@ -2,6 +2,7 @@
 import type { QueueStage } from "@curo/web/flow";
 
 export type { QueueStage };
+export type { Appointment } from "@curo/web/appointments";
 export type { Vitals } from "@curo/web/clinical";
 
 export interface Name {
@@ -71,20 +72,4 @@ export interface Problem {
   status: 'active' | 'resolved' | 'inactive';
   onsetDate: string;
   notes: string;
-}
-
-
-export interface Appointment {
-  id: string;
-  date: string;
-  time: string;
-  doctorId: string;
-  patientId: string;
-  reason: string;
-  visitType: string;
-  status: 'scheduled' | 'not_arrived' | 'arrived' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-  room: string;
-  notes: string;
-  queueStage: QueueStage | null;
-  stageSince: string | null; // last change to the appointment ≈ when it entered its current stage
 }

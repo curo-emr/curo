@@ -18,3 +18,5 @@ export function visitTypeLabel(code: string | null | undefined): string {
   if (!code) return "Not set";
   return VISIT_TYPES.find(t => t.code === code)?.label ?? code;
 }
+
+export * from "./appointment";
