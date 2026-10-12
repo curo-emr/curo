@@ -27,17 +27,13 @@ export function NurseShell({ children, sidebarOpen }: { children: React.ReactNod
           onSignOut={logout}
         />
       }
-      toolbar={
-        <>
-          <div className="flex-1">
-            {/* QueueSearch reads the URL, which needs a Suspense boundary to prerender. */}
-            <Suspense>
-              <QueueSearch />
-            </Suspense>
-          </div>
-          <NotificationsMenu />
-        </>
+      // QueueSearch reads the URL, which needs a Suspense boundary to prerender.
+      search={
+        <Suspense>
+          <QueueSearch />
+        </Suspense>
       }
+      actions={<NotificationsMenu />}
     >
       {children}
     </AppShell>

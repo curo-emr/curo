@@ -35,22 +35,18 @@ export function AdminShell({ children, sidebarOpen }: { children: React.ReactNod
           onSignOut={logout}
         />
       }
-      toolbar={
-        <>
-          <div className="min-w-0 flex-1">
-            <QuickFind
-              label="Find a user"
-              placeholder="Search by name, email or role…"
-              heading="Users"
-              // Under "users", so creating or changing one refreshes the results.
-              queryKey={[...userQueries.all, "find"]}
-              search={findUsers}
-              href={ROUTES.USER}
-            />
-          </div>
-          <NotificationsMenu />
-        </>
+      search={
+        <QuickFind
+          label="Find a user"
+          placeholder="Search by name, email or role…"
+          heading="Users"
+          // Under "users", so creating or changing one refreshes the results.
+          queryKey={[...userQueries.all, "find"]}
+          search={findUsers}
+          href={ROUTES.USER}
+        />
       }
+      actions={<NotificationsMenu />}
     >
       {children}
     </AppShell>

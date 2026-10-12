@@ -28,14 +28,8 @@ export function ReceptionistShell({ children, sidebarOpen }: { children: React.R
           onSignOut={logout}
         />
       }
-      toolbar={
-        <>
-          <div className="flex-1">
-            <PatientSearch search={findPatients} href={ROUTES.PATIENT} />
-          </div>
-          <NotificationsMenu />
-        </>
-      }
+      search={<PatientSearch search={findPatients} href={ROUTES.PATIENT} />}
+      actions={<NotificationsMenu />}
     >
       {children}
     </AppShell>

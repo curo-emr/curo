@@ -26,14 +26,8 @@ export function DoctorShell({ children, sidebarOpen }: { children: React.ReactNo
           onSignOut={logout}
         />
       }
-      toolbar={
-        <>
-          <div className="flex-1">
-            <PatientSearch search={getPatients} href={ROUTES.PATIENT} />
-          </div>
-          <NotificationsMenu />
-        </>
-      }
+      search={<PatientSearch search={getPatients} href={ROUTES.PATIENT} />}
+      actions={<NotificationsMenu />}
     >
       {children}
     </AppShell>

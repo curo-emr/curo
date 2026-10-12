@@ -31,11 +31,9 @@ export function LabShell({ children, sidebarOpen }: { children: React.ReactNode;
           onSignOut={logout}
         />
       }
-      toolbar={
+      search={<PatientSearch search={findPatients} href={ROUTES.PATIENT} />}
+      actions={
         <>
-          <div className="min-w-0 flex-1">
-            <PatientSearch search={findPatients} href={ROUTES.PATIENT} />
-          </div>
           <div className="hidden min-w-0 md:block">
             <WorkplaceBadge icon={FlaskConical} kind="lab" />
           </div>
