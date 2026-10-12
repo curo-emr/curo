@@ -14,6 +14,7 @@ npm-debug.log*
 /notes.txt
 /docs/history/
 /docs/design/
+/docs/QA_*.md
 
 # Agent tooling
 /skills-lock.json
