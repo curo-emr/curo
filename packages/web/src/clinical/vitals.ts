@@ -14,6 +14,9 @@ export type VitalKey =
   | "bpSystolic" | "bpDiastolic" | "pulseBpm" | "spo2Percent"
   | "temperatureC" | "respirationRpm" | "heightCm" | "weightKg";
 
+/** One reading per vital sign: a triage form's values, or a visit's latest. */
+export type Vitals = Record<VitalKey, number>;
+
 type Range = readonly [number, number];
 
 export interface VitalField {
