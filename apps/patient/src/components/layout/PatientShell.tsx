@@ -28,12 +28,7 @@ export function PatientShell({ children, sidebarOpen }: { children: React.ReactN
           onSignOut={logout}
         />
       }
-      toolbar={
-        <>
-          <div className="flex-1" />
-          <NotificationsMenu />
-        </>
-      }
+      actions={<NotificationsMenu />}
     >
       {children}
     </AppShell>

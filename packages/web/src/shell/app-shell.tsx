@@ -44,16 +44,18 @@ interface AppShellProps {
   nav: NavSection[];
   /** The sidebar footer, usually an <AccountMenu>. */
   account: React.ReactNode;
-  /** The top bar beside the sidebar toggle: search, notifications and so on. */
-  toolbar?: React.ReactNode;
+  /** The top bar's left side, after the sidebar toggle and a divider: the portal's search. */
+  search?: React.ReactNode;
+  /** The top bar's right side: notifications, the workplace and so on. */
+  actions?: React.ReactNode;
   /** Whether the sidebar starts open; a portal's layout reads it with `sidebarStartsOpen`. Open by default. */
   sidebarOpen?: boolean;
   children: React.ReactNode;
 }
 
 // The frame every portal shares: a collapsible sidebar (a drawer on phones), a top bar
-// and a scrolling content area. A portal supplies its links, account menu and toolbar.
-export function AppShell({ portal, home, nav, account, toolbar, sidebarOpen, children }: AppShellProps) {
+// and a scrolling content area. A portal supplies its links, account menu, search and actions.
+export function AppShell({ portal, home, nav, account, search, actions, sidebarOpen, children }: AppShellProps) {
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={sidebarOpen} className="h-svh overflow-hidden">
@@ -85,8 +87,13 @@ export function AppShell({ portal, home, nav, account, toolbar, sidebarOpen, chi
         <SidebarInset className="min-w-0 overflow-hidden bg-surface">
           <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4 lg:px-6">
             <SidebarTrigger className="-ml-1 text-muted-foreground" />
-            <Separator orientation="vertical" className="mr-1 data-vertical:h-5 data-vertical:self-auto" />
-            {toolbar}
+            {search && (
+              <>
+                <Separator orientation="vertical" className="mr-1 data-vertical:h-5 data-vertical:self-auto" />
+                <div className="min-w-0 flex-1">{search}</div>
+              </>
+            )}
+            {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
           </header>
           <div id="main" className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-8 lg:py-8">{children}</div>
