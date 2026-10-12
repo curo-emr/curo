@@ -27,7 +27,6 @@ import {
   CuroCalendar,
   CalendarEvent,
   calendarRange,
-  formatDateStr,
   getRelativeDayLabel,
 } from "@curo/web/ui/curo-calendar";
 import { appointmentQueries, patientQueries } from "@/lib/queries";
@@ -124,7 +123,7 @@ function DayAppointments({
   doctors: Doctor[];
   doctorFilter: string;
 }) {
-  const dateStr = formatDateStr(selectedDate);
+  const dateStr = getTodayString(selectedDate);
   const todayStr = getTodayString();
 
   const daily = useMemo(
@@ -213,7 +212,7 @@ export function ScheduleClient({ doctors }: Props) {
   const appointments = range.data ?? NO_APPOINTMENTS;
   const patients = useQuery(patientQueries.byIds(appointments.map((a) => a.patientId))).data ?? NO_PATIENTS;
 
-  const selectedDateStr = formatDateStr(selectedDate);
+  const selectedDateStr = getTodayString(selectedDate);
 
   // Filter calendar events to match the active doctor filter
   const calendarEvents: CalendarEvent[] = useMemo(

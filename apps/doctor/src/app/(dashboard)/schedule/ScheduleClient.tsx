@@ -9,8 +9,8 @@ import { Card } from "@curo/web/ui/card";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageHeader } from "@curo/web/ui/page-header";
 import { AppointmentRow } from "@/components/features/visits/AppointmentRow";
-import { CuroCalendar, calendarRange, formatDateStr, getRelativeDayLabel, type CalendarEvent, type CalendarEventColor } from "@curo/web/ui/curo-calendar";
-import { formatDay } from "@curo/web/format";
+import { CuroCalendar, calendarRange, getRelativeDayLabel, type CalendarEvent, type CalendarEventColor } from "@curo/web/ui/curo-calendar";
+import { formatDay, getTodayString } from "@curo/web/format";
 import { PageSkeleton } from "@curo/web/ui/page-skeleton";
 import { appointmentQueries, patientQueries } from "@/lib/queries";
 import { getQueueGroup, type QueueGroup } from "@/lib/visit";
@@ -55,7 +55,7 @@ export function ScheduleClient() {
       : <PageSkeleton side={false} />;
   }
 
-  const dateStr = formatDateStr(selectedDate);
+  const dateStr = getTodayString(selectedDate);
   const daily = appointments.filter(a => a.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
   const relative = getRelativeDayLabel(selectedDate);
 

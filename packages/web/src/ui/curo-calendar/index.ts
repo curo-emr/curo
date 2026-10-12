@@ -2,7 +2,6 @@ export { CuroCalendar } from "./CuroCalendar";
 export type { CuroCalendarProps } from "./CuroCalendar";
 export type { CalendarEvent, CalendarEventColor, CalendarView } from "./types";
 export {
-  formatDateStr,
   getCalendarDays,
   calendarRange,
   isToday,
