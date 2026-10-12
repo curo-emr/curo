@@ -55,11 +55,11 @@ describe('Appointments and the patient queue', () => {
   const saved = (id: string) =>
     svc.db.getRepository(Appointment).findOneByOrFail({ id });
 
-  const setStatus = (id: string, status: AppointmentStatus) =>
-    svc.api
-      .put(`/appointments/${id}`)
-      .set(receptionist.headers)
-      .send({ status });
+  const setStatus = (
+    id: string,
+    status: AppointmentStatus,
+    actor: TestActor = receptionist,
+  ) => svc.api.put(`/appointments/${id}`).set(actor.headers).send({ status });
 
   const moveTo = (id: string, stage: QueueStage, actor: TestActor) =>
     svc.api
@@ -135,6 +135,21 @@ describe('Appointments and the patient queue', () => {
     await expect(saved(id)).resolves.toMatchObject({
       queueStage: QueueStage.WAITING_NURSE,
     });
+  });
+
+  it("lets a doctor change their own appointment, and refuses another doctor's", async () => {
+    const id = await book();
+    await setStatus(id, AppointmentStatus.ARRIVED, doctor).expect(200);
+
+    const otherDoctor = await svc.as(UserRole.DOCTOR);
+    await setStatus(id, AppointmentStatus.CANCELLED, otherDoctor).expect(403);
+
+    await expect(saved(id)).resolves.toMatchObject({
+      status: AppointmentStatus.ARRIVED,
+    });
+    await expect(auditOf(svc, id)).resolves.not.toContainEqual(
+      expect.objectContaining({ userId: otherDoctor.sub }),
+    );
   });
 
   it('takes a cancelled appointment out of the queue', async () => {

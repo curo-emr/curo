@@ -193,9 +193,23 @@ export class AppointmentService {
     return toFhirAppointment(a);
   }
 
-  async update(id: string, dto: UpdateAppointmentDto, user: AuthUser) {
+  /** Appointment `id`, for `user` to change: a doctor changes only their own. */
+  private async findToChange(id: string, user: AuthUser) {
     const a = await this.appointmentsRepo.findOne({ where: { id } });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);
+    if (
+      user.role === UserRole.DOCTOR &&
+      a.practitionerId !== user.practitionerId
+    ) {
+      throw new ForbiddenException(
+        "Doctors can only change their own patients' appointments",
+      );
+    }
+    return a;
+  }
+
+  async update(id: string, dto: UpdateAppointmentDto, user: AuthUser) {
+    const a = await this.findToChange(id, user);
     const update: Partial<Appointment> = { ...dto };
     if (dto.status && dto.status !== a.status) {
       const stage = queueStageForStatus(dto.status, a.queueStage);
@@ -213,14 +227,7 @@ export class AppointmentService {
   }
 
   async updateQueueStage(id: string, stage: QueueStage, user: AuthUser) {
-    const a = await this.appointmentsRepo.findOne({ where: { id } });
-    if (!a) throw new NotFoundException(`Appointment ${id} not found`);
-    if (
-      user.role === UserRole.DOCTOR &&
-      a.practitionerId !== user.practitionerId
-    ) {
-      throw new ForbiddenException('Doctors can only move their own patients');
-    }
+    const a = await this.findToChange(id, user);
     if (!assertQueueTransition(a.queueStage, stage, user.role))
       return toFhirAppointment(a);
     const changes = changeOf(a, { queueStage: stage });
