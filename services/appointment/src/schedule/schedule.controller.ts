@@ -7,7 +7,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard, Roles, RolesGuard } from '@curo/shared/auth';
+import {
+  CurrentUser,
+  JwtAuthGuard,
+  Roles,
+  RolesGuard,
+  type AuthUser,
+} from '@curo/shared/auth';
 import { parseList } from '@curo/shared/fhir';
 import { ScheduleService } from './schedule.service';
 import { SetSessionsDto } from './dto/set-sessions.dto';
@@ -30,7 +36,8 @@ export class ScheduleController {
   replace(
     @Param('practitionerId') practitionerId: string,
     @Body() dto: SetSessionsDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.scheduleService.replace(practitionerId, dto.sessions);
+    return this.scheduleService.replace(practitionerId, dto.sessions, user);
   }
 }

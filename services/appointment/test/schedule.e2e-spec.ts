@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { AuditLog } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import {
   startService,
@@ -79,5 +81,31 @@ describe("Doctors' weekly sessions", () => {
   it('lets only an administrator change a week', async () => {
     const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
     await setWeek(dr, [morning], receptionist).expect(403);
+  });
+
+  it('records each change to a week in the audit log, and nothing for a save that changes nothing', async () => {
+    const dr = randomUUID();
+
+    await setWeek(dr, [evening, morning]).expect(200);
+    await setWeek(dr, [morning, evening]).expect(200);
+    await setWeek(dr, []).expect(200);
+
+    const entries = await svc.db.getRepository(AuditLog).find({
+      where: { resourceType: 'Schedule', resourceId: dr },
+      order: { createdAt: 'ASC' },
+    });
+    expect(entries).toMatchObject([
+      {
+        userId: admin.sub,
+        action: 'UPDATE',
+        changes: { before: [], after: [{ ...morning }, { ...evening }] },
+        outcomeDescription:
+          'Admin added Monday 09:00–12:00, Monday 16:00–19:00',
+      },
+      {
+        outcomeDescription:
+          'Admin removed Monday 09:00–12:00, Monday 16:00–19:00',
+      },
+    ]);
   });
 });

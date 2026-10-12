@@ -10,6 +10,7 @@ const VERBS: Record<string, string> = {
 // The records the services audit, in the words the portals use for them.
 const RECORDS: Record<string, string> = {
   User: "a user account",
+  Schedule: "a doctor's weekly sessions",
   Organization: "an organization",
   Payment: "a payment",
   Patient: "a patient record",

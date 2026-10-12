@@ -21,6 +21,7 @@ import type { AuthUser } from '@curo/shared/auth';
 import { AuditTrail } from '../audit/audit-trail';
 import { OrganizationService } from '../organization/organization.service';
 import { Passwords } from '../auth/passwords';
+import { accountChange, accountFields } from './account-change';
 
 @Injectable()
 export class AdminService {
@@ -220,42 +221,50 @@ export class AdminService {
     if (dto.isActive === false && id === requestingUser.userId)
       throw new BadRequestException("You can't suspend your own account");
 
-    if (dto.organizationId != null)
-      await this.organizations.checkWorkplace(user.role, dto.organizationId);
+    const workplace =
+      dto.organizationId != null
+        ? await this.organizations.checkWorkplace(user.role, dto.organizationId)
+        : null;
+    const prac = user.practitionerId
+      ? await this.practitionersRepo.findOne({
+          where: { id: user.practitionerId },
+        })
+      : null;
+    const before = accountFields(user, prac);
 
-    const before: Record<string, unknown> = { isActive: user.isActive };
     if (dto.isActive != null) {
       user.isActive = dto.isActive;
       await this.usersRepo.save(user);
     }
 
-    if (user.practitionerId) {
-      const prac = await this.practitionersRepo.findOne({
-        where: { id: user.practitionerId },
-      });
-      if (prac) {
-        before['firstName'] = prac.firstName;
-        before['lastName'] = prac.lastName;
-        if (dto.firstName != null) prac.firstName = dto.firstName;
-        if (dto.lastName != null) prac.lastName = dto.lastName;
-        if (dto.phone != null) prac.phone = dto.phone;
-        if (dto.specialization != null)
-          prac.specialization = dto.specialization;
-        if (dto.qualification != null) prac.qualification = dto.qualification;
-        if (dto.licenseNumber != null) prac.licenseNumber = dto.licenseNumber;
-        if (dto.organizationId != null)
-          prac.organizationId = dto.organizationId;
-        await this.practitionersRepo.save(prac);
-      }
+    if (prac) {
+      if (dto.firstName != null) prac.firstName = dto.firstName;
+      if (dto.lastName != null) prac.lastName = dto.lastName;
+      if (dto.phone != null) prac.phone = dto.phone;
+      if (dto.specialization != null) prac.specialization = dto.specialization;
+      if (dto.qualification != null) prac.qualification = dto.qualification;
+      if (dto.licenseNumber != null) prac.licenseNumber = dto.licenseNumber;
+      if (dto.organizationId != null) prac.organizationId = dto.organizationId;
+      await this.practitionersRepo.save(prac);
     }
 
-    await this.auditTrail.record(requestingUser, {
-      action: 'UPDATE',
-      resourceType: 'User',
-      resourceId: id,
-      changes: { before, after: dto },
-      outcomeDescription: 'Admin updated a user account',
+    const after = accountFields(user, prac);
+    const movedFrom =
+      before.organizationId && before.organizationId !== after.organizationId
+        ? await this.organizations.get(before.organizationId)
+        : null;
+    const change = accountChange(before, after, {
+      from: movedFrom?.name,
+      to: workplace?.name,
     });
+    if (change)
+      await this.auditTrail.record(requestingUser, {
+        action: 'UPDATE',
+        resourceType: 'User',
+        resourceId: id,
+        changes: change.changes,
+        outcomeDescription: change.description,
+      });
 
     return this.getUser(id);
   }

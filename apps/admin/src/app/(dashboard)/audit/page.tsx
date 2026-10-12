@@ -67,7 +67,7 @@ export default function AuditPage() {
                       <p className="whitespace-nowrap text-foreground">{describeAuditEntry(e)}</p>
                       {e.resourceType === "User" && <UserLink user={users.get(e.resourceId)} className="text-xs" />}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{e.outcomeDescription ?? "—"}</TableCell>
+                    <TableCell className="min-w-64 whitespace-normal text-muted-foreground">{e.outcomeDescription ?? "—"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
