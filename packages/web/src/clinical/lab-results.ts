@@ -71,9 +71,12 @@ export function referenceRangeFor(
   return analyte.low != null && analyte.high != null ? { low: analyte.low, high: analyte.high } : null;
 }
 
-/** A reference range as the portals print it: "12 - 16". Empty when neither end is known. */
+/** A reference range as the portals print it: "12 - 16", or "≥ 40" / "≤ 200" with one end. Empty when neither is known. */
 export function formatRange(low?: number | string | null, high?: number | string | null): string {
-  return [low, high].filter(v => v != null && v !== "").join(" - ");
+  const known = (v?: number | string | null) => v != null && v !== "";
+  if (known(low) && known(high)) return `${low} - ${high}`;
+  if (known(low)) return `≥ ${low}`;
+  return known(high) ? `≤ ${high}` : "";
 }
 
 /** One value to enter for an order, under the test it belongs to. */
