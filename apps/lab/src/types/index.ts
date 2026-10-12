@@ -3,16 +3,6 @@ import type { PersonName } from '@curo/web/fhir';
 
 export type { Allergy, Patient } from '@curo/web/fhir';
 
-export interface Problem {
-  id: string;
-  patientId: string;
-  icdCode: string;
-  name: string;
-  status: 'active' | 'resolved' | 'inactive';
-  onsetDate: string;
-  notes: string;
-}
-
 // --- Lab Staff ---
 
 export type LabStaffRole = 'senior_technician' | 'technician' | 'pathologist' | 'phlebotomist';

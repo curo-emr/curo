@@ -7,16 +7,6 @@ export type { Allergy, Insurance, Patient } from '@curo/web/fhir';
 export type { QueueStage };
 export type { Appointment } from '@curo/web/appointments';
 
-export interface Problem {
-  id: string;
-  patientId: string;
-  icdCode: string;
-  name: string;
-  status: 'active' | 'resolved' | 'inactive';
-  onsetDate: string;
-  notes: string;
-}
-
 export interface Doctor {
   id: string;
   name: PersonName;

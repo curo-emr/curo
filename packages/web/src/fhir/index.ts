@@ -74,3 +74,4 @@ export function paginationParams(params?: PaginationParams): Record<string, unkn
 export * from "./allergy";
 export * from "./patient";
 export * from "./lab-report";
+export * from "./condition";
