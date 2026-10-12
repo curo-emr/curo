@@ -58,9 +58,10 @@ describe("referenceRangeFor", () => {
 });
 
 describe("formatRange", () => {
-  it("joins the known ends", () => {
+  it("joins both ends, and marks a range with only one", () => {
     expect(formatRange(12, 17.5)).toBe("12 - 17.5");
-    expect(formatRange("0.4", "")).toBe("0.4");
+    expect(formatRange("0.4", "")).toBe("≥ 0.4");
+    expect(formatRange(null, "200")).toBe("≤ 200");
     expect(formatRange(null, undefined)).toBe("");
   });
 });

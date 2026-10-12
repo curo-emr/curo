@@ -93,7 +93,7 @@ describe("mapFhirReport", () => {
     expect(mapped).toMatchObject({
       orderId: "o1",
       pdfBase64: "JVBER",
-      results: [{ display: "TSH", value: "8.2", unit: "mIU/L", referenceRange: "0.4–4.0", interpretation: "H" }],
+      results: [{ display: "TSH", value: "8.2", unit: "mIU/L", referenceRange: "0.4 - 4.0", interpretation: "H" }],
     });
   });
 
@@ -102,5 +102,14 @@ describe("mapFhirReport", () => {
       { code: "x", display: "Culture", valueString: "No growth", referenceRangeText: "No growth" },
     ])).results;
     expect(r).toMatchObject({ value: "No growth", referenceRange: "No growth", unit: undefined });
+  });
+
+  it("marks a range with only one end, and leaves out a range with none", () => {
+    const [ldl, crp] = mapFhirReport(report([
+      { code: "13457-7", display: "LDL Cholesterol", value: 90, referenceRangeHigh: "100" },
+      { code: "1988-5", display: "CRP", value: 2 },
+    ])).results;
+    expect(ldl.referenceRange).toBe("≤ 100");
+    expect(crp.referenceRange).toBeUndefined();
   });
 });

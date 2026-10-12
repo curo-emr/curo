@@ -1,7 +1,7 @@
 import type { Patient, Problem, LabOrder } from '@/types';
 
 export { mapFhirAllergy, type FhirAllergy } from '@curo/web/fhir';
-import { formatRange, resultFlag } from '@curo/web/clinical';
+import { mapLabResult, type FhirLabResult } from '@curo/web/fhir';
 import type { LabResult } from './lab';
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
@@ -70,26 +70,12 @@ export interface FhirDiagnosticReport {
   resourceType: 'DiagnosticReport';
   id: string;
   status?: string;
-  code?: { text?: string; coding?: Array<{ code?: string; display?: string }> };
   subject?: { reference?: string };
   basedOn?: Array<{ reference?: string }>;
   effectiveDateTime?: string;
   issued?: string;
   conclusion?: string;
-  result?: Array<{
-    testCode?: string;
-    testName?: string;
-    code?: string;
-    display?: string;
-    value?: string | number | null;
-    valueString?: string | null;
-    unit?: string;
-    referenceRange?: string;
-    referenceRangeText?: string;
-    referenceRangeLow?: string;
-    referenceRangeHigh?: string;
-    interpretation?: string;
-  }>;
+  result?: FhirLabResult[];
 }
 
 // ─── Mappers ─────────────────────────────────────────────────────────────────
@@ -240,36 +226,14 @@ function referenceId(reference?: string): string {
   return reference?.split('/').pop() ?? '';
 }
 
-function getReferenceRange(item: NonNullable<FhirDiagnosticReport['result']>[number]): string | undefined {
-  if (item.referenceRange) return item.referenceRange;
-  if (item.referenceRangeText) return item.referenceRangeText;
-  return formatRange(item.referenceRangeLow, item.referenceRangeHigh) || undefined;
-}
-
 export function mapFhirDiagnosticReport(fhir: FhirDiagnosticReport): LabResult {
-  const reportCode = fhir.code?.coding?.[0]?.code ?? '';
-  const reportDisplay = fhir.code?.text ?? fhir.code?.coding?.[0]?.display ?? reportCode;
-
   return {
     id: fhir.id,
     orderId: referenceId(fhir.basedOn?.[0]?.reference),
     patientId: referenceId(fhir.subject?.reference),
     performedAt: fhir.effectiveDateTime ?? fhir.issued ?? '',
     reportedAt: fhir.issued,
-    results: (fhir.result ?? []).map(item => {
-      const testCode = item.testCode ?? item.code ?? reportCode;
-      const testName = item.testName ?? item.display ?? reportDisplay;
-      const value = item.value != null ? String(item.value) : (item.valueString ?? '');
-
-      return {
-        testCode,
-        testName,
-        value,
-        unit: item.unit,
-        referenceRange: getReferenceRange(item),
-        flag: resultFlag(item.interpretation),
-      };
-    }),
+    results: (fhir.result ?? []).map(mapLabResult),
     conclusion: fhir.conclusion,
     status: fhir.status ?? '',
   };
