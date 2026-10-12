@@ -12,10 +12,10 @@ import {
 import {
   CurrentUser,
   Roles,
+  JwtAuthGuard,
   RolesGuard,
   type AuthUser,
 } from '@curo/shared/auth';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationType } from '../entities/organization.entity';
 import {
   CreateOrganizationDto,

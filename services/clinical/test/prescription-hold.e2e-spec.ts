@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { MedicationRequest, Notification } from '@curo/shared/database';
 import { MedicationRequestStatus, UserRole } from '@curo/shared/enums';
-import { auditOf, startService, type ServiceUnderTest } from '@curo/testing';
+import {
+  auditOf,
+  startService,
+  type ServiceUnderTest,
+  type TestActor,
+} from '@curo/testing';
 import { AppModule } from '../src/app.module';
 
 describe('prescription holds', () => {
@@ -9,11 +14,13 @@ describe('prescription holds', () => {
   /** The pharmacy the tests hold at; another is a branch elsewhere. */
   const pharmacy = randomUUID();
   const otherPharmacy = randomUUID();
-  const pharmacist = () =>
-    svc.as(UserRole.PHARMACIST, { organizationId: pharmacy });
+  let pharmacist: TestActor;
 
   beforeAll(async () => {
     svc = await startService(AppModule);
+    pharmacist = await svc.as(UserRole.PHARMACIST, {
+      organizationId: pharmacy,
+    });
   });
 
   afterAll(() => svc.close());
@@ -55,18 +62,18 @@ describe('prescription holds', () => {
   const hold = (rx: MedicationRequest, reason = 'Out of stock until Friday') =>
     svc.api
       .put(`/prescriptions/${rx.id}/hold`)
-      .set(pharmacist().headers)
+      .set(pharmacist.headers)
       .send({ reason });
 
   const release = (rx: MedicationRequest) =>
-    svc.api.delete(`/prescriptions/${rx.id}/hold`).set(pharmacist().headers);
+    svc.api.delete(`/prescriptions/${rx.id}/hold`).set(pharmacist.headers);
 
   const stored = (rx: MedicationRequest) =>
     svc.db.getRepository(MedicationRequest).findOneByOrFail({ id: rx.id });
 
   /** Ids `path` lists, as the pharmacist. */
   async function listed(path: string) {
-    const res = await svc.api.get(path).set(pharmacist().headers).expect(200);
+    const res = await svc.api.get(path).set(pharmacist.headers).expect(200);
     return (res.body as { id: string }[]).map((r) => r.id);
   }
 
@@ -215,7 +222,7 @@ describe('prescription holds', () => {
 
     await svc.api
       .put(`/prescriptions/${rx.id}/hold`)
-      .set(svc.as(UserRole.DOCTOR).headers)
+      .set((await svc.as(UserRole.DOCTOR)).headers)
       .send({ reason: 'x' })
       .expect(403);
 

@@ -19,9 +19,9 @@ describe('Appointments and the patient queue', () => {
 
   beforeAll(async () => {
     svc = await startService(AppModule);
-    receptionist = svc.as(UserRole.RECEPTIONIST);
-    nurse = svc.as(UserRole.NURSE);
-    doctor = svc.as(UserRole.DOCTOR);
+    receptionist = await svc.as(UserRole.RECEPTIONIST);
+    nurse = await svc.as(UserRole.NURSE);
+    doctor = await svc.as(UserRole.DOCTOR);
   });
 
   afterAll(() => svc.close());
@@ -126,9 +126,11 @@ describe('Appointments and the patient queue', () => {
     await setStatus(id, AppointmentStatus.ARRIVED).expect(200);
 
     await moveTo(id, QueueStage.WITH_DOCTOR, nurse).expect(403);
-    await moveTo(id, QueueStage.WITH_DOCTOR, svc.as(UserRole.DOCTOR)).expect(
-      403,
-    );
+    await moveTo(
+      id,
+      QueueStage.WITH_DOCTOR,
+      await svc.as(UserRole.DOCTOR),
+    ).expect(403);
 
     await expect(saved(id)).resolves.toMatchObject({
       queueStage: QueueStage.WAITING_NURSE,
@@ -183,7 +185,7 @@ describe('Appointments and the patient queue', () => {
     const at = (hour: number, minute = 0) => new Date(2031, 0, 6, hour, minute);
 
     it("refuses a time that overlaps the doctor's other appointment, not another doctor's or the next slot", async () => {
-      const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
+      const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
       await bookAt(dr, at(9), 30).expect(201);
 
       const clash = await bookAt(dr, at(9, 15), 30).expect(409);
@@ -191,14 +193,14 @@ describe('Appointments and the patient queue', () => {
         /already has an appointment/,
       );
       await bookAt(
-        svc.as(UserRole.DOCTOR).practitionerId as string,
+        (await svc.as(UserRole.DOCTOR)).practitionerId as string,
         at(9, 15),
       ).expect(201);
       await bookAt(dr, at(9, 30)).expect(201);
     });
 
     it('frees a cancelled slot, and refuses to re-book the cancelled one over its replacement', async () => {
-      const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
+      const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
       const first = await bookAt(dr, at(10)).expect(201);
       const firstId = (first.body as { id: string }).id;
       await setStatus(firstId, AppointmentStatus.CANCELLED).expect(200);
@@ -212,7 +214,7 @@ describe('Appointments and the patient queue', () => {
     });
 
     it('refuses an appointment that ends before it starts', async () => {
-      const dr = svc.as(UserRole.DOCTOR).practitionerId as string;
+      const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
       await bookAt(dr, at(11), -15).expect(400);
     });
   });
@@ -373,7 +375,7 @@ describe('Appointments and the patient queue', () => {
 
   describe('GET /payments/summary', () => {
     it("buckets a payment by the clinic's day, even in the early morning", async () => {
-      const desk = svc.as(UserRole.RECEPTIONIST);
+      const desk = await svc.as(UserRole.RECEPTIONIST);
       const res = await svc.api
         .post('/payments')
         .set(desk.headers)
@@ -404,7 +406,7 @@ describe('Appointments and the patient queue', () => {
         await svc.api
           .get('/payments/totals')
           .query(query)
-          .set(svc.as(UserRole.SUPER_ADMIN).headers)
+          .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
           .expect(200)
       ).body as {
         total: number;
@@ -413,7 +415,7 @@ describe('Appointments and the patient queue', () => {
       };
 
     it('adds up the payments overall and per receptionist', async () => {
-      const desk = svc.as(UserRole.RECEPTIONIST);
+      const desk = await svc.as(UserRole.RECEPTIONIST);
       const before = await totals();
       for (const amount of [1000, 250.5])
         await svc.api
@@ -434,8 +436,8 @@ describe('Appointments and the patient queue', () => {
     });
 
     it('leaves out payments corrected to refunded or waived, as My Income does', async () => {
-      const desk = svc.as(UserRole.RECEPTIONIST);
-      const admin = svc.as(UserRole.SUPER_ADMIN);
+      const desk = await svc.as(UserRole.RECEPTIONIST);
+      const admin = await svc.as(UserRole.SUPER_ADMIN);
       const ids: string[] = [];
       for (const amount of [1000, 300, 200]) {
         const res = await svc.api
@@ -473,7 +475,7 @@ describe('Appointments and the patient queue', () => {
         .expect(201);
       await svc.api
         .put(`/payments/${(res.body as { id: string }).id}`)
-        .set(svc.as(UserRole.SUPER_ADMIN).headers)
+        .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
         .send({ status: 'Paid' })
         .expect(400);
     });

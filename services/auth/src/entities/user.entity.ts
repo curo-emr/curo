@@ -35,7 +35,7 @@ export class User {
   @Column({ nullable: true })
   refreshToken: string;
 
-  /** When a password reset ended every session signed in before it. */
+  /** When a password reset or a suspension ended every session signed in before it. */
   @Column({ type: 'timestamptz', nullable: true })
   sessionsEndedAt: Date | null;
 

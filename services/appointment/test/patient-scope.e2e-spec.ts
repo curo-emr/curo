@@ -22,7 +22,7 @@ describe('A patient sees only their own appointments', () => {
     const start = new Date(Date.now() + 24 * 3_600_000);
     const res = await svc.api
       .post('/appointments')
-      .set(svc.as(UserRole.RECEPTIONIST).headers)
+      .set((await svc.as(UserRole.RECEPTIONIST)).headers)
       .send({
         patientId,
         practitionerId: randomUUID(),
@@ -37,7 +37,7 @@ describe('A patient sees only their own appointments', () => {
 
   beforeAll(async () => {
     svc = await startService(AppModule);
-    patient = svc.as(UserRole.PATIENT, { patientId: ownId });
+    patient = await svc.as(UserRole.PATIENT, { patientId: ownId });
     ownAppointment = await book(ownId);
     otherAppointment = await book(otherId);
   });
@@ -60,14 +60,14 @@ describe('A patient sees only their own appointments', () => {
     await get(`/appointments/${ownAppointment}`).expect(200);
     await get(
       `/appointments/${otherAppointment}`,
-      svc.as(UserRole.RECEPTIONIST),
+      await svc.as(UserRole.RECEPTIONIST),
     ).expect(200);
   });
 
   it('turns away a patient login linked to no record, instead of listing everyone', async () => {
     await get(
       '/appointments',
-      svc.as(UserRole.PATIENT, { patientId: null }),
+      await svc.as(UserRole.PATIENT, { patientId: null }),
     ).expect(403);
   });
 });

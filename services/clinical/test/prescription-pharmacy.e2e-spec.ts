@@ -47,7 +47,8 @@ describe('Prescriptions by pharmacy', () => {
       const theirs = await sentTo(otherPharmacy);
 
       const listed = await pendingFor(
-        svc.as(UserRole.PHARMACIST, { organizationId: pharmacy }).headers,
+        (await svc.as(UserRole.PHARMACIST, { organizationId: pharmacy }))
+          .headers,
       );
 
       expect(listed).toEqual(expect.arrayContaining([ours, unnamed]));
@@ -58,7 +59,7 @@ describe('Prescriptions by pharmacy', () => {
       const ours = await sentTo(pharmacy);
       const theirs = await sentTo(otherPharmacy);
 
-      expect(await pendingFor(svc.as(UserRole.DOCTOR).headers)).toEqual(
+      expect(await pendingFor((await svc.as(UserRole.DOCTOR)).headers)).toEqual(
         expect.arrayContaining([ours, theirs]),
       );
     });
@@ -66,7 +67,9 @@ describe('Prescriptions by pharmacy', () => {
     it('turns away a pharmacist not yet assigned to a pharmacy', async () => {
       await svc.api
         .get('/prescriptions/pending')
-        .set(svc.as(UserRole.PHARMACIST, { organizationId: null }).headers)
+        .set(
+          (await svc.as(UserRole.PHARMACIST, { organizationId: null })).headers,
+        )
         .expect(403);
     });
   });
@@ -91,12 +94,15 @@ describe('Prescriptions by pharmacy', () => {
       await sentTo(null, patientId);
       await sentTo(otherPharmacy, patientId);
 
-      const pharmacist = svc.as(UserRole.PHARMACIST, {
+      const pharmacist = await svc.as(UserRole.PHARMACIST, {
         organizationId: pharmacy,
       });
       expect(await pendingCountFor(patientId, pharmacist.headers)).toBe(2);
       expect(
-        await pendingCountFor(patientId, svc.as(UserRole.DOCTOR).headers),
+        await pendingCountFor(
+          patientId,
+          (await svc.as(UserRole.DOCTOR)).headers,
+        ),
       ).toBe(3);
     });
   });

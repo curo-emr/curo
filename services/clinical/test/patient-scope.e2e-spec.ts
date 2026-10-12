@@ -68,8 +68,8 @@ describe('A patient reads only their own clinical record', () => {
     svc = await startService(AppModule);
     own = await recordsOf(randomUUID());
     other = await recordsOf(randomUUID());
-    patient = svc.as(UserRole.PATIENT, { patientId: own.patientId });
-    doctor = svc.as(UserRole.DOCTOR);
+    patient = await svc.as(UserRole.PATIENT, { patientId: own.patientId });
+    doctor = await svc.as(UserRole.DOCTOR);
   });
 
   afterAll(() => svc.close());
@@ -123,7 +123,7 @@ describe('A patient reads only their own clinical record', () => {
       );
 
     // A sign-in of their own, so earlier tests' reads aren't counted.
-    const me = svc.as(UserRole.PATIENT, { patientId: own.patientId });
+    const me = await svc.as(UserRole.PATIENT, { patientId: own.patientId });
 
     await get(`/encounters/${other.encounterId}`, me).expect(404);
     await get(`/encounters/${own.encounterId}`, me).expect(200);
@@ -158,7 +158,7 @@ describe('A patient reads only their own clinical record', () => {
   it('turns away a patient login linked to no record', async () => {
     await get(
       '/prescriptions',
-      svc.as(UserRole.PATIENT, { patientId: null }),
+      await svc.as(UserRole.PATIENT, { patientId: null }),
     ).expect(403);
   });
 });

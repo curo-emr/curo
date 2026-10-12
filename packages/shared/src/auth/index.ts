@@ -7,6 +7,7 @@ export {
   type AuthRequest,
   type JwtPayload,
 } from './jwt-auth.guard';
+export { sessionIsLive, endSessions, type SessionState } from './session';
 export { RolesGuard } from './roles.guard';
 export { Roles, CurrentUser, ROLES_KEY } from './decorators';
 export { jwtSecret, jwtRefreshSecret } from './jwt-secret';

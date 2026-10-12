@@ -7,7 +7,6 @@ import { AppModule } from '../src/app.module';
 import { User } from '../src/entities/user.entity';
 import { Practitioner } from '../src/entities/practitioner.entity';
 import { LOGIN_LIMITS } from '../src/auth/login-attempts';
-import { signedIn } from './signed-in';
 import { nextSecond } from './sessions';
 
 interface Tokens {
@@ -46,7 +45,7 @@ describe('Sign-in', () => {
     const staff = newStaff();
     await svc.api
       .post('/auth/users')
-      .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
+      .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
       .send(staff)
       .expect(201);
     return staff;
@@ -57,6 +56,9 @@ describe('Sign-in', () => {
 
   const profile = (accessToken: string) =>
     svc.api.get('/auth/profile').set('Authorization', `Bearer ${accessToken}`);
+
+  const refresh = (refreshToken: string) =>
+    svc.api.post('/auth/refresh').send({ refreshToken });
 
   it('signs onboarded staff in with tokens that carry who they are', async () => {
     const staff = await onboard();
@@ -170,7 +172,7 @@ describe('Sign-in', () => {
 
       await svc.api
         .post('/auth/users')
-        .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
+        .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
         .send(patient)
         .expect(400);
 
@@ -184,7 +186,7 @@ describe('Sign-in', () => {
 
       await svc.api
         .post('/auth/users')
-        .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
+        .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
         .send({ ...staff, firstName: 'Someone', lastName: 'Else' })
         .expect(409);
     });
@@ -194,7 +196,7 @@ describe('Sign-in', () => {
 
       await svc.api
         .post('/auth/users')
-        .set((await signedIn(svc, UserRole.DOCTOR)).headers)
+        .set((await svc.as(UserRole.DOCTOR)).headers)
         .send(staff)
         .expect(403);
 
@@ -213,13 +215,10 @@ describe('Sign-in', () => {
         .findOneByOrFail({ email });
       await svc.api
         .post(`/auth/users/${id}/reset-password`)
-        .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
+        .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
         .send({ newPassword: NEW_PASSWORD })
         .expect(201);
     }
-
-    const refresh = (refreshToken: string) =>
-      svc.api.post('/auth/refresh').send({ refreshToken });
 
     it('ends the sessions signed in before it', async () => {
       const staff = await onboard();
@@ -259,7 +258,7 @@ describe('Sign-in', () => {
 
   describe('PATCH /auth/users/:id', () => {
     it("refuses to suspend the super admin's own account", async () => {
-      const admin = await signedIn(svc, UserRole.SUPER_ADMIN);
+      const admin = await svc.as(UserRole.SUPER_ADMIN);
       const { sub } = admin;
 
       await svc.api
@@ -273,8 +272,31 @@ describe('Sign-in', () => {
       ).resolves.toMatchObject({ isActive: true });
     });
 
+    it("ends a suspended account's sessions, for good", async () => {
+      const staff = await onboard();
+      const before = (await login(staff.email, PASSWORD).expect(200))
+        .body as Tokens;
+      await nextSecond();
+      const admin = await svc.as(UserRole.SUPER_ADMIN);
+      const setActive = (isActive: boolean) =>
+        svc.api
+          .patch(`/auth/users/${before.user.id}`)
+          .set(admin.headers)
+          .send({ isActive })
+          .expect(200);
+
+      await setActive(false);
+      await profile(before.accessToken).expect(401);
+      await refresh(before.refreshToken).expect(401);
+
+      await setActive(true);
+      await profile(before.accessToken).expect(401);
+      await refresh(before.refreshToken).expect(401);
+      await login(staff.email, PASSWORD).expect(200);
+    });
+
     it('records a suspension and a reactivation, and nothing for a change to the same value', async () => {
-      const admin = await signedIn(svc, UserRole.SUPER_ADMIN);
+      const admin = await svc.as(UserRole.SUPER_ADMIN);
       const created = await svc.api
         .post('/auth/users')
         .set(admin.headers)
@@ -305,7 +327,7 @@ describe('Sign-in', () => {
 
   describe('GET /auth/users by id', () => {
     it('lists the accounts named by user or practitioner id, in one request', async () => {
-      const admin = await signedIn(svc, UserRole.SUPER_ADMIN);
+      const admin = await svc.as(UserRole.SUPER_ADMIN);
       const onboarded = async () =>
         (
           await svc.api
@@ -346,7 +368,7 @@ describe('Sign-in', () => {
       (
         await svc.api
           .get('/auth/users/summary')
-          .set((await signedIn(svc, UserRole.SUPER_ADMIN)).headers)
+          .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
           .expect(200)
       ).body as {
         total: number;
@@ -380,7 +402,7 @@ describe('Sign-in', () => {
     it('is refused to everyone but the super admin', async () => {
       await svc.api
         .get('/auth/users/summary')
-        .set((await signedIn(svc, UserRole.DOCTOR)).headers)
+        .set((await svc.as(UserRole.DOCTOR)).headers)
         .expect(403);
     });
   });

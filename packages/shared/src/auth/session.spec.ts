@@ -1,11 +1,13 @@
-import type { User } from '../entities/user.entity';
-import { sessionIsLive } from './session';
+import { endSessions, sessionIsLive, type SessionState } from './session';
 
 const RESET_AT = new Date('2026-10-11T09:30:15.700Z');
 const RESET_SECOND = Math.floor(RESET_AT.getTime() / 1000);
 
-const user = (fields: Partial<User> = {}) =>
-  ({ isActive: true, sessionsEndedAt: null, ...fields }) as User;
+const user = (fields: Partial<SessionState> = {}): SessionState => ({
+  isActive: true,
+  sessionsEndedAt: null,
+  ...fields,
+});
 
 describe('sessionIsLive', () => {
   it('passes any token for an active account that was never reset', () => {
@@ -14,6 +16,7 @@ describe('sessionIsLive', () => {
 
   it('refuses a missing or suspended account', () => {
     expect(sessionIsLive(null, RESET_SECOND)).toBe(false);
+    expect(sessionIsLive(undefined, RESET_SECOND)).toBe(false);
     expect(sessionIsLive(user({ isActive: false }), RESET_SECOND)).toBe(false);
   });
 
@@ -29,5 +32,17 @@ describe('sessionIsLive', () => {
 
     expect(sessionIsLive(reset, RESET_SECOND)).toBe(true);
     expect(sessionIsLive(reset, RESET_SECOND + 60)).toBe(true);
+  });
+});
+
+describe('endSessions', () => {
+  it('ends the sessions signed in before now', () => {
+    const account = user();
+    const before = Math.floor(Date.now() / 1000) - 1;
+
+    endSessions(account);
+
+    expect(sessionIsLive(account, before)).toBe(false);
+    expect(account.sessionsEndedAt?.getTime()).toBeGreaterThan(before * 1000);
   });
 });

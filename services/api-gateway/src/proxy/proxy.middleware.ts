@@ -151,7 +151,8 @@ export class ProxyMiddleware implements NestMiddleware {
           .json({ message: 'Unauthorized: No token provided' });
       }
       // Rejects bad tokens at the edge. The request is forwarded unchanged:
-      // each service verifies the token again and reads the user from it.
+      // each service verifies the token again, checks its account's session
+      // is still live, and reads the user from it.
       try {
         jwt.verify(authHeader.split(' ')[1], jwtSecret());
       } catch {

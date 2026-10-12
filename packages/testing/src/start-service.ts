@@ -24,8 +24,9 @@ export interface ServiceUnderTest {
   /**
    * A signed-in user of `role`. Ids are fresh for every call: staff get a
    * practitionerId and patients a patientId, as tokens from the auth service do.
+   * Services check the account behind every token, so it is created too.
    */
-  as(role: UserRole, claims?: Partial<JwtPayload>): TestActor;
+  as(role: UserRole, claims?: Partial<JwtPayload>): Promise<TestActor>;
   close(): Promise<void>;
 }
 
@@ -56,7 +57,7 @@ export async function startService(
   return {
     api: request(app.getHttpServer()),
     db,
-    as(role, claims = {}) {
+    async as(role, claims = {}) {
       const payload: JwtPayload = {
         sub: randomUUID(),
         email: `${role.toLowerCase()}.${randomUUID()}@curo.test`,
@@ -66,6 +67,17 @@ export async function startService(
         name: `Test ${role}`,
         ...claims,
       };
+      await db.query(
+        `INSERT INTO users (id, email, "passwordHash", role, "practitionerId", "patientId")
+         VALUES ($1, $2, 'not used: the token is signed directly', $3, $4, $5)`,
+        [
+          payload.sub,
+          payload.email,
+          role,
+          payload.practitionerId,
+          payload.patientId,
+        ],
+      );
       const token = jwt.sign(payload);
       return { ...payload, headers: { Authorization: `Bearer ${token}` } };
     },

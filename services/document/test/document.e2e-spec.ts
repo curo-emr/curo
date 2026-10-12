@@ -50,7 +50,7 @@ describe('Patient documents', () => {
     svc = await startService(AppModule, [
       { provide: STORAGE_PROVIDER, useValue: storage },
     ]);
-    doctor = svc.as(UserRole.DOCTOR);
+    doctor = await svc.as(UserRole.DOCTOR);
   });
 
   afterAll(() => svc.close());
@@ -114,8 +114,10 @@ describe('Patient documents', () => {
   });
 
   /** A report file `labId`'s technician uploaded for `order`; returns its id. */
-  const reportFor = (labId: string, order: { id: string; patientId: string }) =>
-    uploaded(order.patientId, technicianAt(labId), forOrder(order.id));
+  const reportFor = async (
+    labId: string,
+    order: { id: string; patientId: string },
+  ) => uploaded(order.patientId, await technicianAt(labId), forOrder(order.id));
 
   const list = (query: Record<string, string>, actor: TestActor) =>
     svc.api.get('/documents').query(query).set(actor.headers);
@@ -175,9 +177,9 @@ describe('Patient documents', () => {
       const patientId = randomUUID();
 
       for (const actor of [
-        patientActor(),
-        svc.as(UserRole.NURSE),
-        svc.as(UserRole.PHARMACIST),
+        await patientActor(),
+        await svc.as(UserRole.NURSE),
+        await svc.as(UserRole.PHARMACIST),
       ])
         await upload(patientId, actor).expect(403);
 
@@ -187,7 +189,7 @@ describe('Patient documents', () => {
 
   describe('GET /documents/:id/content', () => {
     it('lets the patient download their own document, and audits the read', async () => {
-      const patient = patientActor();
+      const patient = await patientActor();
       const id = await uploaded(patient.patientId!);
 
       const res = await svc.api
@@ -215,7 +217,7 @@ describe('Patient documents', () => {
 
       await svc.api
         .get(`/documents/${id}/content`)
-        .set(patientActor().headers)
+        .set((await patientActor()).headers)
         .expect(404);
 
       const actions = (await auditOf(svc, id)).map((a) => a.action);
@@ -228,7 +230,7 @@ describe('Patient documents', () => {
       for (const role of [UserRole.DOCTOR, UserRole.SUPER_ADMIN])
         await svc.api
           .get(`/documents/${id}/content`)
-          .set(svc.as(role).headers)
+          .set((await svc.as(role)).headers)
           .expect(200);
     });
   });
@@ -255,8 +257,8 @@ describe('Patient documents', () => {
     const otherLab = randomUUID();
     let technician: TestActor;
 
-    beforeAll(() => {
-      technician = technicianAt(lab);
+    beforeAll(async () => {
+      technician = await technicianAt(lab);
     });
 
     it("upload report files for their lab's orders, onto the order's visit", async () => {
@@ -335,14 +337,14 @@ describe('Patient documents', () => {
     it('need to be assigned a lab', async () => {
       await list(
         { patientId: randomUUID() },
-        svc.as(UserRole.LAB_STAFF),
+        await svc.as(UserRole.LAB_STAFF),
       ).expect(403);
     });
   });
 
   describe('GET /documents/me', () => {
     it("lists only the signed-in patient's documents", async () => {
-      const patient = patientActor();
+      const patient = await patientActor();
       const mine = await uploaded(patient.patientId!);
       await uploaded(randomUUID());
 

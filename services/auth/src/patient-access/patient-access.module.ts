@@ -9,7 +9,7 @@ import { PatientAccessService } from './patient-access.service';
 
 @Module({
   imports: [
-    AuthModule, // JwtStrategy for the guard, and Passwords
+    AuthModule, // Passwords
     AuditTrailModule,
     TypeOrmModule.forFeature([User, Patient]),
   ],

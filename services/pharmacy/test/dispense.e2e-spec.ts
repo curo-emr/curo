@@ -10,6 +10,7 @@ import {
   daysFromToday,
   startService,
   type ServiceUnderTest,
+  type TestActor,
 } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { MedicationDispense } from '../src/entities/medication-dispense.entity';
@@ -20,9 +21,14 @@ describe('POST /dispense', () => {
   /** The pharmacy the tests dispense at; another is a branch elsewhere. */
   const pharmacy = randomUUID();
   const otherPharmacy = randomUUID();
+  /** A pharmacist at the tests' pharmacy, and one not yet assigned to any. */
+  let dispenser: TestActor;
+  let unassigned: TestActor;
 
   beforeAll(async () => {
     svc = await startService(AppModule);
+    dispenser = await svc.as(UserRole.PHARMACIST, { organizationId: pharmacy });
+    unassigned = await svc.as(UserRole.PHARMACIST, { organizationId: null });
   });
 
   afterAll(() => svc.close());
@@ -79,10 +85,10 @@ describe('POST /dispense', () => {
       .getRepository(MedicationDispense)
       .countBy({ medicationRequestId: rx.id });
 
-  const dispense = (rx: MedicationRequest, at: string | null = pharmacy) =>
+  const dispense = (rx: MedicationRequest, by = dispenser) =>
     svc.api
       .post('/dispense')
-      .set(svc.as(UserRole.PHARMACIST, { organizationId: at }).headers)
+      .set(by.headers)
       .send({ medicationRequestId: rx.id });
 
   it('draws the earliest-expiring stock first, skips expired batches and prices from the batches used', async () => {
@@ -148,17 +154,10 @@ describe('POST /dispense', () => {
 
   it('audits the dispense, and the prescription it fills, against the patient', async () => {
     const rx = await prescribe(10, [{ batchNumber: 'B1', quantity: 100 }]);
-    const pharmacist = svc.as(UserRole.PHARMACIST, {
-      organizationId: pharmacy,
-    });
 
-    const res = await svc.api
-      .post('/dispense')
-      .set(pharmacist.headers)
-      .send({ medicationRequestId: rx.id })
-      .expect(201);
+    const res = await dispense(rx).expect(201);
 
-    const by = { userId: pharmacist.sub, patientId: rx.patientId };
+    const by = { userId: dispenser.sub, patientId: rx.patientId };
     await expect(
       auditOf(svc, (res.body as { id: string }).id),
     ).resolves.toEqual([
@@ -244,7 +243,7 @@ describe('POST /dispense', () => {
   it('is refused to a pharmacist not yet assigned to a pharmacy', async () => {
     const rx = await prescribe(1, [{ batchNumber: 'B1', quantity: 5 }]);
 
-    await dispense(rx, null).expect(403);
+    await dispense(rx, unassigned).expect(403);
 
     expect(await statusOf(rx)).toBe(MedicationRequestStatus.ACTIVE);
   });
@@ -255,7 +254,7 @@ describe('POST /dispense', () => {
     for (const role of [UserRole.DOCTOR, UserRole.SUPER_ADMIN])
       await svc.api
         .post('/dispense')
-        .set(svc.as(role).headers)
+        .set((await svc.as(role)).headers)
         .send({ medicationRequestId: rx.id })
         .expect(403);
     await svc.api

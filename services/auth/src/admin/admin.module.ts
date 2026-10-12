@@ -11,7 +11,7 @@ import { OrganizationModule } from '../organization/organization.module';
 
 @Module({
   imports: [
-    AuthModule, // provides JwtModule + JwtStrategy used by the guards
+    AuthModule, // Passwords
     AuditTrailModule,
     OrganizationModule,
     TypeOrmModule.forFeature([User, Practitioner, Patient]),

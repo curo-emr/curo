@@ -42,12 +42,12 @@ describe('Notifications', () => {
 
   describe('POST /notifications', () => {
     it('does not exist: no user can send a notification, whatever their role', async () => {
-      const doctor = svc.as(UserRole.DOCTOR);
+      const doctor = await svc.as(UserRole.DOCTOR);
 
       for (const role of [UserRole.LAB_STAFF, UserRole.SUPER_ADMIN])
         await svc.api
           .post('/notifications')
-          .set(svc.as(role).headers)
+          .set((await svc.as(role)).headers)
           .send({
             recipientId: doctor.sub,
             eventType: NotificationEventType.LAB_RESULTS_READY,
@@ -62,7 +62,7 @@ describe('Notifications', () => {
 
   describe('reading and marking', () => {
     it('delivers a notification, unread, to its recipient', async () => {
-      const doctor = svc.as(UserRole.DOCTOR);
+      const doctor = await svc.as(UserRole.DOCTOR);
 
       const id = await notify(doctor);
 
@@ -72,8 +72,8 @@ describe('Notifications', () => {
     });
 
     it('shows users only their own notifications and count', async () => {
-      const doctor = svc.as(UserRole.DOCTOR);
-      const nurse = svc.as(UserRole.NURSE);
+      const doctor = await svc.as(UserRole.DOCTOR);
+      const nurse = await svc.as(UserRole.NURSE);
       const forDoctor = await notify(doctor);
       await notify(nurse);
       await notify(nurse);
@@ -86,8 +86,8 @@ describe('Notifications', () => {
     });
 
     it("marks a user's own notification read, but not someone else's", async () => {
-      const doctor = svc.as(UserRole.DOCTOR);
-      const nurse = svc.as(UserRole.NURSE);
+      const doctor = await svc.as(UserRole.DOCTOR);
+      const nurse = await svc.as(UserRole.NURSE);
       const forDoctor = await notify(doctor);
       const forNurse = await notify(nurse);
 
@@ -109,8 +109,8 @@ describe('Notifications', () => {
     });
 
     it("marks all of a user's notifications read, and only theirs", async () => {
-      const doctor = svc.as(UserRole.DOCTOR);
-      const nurse = svc.as(UserRole.NURSE);
+      const doctor = await svc.as(UserRole.DOCTOR);
+      const nurse = await svc.as(UserRole.NURSE);
       await notify(doctor);
       await notify(doctor);
       await notify(nurse);

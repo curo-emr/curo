@@ -5,7 +5,6 @@ import { UserRole } from '@curo/shared/enums';
 import { startService, type ServiceUnderTest } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { User } from '../src/entities/user.entity';
-import { signedIn } from './signed-in';
 import { nextSecond } from './sessions';
 
 interface Tokens {
@@ -22,7 +21,7 @@ describe('Patient portal access', () => {
 
   beforeAll(async () => {
     svc = await startService(AppModule);
-    reception = (await signedIn(svc, UserRole.RECEPTIONIST)).headers;
+    reception = (await svc.as(UserRole.RECEPTIONIST)).headers;
   });
 
   afterAll(() => svc.close());
@@ -157,7 +156,7 @@ describe('Patient portal access', () => {
       UserRole.SUPER_ADMIN,
       UserRole.PATIENT,
     ]) {
-      const { headers } = await signedIn(svc, role);
+      const { headers } = await svc.as(role);
       await svc.api.get(access(patient.id)).set(headers).expect(403);
       await svc.api
         .post(access(patient.id))

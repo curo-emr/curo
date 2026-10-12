@@ -12,8 +12,7 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { CurrentUser, type AuthUser } from '@curo/shared/auth';
+import { CurrentUser, JwtAuthGuard, type AuthUser } from '@curo/shared/auth';
 
 @Controller('auth')
 export class AuthController {

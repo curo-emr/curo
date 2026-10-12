@@ -57,7 +57,7 @@ describe('POST /encounters/visit', () => {
 
   beforeAll(async () => {
     svc = await startService(AppModule);
-    doctor = svc.as(UserRole.DOCTOR);
+    doctor = await svc.as(UserRole.DOCTOR);
     lab = await organization('laboratory');
     pharmacy = await organization('pharmacy');
   });
@@ -315,7 +315,7 @@ describe('POST /encounters/visit', () => {
   it('is refused to roles other than doctor and admin', async () => {
     const body = visit();
 
-    await sign(body, svc.as(UserRole.NURSE)).expect(403);
+    await sign(body, await svc.as(UserRole.NURSE)).expect(403);
 
     expect(await recordsOf(body.id)).toEqual(NOTHING);
   });
@@ -335,7 +335,7 @@ describe('GET /encounters/:id/lab-slip', () => {
 
     const res = await svc.api
       .get(`/encounters/${encounterId}/lab-slip`)
-      .set(svc.as(UserRole.DOCTOR).headers)
+      .set((await svc.as(UserRole.DOCTOR)).headers)
       .expect(200);
 
     const slip = res.body as { encodedUrl: string; qrBase64: string };

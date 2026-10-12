@@ -7,6 +7,7 @@ import { jwtSecret } from './jwt-secret';
 /**
  * Import once in a service's AppModule. Makes `JwtService` (configured with
  * `jwtSecret()`), `JwtAuthGuard` and `RolesGuard` available to every module.
+ * The guard reads accounts through the service's TypeORM connection.
  */
 @Global()
 @Module({
