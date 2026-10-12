@@ -281,11 +281,18 @@ export class ClinicalController {
     return this.clinicalService.releasePrescription(id, user);
   }
 
-  // Pending count and latest prescription for each patient on a list page.
+  // Pending count and latest prescription for each patient on a list page;
+  // a pharmacist's counts only what their pharmacy handles.
   @Get('prescriptions/summary')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PHARMACIST')
-  getPrescriptionSummaries(@Query() query: PatientIdsQueryDto) {
-    return this.clinicalService.getPrescriptionSummaries(query.patientIds);
+  getPrescriptionSummaries(
+    @Query() query: PatientIdsQueryDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.getPrescriptionSummaries(
+      query.patientIds,
+      user,
+    );
   }
 
   // Declared after the literal prescriptions/* routes so ":id" doesn't capture them.

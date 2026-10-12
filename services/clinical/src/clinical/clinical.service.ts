@@ -88,6 +88,14 @@ export interface PrescriptionSummary {
   lastPrescribedAt: Date | null;
 }
 
+/**
+ * The pharmacy whose prescriptions `user` handles, or null for everyone's. A
+ * pharmacist handles those sent to their pharmacy and those from before
+ * prescriptions named one; doctors and admins see every pharmacy's.
+ */
+const pharmacyOf = (user: AuthUser): string | null =>
+  user.role === UserRole.PHARMACIST ? workplaceOf(user, 'pharmacy') : null;
+
 @Injectable()
 export class ClinicalService implements OnModuleInit {
   private readonly logger = new Logger(ClinicalService.name);
@@ -328,26 +336,19 @@ export class ClinicalService implements OnModuleInit {
     return this.prescriptionsIn(MedicationRequestStatus.ON_HOLD, user);
   }
 
-  /**
-   * Prescriptions in `status`: for a pharmacist, those sent to their pharmacy
-   * and those from before prescriptions named one; for anyone else, every
-   * pharmacy's.
-   */
+  /** Prescriptions in `status` that `user` handles (see `pharmacyOf`). */
   private async prescriptionsIn(
     status: MedicationRequestStatus,
     user: AuthUser,
   ) {
+    const pharmacy = pharmacyOf(user);
     const meds = await this.medsRepo.find({
-      where:
-        user.role === UserRole.PHARMACIST
-          ? [
-              {
-                status,
-                performerOrganizationId: workplaceOf(user, 'pharmacy'),
-              },
-              { status, performerOrganizationId: IsNull() },
-            ]
-          : { status },
+      where: pharmacy
+        ? [
+            { status, performerOrganizationId: pharmacy },
+            { status, performerOrganizationId: IsNull() },
+          ]
+        : { status },
       order: { authoredOn: 'DESC' },
     });
     return meds.map(toFhirMedRequest);
@@ -424,16 +425,22 @@ export class ClinicalService implements OnModuleInit {
   }
 
   /** One summary per patient; patients with no prescriptions are left out. */
+  /** Each patient's waiting prescriptions that `user` handles (see `pharmacyOf`), and when they were last prescribed anything. */
   async getPrescriptionSummaries(
     patientIds: string[],
+    user: AuthUser,
   ): Promise<PrescriptionSummary[]> {
+    const pharmacy = pharmacyOf(user);
+    const waiting = pharmacy
+      ? 'm.status = :active AND (m.performerOrganizationId = :pharmacy OR m.performerOrganizationId IS NULL)'
+      : 'm.status = :active';
     const rows = await this.medsRepo
       .createQueryBuilder('m')
       .select('m.patientId', 'patientId')
-      .addSelect('COUNT(*) FILTER (WHERE m.status = :active)', 'pendingCount')
+      .addSelect(`COUNT(*) FILTER (WHERE ${waiting})`, 'pendingCount')
       .addSelect('MAX(m.authoredOn)', 'lastPrescribedAt')
       .where('m.patientId IN (:...patientIds)', { patientIds })
-      .setParameter('active', MedicationRequestStatus.ACTIVE)
+      .setParameters({ active: MedicationRequestStatus.ACTIVE, pharmacy })
       .groupBy('m.patientId')
       .getRawMany<{
         patientId: string;
