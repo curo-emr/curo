@@ -84,7 +84,7 @@ export function PatientList() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{formatAgeSex(patient.dob, patient.sex)}</TableCell>
                   <TableCell className="text-muted-foreground">{patient.phone}</TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(patient.updatedAt)}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(patient.registeredAt)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

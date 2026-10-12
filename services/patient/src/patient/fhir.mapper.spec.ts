@@ -24,6 +24,7 @@ const patient = Object.assign(new Patient(), {
   insuranceProvider: 'Ceylinco',
   insurancePolicyNumber: 'P-1',
   active: true,
+  createdAt: new Date('2026-01-05T04:30:00.000Z'),
 });
 
 describe('toFhirPatient', () => {
@@ -73,6 +74,12 @@ describe('toFhirPatient', () => {
       ],
       address: [expect.objectContaining({ city: 'Colombo' })],
       contact: [expect.objectContaining({ name: { text: 'Kamala Perera' } })],
+      extension: expect.arrayContaining([
+        {
+          url: 'urn:curo:registeredAt',
+          valueDateTime: new Date('2026-01-05T04:30:00.000Z'),
+        },
+      ]) as unknown,
     });
   });
 
