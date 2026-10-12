@@ -1,19 +1,9 @@
 import type { Metadata } from "next";
-import { Outfit, Geist_Mono } from "next/font/google";
+import { outfitSans, geistMono } from "@curo/web/fonts";
 import "./globals.css";
 import { AuthProvider } from "@curo/web/auth";
 import { QueryProvider } from "@curo/web/query";
 import { Toaster } from "sonner";
-
-const outfitSans = Outfit({
-  variable: "--font-outfit-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "CuroMD - Patient Portal",
