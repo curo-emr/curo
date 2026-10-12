@@ -1,23 +1,4 @@
-import type { PersonName } from '@curo/web/fhir';
-
 export type { Allergy, Patient } from '@curo/web/fhir';
-
-// --- Pharmacy Staff ---
-
-export type PharmacyStaffRole = 'chief_pharmacist' | 'pharmacist' | 'pharmacy_technician';
-
-export interface PharmacyStaff {
-  id: string;
-  name: PersonName;
-  role: PharmacyStaffRole;
-  employeeId: string;
-  email: string;
-  phone: string;
-  qualifications: string[];
-  registrationNumber: string;
-  activeShift: 'morning' | 'evening' | 'night';
-  joinedAt: string;
-}
 
 // --- Medication Catalog ---
 
@@ -69,8 +50,6 @@ export interface Medication {
 
 export type PrescriptionStatus = 'draft' | 'sent_to_pharmacy' | 'on_hold' | 'active' | 'completed' | 'cancelled';
 
-export type Priority = 'routine' | 'urgent' | 'stat';
-
 export interface PrescriptionItem {
   id: string;
   medicationId: string;
@@ -97,47 +76,4 @@ export interface Prescription {
   holdReason: string;
   /** The pharmacy it was sent to; null for those written before prescriptions named one, which any pharmacy dispenses. */
   pharmacyId: string | null;
-}
-
-// --- Dispensing Records ---
-
-export interface DispensingItem {
-  prescriptionItemId: string;
-  medicationId: string;
-  drugNameDispensed: string;
-  quantityPrescribed: number;
-  quantityDispensed: number;
-  batchNumber: string | null;
-  expiryDate: string | null;
-  substitution: string | null;
-  notes: string;
-}
-
-export interface DispensingRecord {
-  id: string;
-  prescriptionId: string;
-  patientId: string;
-  dispensedBy: string;
-  verifiedBy: string;
-  dispensedAt: string;
-  items: DispensingItem[];
-  counsellingNotes: string;
-  printedInstructions: boolean;
-  totalAmount: number;
-}
-
-// --- Stock Transactions ---
-
-export type StockTransactionType = 'purchase' | 'dispensed' | 'return' | 'adjustment' | 'expired' | 'damaged';
-
-export interface StockTransaction {
-  id: string;
-  medicationId: string;
-  type: StockTransactionType;
-  quantity: number;
-  batchNumber: string;
-  referenceNumber: string;
-  performedBy: string;
-  performedAt: string;
-  notes: string;
 }
