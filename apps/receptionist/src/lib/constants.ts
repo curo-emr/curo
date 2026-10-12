@@ -27,32 +27,3 @@ export const APPOINTMENT_STATUS = {
   CANCELLED: "cancelled",
   NO_SHOW: "no_show",
 } as const;
-
-// Visit statuses
-export const VISIT_STATUS = {
-  CHECKED_IN: "checked_in",
-  WITH_DOCTOR: "with_doctor",
-  COMPLETED: "completed",
-  CANCELLED: "cancelled",
-} as const;
-
-// Priority levels
-export const PRIORITY = {
-  ROUTINE: "routine",
-  URGENT: "urgent",
-  STAT: "stat",
-} as const;
-
-// Severity levels
-export const SEVERITY = {
-  MILD: "mild",
-  MODERATE: "moderate",
-  SEVERE: "severe",
-} as const;
-
-// Problem statuses
-export const PROBLEM_STATUS = {
-  ACTIVE: "active",
-  RESOLVED: "resolved",
-  INACTIVE: "inactive",
-} as const;

@@ -94,8 +94,6 @@ export interface QCLog {
 
 // --- Instruments ---
 
-export type InstrumentStatus = 'operational' | 'maintenance' | 'offline';
-
 export interface LabInstrument {
   id: string;
   name: string;
