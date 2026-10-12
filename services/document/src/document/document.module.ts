@@ -3,12 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DocumentController } from './document.controller';
 import { DocumentService } from './document.service';
 import { DocumentReference } from '../entities/document-reference.entity';
-import { AuditLog } from '@curo/shared/database';
+import { AuditTrailModule } from '@curo/shared/audit';
 import { STORAGE_PROVIDER } from '../storage/storage.provider';
 import { MinioStorageProvider } from '../storage/minio-storage.provider';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DocumentReference, AuditLog])],
+  imports: [TypeOrmModule.forFeature([DocumentReference]), AuditTrailModule],
   controllers: [DocumentController],
   providers: [
     DocumentService,

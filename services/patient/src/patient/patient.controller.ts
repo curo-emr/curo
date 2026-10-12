@@ -17,7 +17,6 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 import { CreateAllergyDto, UpdateAllergyDto } from './dto/create-allergy.dto';
 import { CreateConditionDto } from './dto/create-condition.dto';
 import {
-  actorId,
   JwtAuthGuard,
   RolesGuard,
   Roles,
@@ -37,7 +36,7 @@ export class PatientController {
   @Roles('RECEPTIONIST', 'SUPER_ADMIN', 'DOCTOR')
   @Header('Content-Type', 'application/fhir+json')
   create(@Body() dto: CreatePatientDto, @CurrentUser() user: AuthUser) {
-    return this.patientService.create(dto, actorId(user));
+    return this.patientService.create(dto, user);
   }
 
   @Get()
@@ -62,14 +61,14 @@ export class PatientController {
   @Roles('PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getMyRecord(@CurrentUser() user: AuthUser) {
-    return this.patientService.findMyRecord(user.userId);
+    return this.patientService.findMyRecord(user);
   }
 
   @Get('code/:code')
   @Roles('DOCTOR', 'RECEPTIONIST', 'SUPER_ADMIN', 'LAB_STAFF', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
   findByCode(@Param('code') code: string, @CurrentUser() user: AuthUser) {
-    return this.patientService.findByCode(code, user.role);
+    return this.patientService.findByCode(code, user);
   }
 
   // Allergies for several patients at once (a page of a patient list).
@@ -131,7 +130,7 @@ export class PatientController {
   )
   @Header('Content-Type', 'application/fhir+json')
   getAllergies(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.patientService.getAllergies(readablePatient(user, id));
+    return this.patientService.getAllergies(readablePatient(user, id), user);
   }
 
   // Reception records the allergies a patient reports; only doctors change or retire them.
@@ -143,7 +142,7 @@ export class PatientController {
     @Body() dto: CreateAllergyDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.patientService.addAllergy(id, dto, actorId(user));
+    return this.patientService.addAllergy(id, dto, user);
   }
 
   @Patch(':id/allergies/:allergyId')
@@ -153,8 +152,9 @@ export class PatientController {
     @Param('id') id: string,
     @Param('allergyId', ParseUUIDPipe) allergyId: string,
     @Body() dto: UpdateAllergyDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.patientService.updateAllergy(id, allergyId, dto);
+    return this.patientService.updateAllergy(id, allergyId, dto, user);
   }
 
   // Conditions
@@ -162,7 +162,7 @@ export class PatientController {
   @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getConditions(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.patientService.getConditions(readablePatient(user, id));
+    return this.patientService.getConditions(readablePatient(user, id), user);
   }
 
   @Post(':id/conditions')
@@ -173,7 +173,7 @@ export class PatientController {
     @Body() dto: CreateConditionDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.patientService.addCondition(id, dto, actorId(user));
+    return this.patientService.addCondition(id, dto, user);
   }
 
   // Vitals
@@ -181,13 +181,17 @@ export class PatientController {
   @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getVitals(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.patientService.getVitals(readablePatient(user, id));
+    return this.patientService.getVitals(readablePatient(user, id), user);
   }
 
   @Get(':id/vitals/trend')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
-  getVitalsTrend(@Param('id') id: string, @Query('code') code: string) {
-    return this.patientService.getVitalsTrend(id, code);
+  getVitalsTrend(
+    @Param('id') id: string,
+    @Query('code') code: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.patientService.getVitalsTrend(id, code, user);
   }
 }

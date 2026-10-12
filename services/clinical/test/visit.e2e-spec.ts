@@ -11,6 +11,7 @@ import {
 import { UserRole } from '@curo/shared/enums';
 import { parseLabQr } from '@curo/shared/lab';
 import {
+  auditOf,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -255,6 +256,30 @@ describe('POST /encounters/visit', () => {
 
     expect(replay.body).toMatchObject({ id: body.id, status: 'completed' });
     expect(await recordsOf(body.id)).toEqual(WHOLE_VISIT);
+    expect(await auditOf(svc, body.id)).toHaveLength(1);
+  });
+
+  it('audits the signed visit as one entry on the encounter, listing what was signed with it', async () => {
+    const body = visit();
+
+    await sign(body).expect(201);
+
+    const [prescription] = await svc.db
+      .getRepository(MedicationRequest)
+      .findBy({ encounterId: body.id });
+    await expect(auditOf(svc, body.id)).resolves.toEqual([
+      expect.objectContaining({
+        userId: doctor.sub,
+        action: 'CREATE',
+        resourceType: 'Encounter',
+        patientId: body.patientId,
+        changes: {
+          after: expect.objectContaining({
+            prescriptions: [prescription.id],
+          }) as unknown,
+        },
+      }),
+    ]);
   });
 
   it('saves nothing when any part of the visit fails', async () => {

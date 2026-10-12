@@ -3,10 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
 import { Payment } from '../entities/payment.entity';
-import { AuditLog } from '@curo/shared/database';
+import { AuditTrailModule } from '@curo/shared/audit';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Payment, AuditLog])],
+  imports: [TypeOrmModule.forFeature([Payment]), AuditTrailModule],
   controllers: [PaymentController],
   providers: [PaymentService],
 })

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuditTrailModule } from '@curo/shared/audit';
 import { ClinicalController } from './clinical.controller';
 import { ClinicalService } from './clinical.service';
 import { VisitService } from './visit.service';
@@ -28,6 +29,7 @@ import { Icd10Code } from '../entities/icd10-code.entity';
       Icd10Code,
       Condition,
     ]),
+    AuditTrailModule,
   ],
   controllers: [ClinicalController],
   providers: [ClinicalService, VisitService],

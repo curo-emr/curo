@@ -2,6 +2,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { DataSource, type EntityManager } from 'typeorm';
 import { Condition, Observation } from '@curo/shared/database';
 import { actorId, type AuthUser } from '@curo/shared/auth';
+import { AuditTrail, auditTarget } from '@curo/shared/audit';
 import { Encounter } from '../entities/encounter.entity';
 import { ClinicalNote } from '../entities/clinical-note.entity';
 import { EncounterStatus } from '../enums';
@@ -18,13 +19,17 @@ import {
 
 @Injectable()
 export class VisitService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private auditTrail: AuditTrail,
+  ) {}
 
   /**
    * Records a signed visit (the encounter with its note, vitals, diagnoses,
    * prescriptions and lab orders) in one transaction, so it is saved whole or
    * not at all. Signing the same visit again returns the visit already
-   * recorded and writes nothing.
+   * recorded and writes nothing. The visit is audited as one entry on the
+   * encounter, listing the records signed with it.
    */
   async complete(dto: CompleteVisitDto, user: AuthUser) {
     const encounter = await this.dataSource.transaction(async (em) => {
@@ -53,23 +58,51 @@ export class VisitService {
       await linkTriageVitals(em, visit.appointmentId, id);
 
     const ref = { patientId: visit.patientId, encounterId: id };
-    if (note) await em.save(ClinicalNote, { ...note, ...ref, practitionerId });
-    await em.save(
+    const savedNote =
+      note &&
+      (await em.save(ClinicalNote, { ...note, ...ref, practitionerId }));
+    const savedVitals = await em.save(
       Observation,
       vitals.map((v) => newVital({ ...v, ...ref }, practitionerId, user.role)),
     );
-    await em.save(
+    const savedDiagnoses = await em.save(
       Condition,
       diagnoses.map((d) => newDiagnosis(d, ref, practitionerId)),
     );
-    await savePrescriptions(
+    const savedPrescriptions = await savePrescriptions(
       em,
       prescriptions.map((p) => ({ ...p, ...ref })),
       practitionerId,
     );
-    for (const order of labOrders)
-      await saveLabOrder(em, { ...order, ...ref }, practitionerId);
+    const savedLabOrders: string[] = [];
+    for (const order of labOrders) {
+      const saved = await saveLabOrder(
+        em,
+        { ...order, ...ref },
+        practitionerId,
+      );
+      savedLabOrders.push(saved.order.id);
+    }
 
+    const ids = (records: { id: string }[]) => records.map((r) => r.id);
+    await this.auditTrail.record(
+      user,
+      {
+        action: 'CREATE',
+        ...auditTarget('Encounter', encounter),
+        changes: {
+          after: {
+            note: savedNote?.id,
+            vitals: ids(savedVitals),
+            diagnoses: ids(savedDiagnoses),
+            prescriptions: ids(savedPrescriptions),
+            labOrders: savedLabOrders,
+          },
+        },
+        outcomeDescription: 'Doctor signed the visit',
+      },
+      em,
+    );
     return encounter;
   }
 }

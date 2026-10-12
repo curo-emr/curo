@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
-import { AuditLog } from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import {
+  auditOf,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -123,9 +123,6 @@ describe('Patient documents', () => {
   const ids = (res: { body: unknown }) =>
     (res.body as { id: string }[]).map((d) => d.id);
 
-  const auditOf = (documentId: string) =>
-    svc.db.getRepository(AuditLog).findBy({ resourceId: documentId });
-
   const documentsOf = (patientId: string) =>
     svc.db.getRepository(DocumentReference).findBy({ patientId });
 
@@ -150,7 +147,7 @@ describe('Patient documents', () => {
         subject: { reference: `Patient/${patientId}` },
         author: [{ reference: `Practitioner/${doctor.practitionerId}` }],
       });
-      await expect(auditOf(doc.id)).resolves.toEqual([
+      await expect(auditOf(svc, doc.id)).resolves.toEqual([
         expect.objectContaining({ action: 'CREATE', userId: doctor.sub }),
       ]);
     });
@@ -206,7 +203,7 @@ describe('Patient documents', () => {
 
       expect(res.headers['content-type']).toBe('application/pdf');
       expect(res.body).toEqual(PDF);
-      await expect(auditOf(id)).resolves.toEqual(
+      await expect(auditOf(svc, id)).resolves.toEqual(
         expect.arrayContaining([
           expect.objectContaining({ action: 'READ', userId: patient.sub }),
         ]),
@@ -221,7 +218,7 @@ describe('Patient documents', () => {
         .set(patientActor().headers)
         .expect(404);
 
-      const actions = (await auditOf(id)).map((a) => a.action);
+      const actions = (await auditOf(svc, id)).map((a) => a.action);
       expect(actions).toEqual(['CREATE']);
     });
 

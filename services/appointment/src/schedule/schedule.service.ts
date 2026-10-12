@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import type { AuthUser } from '@curo/shared/auth';
-import { AuditLog } from '@curo/shared/database';
+import { AuditTrail } from '@curo/shared/audit';
 import { DoctorSession } from '../entities/doctor-session.entity';
 import { SessionDto } from './dto/set-sessions.dto';
 import { sessionProblem, weekChange } from './sessions';
@@ -39,6 +39,7 @@ export class ScheduleService {
     @InjectRepository(DoctorSession)
     private sessionsRepo: Repository<DoctorSession>,
     private dataSource: DataSource,
+    private auditTrail: AuditTrail,
   ) {}
 
   /** The weekly sessions of the doctors asked for, or of every doctor. */
@@ -78,18 +79,16 @@ export class ScheduleService {
       const change = weekChange(before, after);
       if (!change) return;
 
-      const audit = tx.getRepository(AuditLog);
-      await audit.save(
-        audit.create({
-          userId: actor.userId,
-          userRole: actor.role,
+      await this.auditTrail.record(
+        actor,
+        {
           action: 'UPDATE',
           resourceType: 'Schedule',
           resourceId: practitionerId,
           changes: { before, after },
-          outcome: 'success',
           outcomeDescription: `Admin ${change}`,
-        }),
+        },
+        tx,
       );
     });
     return this.list([practitionerId]);

@@ -27,7 +27,6 @@ import {
   Roles,
   CurrentUser,
   actorId,
-  patientScope,
   readablePatient,
   type AuthUser,
 } from '@curo/shared/auth';
@@ -59,7 +58,7 @@ export class ClinicalController {
     @Body() dto: CreateEncounterDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.createEncounter(dto, actorId(user));
+    return this.clinicalService.createEncounter(dto, user);
   }
 
   // A whole signed visit in one transaction; replaying the same id is a no-op.
@@ -77,7 +76,10 @@ export class ClinicalController {
     @CurrentUser() user: AuthUser,
     @Query('patientId') patientId?: string,
   ) {
-    return this.clinicalService.getEncounters(readablePatient(user, patientId));
+    return this.clinicalService.getEncounters(
+      user,
+      readablePatient(user, patientId),
+    );
   }
 
   @Get('encounters/patient/:patientId')
@@ -87,7 +89,8 @@ export class ClinicalController {
     @Param('patientId') patientId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.getPatientEncounters(
+    return this.clinicalService.getEncounters(
+      user,
       readablePatient(user, patientId),
     );
   }
@@ -96,7 +99,7 @@ export class ClinicalController {
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getEncounter(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.clinicalService.getEncounter(id, patientScope(user));
+    return this.clinicalService.getEncounter(id, user);
   }
 
   @Put('encounters/:id/status')
@@ -105,15 +108,16 @@ export class ClinicalController {
   updateEncounterStatus(
     @Param('id') id: string,
     @Body('status') status: EncounterStatus,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.updateEncounterStatus(id, status);
+    return this.clinicalService.updateEncounterStatus(id, status, user);
   }
 
   // Clinical Notes
   @Post('notes')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   createNote(@Body() dto: CreateNoteDto, @CurrentUser() user: AuthUser) {
-    return this.clinicalService.createNote(dto, actorId(user));
+    return this.clinicalService.createNote(dto, user);
   }
 
   @Get('notes')
@@ -122,10 +126,7 @@ export class ClinicalController {
     @Query('encounterId') encounterId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.getEncounterNotes(
-      encounterId,
-      patientScope(user),
-    );
+    return this.clinicalService.getEncounterNotes(encounterId, user);
   }
 
   @Get('notes/encounter/:encounterId')
@@ -134,16 +135,16 @@ export class ClinicalController {
     @Param('encounterId') encounterId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.getEncounterNotes(
-      encounterId,
-      patientScope(user),
-    );
+    return this.clinicalService.getEncounterNotes(encounterId, user);
   }
 
   @Get('notes/patient/:patientId')
   @Roles('DOCTOR', 'SUPER_ADMIN')
-  getPatientNotes(@Param('patientId') patientId: string) {
-    return this.clinicalService.getPatientNotes(patientId);
+  getPatientNotes(
+    @Param('patientId') patientId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.getPatientNotes(patientId, user);
   }
 
   // Vitals
@@ -151,7 +152,7 @@ export class ClinicalController {
   @Roles('DOCTOR', 'NURSE', 'SUPER_ADMIN')
   @Header('Content-Type', 'application/fhir+json')
   addVitals(@Body() dto: CreateVitalsDto, @CurrentUser() user: AuthUser) {
-    return this.clinicalService.addVitals(dto, actorId(user), user.role);
+    return this.clinicalService.addVitals(dto, user);
   }
 
   // ?patientId= (history) or ?appointmentId= (one visit's triage vitals)
@@ -163,7 +164,7 @@ export class ClinicalController {
     @Query('patientId') patientId?: string,
     @Query('appointmentId') appointmentId?: string,
   ) {
-    return this.clinicalService.getVitals({
+    return this.clinicalService.getVitals(user, {
       patientId: readablePatient(user, patientId),
       appointmentId,
     });
@@ -176,7 +177,7 @@ export class ClinicalController {
     @Param('patientId') patientId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.getVitals({
+    return this.clinicalService.getVitals(user, {
       patientId: readablePatient(user, patientId),
     });
   }
@@ -187,8 +188,9 @@ export class ClinicalController {
   getVitalsTrend(
     @Param('patientId') patientId: string,
     @Query('code') code: string,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.getVitalsTrend(patientId, code);
+    return this.clinicalService.getVitalsTrend(patientId, code, user);
   }
 
   // Multi-code, category-agnostic trend for charts (BP + glucose + cholesterol, etc.)
@@ -206,6 +208,7 @@ export class ClinicalController {
         .split(',')
         .map((c) => c.trim())
         .filter(Boolean),
+      user,
     );
   }
 
@@ -217,7 +220,7 @@ export class ClinicalController {
     @Body() dto: CreatePrescriptionDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.createPrescription(dto, actorId(user));
+    return this.clinicalService.createPrescription(dto, user);
   }
 
   @Get('prescriptions')
@@ -228,6 +231,7 @@ export class ClinicalController {
     @Query('patientId') patientId?: string,
   ) {
     return this.clinicalService.getPrescriptions(
+      user,
       readablePatient(user, patientId),
     );
   }
@@ -239,7 +243,8 @@ export class ClinicalController {
     @Param('patientId') patientId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.getPatientPrescriptions(
+    return this.clinicalService.getPrescriptions(
+      user,
       readablePatient(user, patientId),
     );
   }
@@ -299,8 +304,8 @@ export class ClinicalController {
   @Get('prescriptions/:id')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PHARMACIST')
   @Header('Content-Type', 'application/fhir+json')
-  getPrescription(@Param('id') id: string) {
-    return this.clinicalService.getPrescription(id);
+  getPrescription(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.clinicalService.getPrescription(id, user);
   }
 
   // Lab Orders
@@ -311,7 +316,7 @@ export class ClinicalController {
     @Body() dto: CreateLabOrderDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.clinicalService.createLabOrder(dto, actorId(user));
+    return this.clinicalService.createLabOrder(dto, user);
   }
 
   // Lab staff read orders from the lab service, which limits them to their lab's.
@@ -322,14 +327,17 @@ export class ClinicalController {
     @CurrentUser() user: AuthUser,
     @Query('patientId') patientId?: string,
   ) {
-    return this.clinicalService.getLabOrders(readablePatient(user, patientId));
+    return this.clinicalService.getLabOrders(
+      user,
+      readablePatient(user, patientId),
+    );
   }
 
   @Get('lab-orders/:id')
   @Roles('DOCTOR', 'SUPER_ADMIN', 'PATIENT')
   @Header('Content-Type', 'application/fhir+json')
   getLabOrder(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.clinicalService.getLabOrder(id, patientScope(user));
+    return this.clinicalService.getLabOrder(id, user);
   }
 
   // The patient's slip for the visit's lab tests: its QR leads each lab to its own.
@@ -343,7 +351,7 @@ export class ClinicalController {
   @Post('tasks')
   @Roles('DOCTOR', 'SUPER_ADMIN')
   createTask(@Body() dto: CreateTaskDto, @CurrentUser() user: AuthUser) {
-    return this.clinicalService.createTask(dto, actorId(user));
+    return this.clinicalService.createTask(dto, user);
   }
 
   @Get('tasks')
@@ -360,7 +368,11 @@ export class ClinicalController {
 
   @Put('tasks/:id')
   @Roles('DOCTOR', 'SUPER_ADMIN')
-  updateTask(@Param('id') id: string, @Body() dto: UpdateTaskDto) {
-    return this.clinicalService.updateTask(id, dto);
+  updateTask(
+    @Param('id') id: string,
+    @Body() dto: UpdateTaskDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clinicalService.updateTask(id, dto, user);
   }
 }

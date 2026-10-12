@@ -21,6 +21,7 @@ import {
 import { AppointmentStatus, QueueStage } from '../enums';
 import { assertQueueTransition, queueStageForStatus } from './queue-stage';
 import { patientScope, type AuthUser } from '@curo/shared/auth';
+import { AuditTrail, auditTarget, changeOf } from '@curo/shared/audit';
 
 function toFhirAppointment(a: Appointment) {
   return {
@@ -80,16 +81,23 @@ export class AppointmentService {
   constructor(
     @InjectRepository(Appointment)
     private appointmentsRepo: Repository<Appointment>,
+    private auditTrail: AuditTrail,
   ) {}
 
-  async create(dto: CreateAppointmentDto) {
+  async create(dto: CreateAppointmentDto, user: AuthUser) {
     const start = new Date(dto.start);
     const end = new Date(dto.end);
     if (end <= start) {
       throw new BadRequestException('An appointment must end after it starts');
     }
-    const appointment = this.appointmentsRepo.create({ ...dto, start, end });
-    return toFhirAppointment(await this.save(appointment));
+    const saved = await this.save(
+      this.appointmentsRepo.create({ ...dto, start, end }),
+    );
+    await this.auditTrail.record(user, {
+      action: 'CREATE',
+      ...auditTarget('Appointment', saved),
+    });
+    return toFhirAppointment(saved);
   }
 
   /** Saves a booking, turning a clash with the doctor's other appointments into a 409. */
@@ -160,6 +168,12 @@ export class AppointmentService {
       .skip(skip)
       .take(take)
       .getManyAndCount();
+    // A patient reads their own, whichever patient they asked for.
+    await this.auditTrail.readPatient(
+      requestingUser,
+      patientScope(requestingUser) ?? filters?.patientId,
+      'appointments',
+    );
     return toSearchset(appointments.map(toFhirAppointment), total, {
       page,
       pageSize,
@@ -168,32 +182,37 @@ export class AppointmentService {
     });
   }
 
-  /** One appointment; with `patientId`, only that patient's (another's is as good as missing). */
-  async findOne(id: string, patientId?: string) {
+  /** One appointment; a patient's own only, for a patient (another's is as good as missing). */
+  async findOne(id: string, user: AuthUser) {
+    const patientId = patientScope(user);
     const a = await this.appointmentsRepo.findOne({
       where: { id, ...(patientId && { patientId }) },
     });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);
+    await this.auditTrail.read(user, auditTarget('Appointment', a));
     return toFhirAppointment(a);
   }
 
-  async update(id: string, dto: UpdateAppointmentDto) {
+  async update(id: string, dto: UpdateAppointmentDto, user: AuthUser) {
     const a = await this.appointmentsRepo.findOne({ where: { id } });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);
+    const update: Partial<Appointment> = { ...dto };
     if (dto.status && dto.status !== a.status) {
       const stage = queueStageForStatus(dto.status, a.queueStage);
-      if (stage !== undefined) a.queueStage = stage;
+      if (stage !== undefined) update.queueStage = stage;
     }
-    Object.assign(a, dto);
+    const changes = changeOf(a, update);
     // Re-booking a cancelled appointment takes its slot back, so it can clash too.
-    return toFhirAppointment(await this.save(a));
+    const saved = await this.save(Object.assign(a, update));
+    await this.auditTrail.record(user, {
+      action: 'UPDATE',
+      ...auditTarget('Appointment', saved),
+      changes,
+    });
+    return toFhirAppointment(saved);
   }
 
-  async updateQueueStage(
-    id: string,
-    stage: QueueStage,
-    user: Pick<AuthUser, 'role' | 'practitionerId'>,
-  ) {
+  async updateQueueStage(id: string, stage: QueueStage, user: AuthUser) {
     const a = await this.appointmentsRepo.findOne({ where: { id } });
     if (!a) throw new NotFoundException(`Appointment ${id} not found`);
     if (
@@ -204,8 +223,14 @@ export class AppointmentService {
     }
     if (!assertQueueTransition(a.queueStage, stage, user.role))
       return toFhirAppointment(a);
+    const changes = changeOf(a, { queueStage: stage });
     a.queueStage = stage;
     const saved = await this.appointmentsRepo.save(a);
+    await this.auditTrail.record(user, {
+      action: 'UPDATE',
+      ...auditTarget('Appointment', saved),
+      changes,
+    });
     return toFhirAppointment(saved);
   }
 
@@ -245,11 +270,12 @@ export class AppointmentService {
     };
   }
 
-  async getPatientAppointments(patientId: string) {
+  async getPatientAppointments(patientId: string, user: AuthUser) {
     const appointments = await this.appointmentsRepo.find({
       where: { patientId },
       order: { start: 'DESC' },
     });
+    await this.auditTrail.readPatient(user, patientId, 'appointments');
     return appointments.map(toFhirAppointment);
   }
 }

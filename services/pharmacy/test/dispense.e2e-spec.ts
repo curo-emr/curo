@@ -6,6 +6,7 @@ import {
   UserRole,
 } from '@curo/shared/enums';
 import {
+  auditOf,
   daysFromToday,
   startService,
   type ServiceUnderTest,
@@ -142,6 +143,42 @@ describe('POST /dispense', () => {
     expect(await stockLeft(rx)).toEqual({ GOOD: 3, EXPIRED: 50 });
     expect(await statusOf(rx)).toBe(MedicationRequestStatus.ACTIVE);
     expect(await dispensesOf(rx)).toBe(0);
+    await expect(auditOf(svc, rx.id)).resolves.toEqual([]);
+  });
+
+  it('audits the dispense, and the prescription it fills, against the patient', async () => {
+    const rx = await prescribe(10, [{ batchNumber: 'B1', quantity: 100 }]);
+    const pharmacist = svc.as(UserRole.PHARMACIST, {
+      organizationId: pharmacy,
+    });
+
+    const res = await svc.api
+      .post('/dispense')
+      .set(pharmacist.headers)
+      .send({ medicationRequestId: rx.id })
+      .expect(201);
+
+    const by = { userId: pharmacist.sub, patientId: rx.patientId };
+    await expect(
+      auditOf(svc, (res.body as { id: string }).id),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        ...by,
+        action: 'CREATE',
+        resourceType: 'MedicationDispense',
+      }),
+    ]);
+    await expect(auditOf(svc, rx.id)).resolves.toEqual([
+      expect.objectContaining({
+        ...by,
+        action: 'UPDATE',
+        resourceType: 'MedicationRequest',
+        changes: {
+          before: { status: 'active' },
+          after: { status: 'completed' },
+        },
+      }),
+    ]);
   });
 
   it('dispenses a prescription once when two pharmacists submit it at the same time', async () => {

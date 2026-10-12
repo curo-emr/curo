@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuditTrailModule } from '@curo/shared/audit';
 import { LabController } from './lab.controller';
 import { LabService } from './lab.service';
 import {
@@ -25,6 +26,7 @@ import { QCLog } from '../entities/qc-log.entity';
       LabTestCatalog,
       QCLog,
     ]),
+    AuditTrailModule,
   ],
   controllers: [LabController],
   providers: [LabService],

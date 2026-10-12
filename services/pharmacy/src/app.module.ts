@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PharmacyModule } from './pharmacy/pharmacy.module';
 import {
+  AuditLog,
   MedicationRequest,
   Notification,
   databaseOptions,
@@ -23,6 +24,7 @@ import { JwtAuthModule } from '@curo/shared/auth';
         Notification,
         Stock,
         MedicationCatalog,
+        AuditLog,
       ]),
     ),
     PharmacyModule,

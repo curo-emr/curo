@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PatientModule } from './patient/patient.module';
 import {
+  AuditLog,
   Patient,
   Condition,
   Observation,
@@ -16,7 +17,13 @@ import { JwtAuthModule } from '@curo/shared/auth';
     ConfigModule.forRoot({ isGlobal: true }),
     JwtAuthModule,
     TypeOrmModule.forRoot(
-      databaseOptions([Patient, AllergyIntolerance, Condition, Observation]),
+      databaseOptions([
+        Patient,
+        AllergyIntolerance,
+        Condition,
+        Observation,
+        AuditLog,
+      ]),
     ),
     PatientModule,
   ],

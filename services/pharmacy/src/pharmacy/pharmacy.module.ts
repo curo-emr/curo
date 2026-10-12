@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuditTrailModule } from '@curo/shared/audit';
 import { PharmacyController } from './pharmacy.controller';
 import { PharmacyService } from './pharmacy.service';
 import { MedicationRequest } from '@curo/shared/database';
@@ -15,6 +16,7 @@ import { MedicationCatalog } from '../entities/medication-catalog.entity';
       Stock,
       MedicationCatalog,
     ]),
+    AuditTrailModule,
   ],
   controllers: [PharmacyController],
   providers: [PharmacyService],
