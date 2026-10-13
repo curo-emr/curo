@@ -1,3 +1,4 @@
+import { PartialType, PickType } from '@nestjs/swagger';
 import {
   IsDateString,
   IsInt,
@@ -46,20 +47,12 @@ export class CreateStockDto {
   batchNumber?: string;
 }
 
-export class UpdateStockDto {
+/** A correction to a batch; a count can go down to zero, but not below. */
+export class UpdateStockDto extends PartialType(
+  PickType(CreateStockDto, ['reorderThreshold', 'unitPrice', 'expiryDate']),
+) {
   @IsOptional()
-  @IsNumber()
+  @IsInt()
+  @Min(0)
   quantity?: number;
-
-  @IsOptional()
-  @IsNumber()
-  reorderThreshold?: number;
-
-  @IsOptional()
-  @IsNumber()
-  unitPrice?: number;
-
-  @IsOptional()
-  @IsString()
-  expiryDate?: string;
 }

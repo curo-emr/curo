@@ -241,6 +241,28 @@ describe('stock', () => {
         .expect(400);
     });
 
+    it('corrects a batch down to zero, but not below, to a fraction or to an invalid price, level or date', async () => {
+      const drug = await stock([{ quantity: 40 }]);
+      const batch = await svc.db
+        .getRepository(Stock)
+        .findOneByOrFail({ medicationCode: drug });
+      const correct = (body: object) =>
+        svc.api.put(`/stock/${batch.id}`).set(pharmacist.headers).send(body);
+      const quantityNow = async () =>
+        (await svc.db.getRepository(Stock).findOneByOrFail({ id: batch.id }))
+          .quantity;
+
+      for (const quantity of [-50, 2.5])
+        await correct({ quantity }).expect(400);
+      await correct({ reorderThreshold: -1 }).expect(400);
+      await correct({ unitPrice: -1 }).expect(400);
+      await correct({ expiryDate: 'not-a-date' }).expect(400);
+      expect(await quantityNow()).toBe(40);
+
+      await correct({ quantity: 0 }).expect(200);
+      expect(await quantityNow()).toBe(0);
+    });
+
     it("can't correct another pharmacy's batch", async () => {
       const drug = await stock([
         { quantity: 40, organizationId: otherPharmacy },

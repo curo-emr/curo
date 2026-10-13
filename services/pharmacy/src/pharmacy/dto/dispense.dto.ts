@@ -1,11 +1,12 @@
-import { IsOptional, IsString, IsNumber, IsUUID } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class DispenseMedicationDto {
   @IsUUID()
   medicationRequestId: string;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   quantityValue?: number;
 
   @IsOptional()
