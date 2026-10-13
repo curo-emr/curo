@@ -27,6 +27,8 @@ COPY database/ ./database/
 # the seed imports the patient identifier generators from source
 COPY packages/shared/src/identifiers/ ./packages/shared/src/identifiers/
 COPY packages/shared/src/lab/ ./packages/shared/src/lab/
+# and sets today's appointments on the clinic's clock
+COPY packages/shared/src/config/ ./packages/shared/src/config/
 # the ICD-10-CM import checks codes with the same rule as the API
 COPY packages/shared/src/icd10/ ./packages/shared/src/icd10/
 COPY --from=icd10cm /icd10cm-codes.txt ./database/data/icd10cm-codes.txt

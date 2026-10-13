@@ -8,6 +8,11 @@ import {
   generatePhn,
 } from '../packages/shared/src/identifiers';
 import {
+  atClinicTime,
+  clinicClock,
+  clinicDate,
+} from '../packages/shared/src/config/clinic-time';
+import {
   ensureLabAnalytes,
   seedLabCatalog,
   seedLabOrders,
@@ -44,6 +49,17 @@ function daysAgo(n: number) {
   d.setDate(d.getDate() - n);
   return d;
 }
+
+/**
+ * `minutes` past midnight on the clinic's calendar, `days` from today. The seed
+ * runs on UTC like the services, so a time of day is set on the clinic's clock
+ * (CLINIC_TIME_ZONE), never with setHours.
+ */
+function clinicTimeOn(days: number, minutes: number) {
+  return atClinicTime(clinicDate(daysAgo(-days)), minutes);
+}
+
+const MINUTE = 60_000;
 
 const HASH = (p: string) => bcrypt.hashSync(p, 12);
 
@@ -749,10 +765,8 @@ async function seed() {
     const docIdx = i % 3;
     const daysOffset = i < 10 ? -(i + 1) : i - 10 + 1;
     const startHour = 9 + (i % 6);
-    const start = daysAgo(-daysOffset);
-    start.setHours(startHour, 0, 0, 0);
-    const end = new Date(start);
-    end.setMinutes(30);
+    const start = clinicTimeOn(daysOffset, startHour * 60);
+    const end = new Date(start.getTime() + 30 * MINUTE);
     const isPast = daysOffset < 0;
     const status = isPast
       ? Math.random() > 0.2
@@ -786,52 +800,36 @@ async function seed() {
 
   // ---- TODAY'S PATIENT FLOW (nurse triage demo) ----
   // A spread of queue stages so the nurse station, reception queue board and the
-  // doctor's schedule all have something to show on a fresh stack.
+  // doctor's schedule all have something to show on a fresh stack. Each
+  // appointment takes the next slot of a doctor's first session today, so the
+  // queue matches the week the doctors keep; `doctor` counts the doctors
+  // working today, earliest first, and wraps when fewer of them work.
   const [nurse] = await db.query<IdRow[]>(
     `SELECT id FROM practitioners WHERE role = 'NURSE' ORDER BY "createdAt" LIMIT 1`,
   );
+  const todaysSessions = await db.query<
+    { practitionerId: string; startMinutes: number; slotMinutes: number }[]
+  >(
+    `SELECT * FROM (
+       SELECT DISTINCT ON ("practitionerId") "practitionerId", "slotMinutes",
+              (EXTRACT(HOUR FROM "startTime") * 60 + EXTRACT(MINUTE FROM "startTime"))::int AS "startMinutes"
+         FROM doctor_sessions WHERE weekday = $1
+        ORDER BY "practitionerId", "startTime"
+     ) first_sessions ORDER BY "startMinutes", "practitionerId"`,
+    [clinicClock(new Date()).weekday],
+  );
   const todayFlow = [
-    {
-      patIdx: 5,
-      docIdx: 0,
-      hour: 8,
-      minute: 0,
-      status: 'fulfilled',
-      stage: 'done',
-    },
-    {
-      patIdx: 6,
-      docIdx: 0,
-      hour: 8,
-      minute: 30,
-      status: 'arrived',
-      stage: 'with_doctor',
-    },
+    { patIdx: 5, doctor: 0, status: 'fulfilled', stage: 'done' },
+    { patIdx: 6, doctor: 0, status: 'arrived', stage: 'with_doctor' },
     {
       patIdx: 7,
-      docIdx: 1,
-      hour: 9,
-      minute: 0,
+      doctor: 1,
       status: 'arrived',
       stage: 'ready_for_doctor',
       vitals: true,
     },
-    {
-      patIdx: 8,
-      docIdx: 1,
-      hour: 9,
-      minute: 30,
-      status: 'arrived',
-      stage: 'waiting_nurse',
-    },
-    {
-      patIdx: 9,
-      docIdx: 2,
-      hour: 10,
-      minute: 0,
-      status: 'arrived',
-      stage: 'waiting_nurse',
-    },
+    { patIdx: 8, doctor: 1, status: 'arrived', stage: 'waiting_nurse' },
+    { patIdx: 9, doctor: 2, status: 'arrived', stage: 'waiting_nurse' },
   ];
   // Triage readings for the ready_for_doctor patient — one hypertensive BP to show the flags.
   const triageVitals = [
@@ -851,10 +849,18 @@ async function seed() {
     { code: '2708-6', display: 'Oxygen saturation', value: 97, unit: '%' },
     { code: '8310-5', display: 'Body temperature', value: 36.9, unit: 'Cel' },
   ];
-  for (const f of todayFlow) {
-    const start = new Date();
-    start.setHours(f.hour, f.minute, 0, 0);
-    const end = new Date(start.getTime() + 30 * 60 * 1000);
+  // A day nobody works (Sunday, in the seeded week) has no flow.
+  const flow = todaysSessions.length ? todayFlow : [];
+  const slotsTaken = new Map<string, number>();
+  for (const f of flow) {
+    const session = todaysSessions[f.doctor % todaysSessions.length];
+    const slot = slotsTaken.get(session.practitionerId) ?? 0;
+    slotsTaken.set(session.practitionerId, slot + 1);
+    const start = clinicTimeOn(
+      0,
+      session.startMinutes + slot * session.slotMinutes,
+    );
+    const end = new Date(start.getTime() + session.slotMinutes * MINUTE);
     const [appt] = await db.query<IdRow[]>(
       `
       INSERT INTO appointments (id, "patientId", "practitionerId", status, "queueStage", start, "end", description, "serviceType", "reasonCode")
@@ -863,7 +869,7 @@ async function seed() {
     `,
       [
         patientIds[f.patIdx],
-        doctorIds[f.docIdx],
+        session.practitionerId,
         f.status,
         f.stage,
         start,
@@ -891,7 +897,11 @@ async function seed() {
       }
     }
   }
-  console.log(`✅ ${todayFlow.length} appointments in today's patient flow`);
+  console.log(
+    flow.length
+      ? `✅ ${flow.length} appointments in today's patient flow`
+      : "ℹ️  No doctor has a session today, so there's no patient flow today",
+  );
 
   // ---- PAYMENTS (receptionist-collected visit income) ----
   const consultationFees = [1500, 2000, 2500, 3000, 3500];

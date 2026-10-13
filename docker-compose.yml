@@ -304,7 +304,7 @@ services:
     restart: "no"
     command: ["npm", "run", "seed"]
     environment:
-      <<: *db-env
+      <<: [*db-env, *clinic-env]
     depends_on: *needs-migrated-db
 
   # ── Frontends ─────────────────────────────────────────────────────────────────
