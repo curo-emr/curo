@@ -379,13 +379,17 @@ export class LabService {
    * Records an order's results and completes it, in one transaction, so they
    * are saved whole or not at all. The results are the values typed in, the
    * report files uploaded for the order, or both; typed values also get a PDF
-   * report. The order is claimed first: results for an order that is no longer
-   * active (already reported, or revoked) get a 409, so a double submit can't
-   * file two reports. The ordering practitioner is notified in the same
-   * transaction.
+   * report. Until the sample is received, results get a 409. The order is
+   * claimed first: results for an order that is no longer active (already
+   * reported, or revoked) get a 409 too, so a double submit can't file two
+   * reports. The ordering practitioner is notified in the same transaction.
    */
   async enterResults(dto: EnterResultsDto, performer: AuthUser) {
     const order = await this.findOrder(dto.serviceRequestId, performer);
+    if (!order.receivedAt)
+      throw new ConflictException(
+        'Receive the sample before entering its results',
+      );
     const typed = dto.results ?? [];
     if (!typed.length && !(await this.hasUploadedReport(order.id)))
       throw new BadRequestException(
