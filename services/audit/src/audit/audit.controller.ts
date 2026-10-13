@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import {
   JwtAuthGuard,
@@ -8,21 +8,16 @@ import {
   type AuthUser,
 } from '@curo/shared/auth';
 import type { PaginationQuery } from '@curo/shared/fhir';
-import { CreateAuditLogDto } from './dto/create-audit-log.dto';
 
+/**
+ * The audit log, for the super admin to read. There is no route to write an
+ * entry: each service records what its users do through AuditTrail in
+ * @curo/shared/audit.
+ */
 @Controller('audit')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AuditController {
   constructor(private auditService: AuditService) {}
-
-  @Post()
-  log(@Body() dto: CreateAuditLogDto, @CurrentUser() user: AuthUser) {
-    return this.auditService.log({
-      ...dto,
-      userId: user.userId,
-      userRole: user.role,
-    });
-  }
 
   @Get()
   @Roles('SUPER_ADMIN')
