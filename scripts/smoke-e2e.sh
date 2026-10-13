@@ -8,10 +8,11 @@
 # ALL through the API gateway at :3000 with real JWTs (the only host-reachable
 # path: it exercises the gateway's token check + each service's RolesGuard).
 #
-# Requires: bash, curl, jq. Stack must be running: `docker compose up -d --build`.
+# Requires: bash, curl, jq. Stack must be running: `make run`.
 #
-# NOTE: the write flow MUTATES the live seeded DB. That is intended on a dev stack.
-# Reset with:  docker compose down -v && docker compose up -d --build
+# NOTE: the write flow MUTATES the live seeded DB. That is intended on a dev stack,
+# and the script can be re-run: each run books free slots and its own stock. For a
+# fresh seed, see "Re-seeding" in docs/TEST_CREDENTIALS.md.
 #
 # Usage:   bash scripts/smoke-e2e.sh
 # Output:  human-readable PASS/FAIL log to stdout; markdown table to docs/API_VERIFICATION.md
@@ -20,8 +21,11 @@
 set -uo pipefail
 
 BASE="${BASE:-http://localhost:3000}"
-PASS=0; FAIL=0; XFAIL=0
-ROWS=()          # markdown rows
+# One line per check: its outcome and its markdown row. Kept in a file, not in
+# variables, because most checks run inside $(…), a subshell.
+TALLY="$(mktemp)"; trap 'rm -f "$TALLY"' EXIT
+tally() { printf '%s\t%s\n' "$1" "$2" >>"$TALLY"; }  # tally <PASS|XFAIL|FAIL> <row>
+count() { grep -c "^$1"$'\t' "$TALLY"; }
 LOGW=0           # write markdown?
 [[ "${1:-}" == "--md" ]] && LOGW=1
 
@@ -39,29 +43,35 @@ req() {
   out="$(curl "${args[@]}")"
   code="${out##*$'\n'}"
   resp="${out%$'\n'*}"
+  record "$label" "$expect" "$method" "$path" "$code"
+  printf '%s' "$resp"
+}
+
+# record <role-label> <expected-status> <METHOD> <path> <actual-status> — counts one request's outcome
+record() {
+  local label="$1" expect="$2" method="$3" path="$4" code="$5"
   local mark status_word color
   if [[ "$code" == "$expect" ]]; then
-    PASS=$((PASS+1)); mark="PASS"; status_word="OK"; color="$c_green"
+    mark="PASS"; status_word="OK"; color="$c_green"
   elif [[ "$expect" == "4"* && "$code" == "4"* ]]; then
     # expected-deny family (e.g. expected 403, got 401) — still a correct "blocked"
-    XFAIL=$((XFAIL+1)); mark="XFAIL"; status_word="blocked(${code})"; color="$c_yellow"
+    mark="XFAIL"; status_word="blocked(${code})"; color="$c_yellow"
   else
-    FAIL=$((FAIL+1)); mark="FAIL"; status_word="GOT ${code}"; color="$c_red"
+    mark="FAIL"; status_word="GOT ${code}"; color="$c_red"
   fi
   printf '%s%-5s%s  %-6s %-42s %s[%s expect %s]%s\n' \
     "$color" "$mark" "$c_reset" "$method" "$path" "$c_dim" "$status_word" "$expect" "$c_reset" >&2
-  ROWS+=("| \`$method $path\` | $label | $expect | $code | $mark |")
-  printf '%s' "$resp"
+  tally "$mark" "| \`$method $path\` | $label | $expect | $code | $mark |"
 }
 
 # expect_eq <label> <actual> <expected> — content assertion (counts like req)
 expect_eq() {
   if [[ "$2" == "$3" ]]; then
-    PASS=$((PASS+1)); printf '%sPASS %s  check  %-42s %s[%s]%s\n' "$c_green" "$c_reset" "$1" "$c_dim" "$2" "$c_reset" >&2
-    ROWS+=("| check: $1 | — | $3 | $2 | PASS |")
+    printf '%sPASS %s  check  %-42s %s[%s]%s\n' "$c_green" "$c_reset" "$1" "$c_dim" "$2" "$c_reset" >&2
+    tally PASS "| check: $1 | — | $3 | $2 | PASS |"
   else
-    FAIL=$((FAIL+1)); printf '%sFAIL %s  check  %-42s %s[got %s, expect %s]%s\n' "$c_red" "$c_reset" "$1" "$c_dim" "$2" "$3" "$c_reset" >&2
-    ROWS+=("| check: $1 | — | $3 | $2 | FAIL |")
+    printf '%sFAIL %s  check  %-42s %s[got %s, expect %s]%s\n' "$c_red" "$c_reset" "$1" "$c_dim" "$2" "$3" "$c_reset" >&2
+    tally FAIL "| check: $1 | — | $3 | $2 | FAIL |"
   fi
 }
 
@@ -97,23 +107,53 @@ NURSE=$(jq -r .accessToken <<<"$NURSE_R")
 
 DOC_PID=$(jq -r .user.practitionerId <<<"$DOC_R")
 LAB_ORG=$(jq -r .user.organizationId <<<"$LAB_R")  # lab tests go to this technician's lab
+PHARM_ORG=$(jq -r .user.organizationId <<<"$PHARM_R")  # prescriptions go to this pharmacist's pharmacy
 PAT_ID_SELF=$(jq -r .user.patientId <<<"$PAT_R")
 
 for r in "ADMIN:$ADMIN" "DOCTOR:$DOC" "RECEP:$RECEP" "PHARM:$PHARM" "LAB:$LAB" "PATIENT:$PAT" "NURSE:$NURSE"; do
   name="${r%%:*}"; tok="${r#*:}"
-  if [[ -n "$tok" && "$tok" != "null" ]]; then
-    PASS=$((PASS+1)); echo "${c_green}PASS ${c_reset} login $name" >&2
-    ROWS+=("| \`POST /auth/login\` | $name | 200 | 200 | PASS |")
-  else
-    FAIL=$((FAIL+1)); echo "${c_red}FAIL ${c_reset} login $name" >&2
-    ROWS+=("| \`POST /auth/login\` | $name | 200 | ERR | FAIL |")
-  fi
+  record "$name" 200 POST /auth/login "$([[ -n "$tok" && "$tok" != "null" ]] && echo 200 || echo ERR)"
 done
 
 req "any"   200 GET  /auth/profile "" "$DOC"
 req "any"   200 GET  "/auth/practitioners?role=DOCTOR" "" "$RECEP" >/dev/null
 req "admin" 200 GET  "/auth/users?role=DOCTOR" "" "$ADMIN" >/dev/null
 req "admin" 201 POST /auth/users "{\"email\":\"smoke.$RANDOM@curo.test\",\"password\":\"Smoke@123\",\"role\":\"RECEPTIONIST\",\"firstName\":\"Smoke\",\"lastName\":\"Test\"}" "$ADMIN" >/dev/null
+
+# Appointments must fall in one of the doctor's weekly sessions, at a time not yet
+# over, and not clash with another booking. slots lists the doctor's session slots
+# over the next four weeks, from tomorrow, on the clinic's clock (Asia/Colombo,
+# UTC+05:30 all year), as "<start> <end>" lines.
+SESSIONS=$(curl -s "$BASE/schedules?practitionerId=$DOC_PID" -H "Authorization: Bearer $RECEP")
+slots() {
+  jq -r '
+    def mins: split(":") | (.[0] | tonumber) * 60 + (.[1] | tonumber);
+    def pad: tostring | if length < 2 then "0" + . else . end;
+    def at($date): "\($date)T\(. / 60 | floor | pad):\(. % 60 | pad):00+05:30";
+    . as $sessions
+    | range(1; 29) as $day
+    | (now + 19800 + $day * 86400) as $t
+    | ($t | strftime("%Y-%m-%d")) as $date
+    | $sessions[] | select(.weekday == ($t | gmtime | .[6])) | .slotMinutes as $len
+    | range(.start | mins; (.end | mins) - $len + 1; $len)
+    | "\(at($date)) \(. + $len | at($date))"' <<<"$SESSIONS"
+}
+
+# book <reason> -> the appointment, in the doctor's first free slot (a taken one is a 409)
+book() {
+  local start end out code
+  while read -r start end; do
+    out=$(curl -s -w $'\n%{http_code}' -X POST "$BASE/appointments" -H 'Content-Type: application/json' \
+      -H "Authorization: Bearer $RECEP" \
+      -d "{\"patientId\":\"$PATIENT_ID\",\"practitionerId\":\"$DOC_PID\",\"start\":\"$start\",\"end\":\"$end\",\"serviceType\":\"consultation\",\"reasonCode\":\"$1\"}")
+    code="${out##*$'\n'}"
+    [[ "$code" != "409" ]] && break
+  done < <(slots)
+  record "receptionist" 201 POST /appointments "$code"
+  printf '%s' "${out%$'\n'*}"
+}
+# The clinic's date an appointment starts on.
+day_of() { jq -r '.start | .[0:10]' <<<"$1"; }
 
 # ---------------------------------------------------------------------------
 # 1. PATIENT registration (receptionist)
@@ -140,18 +180,20 @@ req "patient" 403 GET  "/patients/allergies?patientIds=$PATIENT_ID" "" "$PAT" >/
 # 2. APPOINTMENT + PAYMENT (receptionist)
 # ---------------------------------------------------------------------------
 echo "-- appointment / payment --" >&2
-START="2026-07-01T09:00:00.000Z"; END="2026-07-01T09:30:00.000Z"
-A=$(req "receptionist" 201 POST /appointments \
-  "{\"patientId\":\"$PATIENT_ID\",\"practitionerId\":\"$DOC_PID\",\"start\":\"$START\",\"end\":\"$END\",\"reasonCode\":\"checkup\"}" "$RECEP")
+A=$(book "checkup")
 APPT_ID=$(jq -r '.id' <<<"$A")
 echo "   appointmentId=$APPT_ID" >&2
+req "receptionist" 400 POST /appointments \
+  "{\"patientId\":\"$PATIENT_ID\",\"practitionerId\":\"$DOC_PID\",\"start\":\"2020-01-06T09:00:00+05:30\",\"end\":\"2020-01-06T09:15:00+05:30\",\"serviceType\":\"consultation\"}" "$RECEP" >/dev/null
 
 req "staff"   200 GET "/appointments?practitionerId=$DOC_PID" "" "$RECEP" >/dev/null
-req "staff"   200 GET "/appointments/schedule/$DOC_PID?date=2026-07-01" "" "$RECEP" >/dev/null
+req "staff"   200 GET "/appointments/schedule/$DOC_PID?date=$(day_of "$A")" "" "$RECEP" >/dev/null
 req "staff"   200 GET "/appointments/patient/$PATIENT_ID" "" "$RECEP" >/dev/null
 req "staff"   200 GET "/appointments/$APPT_ID" "" "$RECEP" >/dev/null
 PAYJSON="{\"patientId\":\"$PATIENT_ID\",\"appointmentId\":\"$APPT_ID\",\"amount\":2500,\"paymentMethod\":\"cash\"}"
 req "receptionist" 201 POST /payments "$PAYJSON" "$RECEP" >/dev/null
+req "one payment per visit" 409 POST /payments "$PAYJSON" "$RECEP" >/dev/null
+req "receptionist" 200 PUT "/appointments/$APPT_ID" '{"status":"arrived"}' "$RECEP" >/dev/null  # checked in
 req "receptionist" 200 GET  /payments/mine "" "$RECEP" >/dev/null
 req "receptionist" 200 GET  /payments/summary "" "$RECEP" >/dev/null
 req "admin"        200 GET  /payments "" "$ADMIN" >/dev/null
@@ -220,10 +262,13 @@ INS_ID=$(jq -r '.id' <<<"$INS")
 # 5. PRESCRIPTION (doctor) → DISPENSE (pharmacist)
 # ---------------------------------------------------------------------------
 echo "-- prescription + dispense --" >&2
-RX_BODY="{\"patientId\":\"$PATIENT_ID\",\"encounterId\":\"$ENC_ID\",\"medicationCode\":\"860975\",\"medicationDisplay\":\"Metformin 500mg\",\"dosageText\":\"1 tab BD\",\"quantityValue\":60,\"quantityUnit\":\"tablet\"}"
+# Drugs are prescribed and stocked by their code in the medication catalog.
+METFORMIN="med_0101"   # Metformin 500mg Tablet
+RX_BODY="{\"patientId\":\"$PATIENT_ID\",\"encounterId\":\"$ENC_ID\",\"performerOrganizationId\":\"$PHARM_ORG\",\"medicationCode\":\"$METFORMIN\",\"dosageText\":\"1 tab BD\",\"quantityValue\":60,\"quantityUnit\":\"tablet\"}"
 RX=$(req "doctor" 201 POST /prescriptions "$RX_BODY" "$DOC")
 RX_ID=$(jq -r '.id' <<<"$RX")
 echo "   medicationRequestId=$RX_ID" >&2
+req "drug not in the catalog" 400 POST /prescriptions "${RX_BODY/$METFORMIN/SMOKE-NOT-A-DRUG}" "$DOC" >/dev/null
 
 req "pharma" 200 GET  "/prescriptions/pending" "" "$PHARM" >/dev/null
 RXR=$(req "pharma" 200 GET "/prescriptions/$RX_ID" "" "$PHARM")
@@ -238,7 +283,7 @@ req "patient" 403 GET  "/prescriptions/summary?patientIds=$PATIENT_ID" "" "$PAT"
 # Same body shape as the pharmacy portal: patient, price and dispenser come from the server.
 DISP_BODY="{\"medicationRequestId\":\"$RX_ID\",\"quantityValue\":60,\"quantityUnit\":\"tablet\"}"
 # Stock the 60 tablets this run dispenses, so repeated runs leave the total unchanged.
-req "pharma" 201 POST "/stock" '{"medicationCode":"860975","medicationName":"Metformin 500mg","quantity":60,"unit":"tablet","unitPrice":1}' "$PHARM" >/dev/null
+req "pharma" 201 POST "/stock" "{\"medicationCode\":\"$METFORMIN\",\"quantity\":60,\"unit\":\"tablet\",\"unitPrice\":1}" "$PHARM" >/dev/null
 D=$(req "pharma" 201 POST "/dispense" "$DISP_BODY" "$PHARM")
 DISP_ID=$(jq -r '.id' <<<"$D")
 expect_eq "dispense patient from prescription" "$(jq -r '.subject.reference' <<<"$D")" "Patient/$PATIENT_ID"
@@ -248,20 +293,27 @@ expect_eq "dispense history by prescription" "$(jq -r '.total' <<<"$DH")" "1"
 req "pharma" 200 GET  "/dispense?patientId=$PATIENT_ID" "" "$PHARM" >/dev/null
 [[ -n "$DISP_ID" && "$DISP_ID" != "null" ]] && req "pharma" 200 GET "/dispense/$DISP_ID" "" "$PHARM" >/dev/null
 req "pharma" 200 GET  "/stock" "" "$PHARM" >/dev/null
-ST=$(req "pharma" 201 POST "/stock" '{"medicationCode":"SMK1","medicationName":"Smoke Tablet","quantity":100,"unit":"tablet","reorderThreshold":10,"unitPrice":5}' "$PHARM")
+req "pharma" 400 POST "/stock" '{"medicationCode":"SMOKE-NOT-A-DRUG","quantity":10}' "$PHARM" >/dev/null
+# A batch received, then counted again and found empty: the correction leaves no stock behind.
+ST=$(req "pharma" 201 POST "/stock" "{\"medicationCode\":\"$METFORMIN\",\"quantity\":5,\"unit\":\"tablet\",\"unitPrice\":5}" "$PHARM")
 STOCK_ID=$(jq -r '.id' <<<"$ST")
-[[ -n "$STOCK_ID" && "$STOCK_ID" != "null" ]] && req "pharma" 200 PUT "/stock/$STOCK_ID" '{"quantity":120}' "$PHARM" >/dev/null
+[[ -n "$STOCK_ID" && "$STOCK_ID" != "null" ]] && req "pharma" 200 PUT "/stock/$STOCK_ID" '{"quantity":0}' "$PHARM" >/dev/null
 
-# Pricing, dispenser name and concurrency, on a fresh batch with a known price.
-PRICED_CODE="SMK-RX-$RANDOM$RANDOM"
-req "pharma" 201 POST "/stock" "{\"medicationCode\":\"$PRICED_CODE\",\"medicationName\":\"Smoke Priced\",\"quantity\":100,\"unit\":\"tablet\",\"unitPrice\":2.5}" "$PHARM" >/dev/null
+# Pricing, dispenser name and concurrency. The run stocks a batch of the drug that
+# expires today, on the clinic's calendar, so FEFO dispenses from it first and its
+# price is the one charged. The drug has other batches too, so stock is checked by
+# how much it changes.
+PRICED_CODE="med_0303"
+CLINIC_TODAY=$(TZ=Asia/Colombo date +%F)
+req "pharma" 201 POST "/stock" "{\"medicationCode\":\"$PRICED_CODE\",\"quantity\":20,\"unit\":\"tablet\",\"unitPrice\":2.5,\"expiryDate\":\"$CLINIC_TODAY\"}" "$PHARM" >/dev/null
 prescribe_priced() {  # prescribe_priced [quantity=10] -> echoes the prescription id
-  req "doctor" 201 POST /prescriptions "{\"patientId\":\"$PATIENT_ID\",\"medicationCode\":\"$PRICED_CODE\",\"medicationDisplay\":\"Smoke Priced\",\"dosageText\":\"1 tab OD\",\"quantityValue\":${1:-10},\"quantityUnit\":\"tablet\"}" "$DOC" | jq -r '.id'
+  req "doctor" 201 POST /prescriptions "{\"patientId\":\"$PATIENT_ID\",\"performerOrganizationId\":\"$PHARM_ORG\",\"medicationCode\":\"$PRICED_CODE\",\"dosageText\":\"1 tab OD\",\"quantityValue\":${1:-10},\"quantityUnit\":\"tablet\"}" "$DOC" | jq -r '.id'
 }
 priced_stock_left() {
   req "pharma" 200 GET "/stock/grouped" "" "$PHARM" | jq -r --arg c "$PRICED_CODE" '.[] | select(.medicationCode == $c) | .usableQuantity'
 }
 ext() { jq -r --arg u "urn:curo:$1" '.extension[] | select(.url == $u) | (.valueDecimal // .valueString)'; }
+STOCK_BEFORE=$(priced_stock_left)
 D2=$(req "pharma" 201 POST "/dispense" "{\"medicationRequestId\":\"$(prescribe_priced)\"}" "$PHARM")
 expect_eq "dispense priced from its stock batch" "$(ext totalPrice <<<"$D2")" "25"
 expect_eq "dispenser is the pharmacist's name" "$(ext dispenserName <<<"$D2")" "Kasun Bandara"
@@ -272,12 +324,13 @@ CODES=$(for _ in 1 2; do
     -H "Authorization: Bearer $PHARM" -d "{\"medicationRequestId\":\"$RX3\"}" &
 done; wait)
 expect_eq "concurrent dispenses: one 201, one 409" "$(sort <<<"$CODES" | tr '\n' ' ')" "201 409 "
-expect_eq "stock drawn once per dispense" "$(priced_stock_left)" "80"
+LEFT=$(priced_stock_left)
+expect_eq "stock drawn once per dispense" "$LEFT" "$((STOCK_BEFORE - 20))"
 # More than stock holds: refused, and neither the stock nor the prescription changes.
-RX4=$(prescribe_priced 81)
+RX4=$(prescribe_priced $((LEFT + 1)))
 SHORT=$(req "pharma" 409 POST "/dispense" "{\"medicationRequestId\":\"$RX4\"}" "$PHARM")
-expect_eq "short-stock dispense says why" "$(jq -r '.message' <<<"$SHORT")" "Not enough Smoke Priced in stock: 80 available, 81 needed. Receive stock before dispensing."
-expect_eq "short-stock dispense leaves stock" "$(priced_stock_left)" "80"
+expect_eq "short-stock dispense says why" "$(jq -r '.message' <<<"$SHORT" | grep -o "$LEFT available, $((LEFT + 1)) needed")" "$LEFT available, $((LEFT + 1)) needed"
+expect_eq "short-stock dispense leaves stock" "$(priced_stock_left)" "$LEFT"
 expect_eq "short-stock dispense leaves prescription active" "$(req "pharma" 200 GET "/prescriptions/$RX4" "" "$PHARM" | jq -r '.status')" "active"
 
 # ---------------------------------------------------------------------------
@@ -304,8 +357,9 @@ expect_eq "doctor notified of lab results" "$([[ -n "$NOTIF_ID" ]] && echo yes |
 req "any"   200 GET  "/notifications/count" "" "$DOC" >/dev/null
 [[ -n "$NOTIF_ID" && "$NOTIF_ID" != "null" ]] && req "any" 200 PUT "/notifications/$NOTIF_ID/read" '{}' "$DOC" >/dev/null
 req "any"   200 PUT  "/notifications/read-all" '{}' "$DOC" >/dev/null
-req "any"   201 POST "/audit" "{\"userId\":\"$DOC_UID\",\"action\":\"read\",\"resourceType\":\"Patient\",\"resourceId\":\"$PATIENT_ID\"}" "$DOC" >/dev/null
-req "admin" 200 GET  "/audit?resourceType=Patient" "" "$ADMIN" >/dev/null
+# The services write the audit log themselves: registering the patient above was logged.
+AUD=$(req "admin" 200 GET "/audit?resourceType=Patient&patientId=$PATIENT_ID" "" "$ADMIN")
+expect_eq "patient registration audited" "$(jq -r '[.entry[].resource.action] | index("CREATE") != null' <<<"$AUD")" "true"
 req "staff" 200 GET  "/documents?patientId=$PATIENT_ID" "" "$DOC" >/dev/null
 # Document upload is multipart/form-data; service only accepts pdf/jpeg/png.
 TMPDOC="$(mktemp)"
@@ -314,12 +368,9 @@ printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGA
 DOCJSON=$(curl -s -w $'\n%{http_code}' -X POST "$BASE/documents" -H "Authorization: Bearer $DOC" \
   -F "file=@$TMPDOC;type=image/png;filename=smoke.png" -F "patientId=$PATIENT_ID" -F "type=other")
 DOC_CODE="${DOCJSON##*$'\n'}"; DOC_RESP="${DOCJSON%$'\n'*}"; rm -f "$TMPDOC"
-if [[ "$DOC_CODE" == "201" ]]; then PASS=$((PASS+1)); echo "${c_green}PASS ${c_reset}  POST   /documents (multipart)" >&2;
-  ROWS+=("| \`POST /documents\` (multipart) | doctor | 201 | 201 | PASS |")
-  DOCID=$(jq -r '.id' <<<"$DOC_RESP")
-  [[ -n "$DOCID" && "$DOCID" != "null" ]] && req "staff" 200 GET "/documents/$DOCID/content" "" "$DOC" >/dev/null
-else FAIL=$((FAIL+1)); echo "${c_red}FAIL ${c_reset}  POST   /documents -> $DOC_CODE" >&2;
-  ROWS+=("| \`POST /documents\` (multipart) | doctor | 201 | $DOC_CODE | FAIL |"); fi
+record "doctor" 201 POST "/documents (multipart)" "$DOC_CODE"
+DOCID=$(jq -r '.id // empty' <<<"$DOC_RESP" 2>/dev/null)
+[[ -n "$DOCID" ]] && req "staff" 200 GET "/documents/$DOCID/content" "" "$DOC" >/dev/null
 req "patient" 200 GET "/documents/me" "" "$PAT" >/dev/null
 # Token refresh
 RT=$(jq -r .refreshToken <<<"$DOC_R")
@@ -342,16 +393,15 @@ echo "-- nurse triage --" >&2
 expect_eq "nurse JWT role" "$(jq -r .user.role <<<"$NURSE_R")" "NURSE"
 expect_eq "nurse JWT has practitionerId" "$(jq -r '.user.practitionerId != null' <<<"$NURSE_R")" "true"
 
-TODAY=$(date -u +%F)
-NA=$(req "receptionist" 201 POST /appointments \
-  "{\"patientId\":\"$PATIENT_ID\",\"practitionerId\":\"$DOC_PID\",\"start\":\"${TODAY}T10:00:00.000Z\",\"end\":\"${TODAY}T10:30:00.000Z\",\"reasonCode\":\"triage smoke\"}" "$RECEP")
+NA=$(book "triage smoke")
 NAPPT=$(jq -r '.id' <<<"$NA")
+NDAY=$(day_of "$NA")
 echo "   appointmentId=$NAPPT" >&2
 stage_of() { jq -r '[.extension[]? | select(.url=="urn:curo:queueStage") | .valueString][0] // "none"' <<<"$1"; }
 
 R=$(req "receptionist" 200 PUT "/appointments/$NAPPT" '{"status":"arrived"}' "$RECEP")
 expect_eq "check-in queues for nurse" "$(stage_of "$R")" "waiting_nurse"
-Q=$(req "nurse" 200 GET "/appointments?date=$TODAY&queueStage=waiting_nurse,with_nurse" "" "$NURSE")
+Q=$(req "nurse" 200 GET "/appointments?date=$NDAY&queueStage=waiting_nurse,with_nurse" "" "$NURSE")
 expect_eq "nurse queue lists the patient" "$(jq -r --arg id "$NAPPT" '[.entry[].resource.id] | index($id) != null' <<<"$Q")" "true"
 
 req "nurse" 200 GET "/patients/$PATIENT_ID" "" "$NURSE" >/dev/null
@@ -391,8 +441,7 @@ req "vitals without filter" 400 GET "/vitals" "" "$NURSE" >/dev/null
 #     transaction, under a client-generated id that makes a replay harmless
 # ---------------------------------------------------------------------------
 echo "-- signed visit --" >&2
-VA=$(req "receptionist" 201 POST /appointments \
-  "{\"patientId\":\"$PATIENT_ID\",\"practitionerId\":\"$DOC_PID\",\"start\":\"${TODAY}T11:00:00.000Z\",\"end\":\"${TODAY}T11:30:00.000Z\",\"reasonCode\":\"visit smoke\"}" "$RECEP")
+VA=$(book "visit smoke")
 VAPPT=$(jq -r '.id' <<<"$VA")
 req "nurse" 201 POST /vitals "{\"patientId\":\"$PATIENT_ID\",\"appointmentId\":\"$VAPPT\",\"code\":\"8867-4\",\"display\":\"Heart rate\",\"valueQuantity\":88,\"valueUnit\":\"bpm\"}" "$NURSE" >/dev/null
 
@@ -402,7 +451,7 @@ VISIT="{\"id\":\"$VID\",\"patientId\":\"$PATIENT_ID\",\"appointmentId\":\"$VAPPT
   \"note\":{\"subjective\":\"Cough for 3 days\",\"plan\":\"Rest\",\"additionalNotes\":\"visit smoke\"},
   \"vitals\":[{\"code\":\"8310-5\",\"display\":\"Body temperature\",\"valueQuantity\":38.1,\"valueUnit\":\"Cel\"}],
   \"diagnoses\":[{\"code\":\"J20.9\",\"display\":\"Acute bronchitis\",\"isPrimary\":true}],
-  \"prescriptions\":[{\"medicationCode\":\"860975\",\"medicationDisplay\":\"Metformin 500mg\",\"dosageText\":\"1 tab BD\",\"quantityValue\":10}],
+  \"prescriptions\":[{\"medicationCode\":\"$METFORMIN\",\"performerOrganizationId\":\"$PHARM_ORG\",\"dosageText\":\"1 tab BD\",\"quantityValue\":10}],
   \"labOrders\":[{\"code\":\"58410-2\",\"display\":\"CBC panel\",\"priority\":\"routine\",\"performerOrganizationId\":\"$LAB_ORG\"}]}"
 SV=$(req "doctor" 201 POST /encounters/visit "$VISIT" "$DOC")
 expect_eq "signed visit keeps the client's id" "$(jq -r .id <<<"$SV")" "$VID"
@@ -428,7 +477,7 @@ expect_eq "replayed visit returns the same encounter" "$(jq -r .id <<<"$SV")" "$
 visit_records "after replay"
 
 req "visit: id not a uuid" 400 POST /encounters/visit "{\"id\":\"visit-1\",\"patientId\":\"$PATIENT_ID\"}" "$DOC" >/dev/null
-req "visit: invalid item" 400 POST /encounters/visit "{\"id\":\"$(uuidgen)\",\"patientId\":\"$PATIENT_ID\",\"prescriptions\":[{\"medicationCode\":\"860975\"}]}" "$DOC" >/dev/null
+req "visit: invalid item" 400 POST /encounters/visit "{\"id\":\"$(uuidgen)\",\"patientId\":\"$PATIENT_ID\",\"prescriptions\":[{\"medicationCode\":\"$METFORMIN\"}]}" "$DOC" >/dev/null
 req "pharmacist→visit" 403 POST /encounters/visit "$VISIT" "$PHARM" >/dev/null
 
 # ---------------------------------------------------------------------------
@@ -443,6 +492,7 @@ expect_eq "/health body" "$(jq -r .status <<<"$HEALTH")" "ok"
 # ---------------------------------------------------------------------------
 echo >&2
 echo "================ SUMMARY ================" >&2
+PASS=$(count PASS); XFAIL=$(count XFAIL); FAIL=$(count FAIL)
 echo "  PASS=$PASS   XFAIL(expected-deny)=$XFAIL   FAIL=$FAIL" >&2
 echo "========================================" >&2
 
@@ -451,7 +501,7 @@ if [[ "$LOGW" == "1" ]]; then
   {
     echo "<!-- Auto-generated by scripts/smoke-e2e.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ) -->"
     echo "RESULTS_TABLE_START"
-    printf '%s\n' "${ROWS[@]}"
+    cut -f2- "$TALLY"
     echo "RESULTS_TABLE_END"
     echo "SUMMARY: PASS=$PASS XFAIL=$XFAIL FAIL=$FAIL"
   } > "$OUT.rows"

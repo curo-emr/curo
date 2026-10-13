@@ -15,7 +15,7 @@ slightly from the wording here — follow the intent. The same journey is automa
 ## Before you start
 
 ```bash
-docker compose up -d --build      # wait until `docker compose ps` shows all healthy
+make run      # builds the images one at a time; wait until `docker compose ps` shows all healthy
 ```
 
 - Gateway: **http://localhost:3000** · Live API reference: **http://localhost:3000/docs**
@@ -23,8 +23,8 @@ docker compose up -d --build      # wait until `docker compose ps` shows all hea
 - The IDs you create early (patientId, appointmentId, encounterId, orderId, prescriptionId) thread
   into later steps. The UI carries these for you; with curl, copy them between calls.
 
-> ⚠️ This walkthrough **creates real rows** in the seeded dev database. To reset afterwards:
-> `docker compose down -v && docker compose up -d --build`.
+> ⚠️ This walkthrough **creates real rows** in the seeded dev database. To start again from a
+> fresh seed, see [Re-seeding](./TEST_CREDENTIALS.md#re-seeding).
 
 ---
 
@@ -47,21 +47,29 @@ patient appears in the list with a generated patient code (e.g. `CUR-XXXXXXXX`) 
 ## Step 2 — Receptionist books an appointment + takes payment  ·  Portal :3012
 
 **(A) UI** — Still as receptionist: open the patient (or **Appointments → New**). Pick a **doctor**
-(e.g. Priya Rajapaksa), a date/time slot, reason. **Book**. Then record the consultation **payment**
-(amount, cash).
+(e.g. Priya Rajapaksa), a visit type, a free slot in one of their sessions, reason. **Book**. Then
+record the consultation **payment** (amount, cash). When the patient arrives, **check them in** from
+the Queue.
 
 **(B) API**
 1. Pick a doctor: `GET /auth/practitioners?role=DOCTOR` → **capture a `id` = practitionerId**.
-2. `POST /appointments`
+   Their weekly sessions: `GET /schedules?practitionerId=<practitionerId>` (weekday 0 is Sunday,
+   times on the clinic's clock, Asia/Colombo).
+2. `POST /appointments`, for a slot inside one of those sessions that hasn't passed (otherwise `400`;
+   a slot already taken is `409`)
    ```json
-   { "patientId": "<patientId>", "practitionerId": "<practitionerId>",
-     "start": "2026-07-01T09:00:00.000Z", "end": "2026-07-01T09:30:00.000Z", "reasonCode": "checkup" }
+   { "patientId": "<patientId>", "practitionerId": "<practitionerId>", "serviceType": "consultation",
+     "start": "<date>T09:00:00+05:30", "end": "<date>T09:15:00+05:30", "reasonCode": "checkup" }
    ```
+   `serviceType` is one of `consultation`, `follow_up`, `procedure`, `emergency`.
    → **capture `id` = appointmentId.**
 3. `POST /payments` `{ "patientId": "<patientId>", "appointmentId": "<appointmentId>", "amount": 2500, "paymentMethod": "cash" }`
+   (one payment per visit; a second is `409`)
+4. Check in: `PUT /appointments/{appointmentId}` `{ "status": "arrived" }`. Only a checked-in visit
+   can later be marked `fulfilled`.
 
 **✅ Verify:** appointment appears on the doctor's schedule
-(`GET /appointments/schedule/{practitionerId}?date=2026-07-01`); payment in `GET /payments/mine`.
+(`GET /appointments/schedule/{practitionerId}?date=<date>`); payment in `GET /payments/mine`.
 
 ---
 
@@ -88,9 +96,11 @@ click the patient. Review allergies & conditions. **Start visit** (encounter). R
 **(A) UI** — In the open encounter, go to **Labs / Order Test**, choose a panel (e.g. **CBC**),
 add the individual tests, **Order**. The order is created with **QR codes** (one per test).
 
-**(B) API** — `POST /lab-orders` (clinical-service)
+**(B) API** — `POST /lab-orders` (clinical-service), sent to one lab: find its id with
+`GET /organizations?type=laboratory` (Curo Diagnostics — Colombo is the lab `tharindi.lab` works at).
 ```json
-{ "patientId": "<patientId>", "encounterId": "<encounterId>", "code": "58410-2", "display": "CBC panel",
+{ "patientId": "<patientId>", "encounterId": "<encounterId>", "performerOrganizationId": "<labId>",
+  "code": "58410-2", "display": "CBC panel",
   "testPanel": [ { "code": "718-7", "display": "Hemoglobin" }, { "code": "4544-3", "display": "Hematocrit" } ] }
 ```
 → **capture `id` = orderId.** Response includes an order-level QR + one QR per test (base64).
@@ -124,12 +134,16 @@ diagnostic report is generated.
 ## Step 6 — Doctor prescribes medication  ·  Portal :3010
 
 **(A) UI** — Back as the doctor, in the encounter go to **Prescriptions / Medications**, add a drug
-(e.g. **Metformin 500mg**, dose, quantity), **Prescribe**.
+from the medication catalog (e.g. **Metformin 500mg Tablet**), dose, quantity, and the pharmacy
+to send it to, **Prescribe**.
 
-**(B) API** — `POST /prescriptions` (clinical-service)
+**(B) API** — `POST /prescriptions` (clinical-service). The drug is named by its code in
+`GET /medication-catalog` (a code the catalog lacks is `400`; the name comes from the catalog), and
+the pharmacy by its id from `GET /organizations?type=pharmacy` (Curo Pharmacy — Colombo is
+`kasun.pharma`'s).
 ```json
-{ "patientId": "<patientId>", "encounterId": "<encounterId>", "medicationCode": "860975",
-  "medicationDisplay": "Metformin 500mg", "dosageText": "1 tab BD", "quantityValue": 60, "quantityUnit": "tablet" }
+{ "patientId": "<patientId>", "encounterId": "<encounterId>", "performerOrganizationId": "<pharmacyId>",
+  "medicationCode": "med_0101", "dosageText": "1 tab BD", "quantityValue": 60, "quantityUnit": "tablet" }
 ```
 → **capture `id` = prescriptionId.** Stored as an active `MedicationRequest`.
 
@@ -146,8 +160,10 @@ queue — the new prescription is there. Check **stock** (drugs are grouped, bat
 2. `GET /stock/grouped` (FEFO batch order); low stock via `GET /stock/alerts`.
 3. `POST /dispense`
    ```json
-   { "medicationRequestId": "<prescriptionId>", "patientId": "<patientId>", "dispenserName": "Kasun Bandara", "quantityValue": 60, "quantityUnit": "tablet" }
+   { "medicationRequestId": "<prescriptionId>", "quantityValue": 60, "quantityUnit": "tablet" }
    ```
+   The patient, price and dispenser come from the prescription, the stock and your login. Stock is
+   received by catalog code: `POST /stock` `{ "medicationCode": "med_0101", "quantity": 60, "unitPrice": 1 }`.
    → prescription flips to **COMPLETED**; the dispense record notes which batches were drawn (e.g. `B1×40, B2×20`).
 
 **✅ Verify:** `GET /dispense?patientId={patientId}` shows the dispense; the prescription no longer appears in the pending queue.
@@ -177,7 +193,9 @@ another patient's record is denied.
 ## Cross-cutting checks (any time)
 
 - **Notifications** (any logged-in user): bell icon / `GET /notifications`, `GET /notifications/count`.
-- **Audit log** (admin only, :3015): `GET /audit?resourceType=Patient` — every create/read above is logged.
+- **Audit log** (admin only, :3015): `GET /audit?patientId={patientId}`. Creating, changing and
+  opening each record above is logged by the service that holds it; reading a list (say, a
+  patient's vitals) is one `READ` entry on the patient, describing what was read.
 - **Admin** (:3015, `admin@curo.test`): manage users (`GET /auth/users`), view all payments
   (`GET /payments`), organizations (`GET /organizations`).
 - **Authorization:** try a patient hitting `POST /patients` → **403**; no token → **401**. (Expected.)
