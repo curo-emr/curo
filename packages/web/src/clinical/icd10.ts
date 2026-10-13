@@ -1,11 +1,12 @@
 // ─── ICD-10 codes ────────────────────────────────────────────────────────────
 // A diagnosis is recorded in words, with its code when the doctor gives one.
-// The same rule as `DiagnosisDto` in @curo/shared, so a code is tidied as the
-// API will save it and a malformed one is caught before signing.
+// The same rule as @curo/shared/icd10, which the API checks codes with, so a
+// code is tidied as the API will save it and a malformed one is caught before
+// signing.
 
-// A category (letter, digit, letter or digit), then up to four characters
-// after the dot: R51.9, J45.909, S72.001A.
-const ICD10_CODE = /^[A-Z]\d[\dA-Z](\.[\dA-Z]{1,4})?$/;
+// A category of a letter and two letters or digits (R51, M1A, QA0), then up
+// to four characters after the dot: R51.9, J45.909, S72.001A.
+const ICD10_CODE = /^[A-Z][\dA-Z]{2}(\.[\dA-Z]{1,4})?$/;
 
 /** A code as written, in capitals and dotted after the category ("r519" → "R51.9"); blank is "". */
 export function tidyIcd10Code(code: string): string {

@@ -1,0 +1,11 @@
+A000    Cholera due to Vibrio cholerae 01, biovar cholerae
+G44209  Tension-type headache, unspecified, not intractable
+G44219  Episodic tension-type headache, not intractable
+G4481   Hypnic headache
+G4486   Cervicogenic headache
+I10     Essential (primary) hypertension
+M1A00X0 Idiopathic chronic gout, unspecified site, without tophus (tophi)
+QA00101 SCN2A-related neurodevelopmental disorder
+R059    Cough, unspecified
+R519    Headache, unspecified
+S72001A Fracture of unspecified part of neck of right femur, initial encounter for closed fracture

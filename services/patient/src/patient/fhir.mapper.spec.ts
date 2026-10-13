@@ -152,11 +152,11 @@ describe('toFhirCondition', () => {
       }),
     );
 
-  it('names the diagnosis, and codes it when it has an ICD-10 code', () => {
+  it('names the diagnosis, and codes it in ICD-10-CM when it has a code', () => {
     expect(condition('G44.2').code).toEqual({
       coding: [
         {
-          system: 'http://hl7.org/fhir/sid/icd-10',
+          system: 'http://hl7.org/fhir/sid/icd-10-cm',
           code: 'G44.2',
           display: 'Tension headache',
         },

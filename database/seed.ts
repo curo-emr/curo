@@ -210,41 +210,7 @@ async function topUps(db: DataSource) {
   // ---- MEDICATION CATALOG (see seed-medications.ts) ----
   await ensureMedicationCatalog(db);
 
-  // ---- ICD-10 DIAGNOSIS CATALOG (DB-backed) ----
-  const icd10Codes = [
-    {
-      code: 'E11.9',
-      name: 'Type 2 diabetes mellitus without complications',
-      keywords: ['diabetes', 't2dm'],
-    },
-    {
-      code: 'I10',
-      name: 'Essential (primary) hypertension',
-      keywords: ['hypertension', 'high blood pressure'],
-    },
-    {
-      code: 'J45.909',
-      name: 'Unspecified asthma, uncomplicated',
-      keywords: ['asthma'],
-    },
-    {
-      code: 'J45.901',
-      name: 'Unspecified asthma with (acute) exacerbation',
-      keywords: ['asthma', 'exacerbation', 'wheezing'],
-    },
-    { code: 'R05', name: 'Cough', keywords: ['cough'] },
-  ];
-  for (const c of icd10Codes) {
-    await db.query(
-      `
-      INSERT INTO icd10_codes (code, name, keywords)
-      VALUES ($1, $2, $3::jsonb)
-      ON CONFLICT (code) DO NOTHING
-    `,
-      [c.code, c.name, JSON.stringify(c.keywords)],
-    );
-  }
-  console.log(`✅ ${icd10Codes.length} ICD-10 codes ensured`);
+  // ---- ICD-10-CM DIAGNOSIS LIST: not seeded, imported from CMS's release (import-icd10cm.ts) ----
 
   await ensureLabAnalytes(db);
 }

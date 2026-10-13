@@ -138,6 +138,30 @@ To change the schema:
 | `npm run db:generate -- migrations/<Name>` | write a migration from entity changes |
 | `npm run db:check` | fail if the entities and the database schema differ (CI runs this) |
 | `npm run seed` | load dev data; safe to re-run |
+| `npm run icd10:import -- <file>` | load an ICD-10-CM release into the diagnosis list; safe to re-run |
+
+### ICD-10-CM diagnosis list
+
+Doctors pick diagnoses from CMS's yearly ICD-10-CM release (about 75,000 billable codes),
+or record one in their own words. The release isn't kept in the repo:
+
+- The database image downloads it while it builds, and the build fails unless the file
+  matches the pinned SHA-256 (the `ICD10CM_*` build args in
+  [database/Dockerfile](database/Dockerfile)).
+- In Docker, the one-shot `curo-icd10-import` container loads it after migrations. The
+  list becomes exactly the release: new codes are added, renamed ones updated and
+  retired ones removed. Recorded diagnoses keep their own code and wording. A rerun
+  changes nothing.
+- For a new release (each October), point the three `ICD10CM_*` args at the new file
+  and its hash, rebuild the image and run the import.
+
+From source, `npm run icd10:import -- <path to icd10cm_codes_YYYY.txt>` loads a release you
+have downloaded.
+
+ICD-10-CM is developed by the US National Center for Health Statistics (CDC) under
+authorization from the World Health Organization, which holds the copyright in ICD-10.
+Using or redistributing it outside the US may need WHO's permission. Check this before
+you deploy Curo, and keep images that contain it in a private registry.
 
 ## CI
 

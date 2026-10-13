@@ -15,7 +15,7 @@ export const NAV: NavSection[] = [
     label: "Reference",
     items: [
       { icon: Building2, label: "Pharmacies & Labs", href: ROUTES.DIRECTORY },
-      { icon: BookOpen, label: "ICD-10 codes", href: ROUTES.ICD },
+      { icon: BookOpen, label: "ICD-10-CM codes", href: ROUTES.ICD },
     ],
   },
 ];

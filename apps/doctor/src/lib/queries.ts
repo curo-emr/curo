@@ -171,7 +171,7 @@ export const catalogQueries = {
     staleTime: CATALOG_STALE_MS,
   }),
   /** With `includeInactive`, closed labs too, to name the labs of past orders. */
-  /** A page of ICD-10 codes. Keeps the last page on screen while the next loads. */
+  /** A page of ICD-10-CM codes. Keeps the last page on screen while the next loads. */
   icd10: (params: Parameters<typeof getICD10Paginated>[0]) => queryOptions({
     queryKey: ["icd10", params],
     queryFn: () => getICD10Paginated(params),

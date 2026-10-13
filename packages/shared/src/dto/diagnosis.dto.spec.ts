@@ -1,19 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
-import { DiagnosisDto, toIcd10Code } from './diagnosis.dto';
-
-describe('toIcd10Code', () => {
-  it.each([
-    ['R51.9', 'R51.9'],
-    [' r519 ', 'R51.9'],
-    ['i10', 'I10'],
-    ['S72001A', 'S72.001A'],
-    ['', null],
-    ['   ', null],
-  ])('reads %p as %p', (input, code) => {
-    expect(toIcd10Code(input)).toBe(code);
-  });
-});
+import { DiagnosisDto } from './diagnosis.dto';
 
 describe('DiagnosisDto', () => {
   const problems = (body: object) =>
@@ -24,8 +11,9 @@ describe('DiagnosisDto', () => {
     expect(problems({ display: 'Tension headache', code: ' ' })).toEqual([]);
   });
 
-  it('takes a well-formed code', () => {
-    expect(problems({ display: 'Headache', code: 'r51.9' })).toEqual([]);
+  it('takes a well-formed code, however it is typed', () => {
+    for (const code of ['r51.9', 'R519', 'qa00101'])
+      expect(problems({ display: 'Headache', code })).toEqual([]);
   });
 
   it('turns away a code that is not ICD-10, and a blank diagnosis', () => {

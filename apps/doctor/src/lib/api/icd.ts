@@ -5,7 +5,7 @@ import type { ICD10 } from '@/types';
 // Backend icd10_codes rows already match the frontend ICD10 shape.
 type ApiIcd10 = ICD10;
 
-// Server-driven search + pagination for the ICD-10 dictionary table.
+// Server-driven search + pagination for the ICD-10-CM diagnosis list.
 export async function getICD10Paginated(params: PaginationParams = {}): Promise<PaginatedResult<ICD10>> {
   const res = await apiClient.get<ApiIcd10[] | FhirBundle<ApiIcd10>>('/icd10', {
     params: paginationParams(params),

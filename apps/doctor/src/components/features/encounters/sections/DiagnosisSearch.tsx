@@ -45,7 +45,7 @@ export function DiagnosisSearch({ diagnoses, onChange }: DiagnosisSearchProps) {
     <SectionCard id="diagnoses" icon={Stethoscope} iconClassName="text-clinical-diagnosis" title="Diagnoses" count={diagnoses.length}>
       <div className="space-y-3">
         <SearchCombobox<ICD10>
-          placeholder="Search ICD-10, or type the diagnosis…"
+          placeholder="Search ICD-10-CM, or type the diagnosis…"
           search={search}
           getKey={icd => icd.code}
           onSelect={icd => add({ icdCode: icd.code, name: icd.name })}
