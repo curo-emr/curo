@@ -38,6 +38,7 @@ import {
   UpdateAllergyDto,
 } from './dto/create-allergy.dto';
 import { allergyColumns, isCurrentAllergy } from './allergy-records';
+import { workplacePatients } from './workplace-patients';
 import { CreateConditionDto } from './dto/create-condition.dto';
 import {
   toFhirPatient,
@@ -164,7 +165,7 @@ export class PatientService implements OnModuleInit {
   }
 
   async findAll(
-    requestingUser: Pick<AuthUser, 'role' | 'userId'>,
+    requestingUser: AuthUser,
     search?: string,
     pagination: PaginationQuery = {},
   ) {
@@ -181,6 +182,8 @@ export class PatientService implements OnModuleInit {
     const query = this.patientsRepo
       .createQueryBuilder('p')
       .where('p.active = true');
+    const workplace = workplacePatients(requestingUser);
+    if (workplace) query.andWhere(workplace.where, workplace.params);
     if (search) {
       query.andWhere(
         '(p.firstName ILIKE :s OR p.lastName ILIKE :s OR p.patientCode ILIKE :s OR p.personalHealthNumber ILIKE :s OR p.nic ILIKE :s OR p.phone ILIKE :s)',

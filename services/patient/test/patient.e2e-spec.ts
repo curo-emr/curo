@@ -44,6 +44,30 @@ describe('Patient records', () => {
   const savedPatient = (lastName: string) =>
     svc.db.getRepository(Patient).findOneBy({ lastName });
 
+  /** A lab order for the patient sent to `lab`, as the clinical service keeps them. */
+  const orderLab = (patientId: string, lab: string) =>
+    svc.db.query(
+      `INSERT INTO service_requests
+         ("patientId", "requesterId", "performerOrganizationId", code, display)
+       VALUES ($1, $2, $3, '58410-2', 'Full blood count')`,
+      [patientId, randomUUID(), lab],
+    );
+
+  /** A prescription for the patient sent to `pharmacy`, or to none. */
+  const prescribe = (patientId: string, pharmacy: string | null) =>
+    svc.db.query(
+      `INSERT INTO medication_requests
+         ("patientId", "practitionerId", "performerOrganizationId", "medicationCode", "medicationDisplay")
+       VALUES ($1, $2, $3, 'TEST-DRUG', 'Amoxicillin 500mg Capsule')`,
+      [patientId, randomUUID(), pharmacy],
+    );
+
+  /** Gives the patient work at `workplace`: a lab order for lab staff, a prescription for a pharmacist. */
+  const serve = (role: UserRole, patientId: string, workplace: string) =>
+    role === UserRole.LAB_STAFF
+      ? orderLab(patientId, workplace)
+      : prescribe(patientId, workplace);
+
   describe('POST /patients', () => {
     it('registers a patient with a patient code and a valid Personal Health Number', async () => {
       const body = newPatient();
@@ -328,7 +352,9 @@ describe('Patient records', () => {
         });
         await register(body).expect(201);
         const { id, patientCode } = (await savedPatient(body.lastName))!;
-        const actor = await svc.as(role);
+        const workplace = randomUUID();
+        await serve(role, id, workplace);
+        const actor = await svc.as(role, { organizationId: workplace });
 
         const reads = await Promise.all(
           [
@@ -344,6 +370,91 @@ describe('Patient records', () => {
           expect(text).not.toContain('+94771234567');
           expect(text).not.toMatch(/Teacher|Diabetic|Kamala/);
         }
+      },
+    );
+  });
+
+  describe('listing patients as pharmacy or lab staff', () => {
+    /** Patients sharing a new surname, so a search finds just them; their ids by first name. */
+    async function family(...firstNames: string[]) {
+      const lastName = `Silva-${randomUUID()}`;
+      const ids: Record<string, string> = {};
+      for (const firstName of firstNames) {
+        const res = await register(newPatient({ firstName, lastName }));
+        ids[firstName] = (res.body as { id: string }).id;
+      }
+      return { lastName, ids };
+    }
+
+    /** The ids `actor` finds by `lastName`, and the total the bundle gives. */
+    async function listed(actor: TestActor, lastName: string) {
+      const res = await svc.api
+        .get('/patients')
+        .query({ search: lastName })
+        .set(actor.headers)
+        .expect(200);
+      const bundle = res.body as {
+        total: number;
+        entry?: { resource: { id: string } }[];
+      };
+      return {
+        ids: (bundle.entry ?? []).map((e) => e.resource.id).sort(),
+        total: bundle.total,
+      };
+    }
+
+    it('shows lab staff only the patients with an order at their lab', async () => {
+      const lab = randomUUID();
+      const { lastName, ids } = await family('Ordered', 'Elsewhere', 'None');
+      await orderLab(ids.Ordered, lab);
+      await orderLab(ids.Elsewhere, randomUUID());
+      const labStaff = await svc.as(UserRole.LAB_STAFF, {
+        organizationId: lab,
+      });
+
+      expect(await listed(labStaff, lastName)).toEqual({
+        ids: [ids.Ordered],
+        total: 1,
+      });
+    });
+
+    it('shows a pharmacist the patients with a prescription sent to their pharmacy or to none', async () => {
+      const pharmacy = randomUUID();
+      const { lastName, ids } = await family(
+        'Sent',
+        'Unsent',
+        'Elsewhere',
+        'None',
+      );
+      await prescribe(ids.Sent, pharmacy);
+      await prescribe(ids.Unsent, null);
+      await prescribe(ids.Elsewhere, randomUUID());
+      const pharmacist = await svc.as(UserRole.PHARMACIST, {
+        organizationId: pharmacy,
+      });
+
+      expect(await listed(pharmacist, lastName)).toEqual({
+        ids: [ids.Sent, ids.Unsent].sort(),
+        total: 2,
+      });
+    });
+
+    it('still shows a doctor every patient', async () => {
+      const { lastName, ids } = await family('Ordered', 'None');
+      await orderLab(ids.Ordered, randomUUID());
+
+      expect(
+        await listed(await svc.as(UserRole.DOCTOR), lastName),
+      ).toMatchObject({ total: 2 });
+    });
+
+    it.each([UserRole.LAB_STAFF, UserRole.PHARMACIST])(
+      'refuses %s not yet assigned to a workplace',
+      async (role) => {
+        await svc.api
+          .get('/patients')
+          .set((await svc.as(role)).headers)
+          .expect(403);
       },
     );
   });
