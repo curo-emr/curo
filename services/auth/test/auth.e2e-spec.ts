@@ -6,7 +6,7 @@ import { startService, type ServiceUnderTest } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { User } from '../src/entities/user.entity';
 import { Practitioner } from '../src/entities/practitioner.entity';
-import { LOGIN_LIMITS } from '../src/auth/login-attempts';
+import { loginLimits } from '../src/auth/login-attempts';
 import { nextSecond } from './sessions';
 
 interface Tokens {
@@ -88,7 +88,7 @@ describe('Sign-in', () => {
 
   it('refuses an account after repeated wrong passwords, even with the right one', async () => {
     const staff = await onboard();
-    for (let i = 0; i < LOGIN_LIMITS.perAccount; i++) {
+    for (let i = 0; i < loginLimits().perAccount; i++) {
       await login(staff.email, 'not-the-password').expect(401);
     }
 
@@ -245,7 +245,7 @@ describe('Sign-in', () => {
 
     it('lets someone locked out sign in with the new password straight away', async () => {
       const staff = await onboard();
-      for (let i = 0; i < LOGIN_LIMITS.perAccount; i++) {
+      for (let i = 0; i < loginLimits().perAccount; i++) {
         await login(staff.email, 'not-the-password').expect(401);
       }
       await login(staff.email, PASSWORD).expect(429);

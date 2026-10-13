@@ -2,11 +2,11 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { Practitioner } from '../entities/practitioner.entity';
 import { LoginDto } from './dto/login.dto';
 import { LoginAttempts } from './login-attempts';
+import { Passwords } from './passwords';
 import {
   jwtSecret,
   jwtRefreshSecret,
@@ -33,23 +33,26 @@ export class AuthService {
     private practitionersRepo: Repository<Practitioner>,
     private jwtService: JwtService,
     private loginAttempts: LoginAttempts,
+    private passwords: Passwords,
   ) {}
 
   /** Signs in from `ip`, the client's address; repeated failures are refused for a while (LoginAttempts). */
   async login(dto: LoginDto, ip: string) {
-    this.loginAttempts.assertAllowed(dto.email, ip);
-
-    const user = await this.usersRepo.findOne({ where: { email: dto.email } });
-    const valid =
-      !!user?.isActive &&
-      (await bcrypt.compare(dto.password, user.passwordHash));
-    if (!user || !valid) {
-      this.loginAttempts.recordFailure(dto.email, ip);
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    this.loginAttempts.clearFailures(dto.email);
+    const user = await this.loginAttempts.attempt(dto.email, ip, () =>
+      this.activeUser(dto),
+    );
+    if (!user) throw new UnauthorizedException('Invalid credentials');
     return this.issueTokens(user);
+  }
+
+  /**
+   * The active account with these credentials, or null. The password is
+   * checked either way, so a missing or suspended account answers no faster.
+   */
+  private async activeUser({ email, password }: LoginDto) {
+    const user = await this.usersRepo.findOne({ where: { email } });
+    const valid = await this.passwords.matches(user, password);
+    return valid && user?.isActive ? user : null;
   }
 
   async refresh(refreshToken: string) {

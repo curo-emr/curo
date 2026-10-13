@@ -1,10 +1,18 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { intFromEnv } from '@curo/shared/config';
 import { registerHealthCheck } from '@curo/shared/health';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   // Disable built-in body parser so proxy can forward raw request bodies
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+  });
+  // How many proxies (a load balancer, nginx, Cloudflare) sit in front of the
+  // gateway, so req.ip is the client's: the one each passes on is trusted.
+  // With none, it is the address that connected.
+  app.set('trust proxy', intFromEnv('TRUSTED_PROXIES', 0));
 
   const origins = (
     process.env.FRONTEND_ORIGINS ||
