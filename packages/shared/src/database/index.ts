@@ -1,5 +1,10 @@
 export { databaseOptions } from './database-options';
 export { assertPatientOnFile } from './patient-on-file';
+export {
+  findPatientIdentity,
+  patientLabel,
+  type PatientIdentity,
+} from './patient-identity';
 
 // Shared kernel: tables mapped by two or more services. A table owned by a
 // single service keeps its entity in that service's own `src/entities`.

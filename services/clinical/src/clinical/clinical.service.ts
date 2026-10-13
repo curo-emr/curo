@@ -25,6 +25,8 @@ import {
   ServiceRequest,
   Observation,
   QrCode,
+  findPatientIdentity,
+  patientLabel,
   type LabPanelTest,
 } from '@curo/shared/database';
 import {
@@ -430,10 +432,13 @@ export class ClinicalService implements OnModuleInit {
         MedicationRequestStatus.ACTIVE,
         { status: MedicationRequestStatus.ON_HOLD, statusReason },
       );
+      const patient = await findPatientIdentity(em, held.patientId);
       await notifyPractitioner(em, held.practitionerId, {
         eventType: NotificationEventType.GENERAL,
         title: 'Prescription on hold',
-        message: `The pharmacy put ${held.medicationDisplay} on hold: ${statusReason}`,
+        message:
+          `The pharmacy put ${held.medicationDisplay} for ` +
+          `${patientLabel(patient, held.patientId)} on hold: ${statusReason}`,
         relatedResourceType: 'MedicationRequest',
         relatedResourceId: held.id,
       });
