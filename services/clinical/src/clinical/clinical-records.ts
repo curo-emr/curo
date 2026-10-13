@@ -7,7 +7,7 @@ import {
   Observation,
   QrCode,
   ServiceRequest,
-  patientIsOnFile,
+  assertPatientOnFile,
 } from '@curo/shared/database';
 import {
   ConditionClinicalStatus,
@@ -73,8 +73,7 @@ export async function savePrescriptions(
   for (const pharmacy of new Set(dtos.map((d) => d.performerOrganizationId)))
     await assertActiveOrganization(em, pharmacy, 'pharmacy');
   for (const patientId of new Set(dtos.map((d) => d.patientId)))
-    if (!(await patientIsOnFile(em, patientId)))
-      throw new BadRequestException(`Patient ${patientId} isn't on file`);
+    await assertPatientOnFile(em, patientId);
   const names = await catalogNames(
     em,
     dtos.map((d) => d.medicationCode),
