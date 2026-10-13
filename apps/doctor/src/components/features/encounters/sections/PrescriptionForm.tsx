@@ -7,10 +7,12 @@ import type { Organization as Pharmacy } from "@/lib/api/directory";
 import { allergyAlerts, describeAllergyAlert } from "@curo/web/clinical";
 import { AllergyConfirmDialog } from "@curo/web/ui/allergy-confirm-dialog";
 import { Button } from "@curo/web/ui/button";
+import { Checkbox } from "@curo/web/ui/checkbox";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { SearchCombobox } from "@curo/web/ui/search-combobox";
+import { StatusBadge } from "@curo/web/ui/status-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
 import { searchMedications } from "@/lib/api/medications";
 import { usePatientAllergies } from "@/components/features/patients/AllergyChips";
@@ -19,8 +21,8 @@ import { FREQUENCIES, routeForForm, suggestQuantity } from "../visit";
 interface PrescriptionFormProps {
   prescriptions: PrescriptionItem[];
   onChange: (items: PrescriptionItem[]) => void;
-  /** Where the prescriptions are sent; the doctor chooses when there is more than one. */
-  pharmacies: Pharmacy[];
+  /** Where the prescriptions are sent; the doctor chooses when there is more than one. Undefined until known. */
+  pharmacies: Pharmacy[] | undefined;
   pharmacyId: string | undefined;
   onPharmacyChange: (pharmacyId: string) => void;
   /** Shown before the doctor types; typing searches the whole catalog. */
@@ -28,10 +30,11 @@ interface PrescriptionFormProps {
   patientId: string;
 }
 
-// Only catalog drugs can be prescribed: the pharmacy stocks and dispenses by their codes.
-const newItem = (med: Medication): PrescriptionItem => ({
+// The pharmacy stocks and dispenses catalog drugs by their codes, so one the
+// catalog doesn't list (no `id`) can only be bought outside.
+const newItem = (med: Pick<Medication, "name"> & Partial<Medication>, boughtOutside: boolean): PrescriptionItem => ({
   id: `rx-${Date.now()}`,
-  medicationId: med.id,
+  medicationId: med.id ?? "",
   displayName: med.name,
   dose: med.strength ?? "",
   route: routeForForm(med.form),
@@ -40,6 +43,7 @@ const newItem = (med: Medication): PrescriptionItem => ({
   quantity: suggestQuantity("BD", 5) ?? 1,
   instructions: "",
   substitutes: [],
+  boughtOutside: boughtOutside || !med.id,
 });
 
 export function PrescriptionForm({
@@ -65,21 +69,19 @@ export function PrescriptionForm({
       return next;
     }));
 
-  if (pharmacies.length === 0)
-    return (
-      <SectionCard id="prescriptions" icon={Pill} iconClassName="text-clinical-rx" title="Prescriptions">
-        <p className="text-sm text-muted-foreground">No pharmacy is set up yet, so medicines can&apos;t be prescribed. Ask an administrator to add one.</p>
-      </SectionCard>
-    );
-
-  const description = pharmacies.length === 1
-    ? `Sent to ${pharmacies[0].name} when you sign the visit`
-    : "Sent to the pharmacy you choose when you sign the visit";
+  // With no pharmacy set up, the patient buys everything outside. Until the
+  // pharmacies are known, lines go to the pharmacy, and signing checks there is one.
+  const noPharmacy = pharmacies?.length === 0;
+  const description = noPharmacy
+    ? "No pharmacy is set up yet, so the patient buys these at a pharmacy of their choice"
+    : pharmacies?.length === 1
+      ? `Sent to ${pharmacies[0].name} when you sign the visit, unless the patient buys them outside`
+      : "Sent to the pharmacy you choose when you sign the visit, unless the patient buys them outside";
 
   return (
     <SectionCard id="prescriptions" icon={Pill} iconClassName="text-clinical-rx" title="Prescriptions" count={prescriptions.length}
       description={description}
-      headerRight={pharmacies.length > 1 && (
+      headerRight={pharmacies && pharmacies.length > 1 && (
         <Select value={pharmacyId ?? ""} onValueChange={onPharmacyChange}>
           <SelectTrigger size="sm" aria-label="Pharmacy" className="max-w-48 bg-card text-xs sm:max-w-60">
             <SelectValue placeholder="Choose a pharmacy" />
@@ -100,7 +102,11 @@ export function PrescriptionForm({
           search={searchMedications}
           suggestions={suggestions}
           getKey={m => m.id}
-          onSelect={m => add(newItem(m))}
+          onSelect={m => add(newItem(m, noPharmacy))}
+          onCustom={name => add(newItem({ name }, true))}
+          customLabel={name => (
+            <span>Prescribe <span className="font-medium text-foreground">“{name}”</span> as typed — bought outside</span>
+          )}
           renderItem={m => (
             <div className="flex w-full items-center justify-between gap-3">
               <span>{m.name}</span>
@@ -114,7 +120,10 @@ export function PrescriptionForm({
             <div key={rx.id} className="rounded-lg border p-3 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-medium text-foreground">{rx.displayName}</p>
+                  <p className="flex flex-wrap items-center gap-2 font-medium text-foreground">
+                    {rx.displayName}
+                    {rx.boughtOutside && <StatusBadge status="outside_pharmacy" />}
+                  </p>
                   <p className="text-xs capitalize text-muted-foreground">{rx.route}</p>
                 </div>
                 <Button type="button" variant="ghost" size="icon-sm" onClick={() => onChange(prescriptions.filter(p => p.id !== rx.id))}
@@ -149,6 +158,13 @@ export function PrescriptionForm({
               <Field label="Instructions">
                 <Input value={rx.instructions} onChange={e => update(rx.id, { instructions: e.target.value })} placeholder="e.g. After meals" className="h-9" />
               </Field>
+              {/* Only a catalog drug, with a pharmacy to send it to, can go either way. */}
+              {rx.medicationId && !noPharmacy && (
+                <div className="flex items-center gap-2">
+                  <Checkbox id={`${rx.id}-outside`} checked={!!rx.boughtOutside} onCheckedChange={checked => update(rx.id, { boughtOutside: checked === true })} />
+                  <Label htmlFor={`${rx.id}-outside`} className="text-sm font-normal">Patient buys this outside (not in stock here)</Label>
+                </div>
+              )}
             </div>
           );
         })}

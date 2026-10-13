@@ -21,11 +21,16 @@ export class MedicationRequest {
   practitionerId: string;
 
   // The pharmacy the prescription is sent to; only its pharmacists dispense it.
-  // Null only on prescriptions written before they were sent to a pharmacy,
-  // which every pharmacy sees.
+  // Null on one bought outside, and on prescriptions written before they were
+  // sent to a pharmacy, which every pharmacy sees (see dispensedBy).
   @Index()
   @Column({ type: 'varchar', nullable: true })
   performerOrganizationId: string | null;
+
+  // The patient buys it at a pharmacy of their choice: no pharmacy here
+  // dispenses it, and it may be a drug the catalog doesn't list.
+  @Column({ default: false })
+  boughtOutside: boolean;
 
   @Column({ nullable: true })
   encounterId: string;
@@ -44,8 +49,10 @@ export class MedicationRequest {
   @Column({ nullable: true })
   intent: string; // proposal | plan | order | original-order
 
-  @Column()
-  medicationCode: string; // medication code/name
+  // The drug's code in the medication catalog; null for a drug bought outside
+  // that the catalog doesn't list, which only has a name.
+  @Column({ type: 'varchar', nullable: true })
+  medicationCode: string | null;
 
   @Column()
   medicationDisplay: string; // human-readable medication name

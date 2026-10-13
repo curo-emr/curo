@@ -31,7 +31,7 @@ import { PrescriptionForm } from "./sections/PrescriptionForm";
 import { LabOrderForm } from "./sections/LabOrderForm";
 import { VitalsPanel, type RecordedVitals } from "./sections/VitalsPanel";
 import { PatientContext } from "./PatientContext";
-import { emptyVisit, hasValidAmounts, pharmacyFor, signVisit, type VisitDraft } from "./visit";
+import { emptyVisit, hasValidAmounts, pharmacyFor, signVisit, splitByPharmacy, type VisitDraft } from "./visit";
 import type { Organization } from "@/lib/api/directory";
 import { apiErrorMessage } from "@curo/web/api";
 import { invalidateAfterVisit } from "@/lib/queries";
@@ -45,14 +45,16 @@ interface Props {
   medicationSuggestions: Medication[];
   labTestsCatalog: LabTestCatalogItem[];
   labs: Lab[];
-  pharmacies: Organization[];
+  /** Undefined while loading, or when they couldn't be loaded. */
+  pharmacies: Organization[] | undefined;
 }
 
 type StoredDraft = VisitDraft & { savedAt?: string };
 
 export function EncounterEditor({
-  patient, appointmentId, reason, medicationSuggestions, labTestsCatalog, labs, pharmacies,
+  patient, appointmentId, reason, medicationSuggestions, labTestsCatalog, labs, pharmacies: loadedPharmacies,
 }: Props) {
+  const pharmacies = loadedPharmacies ?? [];
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -63,6 +65,7 @@ export function EncounterEditor({
   const [visit, setVisit] = useState<VisitDraft>(() => (restored ? { ...emptyVisit(), ...restored } : emptyVisit()));
   const [savedAt, setSavedAt] = useState<string | null>(restored?.savedAt ?? null);
   const visitRef = useRef(visit);
+  const rx = splitByPharmacy(visit.prescriptions);
   const dirty = useRef(false);
   const signed = useRef(false);
   const [triage, setTriage] = useState<RecordedVitals | null>(null);
@@ -157,7 +160,7 @@ export function EncounterEditor({
       toast.error("Give each diagnosis an ICD-10 code like R51.9, or leave its code blank");
       return;
     }
-    if (visit.prescriptions.length > 0 && !pharmacyFor(visit, pharmacies)) {
+    if (rx.toPharmacy.length > 0 && !pharmacyFor(visit, pharmacies)) {
       document.getElementById("prescriptions")?.scrollIntoView({ block: "start" });
       toast.error("No pharmacy can take these prescriptions. Ask an administrator to add one.");
       return;
@@ -189,7 +192,7 @@ export function EncounterEditor({
       removeDraft(draftKey);
       void invalidateAfterVisit(queryClient, patient.id);
       toast.success("Visit signed", {
-        description: `${patient.name.full}${visit.prescriptions.length ? ` · ${visit.prescriptions.length} Rx sent to pharmacy` : ""}${visit.labTests.length ? ` · ${visit.labTests.length} lab test${visit.labTests.length > 1 ? "s" : ""} ordered` : ""}`,
+        description: `${patient.name.full}${rx.toPharmacy.length ? ` · ${rx.toPharmacy.length} Rx sent to pharmacy` : ""}${rx.outside.length ? ` · ${rx.outside.length} to buy outside` : ""}${visit.labTests.length ? ` · ${visit.labTests.length} lab test${visit.labTests.length > 1 ? "s" : ""} ordered` : ""}`,
         action: { label: "View summary", onClick: () => router.push(ROUTES.ENCOUNTER(patient.id, encounterId)) },
       });
       if (!appointmentClosed) toast.warning("Visit signed, but the appointment couldn't be marked complete — ask reception to close it.");
@@ -250,7 +253,7 @@ export function EncounterEditor({
           <PrescriptionForm
             prescriptions={visit.prescriptions}
             onChange={v => update("prescriptions", v)}
-            pharmacies={pharmacies}
+            pharmacies={loadedPharmacies}
             pharmacyId={pharmacyFor(visit, pharmacies)?.id}
             onPharmacyChange={id => update("pharmacyId", id)}
             suggestions={medicationSuggestions}
@@ -291,9 +294,12 @@ export function EncounterEditor({
             <SummaryLine ok={visit.diagnoses.length > 0} label="Diagnoses"
               value={visit.diagnoses.length ? visit.diagnoses.map(d => d.name).join(", ") : "None recorded"} />
             <SummaryLine ok label="To pharmacy"
-              value={visit.prescriptions.length
-                ? `${visit.prescriptions.map(p => p.displayName).join(", ")}${pharmacies.length > 1 ? ` → ${pharmacyFor(visit, pharmacies)?.name}` : ""}`
-                : "No prescriptions"} />
+              value={rx.toPharmacy.length
+                ? `${rx.toPharmacy.map(p => p.displayName).join(", ")}${pharmacies.length > 1 ? ` → ${pharmacyFor(visit, pharmacies)?.name}` : ""}`
+                : rx.outside.length ? "None" : "No prescriptions"} />
+            {rx.outside.length > 0 && (
+              <SummaryLine ok label="Patient buys outside" value={rx.outside.map(p => p.displayName).join(", ")} />
+            )}
             <SummaryLine ok label="To lab"
               value={visit.labTests.length ? `${visit.labTests.map(t => labs.length > 1 ? `${t.name} → ${labs.find(l => l.id === t.labId)?.name}` : t.name).join(", ")} (${visit.labPriority})` : "No lab tests"} />
             {appointmentId && <SummaryLine ok label="Appointment" value="Marked as completed" />}

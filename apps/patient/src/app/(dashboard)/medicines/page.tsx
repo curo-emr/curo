@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Ban, PackageCheck, Pill, ShoppingBag } from "lucide-react";
+import { Ban, PackageCheck, Pill, ShoppingBag, Store } from "lucide-react";
 import { QueryContent } from "@curo/web/query";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { PageHeader } from "@curo/web/ui/page-header";
@@ -33,6 +33,7 @@ function Medicines({ patientId }: { patientId: string }) {
 
 const GROUPS: { title: string; icon: typeof Pill; statuses: MedicineStatus[]; muted?: boolean }[] = [
   { title: "To collect", icon: ShoppingBag, statuses: ["to_collect", "on_hold"] },
+  { title: "To buy at a pharmacy", icon: Store, statuses: ["buy_outside"] },
   { title: "Collected", icon: PackageCheck, statuses: ["collected"] },
   { title: "Stopped", icon: Ban, statuses: ["stopped"], muted: true },
 ];

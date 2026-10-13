@@ -30,7 +30,8 @@ export default function NewVisitPage({ params }: { params: Promise<{ patientId: 
   const medicationSuggestions = useQuery(catalogQueries.medicationSuggestions()).data ?? [];
   const labTests = useQuery(catalogQueries.labTests()).data ?? [];
   const labs = useQuery(catalogQueries.labs()).data ?? [];
-  const pharmacies = useQuery(directoryQueries.organizations("pharmacy")).data ?? [];
+  // Undefined until known: none loaded is not the same as none set up.
+  const pharmacies = useQuery(directoryQueries.organizations("pharmacy")).data;
 
   // The editor reads its autosaved draft once, keyed by the appointment, so it
   // waits for that. Later refreshes of the patient never unmount it.

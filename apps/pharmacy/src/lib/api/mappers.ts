@@ -1,5 +1,6 @@
 import type { Prescription } from '@/types';
 
+import { isBoughtOutside } from '@curo/web/fhir';
 export { mapFhirAllergy, mapFhirPatient, type FhirAllergy, type FhirPatient } from '@curo/web/fhir';
 import type { DispenseRecord } from './pharmacy';
 
@@ -37,7 +38,7 @@ export interface FhirMedicationRequest {
     validityPeriod?: { end?: string };
   };
   note?: Array<{ text?: string }>;
-  extension?: Array<{ url: string; valueString?: string; valueInteger?: number }>;
+  extension?: Array<{ url: string; valueString?: string; valueInteger?: number; valueBoolean?: boolean }>;
 }
 
 export interface FhirMedicationDispense {
@@ -83,7 +84,7 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
     patientId,
     encounterId,
     doctorId,
-    status: statusMap[fhir.status] ?? 'draft',
+    status: isBoughtOutside(fhir) ? 'outside_pharmacy' : (statusMap[fhir.status] ?? 'draft'),
     createdAt,
     sentAt: fhir.status === 'active' ? createdAt : null,
     items: [{

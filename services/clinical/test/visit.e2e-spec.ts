@@ -147,6 +147,40 @@ describe('POST /encounters/visit', () => {
     });
   });
 
+  it('records medicines the patient buys outside alongside those sent to the pharmacy', async () => {
+    const body = visit({
+      prescriptions: [
+        { medicationCode: drug, performerOrganizationId: pharmacy },
+        { boughtOutside: true, medicationDisplay: 'Rosuvastatin 10mg Tablet' },
+      ],
+    });
+
+    await sign(body).expect(201);
+
+    const saved = await svc.db.getRepository(MedicationRequest).find({
+      where: { encounterId: body.id },
+      order: { boughtOutside: 'ASC' },
+    });
+    expect(saved).toMatchObject([
+      { boughtOutside: false, performerOrganizationId: pharmacy },
+      {
+        boughtOutside: true,
+        performerOrganizationId: null,
+        medicationDisplay: 'Rosuvastatin 10mg Tablet',
+      },
+    ]);
+  });
+
+  it('records a visit whose medicines are all bought outside, naming no pharmacy', async () => {
+    const body = visit({
+      prescriptions: [{ boughtOutside: true, medicationCode: drug }],
+    });
+
+    await sign(body).expect(201);
+
+    expect(await recordsOf(body.id)).toEqual(WHOLE_VISIT);
+  });
+
   it('records a diagnosis in words alone, and tidies a typed code', async () => {
     const body = visit({
       diagnoses: [

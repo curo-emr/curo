@@ -48,7 +48,8 @@ export interface Medication {
 
 // --- Prescriptions (FHIR-mapped) ---
 
-export type PrescriptionStatus = 'draft' | 'sent_to_pharmacy' | 'on_hold' | 'active' | 'completed' | 'cancelled';
+/** `outside_pharmacy`: the patient buys it at a pharmacy of their choice, so no pharmacy here dispenses it. */
+export type PrescriptionStatus = 'draft' | 'sent_to_pharmacy' | 'on_hold' | 'active' | 'completed' | 'cancelled' | 'outside_pharmacy';
 
 export interface PrescriptionItem {
   id: string;

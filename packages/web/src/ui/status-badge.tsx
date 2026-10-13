@@ -39,6 +39,8 @@ const STATUSES = {
   results_pending: { tone: "warning", label: "Awaiting results" },
   results_ready: { tone: "success" },
   sent_to_pharmacy: { tone: "info" },
+  // Bought at a pharmacy of the patient's choice, not dispensed here
+  outside_pharmacy: { tone: "neutral" },
   // Lab samples and results
   received: { tone: "info" },
   collected: { tone: "teal" },

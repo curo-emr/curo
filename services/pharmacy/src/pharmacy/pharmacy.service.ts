@@ -1,13 +1,12 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, Repository } from 'typeorm';
-import { MedicationRequest } from '@curo/shared/database';
+import { MedicationRequest, assertDispensedBy } from '@curo/shared/database';
 import { AuditTrail, auditTarget } from '@curo/shared/audit';
 import {
   MedicationRequestStatus,
@@ -229,14 +228,7 @@ export class PharmacyService {
       throw new NotFoundException(
         `Prescription ${dto.medicationRequestId} not found`,
       );
-    // Those written before prescriptions named a pharmacy go to any.
-    if (
-      prescription.performerOrganizationId &&
-      prescription.performerOrganizationId !== pharmacy
-    )
-      throw new ForbiddenException(
-        'This prescription was sent to another pharmacy',
-      );
+    assertDispensedBy(prescription, pharmacy);
     const qty = dto.quantityValue || prescription.quantityValue || 1;
 
     const saved = await this.dispenseRepo.manager.transaction(async (em) => {

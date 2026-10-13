@@ -1,5 +1,6 @@
 import { workplaceOf, type AuthUser } from '@curo/shared/auth';
 import { UserRole } from '@curo/shared/enums';
+import { dispensedBySql } from '@curo/shared/database';
 import { labScope } from '@curo/shared/lab';
 
 /** A condition on patients aliased `p`, with its parameters. */
@@ -10,8 +11,8 @@ export interface PatientFilter {
 
 /**
  * The patients lab and pharmacy staff may list, as a filter on patients `p`:
- * those with an order at their lab, or a prescription sent to their pharmacy
- * (or to none, which every pharmacy sees), the same rules as their worklists.
+ * those with an order at their lab, or a prescription their pharmacy
+ * dispenses (dispensedBySql), the same rules as their worklists.
  * Undefined for anyone else, who lists every patient. 403 for staff not yet
  * assigned to a workplace.
  */
@@ -26,13 +27,14 @@ export function workplacePatients(user: AuthUser): PatientFilter | undefined {
                         AND o."performerOrganizationId" = :workplace)`,
       params: { workplace: lab },
     };
-  if (user.role === UserRole.PHARMACIST)
+  if (user.role === UserRole.PHARMACIST) {
+    const pharmacy = workplaceOf(user, 'pharmacy');
     return {
       where: `EXISTS (SELECT 1 FROM medication_requests m
                       WHERE m."patientId" = p.id::text
-                        AND (m."performerOrganizationId" = :workplace
-                             OR m."performerOrganizationId" IS NULL))`,
-      params: { workplace: workplaceOf(user, 'pharmacy') },
+                        AND ${dispensedBySql('m', pharmacy, 'workplace')})`,
+      params: { workplace: pharmacy },
     };
+  }
   return undefined;
 }
