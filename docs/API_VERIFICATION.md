@@ -1,6 +1,6 @@
 # Curo EMR — API Endpoint Verification Report
 
-**Last run:** 2026-06-21 · **Result: 83 / 83 checks PASS, 0 failures**
+**Last run:** 2026-10-13 · **Result: 200 / 200 checks PASS, 0 failures** (two runs in a row)
 **Driver:** [`scripts/smoke-e2e.sh`](../scripts/smoke-e2e.sh) — re-run any time with `bash scripts/smoke-e2e.sh`.
 
 Every check is made **through the API gateway at `http://localhost:3000`** with a real JWT for
@@ -11,8 +11,8 @@ published to the host.
 ## How to reproduce
 
 ```bash
-docker compose up -d --build      # stack must be healthy first
-bash scripts/smoke-e2e.sh         # human-readable PASS/FAIL log
+make run                          # build the images one at a time and start the stack
+bash scripts/smoke-e2e.sh         # human-readable PASS/FAIL log (or: make smoke)
 bash scripts/smoke-e2e.sh --md    # also writes docs/API_VERIFICATION.md.rows
 ```
 
@@ -22,9 +22,10 @@ FEFO dispense → read-back), sweeps the remaining reads, exercises the secondar
 routes, and finishes with authorization spot-checks. IDs created in early steps are threaded
 into later ones.
 
-> ⚠️ **The write checks mutate the live seeded database** (they create a patient, appointment,
-> encounter, lab order, prescription, dispense, etc.). That is intended on a dev stack. To get
-> back to a pristine seed: `docker compose down -v && docker compose up -d --build`.
+> ⚠️ **The write checks mutate the live seeded database** (they create a patient, appointments,
+> an encounter, a lab order, prescriptions, dispenses, stock, etc.). That is intended on a dev
+> stack, and the script can be re-run: it books the doctor's next free slots and stocks what it
+> dispenses. See [`TEST_CREDENTIALS.md`](./TEST_CREDENTIALS.md#re-seeding) to start from a fresh seed.
 
 ---
 
@@ -61,13 +62,13 @@ real IDs captured from prior steps.
 ### Appointment service (`:3003` — `/appointments`, `/payments`)
 | Method | Path | Role | Status |
 |---|---|---|---|
-| POST | `/appointments` | RECEPTIONIST | ✅ 201 |
+| POST | `/appointments` (a `serviceType`, in one of the doctor's sessions and not yet over; a past time is a 400, a taken slot a 409) | RECEPTIONIST | ✅ 201 / 400 |
 | GET | `/appointments?practitionerId=` | staff | ✅ 200 |
 | GET | `/appointments/schedule/:practitionerId?date=` | staff | ✅ 200 |
 | GET | `/appointments/patient/:patientId` | staff / PATIENT | ✅ 200 |
 | GET | `/appointments/:id` | staff | ✅ 200 |
-| PUT | `/appointments/:id` | RECEPTIONIST | ✅ 200 |
-| POST | `/payments` | RECEPTIONIST | ✅ 201 |
+| PUT | `/appointments/:id` (`arrived` checks in; only an arrived visit can be `fulfilled`) | RECEPTIONIST | ✅ 200 |
+| POST | `/payments` (one per visit: a second is a 409) | RECEPTIONIST | ✅ 201 / 409 |
 | GET | `/payments/mine` · `/payments/summary` | RECEPTIONIST | ✅ 200 |
 | GET | `/payments` | SUPER_ADMIN | ✅ 200 |
 
@@ -79,7 +80,7 @@ real IDs captured from prior steps.
 | PUT | `/encounters/:id/status` | DOCTOR | ✅ 200 |
 | POST/GET | `/notes` · `/notes/encounter/:id` · `/notes/patient/:id` | DOCTOR | ✅ 201 / 200 |
 | POST/GET | `/vitals` · `/vitals/patient/:id` · `/vitals/patient/:id/trends` | DOCTOR | ✅ 201 / 200 |
-| POST/GET | `/prescriptions` · `/prescriptions?patientId=` · `/prescriptions/patient/:id` | DOCTOR / PATIENT | ✅ 201 / 200 |
+| POST/GET | `/prescriptions` (a medication-catalog code and a `performerOrganizationId` pharmacy; a code the catalog lacks is a 400) · `/prescriptions?patientId=` · `/prescriptions/patient/:id` | DOCTOR / PATIENT | ✅ 201 / 200 |
 | GET | `/prescriptions/pending` | PHARMACIST (routed here) | ✅ 200 |
 | POST/GET | `/lab-orders` · `/lab-orders?patientId=` | DOCTOR | ✅ 201 / 200 |
 | POST/GET/PUT | `/tasks` · `/tasks/mine` · `/tasks?status=` · `/tasks/:id` | DOCTOR | ✅ 201 / 200 |
@@ -99,17 +100,16 @@ real IDs captured from prior steps.
 | Method | Path | Role | Status |
 |---|---|---|---|
 | GET | `/stock` · `/stock/grouped` (FEFO) · `/stock/alerts` (per drug) | PHARMACIST | ✅ 200 |
-| POST/PUT | `/stock` · `/stock/:id` | PHARMACIST | ✅ 201 / 200 |
+| POST/PUT | `/stock` (by medication-catalog code; any other is a 400) · `/stock/:id` (a count correction, down to 0) | PHARMACIST | ✅ 201 / 200 |
 | POST | `/dispense` (FEFO multi-batch decrement) | PHARMACIST | ✅ 201 |
 | GET | `/dispense?patientId=` · `/dispense/:id` | PHARMACIST | ✅ 200 |
 
 ### Notification (`:3007`), Audit (`:3008`), Document (`:3009`)
 | Method | Path | Role | Status |
 |---|---|---|---|
-| POST/GET | `/notifications` · `/notifications/count` | any authed | ✅ 201 / 200 |
+| GET | `/notifications` · `/notifications/count` (only the services send notifications: `POST` is a 404) | any authed | ✅ 200 |
 | PUT | `/notifications/:id/read` · `/notifications/read-all` | any authed | ✅ 200 |
-| POST | `/audit` | any authed | ✅ 201 |
-| GET | `/audit?resourceType=` | SUPER_ADMIN | ✅ 200 |
+| GET | `/audit?resourceType=&patientId=` (the services write it: the registration above is listed) | SUPER_ADMIN | ✅ 200 |
 | POST | `/documents` (multipart, png/jpeg/pdf only; lab staff: a lab-report for their lab's order) | DOCTOR / LAB_STAFF | ✅ 201 |
 | GET | `/documents?patientId=\|encounterId=\|serviceRequestId=` (one required; lab staff see their lab's report files) · `/documents/me` · `/documents/:id/content` | staff / PATIENT | ✅ 200 |
 
@@ -145,7 +145,7 @@ one corrects an outdated note in the build history.
 
 ## Coverage notes
 
-83 checks cover the full clinical journey end-to-end plus all secondary read/update/cross-cutting
+200 checks cover the full clinical journey end-to-end plus all secondary read/update/cross-cutting
 routes. Endpoints **not** directly exercised by the script (low-risk, equivalent paths covered):
 the admin user-management variants `GET/PATCH /auth/users/:id` and `/auth/users/:id/reset-password`
 (the create path is covered via `POST /auth/users`; the list path via `GET /auth/users`). Add these to the script if full admin-CRUD

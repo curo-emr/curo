@@ -75,8 +75,14 @@ All patients share the password **`Patient@123`**.
 
 ## Re-seeding
 
-The seed is idempotent (aborts if `admin@curo.test` already exists). To wipe and reseed:
+The seed is idempotent (aborts if `admin@curo.test` already exists). To start again from a fresh
+seed, delete only the database's volume:
 
 ```bash
-docker compose down -v && docker compose up -d --build
+docker compose down
+docker volume rm "$(docker compose config --format json | jq -r .name)_postgres_data"
+docker compose up -d    # migrates the empty database, loads ICD-10-CM and seeds it
 ```
+
+This deletes every record in the database. Don't use `docker compose down -v`: it also deletes
+the MinIO volume holding uploaded documents.
