@@ -240,6 +240,21 @@ describe('POST /dispense', () => {
     await dispense(await sendTo(null)).expect(201);
   });
 
+  it('refuses a quantity that is not a whole number above zero, and changes nothing', async () => {
+    const rx = await prescribe(10, [{ batchNumber: 'GOOD', quantity: 50 }]);
+
+    for (const quantityValue of [0, -5, 2.5])
+      await svc.api
+        .post('/dispense')
+        .set(dispenser.headers)
+        .send({ medicationRequestId: rx.id, quantityValue })
+        .expect(400);
+
+    expect(await stockLeft(rx)).toEqual({ GOOD: 50 });
+    expect(await statusOf(rx)).toBe(MedicationRequestStatus.ACTIVE);
+    expect(await dispensesOf(rx)).toBe(0);
+  });
+
   it("answers 400 to a prescription id that isn't a uuid", async () => {
     const res = await svc.api
       .post('/dispense')

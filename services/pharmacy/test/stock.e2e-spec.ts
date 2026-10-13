@@ -253,6 +253,27 @@ describe('stock', () => {
         .expect(400);
     });
 
+    it('corrects a batch down to zero, but not below or to a fraction', async () => {
+      const drug = await stock([{ quantity: 40 }]);
+      const batch = await svc.db
+        .getRepository(Stock)
+        .findOneByOrFail({ medicationCode: drug });
+      const correct = (quantity: number) =>
+        svc.api
+          .put(`/stock/${batch.id}`)
+          .set(pharmacist.headers)
+          .send({ quantity });
+      const quantityNow = async () =>
+        (await svc.db.getRepository(Stock).findOneByOrFail({ id: batch.id }))
+          .quantity;
+
+      for (const quantity of [-50, 2.5]) await correct(quantity).expect(400);
+      expect(await quantityNow()).toBe(40);
+
+      await correct(0).expect(200);
+      expect(await quantityNow()).toBe(0);
+    });
+
     it("can't correct another pharmacy's batch", async () => {
       const drug = await stock([
         { quantity: 40, organizationId: otherPharmacy },
