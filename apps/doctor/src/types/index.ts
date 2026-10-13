@@ -94,6 +94,8 @@ export interface LabTestCatalogItem {
   code: string;
   name: string;
   category: string;
+  /** The values it reports, by name, so a search for one finds the test. */
+  analytes: { display: string }[];
   /** The lab that offers it; the catalog lists a test once per lab. */
   labId: string | null;
 }

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { matchesLabTest } from "@curo/web/clinical";
 import { formatMoney } from "@curo/web/format";
 import { LoadError } from "@curo/web/ui/load-error";
 import { FlaskConical, Pill, Search } from "lucide-react";
@@ -51,7 +52,7 @@ export default function DirectoryPage() {
             orgLabel="lab"
             searchPlaceholder="Search tests…"
             catalog={directoryQueries.labCatalog}
-            matches={(t, q) => `${t.name} ${t.code}`.toLowerCase().includes(q)}
+            matches={matchesLabTest}
             emptyIcon={FlaskConical}
             columns={[
               { header: "Test", cell: t => <><span className="font-medium text-foreground">{t.name}</span> <span className="font-mono text-xs text-muted-foreground">{t.code}</span></> },

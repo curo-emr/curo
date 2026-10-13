@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { FlaskConical, SearchX } from "lucide-react";
-import { formatRange, type LabAnalyte } from "@curo/web/clinical";
+import { formatRange, matchesLabTest, type LabAnalyte } from "@curo/web/clinical";
 import { formatMoney } from "@curo/web/format";
 import { EmptyState } from "@curo/web/ui/empty-state";
 import { SearchInput } from "@curo/web/ui/search-input";
@@ -24,9 +24,8 @@ export function TestCatalogList({ tests }: { tests: LabTestCatalogItem[] }) {
   const specimens = useMemo(() => optionsOf(tests, "specimen"), [tests]);
 
   const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
     return tests.filter(t =>
-      (!q || [t.name, t.code, ...t.analytes.map(a => a.display)].some(text => text.toLowerCase().includes(q))) &&
+      matchesLabTest(t, query) &&
       (category === ALL || t.category === category) &&
       (specimen === ALL || t.specimen === specimen),
     );

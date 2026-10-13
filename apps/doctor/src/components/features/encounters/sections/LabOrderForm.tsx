@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { FlaskConical, X } from "lucide-react";
 import type { Lab, LabTestCatalogItem } from "@/types";
+import { matchesLabTest } from "@curo/web/clinical";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@curo/web/ui/section-card";
@@ -37,10 +38,7 @@ export function LabOrderForm({ tests, onTestsChange, priority, onPriorityChange,
   );
 
   const search = useCallback(
-    (q: string) => {
-      const needle = q.toLowerCase();
-      return uniqueCatalog.filter(t => `${t.name} ${t.code} ${t.category}`.toLowerCase().includes(needle)).slice(0, 8);
-    },
+    (q: string) => uniqueCatalog.filter(t => matchesLabTest(t, q)).slice(0, 8),
     [uniqueCatalog],
   );
 
