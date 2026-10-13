@@ -1,12 +1,15 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, In } from 'typeorm';
+import { DataSource, Repository, Between, In } from 'typeorm';
 import { Payment } from '../entities/payment.entity';
+import { Appointment } from '../entities/appointment.entity';
 import { AuditTrail } from '@curo/shared/audit';
+import { assertPatientOnFile } from '@curo/shared/database';
 import {
   dayBounds,
   parseList,
@@ -19,16 +22,28 @@ import { clinicTimeZone } from '@curo/shared/config';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { actorId, type AuthUser } from '@curo/shared/auth';
-import { PaymentStatus } from '../enums';
+import {
+  AppointmentStatus,
+  PaymentMethod,
+  PaymentStatus,
+  PaymentType,
+} from '../enums';
 
 const CURRENCY = process.env.CURRENCY || 'LKR';
+
+// A visit that didn't happen has nothing to pay for; reception offers no
+// payment on these either.
+const MISSED_VISIT = [AppointmentStatus.CANCELLED, AppointmentStatus.NOSHOW];
 
 @Injectable()
 export class PaymentService {
   constructor(
     @InjectRepository(Payment)
     private paymentsRepo: Repository<Payment>,
+    @InjectRepository(Appointment)
+    private appointmentsRepo: Repository<Appointment>,
     private auditTrail: AuditTrail,
+    private dataSource: DataSource,
   ) {}
 
   /** Query over the payments that count as income, aliased `p`. */
@@ -45,6 +60,7 @@ export class PaymentService {
   /** Receptionist records the amount collected for a patient visit. Immutable afterwards. */
   async create(dto: CreatePaymentDto, user: AuthUser): Promise<Payment> {
     const collectedBy = actorId(user);
+    await this.assertPayable(dto);
 
     // One consultation payment per appointment — prevents double entry / silent edits.
     if (dto.appointmentId) {
@@ -63,10 +79,10 @@ export class PaymentService {
       appointmentId: dto.appointmentId,
       encounterId: dto.encounterId,
       collectedBy,
-      type: dto.type || 'consultation',
+      type: dto.type ?? PaymentType.CONSULTATION,
       amount: dto.amount,
       currency: CURRENCY,
-      paymentMethod: dto.paymentMethod || 'cash',
+      paymentMethod: dto.paymentMethod ?? PaymentMethod.CASH,
       status: PaymentStatus.PAID,
       receiptNumber: this.genReceipt(),
       notes: dto.notes,
@@ -90,6 +106,30 @@ export class PaymentService {
     });
 
     return saved;
+  }
+
+  /**
+   * Refuses a payment from anyone but a patient on file, and one for an
+   * appointment that doesn't exist, is another patient's, or was missed, so
+   * the visit shown as paid is the one the money is recorded against.
+   */
+  private async assertPayable({ patientId, appointmentId }: CreatePaymentDto) {
+    await assertPatientOnFile(this.dataSource, patientId);
+    if (!appointmentId) return;
+
+    const appointment = await this.appointmentsRepo.findOneBy({
+      id: appointmentId,
+    });
+    if (!appointment)
+      throw new BadRequestException(`Appointment ${appointmentId} not found`);
+    if (appointment.patientId !== patientId)
+      throw new BadRequestException(
+        `Appointment ${appointmentId} is another patient's`,
+      );
+    if (MISSED_VISIT.includes(appointment.status))
+      throw new BadRequestException(
+        `Appointment ${appointmentId} is ${appointment.status}: there's no visit to pay for`,
+      );
   }
 
   /** Whole days on the clinic's calendar, from `from` through `to`. */

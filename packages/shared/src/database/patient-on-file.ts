@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import type { DataSource, EntityManager } from 'typeorm';
 
 /**
@@ -13,4 +14,13 @@ export async function patientIsOnFile(
     [patientId],
   );
   return rows.length > 0;
+}
+
+/** Throws 400 unless `patientId` names a registered, active patient. */
+export async function assertPatientOnFile(
+  db: DataSource | EntityManager,
+  patientId: string,
+): Promise<void> {
+  if (!(await patientIsOnFile(db, patientId)))
+    throw new BadRequestException(`Patient ${patientId} isn't on file`);
 }

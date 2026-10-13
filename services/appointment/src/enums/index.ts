@@ -28,6 +28,21 @@ export enum QueueStage {
   DONE = 'done',
 }
 
+// How a payment was made, and what it was for. The reception payment dialog
+// offers the methods; keep the two in step.
+export enum PaymentMethod {
+  CASH = 'cash',
+  CARD = 'card',
+  INSURANCE = 'insurance',
+}
+
+export enum PaymentType {
+  CONSULTATION = 'consultation',
+  LAB = 'lab',
+  DISPENSING = 'dispensing',
+  OTHER = 'other',
+}
+
 // What became of a recorded payment. Only `paid` counts as income; an
 // administrator's correction may mark it refunded or waived.
 export enum PaymentStatus {

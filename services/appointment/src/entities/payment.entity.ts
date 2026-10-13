@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-import { PaymentStatus } from '../enums';
+import { PaymentMethod, PaymentStatus, PaymentType } from '../enums';
 
 @Entity('payments')
 export class Payment {
@@ -34,8 +34,8 @@ export class Payment {
   @Column({ nullable: true })
   collectedBy: string; // receptionist practitioner id (from JWT)
 
-  @Column({ nullable: true })
-  type: string; // consultation | lab | dispensing | other
+  @Column({ type: 'varchar', nullable: true })
+  type: PaymentType;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
@@ -43,8 +43,8 @@ export class Payment {
   @Column({ nullable: true })
   currency: string;
 
-  @Column({ nullable: true })
-  paymentMethod: string; // cash | card | insurance
+  @Column({ type: 'varchar', nullable: true })
+  paymentMethod: PaymentMethod;
 
   @Column({ type: 'varchar', nullable: true })
   status: PaymentStatus;

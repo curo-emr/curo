@@ -1,18 +1,21 @@
 import {
-  IsNotEmpty,
+  IsEnum,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
+  IsUUID,
 } from 'class-validator';
+import { PaymentMethod, PaymentType } from '../../enums';
 
 export class CreatePaymentDto {
-  @IsNotEmpty()
-  @IsString()
+  /** A patient on file; with an appointment, the appointment's patient. */
+  @IsUUID()
   patientId: string;
 
+  /** The visit paid for: one payment each, and not one that was missed. */
   @IsOptional()
-  @IsString()
+  @IsUUID()
   appointmentId?: string;
 
   @IsOptional()
@@ -24,12 +27,12 @@ export class CreatePaymentDto {
   amount: number;
 
   @IsOptional()
-  @IsString()
-  type?: string; // defaults to 'consultation'
+  @IsEnum(PaymentType)
+  type?: PaymentType; // defaults to consultation
 
   @IsOptional()
-  @IsString()
-  paymentMethod?: string; // cash | card | insurance
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod; // defaults to cash
 
   @IsOptional()
   @IsString()

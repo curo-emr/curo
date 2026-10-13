@@ -5,7 +5,7 @@ import {
   IsPositive,
   IsString,
 } from 'class-validator';
-import { PaymentStatus } from '../../enums';
+import { PaymentMethod, PaymentStatus } from '../../enums';
 
 // Admin-only correction of a recorded payment. Receptionists cannot edit.
 export class UpdatePaymentDto {
@@ -15,8 +15,8 @@ export class UpdatePaymentDto {
   amount?: number;
 
   @IsOptional()
-  @IsString()
-  paymentMethod?: string;
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
 
   @IsOptional()
   @IsEnum(PaymentStatus)
