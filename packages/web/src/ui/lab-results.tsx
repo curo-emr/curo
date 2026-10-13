@@ -1,5 +1,5 @@
 import { isAbnormalResult, resultFlag } from "../clinical";
-import type { LabResultValue } from "../fhir";
+import type { LabReport, LabResultValue } from "../fhir";
 import { ResultFlagBadge } from "./result-flag-badge";
 import { cn } from "./utils";
 
@@ -31,5 +31,25 @@ export function LabResultList({ results, className }: { results: LabResultValue[
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * What a lab reported, as every portal shows it: the typed values, the results
+ * pasted as text (kept as pasted, its columns lined up), then the conclusion.
+ */
+export function LabReportBody({ report }: { report: Pick<LabReport, "results" | "resultsText" | "conclusion"> }) {
+  const { results, resultsText, conclusion } = report;
+  return (
+    // min-w-0 keeps a wide printout scrolling in its box, not stretching the page.
+    <div className="min-w-0 space-y-3">
+      {results.length > 0 && <LabResultList results={results} />}
+      {resultsText && (
+        <pre className="overflow-x-auto rounded-lg border px-3 py-2.5 font-mono text-xs leading-relaxed text-foreground">
+          {resultsText}
+        </pre>
+      )}
+      {conclusion && <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-foreground">{conclusion}</p>}
+    </div>
   );
 }

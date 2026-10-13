@@ -476,6 +476,99 @@ describe('Lab specimens and results', () => {
       });
     });
 
+    describe('pasted as text', () => {
+      type Report = {
+        result: unknown[];
+        presentedForm: { contentType: string; data: string }[];
+      };
+      const attached = (report: Report, contentType: string) =>
+        report.presentedForm.find((f) => f.contentType.startsWith(contentType));
+      const textOf = (report: Report) =>
+        Buffer.from(attached(report, 'text/plain')!.data, 'base64').toString();
+
+      // A printout's columns, with characters outside ASCII.
+      const printout = [
+        '  WBC      6.2   ×10³/µL   4.0 - 11.0',
+        '  Plt      250   ×10³/µL   150 - 400',
+        '  සටහන: සාමාන්‍යයි',
+      ].join('\n');
+
+      it('completes the order with the text kept as pasted, and a PDF report', async () => {
+        const { order } = await receivedLabs();
+
+        const res = await enterResults({
+          serviceRequestId: order.id,
+          // Blank lines before and whitespace after are dropped, Windows line endings made \n.
+          resultsText: `\r\n\r\n${printout.replaceAll('\n', '\r\n')}  \r\n`,
+        }).expect(201);
+
+        const report = res.body as Report;
+        expect(report.result).toEqual([]);
+        expect(textOf(report)).toBe(printout);
+        const pdf = attached(report, 'application/pdf')!.data;
+        expect(Buffer.from(pdf, 'base64').subarray(0, 5).toString()).toBe(
+          '%PDF-',
+        );
+        expect(await recordsOf(order.id)).toEqual({
+          observations: 0,
+          reports: 1,
+        });
+        await expect(savedOrder(order.id)).resolves.toMatchObject({
+          status: ServiceRequestStatus.COMPLETED,
+        });
+
+        const listed = await svc.api
+          .get('/reports')
+          .query({ serviceRequestId: order.id })
+          .set(labStaff.headers)
+          .expect(200);
+        const [{ resource }] = (
+          listed.body as { entry: { resource: Report }[] }
+        ).entry;
+        expect(textOf(resource)).toBe(printout);
+      });
+
+      it('keeps typed values and the text together', async () => {
+        const { order } = await receivedLabs();
+
+        const res = await enterResults({
+          serviceRequestId: order.id,
+          results: [fbc],
+          resultsText: 'Film: normocytic, normochromic',
+        }).expect(201);
+
+        const report = res.body as Report;
+        expect(report.result).toHaveLength(1);
+        expect(textOf(report)).toBe('Film: normocytic, normochromic');
+        expect(await recordsOf(order.id)).toEqual({
+          observations: 1,
+          reports: 1,
+        });
+      });
+
+      it('refuses blank or overlong text, writing nothing', async () => {
+        const { order } = await receivedLabs();
+        const serviceRequestId = order.id;
+
+        await enterResults({ serviceRequestId, resultsText: ' \n\t ' }).expect(
+          400,
+        );
+        await enterResults({
+          serviceRequestId,
+          results: [fbc],
+          resultsText: 'x'.repeat(20_001),
+        }).expect(400);
+
+        expect(await recordsOf(order.id)).toEqual({
+          observations: 0,
+          reports: 0,
+        });
+        await expect(savedOrder(order.id)).resolves.toMatchObject({
+          status: ServiceRequestStatus.ACTIVE,
+        });
+      });
+    });
+
     it('rejects missing or malformed result items before writing anything', async () => {
       const { order } = await receivedLabs();
       const serviceRequestId = order.id;

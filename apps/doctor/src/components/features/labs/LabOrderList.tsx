@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { QueryContent } from "@curo/web/query";
 import type { LabOrder, LabReport } from "@/types";
 import { Button } from "@curo/web/ui/button";
-import { LabResultList } from "@curo/web/ui/lab-results";
+import { LabReportBody } from "@curo/web/ui/lab-results";
 import { StatusBadge, type Status } from "@curo/web/ui/status-badge";
 import { openDocument, openPdf } from "@curo/web/api";
 import type { DocumentRef } from "@/lib/api/documents";
@@ -79,8 +79,7 @@ function LabOrderRow({ order, labName, report, files }: {
         <StatusBadge status={stageOf(order, report)} />
       </div>
 
-      {report && report.results.length > 0 && <LabResultList results={report.results} />}
-      {report?.conclusion && <p className="text-sm italic text-muted-foreground">{report.conclusion}</p>}
+      {report && <LabReportBody report={report} />}
 
       {(report?.pdfBase64 || files.length > 0) && (
         <div className="flex flex-wrap gap-2">

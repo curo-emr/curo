@@ -23,7 +23,13 @@ export interface FhirDiagnosticReport {
   issued?: string | null;
   conclusion?: string | null;
   result?: FhirLabResult[];
-  presentedForm?: Array<{ contentType?: string; data?: string }>;
+  presentedForm?: FhirAttachment[];
+}
+
+/** A file carried inline in a resource, its bytes as base64. */
+export interface FhirAttachment {
+  contentType?: string;
+  data?: string;
 }
 
 export interface LabResultValue {
@@ -36,14 +42,16 @@ export interface LabResultValue {
   interpretation?: string;
 }
 
-/** What a lab reported for an order: typed values and/or a generated PDF. */
+/** What a lab reported for an order: typed values, results pasted as text, and a generated PDF. */
 export interface LabReport {
   id: string;
   orderId: string;
   issued: string | null;
   conclusion?: string;
   results: LabResultValue[];
-  /** The PDF made from the typed values, as base64; absent when only a file was uploaded. */
+  /** The results as the lab pasted them (a printout), to show as is. */
+  resultsText?: string;
+  /** The PDF made from the typed values or text, as base64; absent when only a file was uploaded. */
   pdfBase64?: string;
 }
 
@@ -66,6 +74,19 @@ export function mapFhirReport(r: FhirDiagnosticReport): LabReport {
     issued: r.issued ?? null,
     conclusion: r.conclusion ?? undefined,
     results: (r.result ?? []).map(mapLabResult),
-    pdfBase64: r.presentedForm?.find(f => f.contentType === "application/pdf")?.data,
+    resultsText: presentedText(r.presentedForm),
+    pdfBase64: presented(r.presentedForm, "application/pdf"),
   };
+}
+
+/** The base64 data of the first attachment of `contentType` (parameters such as a charset aside). */
+function presented(forms: FhirAttachment[] | undefined, contentType: string): string | undefined {
+  return forms?.find(f => f.contentType?.split(";")[0].trim() === contentType)?.data;
+}
+
+/** The results a lab pasted as text: the report's plain-text attachment, read as UTF-8. */
+export function presentedText(forms: FhirAttachment[] | undefined): string | undefined {
+  const data = presented(forms, "text/plain");
+  if (data === undefined) return undefined;
+  return new TextDecoder().decode(Uint8Array.from(atob(data), c => c.charCodeAt(0)));
 }

@@ -53,6 +53,9 @@ export class DiagnosticReport {
   @Column({ type: 'jsonb', nullable: true })
   results: LabResultItem[] | null;
 
+  @Column({ type: 'text', nullable: true })
+  resultsText: string | null; // the results as the lab pasted them
+
   @Column({ nullable: true })
   conclusion: string;
 

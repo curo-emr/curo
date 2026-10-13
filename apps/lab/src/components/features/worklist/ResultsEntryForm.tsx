@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
-import { CheckCircle, FlaskConical, Loader2, MessageSquareText } from "lucide-react";
+import { CheckCircle, ClipboardPaste, FlaskConical, Loader2, MessageSquareText } from "lucide-react";
 import { adultRangesApply, analytesToReport, referenceRangeFor, resultFlag } from "@curo/web/clinical";
 import { Button } from "@curo/web/ui/button";
 import { Input } from "@curo/web/ui/input";
@@ -13,7 +13,7 @@ import { Label } from "@curo/web/ui/label";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { Textarea } from "@curo/web/ui/textarea";
 import { ResultFlagBadge } from "@curo/web/ui/result-flag-badge";
-import { enterResults, type ResultEntry } from "@/lib/api/lab";
+import { enterResults, RESULTS_TEXT_MAX_LENGTH, type ResultEntry } from "@/lib/api/lab";
 import { ROUTES } from "@/lib/constants";
 import { invalidateOrder, orderQueries } from "@/lib/queries";
 import { interpret } from "@/lib/result-flag";
@@ -52,14 +52,16 @@ interface ResultsEntryFormProps {
 }
 
 /**
- * A row per value the order reports, and the report files uploaded for the order.
- * Submitting files the results and completes the order. The results are every
- * value, or an uploaded report with no values typed (the report holds them), or both.
+ * A row per value the order reports, a box for results pasted as text, and the report
+ * files uploaded for the order. Submitting files the results and completes the order.
+ * Values are typed in full or not at all; with none typed, the pasted text or an
+ * uploaded report holds the results.
  */
 export function ResultsEntryForm({ order, patient, catalog }: ResultsEntryFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [entries, setEntries] = useState(() => blankRows(order, catalog, patient));
+  const [resultsText, setResultsText] = useState("");
   const [conclusion, setConclusion] = useState("");
   // Uploading a report refreshes this list, so the form knows it can be submitted without typed values.
   const reportCount = useQuery(orderQueries.reports(order.id)).data?.length ?? 0;
@@ -73,15 +75,16 @@ export function ResultsEntryForm({ order, patient, catalog }: ResultsEntryFormPr
 
   const typedCount = entries.filter(entry => entry.value.trim()).length;
   const allTyped = entries.length > 0 && typedCount === entries.length;
-  const canSubmit = allTyped || (typedCount === 0 && reportCount > 0);
+  const hasText = resultsText.trim() !== "";
+  const canSubmit = allTyped || (typedCount === 0 && (hasText || reportCount > 0));
   const hint = typedCount > 0
-    ? "Enter every value, or clear them and submit the uploaded report."
-    : "Enter every value, or upload the report, to submit.";
+    ? "Enter every value, or clear them and submit the text or uploaded report."
+    : "Enter every value, paste the results as text, or upload the report, to submit.";
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await enterResults({ orderId: order.id, results: allTyped ? entries : [], conclusion });
+      await enterResults({ orderId: order.id, results: allTyped ? entries : [], resultsText, conclusion });
       void invalidateOrder(queryClient, order);
       toast.success("Results submitted. The ordering doctor has been notified.");
       router.push(ROUTES.ORDER(order.id));
@@ -168,6 +171,25 @@ export function ResultsEntryForm({ order, patient, catalog }: ResultsEntryFormPr
             );
           })}
         </div>
+      </SectionCard>
+
+      <SectionCard
+        icon={ClipboardPaste}
+        iconClassName="text-primary"
+        title="Results as text"
+        description="Paste the analyser's or lab system's printout, in place of the values above or alongside them. Kept as pasted; typed values are flagged, text isn't."
+      >
+        <Textarea
+          aria-label="Results as text"
+          placeholder="Paste the results here"
+          value={resultsText}
+          onChange={e => setResultsText(e.target.value)}
+          maxLength={RESULTS_TEXT_MAX_LENGTH}
+          // Unwrapped, so a printout's columns stay lined up; it scrolls sideways instead.
+          wrap="off"
+          spellCheck={false}
+          className="max-h-[32rem] min-h-40 font-mono text-xs md:text-xs"
+        />
       </SectionCard>
 
       <SectionCard icon={MessageSquareText} iconClassName="text-primary" title="Conclusion" description="Optional. For the ordering doctor; printed on the report.">

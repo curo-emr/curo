@@ -3,7 +3,7 @@
 import { FileText, Loader2 } from "lucide-react";
 import { openDocument, openPdf } from "@curo/web/api";
 import { Button } from "@curo/web/ui/button";
-import { LabResultList } from "@curo/web/ui/lab-results";
+import { LabReportBody } from "@curo/web/ui/lab-results";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import type { DocumentRef } from "@/lib/api/documents";
 import { useDoctorName } from "@/lib/hooks/useDirectory";
@@ -37,8 +37,7 @@ export function LabTestCard({ test, report, files }: LabTestCardProps) {
         </div>
         <StatusBadge status={status} label={label} className="shrink-0" />
       </div>
-      {report && report.results.length > 0 && <LabResultList results={report.results} />}
-      {report?.conclusion && <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-foreground">{report.conclusion}</p>}
+      {report && <LabReportBody report={report} />}
       <ReportFiles pdfBase64={report?.pdfBase64} files={files} />
     </li>
   );
