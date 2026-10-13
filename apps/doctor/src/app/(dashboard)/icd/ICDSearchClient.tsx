@@ -29,7 +29,7 @@ export function ICDSearchClient() {
         <div className="relative">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            aria-label="Search ICD-10"
+            aria-label="Search ICD-10-CM"
             value={query}
             // A new search starts at page 1.
             onChange={e => { setQuery(e.target.value); setPage(1); }}
@@ -46,7 +46,7 @@ export function ICDSearchClient() {
 
       <Card className="gap-0 py-0">
         {!data && result.isError ? (
-          <LoadError what="ICD-10 codes" onRetry={() => void result.refetch()} retrying={result.isFetching} />
+          <LoadError what="ICD-10-CM codes" onRetry={() => void result.refetch()} retrying={result.isFetching} />
         ) : !data ? (
           <div className="space-y-3 p-5">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
         ) : data.items.length === 0 ? (
@@ -57,11 +57,6 @@ export function ICDSearchClient() {
               <li key={icd.code} className="flex flex-col gap-1.5 px-5 py-3 sm:flex-row sm:items-center sm:gap-4">
                 <span className="w-24 shrink-0 font-mono text-sm font-semibold text-primary">{icd.code}</span>
                 <span className="flex-1 text-sm font-medium text-foreground">{icd.name}</span>
-                {(icd.keywords ?? []).length > 0 && (
-                  <span className="flex flex-wrap gap-1.5">
-                    {icd.keywords.slice(0, 4).map(k => <span key={k} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{k}</span>)}
-                  </span>
-                )}
               </li>
             ))}
           </ul>
@@ -69,6 +64,14 @@ export function ICDSearchClient() {
       </Card>
 
       <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} onPageSizeChange={size => { setPageSize(size); setPage(1); }} />
+
+      {/* The terms CDC publishes ICD-10-CM under: name its source, say it's free there, and claim no endorsement. */}
+      <p className="text-xs text-muted-foreground">
+        ICD-10-CM is developed by the US National Center for Health Statistics (CDC), under authorization from the
+        World Health Organization, which holds the copyright in ICD-10. It is available free from{" "}
+        <a href="https://www.cms.gov/medicare/coding-billing/icd-10-codes" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-foreground">cms.gov</a>.
+        Its use here does not imply endorsement by CDC, CMS or WHO.
+      </p>
     </div>
   );
 }

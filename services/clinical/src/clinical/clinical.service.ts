@@ -41,6 +41,7 @@ import {
 } from '@curo/shared/auth';
 import { AuditTrail, auditTarget, changeOf } from '@curo/shared/audit';
 import {
+  escapeLike,
   parsePagination,
   toSearchset,
   toFhirServiceRequest,
@@ -103,6 +104,9 @@ export interface PrescriptionSummary {
 const pharmacyOf = (user: AuthUser): string | null =>
   user.role === UserRole.PHARMACIST ? workplaceOf(user, 'pharmacy') : null;
 
+// More words than a diagnosis search needs are ignored.
+const MAX_SEARCH_WORDS = 8;
+
 @Injectable()
 export class ClinicalService implements OnModuleInit {
   private readonly logger = new Logger(ClinicalService.name);
@@ -128,18 +132,34 @@ export class ClinicalService implements OnModuleInit {
     private auditTrail: AuditTrail,
   ) {}
 
-  // ICD-10 diagnosis catalog (DB-backed) — searchable + paginated FHIR searchset.
+  /**
+   * The ICD-10-CM diagnosis list as a FHIR searchset. Each word searched for
+   * must be in the code or the name, as names run "Tension-type headache,
+   * unspecified…". Codes starting with the search come first, then names that
+   * do, then the shortest (broadest) names: "headache" leads with R51.9
+   * Headache, unspecified.
+   */
   async getIcd10(query: SearchQuery = {}) {
     const { skip, take, page, pageSize } = parsePagination(query);
+    const search = query.search?.trim() ?? '';
     const qb = this.icd10Repo.createQueryBuilder('c');
-    if (query.search) {
-      qb.where(
-        '(c.code ILIKE :s OR c.name ILIKE :s OR c.keywords::text ILIKE :s)',
-        { s: `%${query.search}%` },
+    search
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, MAX_SEARCH_WORDS)
+      .forEach((word, i) =>
+        qb.andWhere(`(c.code ILIKE :word${i} OR c.name ILIKE :word${i})`, {
+          [`word${i}`]: `%${escapeLike(word)}%`,
+        }),
       );
-    }
+    if (search)
+      qb.orderBy(
+        'CASE WHEN c.code ILIKE :start THEN 0 WHEN c.name ILIKE :start THEN 1 ELSE 2 END',
+      )
+        .addOrderBy('LENGTH(c.name)')
+        .setParameter('start', `${escapeLike(search)}%`);
     const [rows, total] = await qb
-      .orderBy('c.code', 'ASC')
+      .addOrderBy('c.code')
       .skip(skip)
       .take(take)
       .getManyAndCount();

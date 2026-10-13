@@ -70,6 +70,8 @@ jobs:
       - run: npm run db:migrate
       - run: npm run db:check
       - run: npm run seed
+      # The ICD-10-CM import, on lines of the release (the image downloads the whole of it).
+      - run: npm run icd10:import -- fixtures/icd10cm-codes.sample.txt
 
   frontend:
     name: Frontend (${{ matrix.workspace }})

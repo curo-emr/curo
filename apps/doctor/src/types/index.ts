@@ -43,7 +43,6 @@ export interface Encounter {
 export interface ICD10 {
   code: string;
   name: string;
-  keywords: string[];
 }
 
 export interface Medication {

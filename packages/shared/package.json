@@ -41,6 +41,10 @@
       "types": "./dist/health/index.d.ts",
       "default": "./dist/health/index.js"
     },
+    "./icd10": {
+      "types": "./dist/icd10/index.d.ts",
+      "default": "./dist/icd10/index.js"
+    },
     "./identifiers": {
       "types": "./dist/identifiers/index.d.ts",
       "default": "./dist/identifiers/index.js"

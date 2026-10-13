@@ -287,6 +287,17 @@ services:
       postgres:
         condition: service_healthy
 
+  # The ICD-10-CM diagnosis list, from the release built into the image. It changes
+  # nothing when the list is already that release, so it runs on every `up`.
+  curo-icd10-import:
+    build: *db-tools-build
+    container_name: curo_icd10_import
+    restart: "no"
+    command: ["npm", "run", "icd10:import"]
+    environment:
+      <<: *db-env
+    depends_on: *needs-migrated-db
+
   curo-seed:
     build: *db-tools-build
     container_name: curo_seed

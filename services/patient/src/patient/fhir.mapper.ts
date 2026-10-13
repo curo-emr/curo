@@ -179,7 +179,7 @@ export function toFhirCondition(c: Condition) {
       coding: c.code
         ? [
             {
-              system: 'http://hl7.org/fhir/sid/icd-10',
+              system: 'http://hl7.org/fhir/sid/icd-10-cm',
               code: c.code,
               display: c.display,
             },

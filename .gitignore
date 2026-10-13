@@ -10,6 +10,9 @@ dist/
 .claude/
 npm-debug.log*
 
+# A downloaded ICD-10-CM release: the database image fetches its own, and it isn't ours to redistribute
+/database/data/
+
 # Local notes and working docs, kept out of the public repo
 /notes.txt
 /docs/history/

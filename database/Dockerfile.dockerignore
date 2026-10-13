@@ -1,5 +1,6 @@
 # The context is the repo root: the image needs only the root manifests, the base tsconfig,
-# database/ and the identifier generators and lab QR formats the seed imports from @curo/shared's source.
+# database/ and the identifier generators, lab QR formats and ICD-10 code rule the seed and the
+# ICD-10-CM import read from @curo/shared's source. The release itself is downloaded in the build.
 **
 !package.json
 !package-lock.json
@@ -7,6 +8,8 @@
 !database/**
 !packages/shared/src/identifiers/**
 !packages/shared/src/lab/**
+!packages/shared/src/icd10/**
+database/data
 **/*.spec.ts
 **/node_modules
 **/.env*
