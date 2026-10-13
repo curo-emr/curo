@@ -16,6 +16,7 @@
     "./hooks": "./src/hooks/index.ts",
     "./notifications": "./src/notifications/index.ts",
     "./patients": "./src/patients/index.ts",
+    "./practitioners": "./src/practitioners/index.ts",
     "./print": "./src/print/index.ts",
     "./query": "./src/query/index.ts",
     "./schedule": "./src/schedule/index.ts",

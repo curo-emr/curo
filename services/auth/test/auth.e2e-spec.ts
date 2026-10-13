@@ -41,8 +41,8 @@ describe('Sign-in', () => {
   });
 
   /** Onboards a doctor the way the admin portal does, and returns their details. */
-  async function onboard() {
-    const staff = newStaff();
+  async function onboard(details: { specialization?: string } = {}) {
+    const staff = { ...newStaff(), ...details };
     await svc.api
       .post('/auth/users')
       .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
@@ -360,6 +360,26 @@ describe('Sign-in', () => {
       expect(named.sort()).toEqual([byUser.id, byPractitioner.id].sort());
       expect(named).not.toContain(other.id);
       expect(await listed({ ids: 'not-a-uuid' })).toEqual([]);
+    });
+  });
+
+  describe('GET /auth/practitioners', () => {
+    it('lists a doctor with their specialization, under the name the admin gave it', async () => {
+      const doctor = await onboard({ specialization: 'Cardiology' });
+
+      const res = await svc.api
+        .get('/auth/practitioners')
+        .query({ role: UserRole.DOCTOR })
+        .set((await svc.as(UserRole.NURSE)).headers)
+        .expect(200);
+
+      expect(res.body).toContainEqual(
+        expect.objectContaining({
+          email: doctor.email,
+          role: UserRole.DOCTOR,
+          specialization: 'Cardiology',
+        }),
+      );
     });
   });
 

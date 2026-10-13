@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Appointment, Patient, QueueStage } from "@/types";
-import type { Practitioner } from "@/lib/api/practitioners";
+import type { Practitioner } from "@curo/web/practitioners";
 import { patientQueries, practitionerQueries, queueQueries } from "@/lib/queries";
 import { getTodayString } from "@/lib/utils";
 

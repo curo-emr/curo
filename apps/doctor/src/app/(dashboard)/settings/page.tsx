@@ -15,7 +15,7 @@ export default function AccountPage() {
 
   const fields = [
     { label: "Full name", value: me ? `Dr. ${me.name.full}` : user?.name },
-    { label: "Specialty", value: me?.specialty },
+    { label: "Specialty", value: me?.specialization },
     { label: "Qualifications", value: me?.qualification },
     { label: "SLMC licence", value: me?.licenseNumber },
     { label: "Email", value: me?.email ?? user?.email },

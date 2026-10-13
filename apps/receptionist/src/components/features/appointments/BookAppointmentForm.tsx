@@ -219,7 +219,7 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-foreground">Dr. {doc.name.full}</p>
-                    <p className="text-sm text-muted-foreground">{doc.specialty}</p>
+                    <p className="text-sm text-muted-foreground">{doc.specialization}</p>
                   </div>
                   {selected && (
                     <span className="rounded-full bg-primary p-0.5 text-primary-foreground">

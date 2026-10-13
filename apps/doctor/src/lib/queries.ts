@@ -3,7 +3,7 @@ import { POLL_INBOX_MS, POLL_QUEUE_MS } from "@curo/web/query";
 import { getAllergies, getConditions, getPatientById, getPatientsByIds, getPatientsPaginated } from "@/lib/api/patients";
 import { getAppointments } from "@/lib/api/appointments";
 import { getLabCatalog, getOrganizations, getPharmacyStock } from "@/lib/api/directory";
-import { getPractitioners } from "@/lib/api/practitioners";
+import { getPractitioners } from "@curo/web/practitioners";
 import { getOpenTasks } from "@/lib/api/tasks";
 import { getEncounterById, getEncountersByPatient } from "@/lib/api/encounters";
 import {

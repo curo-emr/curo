@@ -88,7 +88,7 @@ export class AuthService {
         full: fullName(p),
       },
       role: p.role,
-      specialty: p.specialization ?? '',
+      specialization: p.specialization ?? '',
       phone: p.phone ?? '',
       email: p.email,
       qualification: p.qualification ?? '',
