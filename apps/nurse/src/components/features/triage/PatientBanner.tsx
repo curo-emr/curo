@@ -1,6 +1,6 @@
 import { AlertTriangle, Clock, Stethoscope } from "lucide-react";
 import type { Allergy, Appointment, Patient, Problem } from "@/types";
-import type { Practitioner } from "@/lib/api/practitioners";
+import type { Practitioner } from "@curo/web/practitioners";
 import { Badge } from "@curo/web/ui/badge";
 import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { calculateAge } from "@curo/web/format";

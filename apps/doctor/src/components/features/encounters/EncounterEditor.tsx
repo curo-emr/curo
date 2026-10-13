@@ -23,7 +23,7 @@ import { adultRangesApply, implausibleVitals, implausibleVitalsMessage, isBlankO
 import { readDraft, removeDraft, visitDraftKey, writeDraft } from "@/lib/visit";
 import { getVitalsByAppointment } from "@/lib/api/clinical";
 import { updateQueueStage } from "@/lib/api/appointments";
-import { getPractitioners } from "@/lib/api/practitioners";
+import { getPractitioners } from "@curo/web/practitioners";
 
 import { ClinicalNotes } from "./sections/ClinicalNotes";
 import { DiagnosisSearch } from "./sections/DiagnosisSearch";

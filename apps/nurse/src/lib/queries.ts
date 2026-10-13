@@ -2,7 +2,7 @@ import { keepPreviousData, queryOptions, type QueryClient } from "@tanstack/reac
 import { POLL_QUEUE_MS } from "@curo/web/query";
 import { getQueue } from "@/lib/api/appointments";
 import { getPatientsByIds } from "@/lib/api/patients";
-import { getPractitioners } from "@/lib/api/practitioners";
+import { getPractitioners } from "@curo/web/practitioners";
 import type { QueueStage } from "@/types";
 
 export const queueQueries = {

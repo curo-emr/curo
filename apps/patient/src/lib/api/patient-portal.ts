@@ -1,5 +1,6 @@
 import { apiClient, getAllPages, nullIfNotFound } from '@curo/web/api';
 import { unwrapBundle, type FhirBundle } from '@curo/web/fhir';
+import { getPractitioners } from '@curo/web/practitioners';
 import type { Allergy, Appointment, Condition, LabReport, LabTest, Medicine, Named, Patient, Visit } from '@/types';
 import {
   mapFhirAllergy, mapFhirAppointment, mapFhirCondition, mapFhirEncounter, mapFhirMedicationRequest, mapFhirPatient,
@@ -56,8 +57,7 @@ export async function getMyVisits(patientId: string): Promise<Visit[]> {
 }
 
 export async function getDoctors(): Promise<Named[]> {
-  const res = await apiClient.get<Array<{ id: string; name: { full: string } }>>('/auth/practitioners', { params: { role: 'DOCTOR' } });
-  return res.data.map(p => ({ id: p.id, name: { full: `Dr. ${p.name.full}` } }));
+  return (await getPractitioners('DOCTOR')).map(p => ({ id: p.id, name: { full: `Dr. ${p.name.full}` } }));
 }
 
 /** Every pharmacy, closed ones too, to name the one a prescription went to. */

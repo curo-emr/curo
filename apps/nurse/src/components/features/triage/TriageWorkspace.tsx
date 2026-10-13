@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Button } from "@curo/web/ui/button";
 import { getAppointmentById, updateQueueStage } from "@/lib/api/appointments";
 import { getAllergies, getConditions, getPatientById } from "@/lib/api/patients";
-import { getPractitioners, type Practitioner } from "@/lib/api/practitioners";
+import { getPractitioners, type Practitioner } from "@curo/web/practitioners";
 import { getLatestVitals, getVisitVitals, recordVitals } from "@/lib/api/vitals";
 import { apiErrorMessage } from "@curo/web/api";
 import { ROUTES } from "@/lib/constants";

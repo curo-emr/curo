@@ -20,7 +20,7 @@ export function DoctorShell({ children, sidebarOpen }: { children: React.ReactNo
       account={
         <AccountMenu
           name={user?.name ? `Dr. ${user.name}` : "Doctor"}
-          detail={user?.specialty || "General Practice"}
+          detail={user?.specialization || "General Practice"}
           email={user?.email}
           links={[{ label: "Account", href: ROUTES.SETTINGS, icon: Settings }]}
           onSignOut={logout}

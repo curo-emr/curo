@@ -112,7 +112,7 @@ export function ReportsDashboard({ doctors }: ReportsDashboardProps) {
       return {
         doctorId,
         name: doc?.name.full || "Unknown",
-        specialty: doc?.specialty || "",
+        specialization: doc?.specialization || "",
         ...data,
       };
     });
@@ -265,7 +265,7 @@ export function ReportsDashboard({ doctors }: ReportsDashboardProps) {
                     {doctorStats.map((doc) => (
                       <TableRow key={doc.doctorId}>
                         <TableCell className="font-medium text-foreground">{doc.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{doc.specialty}</TableCell>
+                        <TableCell className="text-muted-foreground">{doc.specialization}</TableCell>
                         <TableCell className="text-center">
                           <Badge variant="secondary" className="bg-primary/10 text-primary">
                             {doc.total}
