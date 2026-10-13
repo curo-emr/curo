@@ -31,7 +31,7 @@ import { MedicationCatalog } from '../entities/medication-catalog.entity';
 import { DispenseMedicationDto } from './dto/dispense.dto';
 import { CreateStockDto, UpdateStockDto } from './dto/stock.dto';
 import { MedicationDispenseStatus } from '../enums';
-import { byExpiry, planFefoDraws } from './fefo';
+import { byExpiry, isUsable, planFefoDraws } from './fefo';
 import {
   isLow,
   lowStockAfterDraw,
@@ -97,6 +97,8 @@ export interface StockGroup
     StockLevel {
   /** At or below its reorder level (see reorder-level.ts). */
   low: boolean;
+  /** When the first batch that can still be dispensed expires; null if none can, or it has no date. */
+  nextExpiry: string | null;
   /** FEFO order: the batch dispensed from next comes first. */
   batches: StockBatch[];
 }
@@ -468,6 +470,7 @@ export class PharmacyService {
     return Array.from(byDrug.values(), (batches) => {
       const [first] = batches;
       const level = stockLevel(batches, today);
+      const fefo = batches.sort(byExpiry);
       return {
         organizationId: first.organizationId,
         medicationCode: first.medicationCode,
@@ -478,7 +481,8 @@ export class PharmacyService {
         unit: first.unit,
         ...level,
         low: isLow(level),
-        batches: batches.sort(byExpiry).map((b) => ({
+        nextExpiry: fefo.find((b) => isUsable(b, today))?.expiryDate ?? null,
+        batches: fefo.map((b) => ({
           id: b.id,
           batchNumber: b.batchNumber,
           quantity: b.quantity,
