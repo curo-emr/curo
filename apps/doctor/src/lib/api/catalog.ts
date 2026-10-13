@@ -11,6 +11,7 @@ interface ApiCatalogItem {
   category?: string | null;
   specimen?: string | null;
   price?: number | string | null;
+  analytes?: { display: string }[] | null;
 }
 
 function mapCatalogItem(item: ApiCatalogItem): LabTestCatalogItem {
@@ -19,6 +20,7 @@ function mapCatalogItem(item: ApiCatalogItem): LabTestCatalogItem {
     code: item.code,
     name: item.name,
     category: item.category ?? '',
+    analytes: item.analytes ?? [],
     labId: item.organizationId ?? null,
   };
 }

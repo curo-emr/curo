@@ -25,5 +25,6 @@ export const BMI_CATEGORY_LABELS: Record<BMICategory, string> = {
 export * from "./vitals";
 export * from "./allergy-check";
 export * from "./lab-results";
+export * from "./lab-search";
 export * from "./dosing";
 export * from "./icd10";

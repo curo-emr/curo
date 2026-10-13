@@ -33,6 +33,7 @@ export interface LabCatalogTest {
   category?: string;
   specimen?: string;
   price?: number;
+  analytes?: { display: string }[] | null;
 }
 
 export async function getOrganizations(type?: "pharmacy" | "laboratory"): Promise<Organization[]> {
