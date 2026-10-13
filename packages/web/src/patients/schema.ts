@@ -1,6 +1,7 @@
 import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { ALLERGY_SEVERITIES, INSURANCE_RELATIONSHIPS, MARITAL_STATUSES } from "../fhir";
+import { getTodayString } from "../format";
 
 const allergyEntrySchema = z.object({
   /** Set for an allergy already on record. */
@@ -19,7 +20,8 @@ export const patientFormSchema = z.object({
   nic: z.string().optional().default(""),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  dob: z.string().min(1, "Date of birth is required"),
+  dob: z.string().min(1, "Date of birth is required")
+    .refine(dob => dob <= getTodayString(), "Date of birth can't be after today"),
   sex: z.enum(["male", "female", "other"], { error: "Sex is required" }),
   bloodType: z.string().optional().default(""),
   nationality: z.string().optional().default("Sri Lankan"),

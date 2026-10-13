@@ -1,3 +1,4 @@
+import { getTodayString } from "../format";
 import { patientFormSchema, type PatientFormInput } from "./schema";
 
 /** Only the fields the form requires. */
@@ -36,6 +37,13 @@ describe("patientFormSchema", () => {
       firstName: ["First name is required"],
       city: ["City is required"],
     });
+  });
+
+  it("takes a birth date up to today, not after", () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    expect(errorsFor({ dob: getTodayString() })).toEqual({});
+    expect(errorsFor({ dob: getTodayString(tomorrow) })).toEqual({ dob: ["Date of birth can't be after today"] });
   });
 
   it("takes a blank email but not a malformed one", () => {

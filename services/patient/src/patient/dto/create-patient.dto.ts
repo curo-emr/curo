@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsDateString,
@@ -10,6 +10,7 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
+import { IsNotAfterToday } from '@curo/shared/dto';
 import { Gender, MaritalStatus } from '@curo/shared/enums';
 import { CreateAllergyDto } from './create-allergy.dto';
 
@@ -34,16 +35,22 @@ export class CreatePatientDto {
   middleName?: string;
 
   @IsDateString()
+  @IsNotAfterToday()
   birthDate: string; // YYYY-MM-DD
 
   @IsEnum(Gender)
   gender: Gender;
 
   // NIC is intentionally optional: minors have no NIC. The Personal Health Number
-  // (server-generated when omitted) is the unique identifier instead.
+  // (server-generated when omitted) is the unique identifier instead. Stored
+  // trimmed and in capitals, so "123456789v " and "123456789V" are one NIC; a
+  // blank one is none. No two patients share one.
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() || null : value,
+  )
   @IsString()
-  nic?: string;
+  nic?: string | null;
 
   @IsOptional()
   @IsString()

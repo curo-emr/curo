@@ -4,6 +4,7 @@ import { ConditionClinicalStatus, Gender, UserRole } from '@curo/shared/enums';
 import { luhnCheckDigit } from '@curo/shared/identifiers';
 import {
   auditOf,
+  daysFromToday,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -33,6 +34,9 @@ describe('Patient records', () => {
     gender: Gender.MALE,
     ...overrides,
   });
+
+  /** A NIC no other test uses. */
+  const newNic = () => `${randomUUID()}V`.toUpperCase();
 
   const register = (body: object, actor = receptionist) =>
     svc.api.post('/patients').set(actor.headers).send(body);
@@ -187,12 +191,106 @@ describe('Patient records', () => {
     return (await savedPatient(body.lastName))!.id;
   }
 
+  const update = (patientId: string, body: object) =>
+    svc.api
+      .patch(`/patients/${patientId}`)
+      .set(receptionist.headers)
+      .send(body);
+
+  describe('birth date', () => {
+    it('refuses one after today, on registration and on an edit', async () => {
+      const body = newPatient({ birthDate: daysFromToday(1) });
+
+      const res = await register(body).expect(400);
+
+      expect(res.body).toMatchObject({
+        message: ["birthDate can't be after today"],
+      });
+      await expect(savedPatient(body.lastName)).resolves.toBeNull();
+      await update(await registered(), { birthDate: '2030-05-05' }).expect(400);
+    });
+
+    it('takes today, for a baby born today', async () => {
+      await register(newPatient({ birthDate: daysFromToday(0) })).expect(201);
+    });
+  });
+
+  describe('NIC', () => {
+    it('refuses a NIC another patient has, naming them, and registers no one', async () => {
+      const nic = newNic();
+      const first = newPatient({ nic });
+      await register(first).expect(201);
+      const holder = await savedPatient(first.lastName);
+
+      for (const sameNic of [nic, ` ${nic.toLowerCase()} `]) {
+        const second = newPatient({ nic: sameNic });
+        const res = await register(second).expect(409);
+
+        expect(res.body).toMatchObject({
+          message: `NIC ${nic} is already registered to patient ${holder!.patientCode}`,
+        });
+        await expect(savedPatient(second.lastName)).resolves.toBeNull();
+      }
+    });
+
+    it('stores a NIC trimmed and in capitals, and a blank one as none', async () => {
+      const nic = newNic();
+      const typed = newPatient({ nic: ` ${nic.toLowerCase()} ` });
+      const blank = newPatient({ nic: '  ' });
+      const none = newPatient();
+
+      for (const body of [typed, blank, none]) await register(body).expect(201);
+
+      await expect(savedPatient(typed.lastName)).resolves.toMatchObject({
+        nic,
+      });
+      for (const body of [blank, none])
+        await expect(savedPatient(body.lastName)).resolves.toMatchObject({
+          nic: null,
+        });
+    });
+
+    it("refuses an edit to another patient's NIC, and keeps the patient's own", async () => {
+      const nic = newNic();
+      const holder = newPatient({ nic });
+      await register(holder).expect(201);
+      const own = newNic();
+      const other = newPatient({ nic: own });
+      await register(other).expect(201);
+      const otherId = (await savedPatient(other.lastName))!.id;
+
+      await update(otherId, { nic }).expect(409);
+      await update(otherId, {
+        nic: own.toLowerCase(),
+        phone: '0771234567',
+      }).expect(200);
+
+      await expect(savedPatient(other.lastName)).resolves.toMatchObject({
+        nic: own,
+        phone: '0771234567',
+      });
+    });
+
+    it('registers one of two patients given the same NIC at the same time', async () => {
+      const nic = newNic();
+
+      const results = await Promise.all(
+        [newPatient({ nic }), newPatient({ nic })].map((body) =>
+          register(body),
+        ),
+      );
+
+      expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    });
+  });
+
   describe('reading a patient as pharmacy or lab staff', () => {
     it.each([UserRole.PHARMACIST, UserRole.LAB_STAFF])(
       'every route %s can use leaves out NIC, contact, address and the rest',
       async (role) => {
+        const nic = newNic();
         const body = newPatient({
-          nic: '199012345678',
+          nic,
           phone: '+94771234567',
           occupation: 'Teacher',
           tags: ['Diabetic'],
@@ -212,7 +310,7 @@ describe('Patient records', () => {
 
         for (const { text } of reads) {
           expect(text).toContain(id);
-          expect(text).not.toContain('199012345678');
+          expect(text).not.toContain(nic);
           expect(text).not.toContain('+94771234567');
           expect(text).not.toMatch(/Teacher|Diabetic|Kamala/);
         }

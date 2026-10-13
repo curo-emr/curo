@@ -8,7 +8,7 @@ export { Condition } from './entities/condition.entity';
 export { MedicationRequest } from './entities/medication-request.entity';
 export { Notification } from './entities/notification.entity';
 export { Observation } from './entities/observation.entity';
-export { Patient } from './entities/patient.entity';
+export { Patient, UNIQUE_NIC } from './entities/patient.entity';
 export { QrCode } from './entities/qr-code.entity';
 export {
   ServiceRequest,
