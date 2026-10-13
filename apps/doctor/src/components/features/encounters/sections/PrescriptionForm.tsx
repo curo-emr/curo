@@ -28,12 +28,13 @@ interface PrescriptionFormProps {
   patientId: string;
 }
 
-const newItem = (displayName: string, med?: Medication): PrescriptionItem => ({
+// Only catalog drugs can be prescribed: the pharmacy stocks and dispenses by their codes.
+const newItem = (med: Medication): PrescriptionItem => ({
   id: `rx-${Date.now()}`,
-  medicationId: med?.id ?? `custom-${displayName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-  displayName,
-  dose: med?.strength ?? "",
-  route: routeForForm(med?.form),
+  medicationId: med.id,
+  displayName: med.name,
+  dose: med.strength ?? "",
+  route: routeForForm(med.form),
   frequency: "BD",
   durationDays: 5,
   quantity: suggestQuantity("BD", 5) ?? 1,
@@ -99,8 +100,7 @@ export function PrescriptionForm({
           search={searchMedications}
           suggestions={suggestions}
           getKey={m => m.id}
-          onSelect={m => add(newItem(m.name, m))}
-          onCustom={name => add(newItem(name))}
+          onSelect={m => add(newItem(m))}
           renderItem={m => (
             <div className="flex w-full items-center justify-between gap-3">
               <span>{m.name}</span>

@@ -79,7 +79,6 @@ export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ 
     prescriptions: visit.prescriptions.map(rx => ({
       performerOrganizationId: visit.pharmacyId,
       medicationCode: rx.medicationId,
-      medicationDisplay: rx.displayName,
       dosageText: rx.dose,
       route: rx.route,
       frequency: rx.frequency,
@@ -122,6 +121,10 @@ export const FREQUENCIES = [
   { value: "PRN", label: "As needed (PRN)", perDay: 0 },
   { value: "STAT", label: "Single dose (STAT)", perDay: 0 },
 ] as const;
+
+/** Whether a prescription's quantity and days are whole numbers above zero, as the backend requires. */
+export const hasValidAmounts = (rx: Pick<PrescriptionItem, "quantity" | "durationDays">): boolean =>
+  [rx.quantity, rx.durationDays].every(n => Number.isInteger(n) && n >= 1);
 
 /** Suggested dispense quantity for a frequency and duration (null when it can't be derived). */
 export function suggestQuantity(frequency: string, days: number): number | null {

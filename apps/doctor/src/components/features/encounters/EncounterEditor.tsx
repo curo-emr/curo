@@ -31,7 +31,7 @@ import { PrescriptionForm } from "./sections/PrescriptionForm";
 import { LabOrderForm } from "./sections/LabOrderForm";
 import { VitalsPanel, type RecordedVitals } from "./sections/VitalsPanel";
 import { PatientContext } from "./PatientContext";
-import { emptyVisit, pharmacyFor, signVisit, type VisitDraft } from "./visit";
+import { emptyVisit, hasValidAmounts, pharmacyFor, signVisit, type VisitDraft } from "./visit";
 import type { Organization } from "@/lib/api/directory";
 import { apiErrorMessage } from "@curo/web/api";
 import { invalidateAfterVisit } from "@/lib/queries";
@@ -149,6 +149,11 @@ export function EncounterEditor({
     if (visit.prescriptions.length > 0 && !pharmacyFor(visit, pharmacies)) {
       document.getElementById("prescriptions")?.scrollIntoView({ block: "start" });
       toast.error("No pharmacy can take these prescriptions. Ask an administrator to add one.");
+      return;
+    }
+    if (!visit.prescriptions.every(hasValidAmounts)) {
+      document.getElementById("prescriptions")?.scrollIntoView({ block: "start" });
+      toast.error("Give every prescription a quantity and a number of days of at least 1");
       return;
     }
     if (visit.labTests.some(t => !t.labId)) {

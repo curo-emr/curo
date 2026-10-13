@@ -1,14 +1,14 @@
 import {
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsNumber,
   IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreatePrescriptionDto {
-  @IsNotEmpty()
-  @IsString()
+  @IsUUID()
   patientId: string;
 
   @IsOptional()
@@ -19,13 +19,10 @@ export class CreatePrescriptionDto {
   @IsUUID()
   performerOrganizationId: string;
 
+  /** A drug in the medication catalog; the prescription takes its name from there. */
   @IsNotEmpty()
   @IsString()
   medicationCode: string;
-
-  @IsNotEmpty()
-  @IsString()
-  medicationDisplay: string;
 
   @IsOptional()
   @IsString()
@@ -40,11 +37,13 @@ export class CreatePrescriptionDto {
   frequency?: string;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   durationDays?: number;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   quantityValue?: number;
 
   @IsOptional()

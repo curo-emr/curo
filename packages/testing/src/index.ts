@@ -6,4 +6,9 @@ export {
 } from './start-service';
 export { daysFromToday } from './clinic-days';
 export { auditOf } from './audit';
-export { addPractitioner, registerPatient } from './directory';
+export {
+  addCatalogDrug,
+  addOrganization,
+  addPractitioner,
+  registerPatient,
+} from './directory';
