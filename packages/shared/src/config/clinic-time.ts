@@ -85,3 +85,29 @@ export function clinicDate(
     day: '2-digit',
   }).format(instant);
 }
+
+/** What the clinic's clocks show at an instant. */
+export interface ClinicClock {
+  /** The calendar date, "YYYY-MM-DD". */
+  date: string;
+  /** 0 = Sunday … 6 = Saturday, as `Date#getDay`. */
+  weekday: number;
+  /** Minutes since midnight. */
+  minutes: number;
+}
+
+/** The clinic's date, weekday and time of day at `instant`. */
+export function clinicClock(
+  instant: Date,
+  timeZone = clinicTimeZone(),
+): ClinicClock {
+  // The wall-clock reading, held in a Date's UTC fields.
+  const wall = new Date(
+    instant.getTime() + offsetAt(timeZone, instant.getTime()),
+  );
+  return {
+    date: wall.toISOString().slice(0, 10),
+    weekday: wall.getUTCDay(),
+    minutes: wall.getUTCHours() * 60 + wall.getUTCMinutes(),
+  };
+}

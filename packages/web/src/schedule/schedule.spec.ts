@@ -1,4 +1,4 @@
-import { slotsOn, weekdayOf, workingDays, type DoctorSession } from "./index";
+import { slotIsOver, slotsOn, startOf, weekdayOf, workingDays, type DoctorSession } from "./index";
 
 const session = (weekday: number, start: string, end: string, slotMinutes: number, room: string | null = null): DoctorSession => ({
   practitionerId: "dr",
@@ -40,5 +40,27 @@ describe("workingDays", () => {
       "Wed, Sun",
     );
     expect(workingDays([])).toBe("");
+  });
+});
+
+describe("startOf", () => {
+  it("reads the date and time on the local clock", () => {
+    expect(startOf("2026-10-12", "09:30")).toEqual(new Date(2026, 9, 12, 9, 30));
+  });
+});
+
+describe("slotIsOver", () => {
+  const slot = { time: "09:00", minutes: 15, room: null };
+  const at = (hour: number, minute: number, day = 12) => new Date(2026, 9, day, hour, minute);
+
+  it("keeps a slot bookable until it ends, then not", () => {
+    expect(slotIsOver(slot, "2026-10-12", at(8, 59))).toBe(false);
+    expect(slotIsOver(slot, "2026-10-12", at(9, 10))).toBe(false);
+    expect(slotIsOver(slot, "2026-10-12", at(9, 15))).toBe(true);
+  });
+
+  it("is over on an earlier day, and not yet on a later one", () => {
+    expect(slotIsOver(slot, "2026-10-11", at(8, 0))).toBe(true);
+    expect(slotIsOver(slot, "2026-10-13", at(23, 0))).toBe(false);
   });
 });

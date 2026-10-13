@@ -1,4 +1,5 @@
 import { apiClient, apiErrorMessage } from "@curo/web/api";
+import { startOf } from "@curo/web/schedule";
 import { mapFhirAppointment, type FhirAppointment } from "@/lib/api/mappers";
 import { bookAppointmentSchema, type BookAppointmentInput } from "@/lib/validations/appointment";
 import type { Appointment } from "@/types";
@@ -13,10 +14,8 @@ export async function bookNewAppointment(data: BookAppointmentInput) {
 
   const v = parsed.data;
 
-  // Build ISO datetime strings from date + time
-  const [startHour, startMin] = v.time.split(":").map(Number);
-  const startDt = new Date(v.date);
-  startDt.setHours(startHour, startMin, 0, 0);
+  // The slot is on the desk's clock, which is the clinic's.
+  const startDt = startOf(v.date, v.time);
   const endDt = new Date(startDt.getTime() + v.minutes * 60 * 1000);
 
   const payload = {

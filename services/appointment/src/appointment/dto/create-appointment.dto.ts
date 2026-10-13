@@ -1,21 +1,20 @@
 import {
   IsEnum,
-  IsNotEmpty,
   IsOptional,
   IsString,
   IsBoolean,
   IsDateString,
   IsNumber,
+  IsUUID,
 } from 'class-validator';
 import { VisitType } from '../../enums';
 
 export class CreateAppointmentDto {
-  @IsNotEmpty()
-  @IsString()
+  @IsUUID()
   patientId: string;
 
-  @IsNotEmpty()
-  @IsString()
+  /** The doctor's practitioner id. */
+  @IsUUID()
   practitionerId: string;
 
   @IsDateString()

@@ -4,9 +4,14 @@ import { AuditTrailModule } from '@curo/shared/audit';
 import { AppointmentController } from './appointment.controller';
 import { AppointmentService } from './appointment.service';
 import { Appointment } from '../entities/appointment.entity';
+import { ScheduleModule } from '../schedule/schedule.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Appointment]), AuditTrailModule],
+  imports: [
+    TypeOrmModule.forFeature([Appointment]),
+    AuditTrailModule,
+    ScheduleModule,
+  ],
   controllers: [AppointmentController],
   providers: [AppointmentService],
 })

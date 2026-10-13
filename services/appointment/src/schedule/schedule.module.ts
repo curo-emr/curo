@@ -9,5 +9,6 @@ import { ScheduleService } from './schedule.service';
   imports: [TypeOrmModule.forFeature([DoctorSession]), AuditTrailModule],
   controllers: [ScheduleController],
   providers: [ScheduleService],
+  exports: [ScheduleService],
 })
 export class ScheduleModule {}
