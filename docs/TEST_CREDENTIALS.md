@@ -23,7 +23,7 @@ All logins go through the gateway: `POST http://localhost:3000/auth/login` with
 
 | Role | Email | Password | Name / detail |
 |---|---|---|---|
-| SUPER_ADMIN | `admin@curo.test` | `Admin@12345` | System administrator |
+| SUPER_ADMIN | `admin@curo.test` | `Admin@12345` | Sanduni Karunaratne — system administrator |
 | DOCTOR | `dr.priya@curo.test` | `Doctor@123` | Priya Rajapaksa — General Medicine (SLMC-001) |
 | DOCTOR | `dr.ashan@curo.test` | `Doctor@123` | Ashan Fernando — Cardiology (SLMC-002) |
 | DOCTOR | `dr.nimal@curo.test` | `Doctor@123` | Nimal Perera — Pediatrics (SLMC-003) |

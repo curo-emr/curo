@@ -83,15 +83,44 @@ interface StaffSeed {
   licenseNumber?: string;
 }
 
-/** Inserts a practitioner and its login account, linked both ways. */
+// Named like the rest of the staff: the admin portal and the audit log show
+// who did what by their practitioner record's name.
+const SUPER_ADMIN: StaffSeed = {
+  firstName: 'Sanduni',
+  lastName: 'Karunaratne',
+  email: 'admin@curo.test',
+  role: UserRole.SUPER_ADMIN,
+  password: 'Admin@12345',
+  organizationId: null,
+};
+
+/** Inserts a login account and its practitioner, linked both ways. */
 async function insertStaff(
   db: DataSource,
   s: StaffSeed,
 ): Promise<{ practitionerId: string; userId: string }> {
+  const [user] = await db.query<IdRow[]>(
+    `
+    INSERT INTO users (id, email, "passwordHash", role, "isActive")
+    VALUES (gen_random_uuid(), $1, $2, $3, true)
+    RETURNING id
+  `,
+    [s.email, HASH(s.password), s.role],
+  );
+  const practitionerId = await addPractitioner(db, user.id, s);
+  return { practitionerId, userId: user.id };
+}
+
+/** Gives the account `userId` its practitioner record, linked both ways. */
+async function addPractitioner(
+  db: DataSource,
+  userId: string,
+  s: Omit<StaffSeed, 'password'>,
+): Promise<string> {
   const [prac] = await db.query<IdRow[]>(
     `
-    INSERT INTO practitioners (id, "firstName", "lastName", email, gender, role, specialization, qualification, "licenseNumber", "organizationId", active)
-    VALUES (gen_random_uuid(), $1, $2, $3, 'unknown', $4, $5, $6, $7, $8, true)
+    INSERT INTO practitioners (id, "firstName", "lastName", email, gender, role, specialization, qualification, "licenseNumber", "organizationId", "userId", active)
+    VALUES (gen_random_uuid(), $1, $2, $3, 'unknown', $4, $5, $6, $7, $8, $9, true)
     RETURNING id
   `,
     [
@@ -103,21 +132,14 @@ async function insertStaff(
       s.qualification ?? null,
       s.licenseNumber ?? null,
       s.organizationId,
+      userId,
     ],
   );
-  const [user] = await db.query<IdRow[]>(
-    `
-    INSERT INTO users (id, email, "passwordHash", role, "practitionerId", "isActive")
-    VALUES (gen_random_uuid(), $1, $2, $3, $4, true)
-    RETURNING id
-  `,
-    [s.email, HASH(s.password), s.role, prac.id],
-  );
-  await db.query(`UPDATE practitioners SET "userId" = $1 WHERE id = $2`, [
-    user.id,
+  await db.query(`UPDATE users SET "practitionerId" = $1 WHERE id = $2`, [
     prac.id,
+    userId,
   ]);
-  return { practitionerId: prac.id, userId: user.id };
+  return prac.id;
 }
 
 /** Adds a staff member to the first clinic unless their email is taken. */
@@ -138,6 +160,16 @@ async function ensureStaffUser(
 }
 
 async function topUps(db: DataSource) {
+  // ---- THE SUPER ADMIN'S NAME ----
+  // Databases seeded before the admin had a practitioner record have none,
+  // so the portal and the audit log could show only their email.
+  const [unnamedAdmin] = await db.query<IdRow[]>(
+    `SELECT id FROM users WHERE email = $1 AND "practitionerId" IS NULL`,
+    [SUPER_ADMIN.email],
+  );
+  if (unnamedAdmin) await addPractitioner(db, unnamedAdmin.id, SUPER_ADMIN);
+  console.log(`✅ super admin named (${unnamedAdmin ? 1 : 0} new)`);
+
   // ---- NURSES (Nursing Officers — pre-visit triage) ----
   const nurses = [
     { firstName: 'Nimasha', lastName: 'Herath', email: 'nimasha@curo.test' },
@@ -239,7 +271,8 @@ async function seed() {
 
   // ---- SUPER ADMIN ----
   const existingAdmin = await db.query<IdRow[]>(
-    `SELECT id FROM users WHERE email = 'admin@curo.test' LIMIT 1`,
+    `SELECT id FROM users WHERE email = $1 LIMIT 1`,
+    [SUPER_ADMIN.email],
   );
   if (existingAdmin.length > 0) {
     console.log('⚠️  Data already seeded — applying idempotent top-ups only.');
@@ -301,13 +334,7 @@ async function seed() {
   console.log('✅ organizations created (1 clinic, 2 pharmacies, 2 labs)');
 
   // ---- SUPER ADMIN USER ----
-  await db.query(
-    `
-    INSERT INTO users (id, email, "passwordHash", role, "isActive")
-    VALUES (gen_random_uuid(), 'admin@curo.test', $1, 'SUPER_ADMIN', true)
-  `,
-    [HASH('Admin@12345')],
-  );
+  await insertStaff(db, SUPER_ADMIN);
   console.log('✅ Super admin created — admin@curo.test / Admin@12345');
 
   // ---- DOCTORS ----
