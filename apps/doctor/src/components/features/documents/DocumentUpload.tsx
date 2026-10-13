@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { apiErrorMessage } from "@curo/web/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Upload, Loader2 } from "lucide-react";
 import { Button } from "@curo/web/ui/button";
@@ -60,7 +61,7 @@ export function DocumentUpload({ patientId, encounterId }: Props) {
       void queryClient.invalidateQueries({ queryKey: patientQueries.documents(patientId).queryKey });
     } catch (err) {
       console.error(err);
-      toast.error("Upload failed. Please try again.");
+      toast.error(apiErrorMessage(err, "Upload failed. Please try again."));
     } finally {
       setIsUploading(false);
     }

@@ -3,6 +3,7 @@ import { Readable } from 'node:stream';
 import { UserRole } from '@curo/shared/enums';
 import {
   auditOf,
+  registerPatient,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -55,8 +56,15 @@ describe('Patient documents', () => {
 
   afterAll(() => svc.close());
 
-  /** A patient's sign-in, for a patient of their own. */
-  const patientActor = () => svc.as(UserRole.PATIENT);
+  /** A patient on file, with no sign-in; returns their id. */
+  const newPatient = () => registerPatient(svc.db);
+
+  /** A patient's sign-in, for a patient of their own on file. */
+  async function patientActor(): Promise<TestActor> {
+    const patient = await svc.as(UserRole.PATIENT);
+    await registerPatient(svc.db, patient.patientId!);
+    return patient;
+  }
 
   /** A technician working at `labId`. */
   const technicianAt = (labId: string) =>
@@ -95,7 +103,8 @@ describe('Patient documents', () => {
   }
 
   /** A lab order sent to `labId`, as the clinical service keeps them. */
-  async function labOrder(labId: string, patientId = randomUUID()) {
+  async function labOrder(labId: string, patientId?: string) {
+    patientId ??= await newPatient();
     const encounterId = randomUUID();
     const [{ id }] = await svc.db.query<{ id: string }[]>(
       `INSERT INTO service_requests
@@ -130,7 +139,7 @@ describe('Patient documents', () => {
 
   describe('POST /documents', () => {
     it('stores the file under the patient and records who added it', async () => {
-      const patientId = randomUUID();
+      const patientId = await newPatient();
 
       const res = await upload(patientId).expect(201);
 
@@ -155,7 +164,7 @@ describe('Patient documents', () => {
     });
 
     it('refuses file types other than PDF, JPEG and PNG, storing nothing', async () => {
-      const patientId = randomUUID();
+      const patientId = await newPatient();
       const stored = storage.objects.size;
 
       await upload(
@@ -173,8 +182,41 @@ describe('Patient documents', () => {
       await expect(documentsOf(patientId)).resolves.toEqual([]);
     });
 
-    it('is refused to patients, nurses and pharmacists', async () => {
+    it("refuses a file whose contents aren't the type it was sent as", async () => {
+      const patientId = await newPatient();
+      const stored = storage.objects.size;
+      const program = Buffer.from('MZ\x90\x00 not really a program');
+      const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+      for (const [body, type] of [
+        [program, 'application/pdf'],
+        [png, 'application/pdf'],
+        [PDF, 'image/png'],
+        [Buffer.alloc(0), 'image/jpeg'],
+      ] as const)
+        await upload(
+          patientId,
+          doctor,
+          {},
+          { body, name: 'scan', type },
+        ).expect(400);
+
+      expect(storage.objects.size).toBe(stored);
+      await expect(documentsOf(patientId)).resolves.toEqual([]);
+    });
+
+    it('refuses a patient who is not on file, storing nothing', async () => {
       const patientId = randomUUID();
+      const stored = storage.objects.size;
+
+      await upload(patientId).expect(400);
+
+      expect(storage.objects.size).toBe(stored);
+      await expect(documentsOf(patientId)).resolves.toEqual([]);
+    });
+
+    it('is refused to patients, nurses and pharmacists', async () => {
+      const patientId = await newPatient();
 
       for (const actor of [
         await patientActor(),
@@ -213,7 +255,7 @@ describe('Patient documents', () => {
     });
 
     it("hides another patient's document, without auditing a read", async () => {
-      const id = await uploaded(randomUUID());
+      const id = await uploaded(await newPatient());
 
       await svc.api
         .get(`/documents/${id}/content`)
@@ -225,7 +267,7 @@ describe('Patient documents', () => {
     });
 
     it('lets doctors and the admin open any document', async () => {
-      const id = await uploaded(randomUUID());
+      const id = await uploaded(await newPatient());
 
       for (const role of [UserRole.DOCTOR, UserRole.SUPER_ADMIN])
         await svc.api
@@ -237,10 +279,10 @@ describe('Patient documents', () => {
 
   describe('GET /documents', () => {
     it("lists a patient's documents, newest first", async () => {
-      const patientId = randomUUID();
+      const patientId = await newPatient();
       const first = await uploaded(patientId);
       const second = await uploaded(patientId, doctor, { type: 'consent' });
-      await uploaded(randomUUID());
+      await uploaded(await newPatient());
 
       const res = await list({ patientId }, doctor).expect(200);
 
@@ -298,7 +340,9 @@ describe('Patient documents', () => {
         ...forOrder(order.id),
         type: 'referral-letter',
       }).expect(400);
-      await upload(randomUUID(), technician, forOrder(order.id)).expect(400);
+      await upload(await newPatient(), technician, forOrder(order.id)).expect(
+        400,
+      );
 
       expect(storage.objects.size).toBe(stored);
       await expect(documentsOf(order.patientId)).resolves.toEqual([]);
@@ -306,7 +350,7 @@ describe('Patient documents', () => {
     });
 
     it("see and open only their lab's report files", async () => {
-      const patientId = randomUUID();
+      const patientId = await newPatient();
       const ours = await labOrder(lab, patientId);
       const theirs = await labOrder(otherLab, patientId);
       const ourReport = await reportFor(lab, ours);
@@ -346,7 +390,7 @@ describe('Patient documents', () => {
     it("lists only the signed-in patient's documents", async () => {
       const patient = await patientActor();
       const mine = await uploaded(patient.patientId!);
-      await uploaded(randomUUID());
+      await uploaded(await newPatient());
 
       const res = await svc.api
         .get('/documents/me')
