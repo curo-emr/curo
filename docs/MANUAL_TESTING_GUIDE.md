@@ -125,7 +125,9 @@ diagnostic report is generated.
    ```json
    { "serviceRequestId": "<orderId>", "results": [ { "code": "718-7", "display": "Hemoglobin", "value": 14.2, "unit": "g/dL", "referenceRangeLow": "13", "referenceRangeHigh": "17", "interpretation": "N" } ], "conclusion": "Within normal limits" }
    ```
-   → order flips to **COMPLETED**, a `DiagnosticReport` (PDF) is created.
+   → order flips to **COMPLETED**, a `DiagnosticReport` (PDF) is created. In place of `results`
+   (or alongside them) the lab can send `"resultsText"`: a pasted printout, up to 20,000
+   characters, kept as pasted and returned as the report's `text/plain` `presentedForm`.
 
 **✅ Verify:** `GET /reports?patientId={patientId}` returns the finished report; `GET /orders/{orderId}` shows status completed.
 

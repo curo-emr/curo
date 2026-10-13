@@ -169,9 +169,14 @@ export interface LabResult {
   performedAt: string;
   reportedAt?: string;
   results: LabResultValue[];
+  /** The results as the lab pasted them. */
+  resultsText?: string;
   conclusion?: string;
   status: string;
 }
+
+/** The longest results text the lab service accepts. */
+export const RESULTS_TEXT_MAX_LENGTH = 20_000;
 
 /** One test's result as the technician typed it. */
 export interface ResultEntry {
@@ -197,15 +202,20 @@ function toResultItem(entry: ResultEntry) {
   };
 }
 
-/** Files the order's results (typed, or none when a report file was uploaded) and completes it; the ordering doctor is notified. */
+/**
+ * Files the order's results (typed values, pasted text, or neither when a report file was uploaded)
+ * and completes it; the ordering doctor is notified. The service tidies the text.
+ */
 export async function enterResults(data: {
   orderId: string;
   results: ResultEntry[];
+  resultsText?: string;
   conclusion?: string;
 }): Promise<LabResult> {
   const res = await apiClient.post<FhirDiagnosticReport>('/results', {
     serviceRequestId: data.orderId,
     results: data.results.map(toResultItem),
+    resultsText: data.resultsText?.trim() ? data.resultsText : undefined,
     conclusion: data.conclusion?.trim() || undefined,
   });
   return mapFhirDiagnosticReport(res.data);

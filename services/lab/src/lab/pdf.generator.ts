@@ -8,6 +8,7 @@ interface ReportData {
   birthDate: string;
   testName: string;
   results: LabResultItem[];
+  resultsText?: string;
   conclusion?: string;
   labStaffName: string;
   clinicName: string;
@@ -59,61 +60,14 @@ export async function generateLabReportPdf(data: ReportData): Promise<string> {
       .text(data.testName);
     doc.moveDown();
 
-    // Results table header
     doc.font('Helvetica-Bold').text('Results:', { underline: true });
     doc.moveDown(0.3);
-
-    const tableTop = doc.y;
-    const col1 = 50,
-      col2 = 200,
-      col3 = 280,
-      col4 = 360,
-      col5 = 440;
-    const rowHeight = 20;
-
-    doc.font('Helvetica-Bold').fontSize(10);
-    doc.text('Test', col1, tableTop);
-    doc.text('Result', col2, tableTop);
-    doc.text('Unit', col3, tableTop);
-    doc.text('Ref Range', col4, tableTop);
-    doc.text('Flag', col5, tableTop);
-    doc
-      .moveTo(50, tableTop + rowHeight - 2)
-      .lineTo(550, tableTop + rowHeight - 2)
-      .stroke();
-
-    doc.font('Helvetica').fontSize(10);
-    let y = tableTop + rowHeight;
-
-    for (const r of data.results) {
-      const resultText = r.value != null ? `${r.value}` : r.valueString || '--';
-      const refRange =
-        r.referenceRangeText ||
-        (r.referenceRangeLow && r.referenceRangeHigh
-          ? `${r.referenceRangeLow} - ${r.referenceRangeHigh}`
-          : '--');
-      const flag = r.interpretation || '';
-
-      if (flag === 'H' || flag === 'HH') {
-        doc.fillColor('red');
-      } else if (flag === 'L' || flag === 'LL') {
-        doc.fillColor('blue');
-      } else {
-        doc.fillColor('black');
-      }
-
-      doc.text(r.display, col1, y, { width: 140 });
-      doc.text(resultText, col2, y, { width: 70 });
-      doc.text(r.unit || '--', col3, y, { width: 70 });
-      doc.text(refRange, col4, y, { width: 70 });
-      doc.text(flag, col5, y, { width: 50 });
-      doc.fillColor('black');
-      y += rowHeight;
+    if (data.results.length) drawResultsTable(doc, data.results);
+    if (data.resultsText) {
+      // As pasted, in a fixed-width font so a printout's columns line up.
+      doc.font('Courier').fontSize(9).text(data.resultsText);
+      doc.font('Helvetica').fontSize(10).moveDown();
     }
-
-    // Back to the left margin: the rows left the cursor in the last column.
-    doc.x = doc.page.margins.left;
-    doc.y = y + 10;
 
     if (data.conclusion) {
       doc.font('Helvetica-Bold').text('Conclusion / Interpretation:');
@@ -137,4 +91,59 @@ export async function generateLabReportPdf(data: ReportData): Promise<string> {
 
     doc.end();
   });
+}
+
+/** The typed values as a table, red when high and blue when low. */
+function drawResultsTable(doc: PDFKit.PDFDocument, results: LabResultItem[]) {
+  const tableTop = doc.y;
+  const col1 = 50,
+    col2 = 200,
+    col3 = 280,
+    col4 = 360,
+    col5 = 440;
+  const rowHeight = 20;
+
+  doc.font('Helvetica-Bold').fontSize(10);
+  doc.text('Test', col1, tableTop);
+  doc.text('Result', col2, tableTop);
+  doc.text('Unit', col3, tableTop);
+  doc.text('Ref Range', col4, tableTop);
+  doc.text('Flag', col5, tableTop);
+  doc
+    .moveTo(50, tableTop + rowHeight - 2)
+    .lineTo(550, tableTop + rowHeight - 2)
+    .stroke();
+
+  doc.font('Helvetica').fontSize(10);
+  let y = tableTop + rowHeight;
+
+  for (const r of results) {
+    const resultText = r.value != null ? `${r.value}` : r.valueString || '--';
+    const refRange =
+      r.referenceRangeText ||
+      (r.referenceRangeLow && r.referenceRangeHigh
+        ? `${r.referenceRangeLow} - ${r.referenceRangeHigh}`
+        : '--');
+    const flag = r.interpretation || '';
+
+    if (flag === 'H' || flag === 'HH') {
+      doc.fillColor('red');
+    } else if (flag === 'L' || flag === 'LL') {
+      doc.fillColor('blue');
+    } else {
+      doc.fillColor('black');
+    }
+
+    doc.text(r.display, col1, y, { width: 140 });
+    doc.text(resultText, col2, y, { width: 70 });
+    doc.text(r.unit || '--', col3, y, { width: 70 });
+    doc.text(refRange, col4, y, { width: 70 });
+    doc.text(flag, col5, y, { width: 50 });
+    doc.fillColor('black');
+    y += rowHeight;
+  }
+
+  // Back to the left margin: the rows left the cursor in the last column.
+  doc.x = doc.page.margins.left;
+  doc.y = y + 10;
 }

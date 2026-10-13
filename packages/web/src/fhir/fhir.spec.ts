@@ -233,4 +233,14 @@ describe("mapFhirReport", () => {
     expect(ldl.referenceRange).toBe("≤ 100");
     expect(crp.referenceRange).toBeUndefined();
   });
+  it("reads the results pasted as text as UTF-8, and leaves them out when there are none", () => {
+    const text = "WBC  6.2 ×10³/µL\nසාමාන්‍යයි";
+    const data = btoa(String.fromCharCode(...new TextEncoder().encode(text)));
+    const mapped = mapFhirReport({
+      ...report([]),
+      presentedForm: [{ contentType: "text/plain; charset=utf-8", data }],
+    });
+    expect(mapped).toMatchObject({ resultsText: text, pdfBase64: undefined });
+    expect(mapFhirReport(report([])).resultsText).toBeUndefined();
+  });
 });

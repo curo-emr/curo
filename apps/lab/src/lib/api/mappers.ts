@@ -1,7 +1,7 @@
 import type { LabOrder } from '@/types';
 
 export { mapFhirAllergy, mapFhirPatient, type FhirAllergy, type FhirPatient } from '@curo/web/fhir';
-import { mapLabResult, type FhirLabResult } from '@curo/web/fhir';
+import { mapLabResult, presentedText, type FhirAttachment, type FhirLabResult } from '@curo/web/fhir';
 import type { LabResult } from './lab';
 
 // ─── FHIR raw shapes (subset of what the backend returns) ───────────────────
@@ -36,6 +36,7 @@ export interface FhirDiagnosticReport {
   issued?: string;
   conclusion?: string;
   result?: FhirLabResult[];
+  presentedForm?: FhirAttachment[];
 }
 
 // ─── Mappers ─────────────────────────────────────────────────────────────────
@@ -112,6 +113,7 @@ export function mapFhirDiagnosticReport(fhir: FhirDiagnosticReport): LabResult {
     performedAt: fhir.effectiveDateTime ?? fhir.issued ?? '',
     reportedAt: fhir.issued,
     results: (fhir.result ?? []).map(mapLabResult),
+    resultsText: presentedText(fhir.presentedForm),
     conclusion: fhir.conclusion,
     status: fhir.status ?? '',
   };

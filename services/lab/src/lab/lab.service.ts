@@ -71,10 +71,29 @@ function toFhirReport(r: DiagnosticReport) {
     // Pragmatic FHIR: each result carries its values inline (code, value or
     // valueString, unit, range, interpretation), which the lab portal reads.
     result: r.results ?? [],
-    presentedForm: r.pdfBase64
-      ? [{ contentType: 'application/pdf', data: r.pdfBase64 }]
-      : [],
+    presentedForm: presentedForm(r),
   };
+}
+
+/** A FHIR Attachment carried inline: its bytes as base64 `data`. */
+export interface Attachment {
+  contentType: string;
+  title?: string;
+  data: string;
+}
+
+/** The report as attachments: the generated PDF, and the results as pasted text. */
+function presentedForm(r: DiagnosticReport): Attachment[] {
+  const forms: Attachment[] = [];
+  if (r.pdfBase64)
+    forms.push({ contentType: 'application/pdf', data: r.pdfBase64 });
+  if (r.resultsText)
+    forms.push({
+      contentType: 'text/plain; charset=utf-8',
+      title: 'Results as text',
+      data: Buffer.from(r.resultsText, 'utf8').toString('base64'),
+    });
+  return forms;
 }
 
 /** Filters for `getOrders`; list filters are comma-separated. */
@@ -378,11 +397,12 @@ export class LabService {
   /**
    * Records an order's results and completes it, in one transaction, so they
    * are saved whole or not at all. The results are the values typed in, the
-   * report files uploaded for the order, or both; typed values also get a PDF
-   * report. Until the sample is received, results get a 409. The order is
-   * claimed first: results for an order that is no longer active (already
-   * reported, or revoked) get a 409 too, so a double submit can't file two
-   * reports. The ordering practitioner is notified in the same transaction.
+   * results pasted as text, the report files uploaded for the order, or any
+   * mix; typed values and text also get a PDF report. Until the sample is
+   * received, results get a 409. The order is claimed first: results for an
+   * order that is no longer active (already reported, or revoked) get a 409
+   * too, so a double submit can't file two reports. The ordering practitioner
+   * is notified in the same transaction.
    */
   async enterResults(dto: EnterResultsDto, performer: AuthUser) {
     const order = await this.findOrder(dto.serviceRequestId, performer);
@@ -391,9 +411,14 @@ export class LabService {
         'Receive the sample before entering its results',
       );
     const typed = dto.results ?? [];
-    if (!typed.length && !(await this.hasUploadedReport(order.id)))
+    const { resultsText } = dto;
+    if (
+      !typed.length &&
+      !resultsText &&
+      !(await this.hasUploadedReport(order.id))
+    )
       throw new BadRequestException(
-        'Enter the results, or upload the report, first',
+        'Enter the results, paste them as text, or upload the report, first',
       );
 
     const performerId = actorId(performer);
@@ -412,21 +437,23 @@ export class LabService {
       : `patient ${order.patientId}`;
 
     // Rendered before the transaction opens, so no rows stay locked meanwhile.
-    const pdfBase64 = typed.length
-      ? await generateLabReportPdf({
-          patientName: fullName ?? 'Unknown patient',
-          patientCode: patient?.patientCode ?? order.patientId,
-          birthDate: patient?.birthDate ?? 'Not recorded',
-          testName: order.display,
-          results: typed,
-          conclusion: dto.conclusion,
-          labStaffName: performer.name ?? performer.email,
-          clinicName:
-            (await this.labName(order.performerOrganizationId)) ??
-            'Curo Medical Center',
-          reportDate: now.toLocaleDateString(),
-        })
-      : undefined;
+    const pdfBase64 =
+      typed.length || resultsText
+        ? await generateLabReportPdf({
+            patientName: fullName ?? 'Unknown patient',
+            patientCode: patient?.patientCode ?? order.patientId,
+            birthDate: patient?.birthDate ?? 'Not recorded',
+            testName: order.display,
+            results: typed,
+            resultsText,
+            conclusion: dto.conclusion,
+            labStaffName: performer.name ?? performer.email,
+            clinicName:
+              (await this.labName(order.performerOrganizationId)) ??
+              'Curo Medical Center',
+            reportDate: now.toLocaleDateString(),
+          })
+        : undefined;
 
     const report = await this.dataSource.transaction(async (em) => {
       const { affected } = await em.update(
@@ -465,6 +492,7 @@ export class LabService {
         code: order.code,
         display: order.display,
         results: typed,
+        resultsText: resultsText ?? null,
         conclusion: dto.conclusion,
         pdfBase64,
         effectiveDateTime: now,
