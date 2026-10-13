@@ -147,6 +147,38 @@ describe('POST /encounters/visit', () => {
     });
   });
 
+  it('records a diagnosis in words alone, and tidies a typed code', async () => {
+    const body = visit({
+      diagnoses: [
+        { display: ' Tension headache ', isPrimary: true },
+        { code: '', display: 'Neck strain' },
+        { code: ' r519 ', display: 'Headache' },
+      ],
+    });
+
+    await sign(body).expect(201);
+
+    const saved = await svc.db
+      .getRepository(Condition)
+      .find({ where: { encounterId: body.id }, order: { display: 'ASC' } });
+    expect(saved.map((c) => [c.display, c.code])).toEqual([
+      ['Headache', 'R51.9'],
+      ['Neck strain', null],
+      ['Tension headache', null],
+    ]);
+  });
+
+  it('saves nothing when a diagnosis has no words, or a code that is not ICD-10', async () => {
+    for (const diagnosis of [
+      { code: 'R51.9', display: ' ' },
+      { code: 'headache', display: 'Headache' },
+    ]) {
+      const body = visit({ diagnoses: [diagnosis] });
+      await sign(body).expect(400);
+      expect(await recordsOf(body.id)).toEqual(NOTHING);
+    }
+  });
+
   it('gives each lab order its QR label', async () => {
     const body = visit();
 

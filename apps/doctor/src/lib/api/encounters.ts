@@ -22,7 +22,7 @@ export interface VisitPayload {
   reasonCode: string;
   note: { subjective?: string; objective?: string; assessment?: string; plan?: string; additionalNotes?: string };
   vitals: { code: string; display: string; valueQuantity: number; valueUnit: string }[];
-  diagnoses: { code: string; display: string; isPrimary: boolean }[];
+  diagnoses: { code?: string; display: string; isPrimary: boolean }[];
   prescriptions: {
     performerOrganizationId?: string;
     medicationCode: string; // a catalog drug; the backend names it as the catalog does

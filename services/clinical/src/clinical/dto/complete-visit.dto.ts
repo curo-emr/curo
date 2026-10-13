@@ -3,12 +3,11 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
-  IsNotEmpty,
   IsOptional,
-  IsString,
   IsUUID,
   ValidateNested,
 } from 'class-validator';
+import { DiagnosisDto } from '@curo/shared/dto';
 import { CreateEncounterDto } from './create-encounter.dto';
 import { CreateLabOrderDto } from './create-lab-order.dto';
 import { CreateNoteDto } from './create-note.dto';
@@ -39,15 +38,7 @@ export class VisitLabOrderDto extends OmitType(CreateLabOrderDto, [
   'encounterId',
 ]) {}
 
-export class VisitDiagnosisDto {
-  @IsNotEmpty()
-  @IsString()
-  code: string; // ICD-10
-
-  @IsNotEmpty()
-  @IsString()
-  display: string;
-
+export class VisitDiagnosisDto extends DiagnosisDto {
   @IsOptional()
   @IsBoolean()
   isPrimary?: boolean;

@@ -1,6 +1,6 @@
 import type { Diagnosis, PrescriptionItem, SOAP, Vitals } from "@/types";
 import { completeVisit } from "@/lib/api/encounters";
-import { VITAL_FIELDS } from "@curo/web/clinical";
+import { tidyIcd10Code, VITAL_FIELDS } from "@curo/web/clinical";
 import { updateAppointment } from "@/lib/api/appointments";
 import { changedVitalKeys } from "@/lib/utils";
 
@@ -75,7 +75,7 @@ export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ 
       valueQuantity: visit.vitals[f.key] as number,
       valueUnit: f.ucum,
     })),
-    diagnoses: visit.diagnoses.map(d => ({ code: d.icdCode, display: d.name, isPrimary: d.isPrimary })),
+    diagnoses: visit.diagnoses.map(d => ({ code: tidyIcd10Code(d.icdCode) || undefined, display: d.name, isPrimary: d.isPrimary })),
     prescriptions: visit.prescriptions.map(rx => ({
       performerOrganizationId: visit.pharmacyId,
       medicationCode: rx.medicationId,
