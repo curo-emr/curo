@@ -3,6 +3,7 @@ import { MedicationRequest, Notification } from '@curo/shared/database';
 import { MedicationRequestStatus, UserRole } from '@curo/shared/enums';
 import {
   auditOf,
+  registerPatient,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -49,9 +50,10 @@ describe('prescription holds', () => {
     status = MedicationRequestStatus.ACTIVE,
     practitionerId: string = randomUUID(),
     sentTo: string | null = pharmacy,
+    patientId: string = randomUUID(),
   ) =>
     svc.db.getRepository(MedicationRequest).save({
-      patientId: randomUUID(),
+      patientId,
       practitionerId,
       performerOrganizationId: sentTo,
       status,
@@ -90,7 +92,36 @@ describe('prescription holds', () => {
     expect(await listed('/prescriptions/pending')).not.toContain(rx.id);
   });
 
-  it('tells the doctor who wrote it', async () => {
+  /** What the doctor who wrote `rx` was told when it was held. */
+  const noticesOf = (doctor: { userId: string }, rx: MedicationRequest) =>
+    svc.db.getRepository(Notification).findBy({
+      recipientId: doctor.userId,
+      relatedResourceId: rx.id,
+    });
+
+  it('tells the doctor who wrote it, naming the patient', async () => {
+    const doctor = await doctorAccount();
+    const patientId = await registerPatient(svc.db);
+    const rx = await prescription(
+      MedicationRequestStatus.ACTIVE,
+      doctor.practitionerId,
+      pharmacy,
+      patientId,
+    );
+
+    await hold(rx).expect(200);
+
+    await expect(noticesOf(doctor, rx)).resolves.toEqual([
+      expect.objectContaining({
+        title: 'Prescription on hold',
+        message:
+          `The pharmacy put Amlodipine 5mg Tablet for Test Patient (TEST-${patientId}) ` +
+          'on hold: Out of stock until Friday',
+      }),
+    ]);
+  });
+
+  it('still tells the doctor when the patient is not on file', async () => {
     const doctor = await doctorAccount();
     const rx = await prescription(
       MedicationRequestStatus.ACTIVE,
@@ -99,16 +130,11 @@ describe('prescription holds', () => {
 
     await hold(rx).expect(200);
 
-    await expect(
-      svc.db.getRepository(Notification).findBy({
-        recipientId: doctor.userId,
-        relatedResourceId: rx.id,
-      }),
-    ).resolves.toEqual([
+    await expect(noticesOf(doctor, rx)).resolves.toEqual([
       expect.objectContaining({
-        title: 'Prescription on hold',
         message:
-          'The pharmacy put Amlodipine 5mg Tablet on hold: Out of stock until Friday',
+          `The pharmacy put Amlodipine 5mg Tablet for patient ${rx.patientId} ` +
+          'on hold: Out of stock until Friday',
       }),
     ]);
   });

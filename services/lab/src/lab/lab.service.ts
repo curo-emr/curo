@@ -10,8 +10,9 @@ import { Brackets, DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import {
   ServiceRequest,
   Observation,
-  Patient,
   QrCode,
+  findPatientIdentity,
+  patientLabel,
 } from '@curo/shared/database';
 import {
   ServiceRequestStatus,
@@ -125,8 +126,6 @@ export class LabService {
     private reportsRepo: Repository<DiagnosticReport>,
     @InjectRepository(QrCode)
     private qrRepo: Repository<QrCode>,
-    @InjectRepository(Patient)
-    private patientsRepo: Repository<Patient>,
     @InjectRepository(LabInstrument)
     private instrumentsRepo: Repository<LabInstrument>,
     @InjectRepository(LabTestCatalog)
@@ -423,24 +422,13 @@ export class LabService {
 
     const performerId = actorId(performer);
     const now = new Date();
-    // Compared as text: an order's patientId is not validated as a uuid.
-    const patient = await this.patientsRepo
-      .createQueryBuilder('p')
-      .select(['p.firstName', 'p.lastName', 'p.patientCode', 'p.birthDate'])
-      .where('p.id::text = :id', { id: order.patientId })
-      .getOne();
-    const fullName = patient
-      ? `${patient.firstName} ${patient.lastName}`
-      : null;
-    const patientLabel = patient
-      ? `${fullName} (${patient.patientCode})`
-      : `patient ${order.patientId}`;
+    const patient = await findPatientIdentity(this.dataSource, order.patientId);
 
     // Rendered before the transaction opens, so no rows stay locked meanwhile.
     const pdfBase64 =
       typed.length || resultsText
         ? await generateLabReportPdf({
-            patientName: fullName ?? 'Unknown patient',
+            patientName: patient?.name ?? 'Unknown patient',
             patientCode: patient?.patientCode ?? order.patientId,
             birthDate: patient?.birthDate ?? 'Not recorded',
             testName: order.display,
@@ -518,7 +506,7 @@ export class LabService {
       await notifyPractitioner(em, order.requesterId, {
         eventType: NotificationEventType.LAB_RESULTS_READY,
         title: 'Lab results ready',
-        message: `${order.display} results for ${patientLabel} are ready to review.`,
+        message: `${order.display} results for ${patientLabel(patient, order.patientId)} are ready to review.`,
         relatedResourceType: 'DiagnosticReport',
         relatedResourceId: report.id,
       });

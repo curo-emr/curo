@@ -3,12 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditTrailModule } from '@curo/shared/audit';
 import { LabController } from './lab.controller';
 import { LabService } from './lab.service';
-import {
-  ServiceRequest,
-  Observation,
-  Patient,
-  QrCode,
-} from '@curo/shared/database';
+import { ServiceRequest, Observation, QrCode } from '@curo/shared/database';
 import { DiagnosticReport } from '../entities/diagnostic-report.entity';
 import { LabInstrument } from '../entities/lab-instrument.entity';
 import { LabTestCatalog } from '../entities/lab-test-catalog.entity';
@@ -20,7 +15,6 @@ import { QCLog } from '../entities/qc-log.entity';
       ServiceRequest,
       DiagnosticReport,
       Observation,
-      Patient,
       QrCode,
       LabInstrument,
       LabTestCatalog,
