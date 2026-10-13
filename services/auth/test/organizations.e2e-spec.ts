@@ -73,16 +73,41 @@ describe('Organizations', () => {
       expect(await listed({ includeInactive: 'true' })).toContain(pharmacy.id);
     });
 
-    it('keeps the type it was created with', async () => {
+    it('refuses to change the type it was created with', async () => {
       const pharmacy = await create(OrganizationType.PHARMACY);
 
-      await update(pharmacy.id, { name: 'Renamed', type: 'laboratory' }).expect(
-        200,
-      );
+      for (const type of ['laboratory', 'pharmacy', null]) {
+        const res = await update(pharmacy.id, { name: 'Renamed', type }).expect(
+          400,
+        );
+        expect((res.body as { message: string[] }).message).toContain(
+          "An organization's type can't be changed once it is created",
+        );
+      }
 
       await expect(
         svc.db.getRepository(Organization).findOneBy({ id: pharmacy.id }),
-      ).resolves.toMatchObject({ name: 'Renamed', type: 'pharmacy' });
+      ).resolves.toMatchObject({ name: pharmacy.name, type: 'pharmacy' });
+    });
+
+    it('changes only the fields sent, and audits just those', async () => {
+      const pharmacy = await create(OrganizationType.PHARMACY);
+
+      const res = await update(pharmacy.id, { city: 'Galle' }).expect(200);
+
+      expect(res.body).toMatchObject({
+        name: pharmacy.name,
+        type: 'pharmacy',
+        city: 'Galle',
+        active: true,
+      });
+      const log = await svc.db
+        .getRepository(AuditLog)
+        .findOneBy({ resourceId: pharmacy.id, action: 'UPDATE' });
+      expect(log?.changes).toEqual({
+        before: { city: 'Kandy' },
+        after: { city: 'Galle' },
+      });
     });
 
     it('refuses an unknown type', async () => {
