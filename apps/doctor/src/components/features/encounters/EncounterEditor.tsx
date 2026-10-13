@@ -19,7 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/lib/constants";
 import { formatRelative } from "@curo/web/format";
 import { formatAgeSex } from "@/lib/utils";
-import { adultRangesApply, isBlankOrIcd10Code } from "@curo/web/clinical";
+import { adultRangesApply, implausibleVitals, implausibleVitalsMessage, isBlankOrIcd10Code } from "@curo/web/clinical";
 import { readDraft, removeDraft, visitDraftKey, writeDraft } from "@/lib/visit";
 import { getVitalsByAppointment } from "@/lib/api/clinical";
 import { updateQueueStage } from "@/lib/api/appointments";
@@ -144,6 +144,12 @@ export function EncounterEditor({
       ccRef.current?.focus({ preventScroll: true });
       ccRef.current?.scrollIntoView({ block: "start" });
       toast.error("Add the chief complaint before signing");
+      return;
+    }
+    const implausible = implausibleVitals(visit.vitals);
+    if (implausible.length > 0) {
+      document.getElementById("vitals")?.scrollIntoView({ block: "start" });
+      toast.error(implausibleVitalsMessage(implausible));
       return;
     }
     if (!visit.diagnoses.every(d => isBlankOrIcd10Code(d.icdCode))) {

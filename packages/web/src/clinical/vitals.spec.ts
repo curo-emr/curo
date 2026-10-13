@@ -1,4 +1,6 @@
-import { VITAL_FIELD, adultRangesApply, assessVital, collapseVitals, isPlausible, worstLevel } from "./index";
+import {
+  VITAL_FIELD, adultRangesApply, assessVital, collapseVitals, implausibleVitals, implausibleVitalsMessage, isPlausible, worstLevel,
+} from "./index";
 
 describe("assessVital", () => {
   it("is normal inside the reference band, edges included", () => {
@@ -32,6 +34,29 @@ describe("isPlausible", () => {
   it("rejects typos far outside what a body can read", () => {
     expect(isPlausible(VITAL_FIELD.temperatureC, 37)).toBe(true);
     expect(isPlausible(VITAL_FIELD.temperatureC, 370)).toBe(false);
+  });
+});
+
+describe("implausibleVitals", () => {
+  it("lists the readings no body could have, leaving out plausible and missing ones", () => {
+    expect(implausibleVitals({ temperatureC: 370, pulseBpm: 72, spo2Percent: 101 })).toEqual([
+      VITAL_FIELD.spo2Percent,
+      VITAL_FIELD.temperatureC,
+    ]);
+    expect(implausibleVitals({ pulseBpm: 72 })).toEqual([]);
+    expect(implausibleVitals({})).toEqual([]);
+  });
+
+  it("counts a reading that isn't a number as implausible", () => {
+    expect(implausibleVitals({ weightKg: Number.NaN })).toEqual([VITAL_FIELD.weightKg]);
+  });
+});
+
+describe("implausibleVitalsMessage", () => {
+  it("gives the range of each implausible reading", () => {
+    expect(implausibleVitalsMessage([VITAL_FIELD.temperatureC, VITAL_FIELD.pulseBpm])).toBe(
+      "Temperature should be between 30 and 45 °C. Pulse should be between 20 and 250 bpm. Check the reading.",
+    );
   });
 });
 
