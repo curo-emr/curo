@@ -37,6 +37,11 @@ export function MedicineCard({ medicine }: { medicine: Medicine }) {
           The pharmacy is holding this{medicine.holdReason ? `: ${medicine.holdReason}` : "."} Ask them, or your doctor, what happens next.
         </p>
       )}
+      {medicine.status === "buy_outside" && (
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Store className="size-4" /> Buy this at a pharmacy of your choice.
+        </p>
+      )}
       {waiting && pharmacy && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
           <span className="flex items-center gap-1.5"><Store className="size-4" /> {pharmacy.name.full}</span>

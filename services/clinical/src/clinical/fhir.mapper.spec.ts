@@ -39,6 +39,28 @@ describe('toFhirEncounter', () => {
 });
 
 describe('toFhirMedRequest', () => {
+  it('marks one bought outside, which names no pharmacy and may have no catalog code', () => {
+    const fhir = toFhirMedRequest(
+      Object.assign(new MedicationRequest(), {
+        id: 'rx-2',
+        patientId: 'patient-1',
+        practitionerId: 'doctor-1',
+        boughtOutside: true,
+        performerOrganizationId: null,
+        medicationCode: null,
+        medicationDisplay: 'Rosuvastatin 10mg',
+      }),
+    );
+
+    expect(fhir.extension).toEqual([
+      { url: 'urn:curo:boughtOutside', valueBoolean: true },
+    ]);
+    expect(fhir.dispenseRequest.performer).toBeUndefined();
+    expect(fhir.medicationCodeableConcept.coding).toEqual([
+      { code: undefined, display: 'Rosuvastatin 10mg' },
+    ]);
+  });
+
   it('carries the dose, frequency, quantity and supply duration', () => {
     const fhir = toFhirMedRequest(
       Object.assign(new MedicationRequest(), {

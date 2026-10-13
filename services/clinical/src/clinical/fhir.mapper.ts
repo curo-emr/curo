@@ -31,7 +31,9 @@ export function toFhirMedRequest(m: MedicationRequest) {
     statusReason: m.statusReason ? { text: m.statusReason } : undefined,
     intent: m.intent || 'order',
     medicationCodeableConcept: {
-      coding: [{ code: m.medicationCode, display: m.medicationDisplay }],
+      coding: [
+        { code: m.medicationCode ?? undefined, display: m.medicationDisplay },
+      ],
     },
     subject: { reference: `Patient/${m.patientId}` },
     requester: { reference: `Practitioner/${m.practitionerId}` },
@@ -59,6 +61,10 @@ export function toFhirMedRequest(m: MedicationRequest) {
         : undefined,
     },
     note: m.note ? [{ text: m.note }] : undefined,
+    // Bought at a pharmacy of the patient's choice: dispenseRequest names none.
+    extension: m.boughtOutside
+      ? [{ url: 'urn:curo:boughtOutside', valueBoolean: true }]
+      : undefined,
   };
 }
 

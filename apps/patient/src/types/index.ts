@@ -48,7 +48,8 @@ export interface Visit {
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 }
 
-export type MedicineStatus = 'to_collect' | 'on_hold' | 'collected' | 'stopped';
+/** `buy_outside`: the patient buys it at a pharmacy of their choice, not one of the clinic's. */
+export type MedicineStatus = 'to_collect' | 'on_hold' | 'collected' | 'stopped' | 'buy_outside';
 
 /** One medicine on a prescription. */
 export interface Medicine {

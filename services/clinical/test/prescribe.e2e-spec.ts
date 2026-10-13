@@ -57,6 +57,71 @@ describe('POST /prescriptions', () => {
     });
   });
 
+  describe('bought outside', () => {
+    const outside = (overrides: object) =>
+      prescribe({
+        boughtOutside: true,
+        performerOrganizationId: undefined,
+        ...overrides,
+      });
+
+    const saved = async (res: { body: unknown }) =>
+      svc.db
+        .getRepository(MedicationRequest)
+        .findOneByOrFail({ id: (res.body as { id: string }).id });
+
+    it('names a drug the catalog does not list as the doctor wrote it, sent to no pharmacy', async () => {
+      const res = await outside({
+        medicationCode: undefined,
+        medicationDisplay: '  Rosuvastatin 10mg Tablet ',
+      }).expect(201);
+
+      expect(await saved(res)).toMatchObject({
+        boughtOutside: true,
+        performerOrganizationId: null,
+        medicationCode: null,
+        medicationDisplay: 'Rosuvastatin 10mg Tablet',
+      });
+    });
+
+    it('names a catalog drug as the catalog does, and sends it to no pharmacy even when one is given', async () => {
+      const res = await outside({ performerOrganizationId: pharmacy }).expect(
+        201,
+      );
+
+      expect(await saved(res)).toMatchObject({
+        boughtOutside: true,
+        performerOrganizationId: null,
+        medicationCode: drug,
+        medicationDisplay: 'Azithromycin 500mg Tablet',
+      });
+    });
+
+    it('turns away one with neither a catalog drug nor a name', async () => {
+      const before = await prescriptionsOf(patientId);
+
+      await outside({ medicationCode: undefined }).expect(400);
+      await outside({
+        medicationCode: undefined,
+        medicationDisplay: '   ',
+      }).expect(400);
+
+      expect(await prescriptionsOf(patientId)).toBe(before);
+    });
+  });
+
+  it('turns away a prescription for the pharmacy that names none, or a drug only by name', async () => {
+    const before = await prescriptionsOf(patientId);
+
+    await prescribe({ performerOrganizationId: undefined }).expect(400);
+    await prescribe({
+      medicationCode: undefined,
+      medicationDisplay: 'Rosuvastatin 10mg Tablet',
+    }).expect(400);
+
+    expect(await prescriptionsOf(patientId)).toBe(before);
+  });
+
   it("turns away a patient who isn't on file", async () => {
     const stranger = randomUUID();
 

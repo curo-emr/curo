@@ -165,6 +165,10 @@ function PrescriptionDetail({ prescription }: { prescription: Prescription }) {
             <p className="text-sm text-muted-foreground">
               This prescription was sent to another pharmacy, so it can&apos;t be dispensed here.
             </p>
+          ) : prescription.status === "outside_pharmacy" ? (
+            <p className="text-sm text-muted-foreground">
+              The patient buys this at a pharmacy of their choice, so it isn&apos;t dispensed here.
+            </p>
           ) : held ? (
             <HeldNotice prescription={prescription} />
           ) : (

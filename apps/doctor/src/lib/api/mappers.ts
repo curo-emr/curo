@@ -2,6 +2,7 @@ import type {
   Encounter, Prescription, LabOrder,
   Task,
 } from '@/types';
+import { isBoughtOutside } from '@curo/web/fhir';
 
 export {
   mapFhirAllergy, mapFhirCondition, mapFhirPatient, type FhirAllergy, type FhirCondition, type FhirPatient,
@@ -58,7 +59,7 @@ export interface FhirMedicationRequest {
     validityPeriod?: { end?: string };
   };
   note?: Array<{ text?: string }>;
-  extension?: Array<{ url: string; valueString?: string; valueInteger?: number }>;
+  extension?: Array<{ url: string; valueString?: string; valueInteger?: number; valueBoolean?: boolean }>;
 }
 
 export interface FhirServiceRequest {
@@ -148,6 +149,7 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
     cancelled: 'cancelled', stopped: 'cancelled', 'entered-in-error': 'cancelled',
   };
 
+  const boughtOutside = isBoughtOutside(fhir);
   const dosage = fhir.dosageInstruction?.[0];
   const dose = dosage?.doseAndRate?.[0]?.doseQuantity;
   const qty = fhir.dispenseRequest?.quantity?.value ?? 1;
@@ -157,7 +159,7 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
     patientId,
     encounterId,
     doctorId,
-    status: statusMap[fhir.status] ?? 'draft',
+    status: boughtOutside ? 'outside_pharmacy' : (statusMap[fhir.status] ?? 'draft'),
     holdReason: fhir.statusReason?.text ?? '',
     createdAt: fhir.authoredOn ?? fhir.meta?.lastUpdated ?? '',
     sentAt: fhir.status === 'active' ? (fhir.meta?.lastUpdated ?? null) : null,
@@ -173,6 +175,7 @@ export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Prescript
       quantity: qty,
       instructions: fhir.note?.[0]?.text ?? '',
       substitutes: [],
+      boughtOutside,
     }],
     notesToPharmacy: fhir.note?.[0]?.text ?? '',
   };

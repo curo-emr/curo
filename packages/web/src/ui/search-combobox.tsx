@@ -15,6 +15,8 @@ interface SearchComboboxProps<T> {
   onSelect: (item: T) => void;
   /** Offer "Add “query”" when nothing in the catalog fits. */
   onCustom?: (query: string) => void;
+  /** What the custom option says in place of "Add “query”". */
+  customLabel?: (query: string) => React.ReactNode;
   /** Suggestions shown before the user types. */
   suggestions?: T[];
   /** The item already chosen, shown in place of the placeholder when the picker holds one value. */
@@ -27,7 +29,7 @@ interface SearchComboboxProps<T> {
 // A search-as-you-type picker (shadcn Popover + Command). Picking an item clears the box so
 // several items can be added in a row, or, with `selected`, shows the one chosen.
 export function SearchCombobox<T>({
-  placeholder, search, getKey, renderItem, onSelect, onCustom, suggestions = [], selected, id, className,
+  placeholder, search, getKey, renderItem, onSelect, onCustom, customLabel, suggestions = [], selected, id, className,
 }: SearchComboboxProps<T>) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -102,7 +104,7 @@ export function SearchCombobox<T>({
               <CommandGroup>
                 <CommandItem value={`__custom__${q}`} onSelect={pickCustom} className="text-muted-foreground">
                   <Plus />
-                  <span>Add <span className="font-medium text-foreground">“{q}”</span></span>
+                  {customLabel?.(q) ?? <span>Add <span className="font-medium text-foreground">“{q}”</span></span>}
                 </CommandItem>
               </CommandGroup>
             )}

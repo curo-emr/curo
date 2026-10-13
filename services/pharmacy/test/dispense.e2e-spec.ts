@@ -66,7 +66,7 @@ describe('POST /dispense', () => {
     });
 
   /** Units left in each of the prescribed drug's batches, by batch number. */
-  async function stockLeft(rx: MedicationRequest) {
+  async function stockLeft(rx: { medicationCode: string }) {
     const batches = await svc.db
       .getRepository(Stock)
       .findBy({ medicationCode: rx.medicationCode });
@@ -240,6 +240,22 @@ describe('POST /dispense', () => {
     await dispense(await sendTo(null)).expect(201);
   });
 
+  it('dispenses no prescription the patient buys outside', async () => {
+    const rx = await prescribe(1, [{ batchNumber: 'B1', quantity: 5 }]);
+    const outside = await svc.db
+      .getRepository(MedicationRequest)
+      .save({ ...rx, performerOrganizationId: null, boughtOutside: true });
+
+    const res = await dispense(outside).expect(403);
+
+    expect(res.body).toMatchObject({
+      message:
+        'The patient buys this prescription at a pharmacy of their choice',
+    });
+    expect(await statusOf(outside)).toBe(MedicationRequestStatus.ACTIVE);
+    expect(await stockLeft(rx)).toEqual({ B1: 5 });
+  });
+
   it('refuses a quantity that is not a whole number above zero, and changes nothing', async () => {
     const rx = await prescribe(10, [{ batchNumber: 'GOOD', quantity: 50 }]);
 
@@ -314,7 +330,7 @@ describe('POST /dispense', () => {
     }
 
     /** Low-stock alerts about the prescribed drug in `userId`'s inbox. */
-    const alertsFor = (userId: string, rx: MedicationRequest) =>
+    const alertsFor = (userId: string, rx: { medicationCode: string }) =>
       svc.db.getRepository(Notification).findBy({
         recipientId: userId,
         eventType: NotificationEventType.LOW_STOCK_ALERT,

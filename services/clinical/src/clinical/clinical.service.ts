@@ -3,7 +3,6 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   OnModuleInit,
   Logger,
 } from '@nestjs/common';
@@ -14,7 +13,6 @@ import {
   FindOptionsWhere,
   Repository,
   In,
-  IsNull,
   Not,
 } from 'typeorm';
 import * as QRCode from 'qrcode';
@@ -25,6 +23,8 @@ import {
   ServiceRequest,
   Observation,
   QrCode,
+  assertDispensedBy,
+  dispensedBySql,
   findPatientIdentity,
   patientLabel,
   type LabPanelTest,
@@ -406,15 +406,14 @@ export class ClinicalService implements OnModuleInit {
     user: AuthUser,
   ) {
     const pharmacy = pharmacyOf(user);
-    const meds = await this.medsRepo.find({
-      where: pharmacy
-        ? [
-            { status, performerOrganizationId: pharmacy },
-            { status, performerOrganizationId: IsNull() },
-          ]
-        : { status },
-      order: { authoredOn: 'DESC' },
-    });
+    const meds = await this.medsRepo
+      .createQueryBuilder('m')
+      .where('m.status = :status', { status })
+      .andWhere(dispensedBySql('m', pharmacy), {
+        pharmacy,
+      })
+      .orderBy('m.authoredOn', 'DESC')
+      .getMany();
     return meds.map(toFhirMedRequest);
   }
 
@@ -474,16 +473,10 @@ export class ClinicalService implements OnModuleInit {
     const pharmacy = workplaceOf(pharmacist, 'pharmacy');
     const sentTo = await repo.findOne({
       where: { id },
-      select: { id: true, performerOrganizationId: true },
+      select: { id: true, performerOrganizationId: true, boughtOutside: true },
     });
     if (!sentTo) throw new NotFoundException(`Prescription ${id} not found`);
-    if (
-      sentTo.performerOrganizationId &&
-      sentTo.performerOrganizationId !== pharmacy
-    )
-      throw new ForbiddenException(
-        'This prescription was sent to another pharmacy',
-      );
+    assertDispensedBy(sentTo, pharmacy);
     const { affected } = await repo.update({ id, status: from }, change);
     const med = await repo.findOneByOrFail({ id });
     if (!affected)
@@ -507,9 +500,7 @@ export class ClinicalService implements OnModuleInit {
     user: AuthUser,
   ): Promise<PrescriptionSummary[]> {
     const pharmacy = pharmacyOf(user);
-    const waiting = pharmacy
-      ? 'm.status = :active AND (m.performerOrganizationId = :pharmacy OR m.performerOrganizationId IS NULL)'
-      : 'm.status = :active';
+    const waiting = `m.status = :active AND ${dispensedBySql('m', pharmacy)}`;
     const rows = await this.medsRepo
       .createQueryBuilder('m')
       .select('m.patientId', 'patientId')

@@ -24,8 +24,10 @@ export interface VisitPayload {
   vitals: { code: string; display: string; valueQuantity: number; valueUnit: string }[];
   diagnoses: { code?: string; display: string; isPrimary: boolean }[];
   prescriptions: {
+    boughtOutside?: boolean; // the patient buys it elsewhere: sent to no pharmacy
     performerOrganizationId?: string;
-    medicationCode: string; // a catalog drug; the backend names it as the catalog does
+    medicationCode?: string; // a catalog drug; the backend names it as the catalog does
+    medicationDisplay: string; // used only for a drug bought outside that the catalog doesn't list
     dosageText?: string;
     route?: string;
     frequency?: string;

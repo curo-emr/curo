@@ -1,5 +1,6 @@
 export { databaseOptions } from './database-options';
 export { assertPatientOnFile } from './patient-on-file';
+export { assertDispensedBy, dispensedBySql } from './prescription-pharmacy';
 export {
   findPatientIdentity,
   patientLabel,

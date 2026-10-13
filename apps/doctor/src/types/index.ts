@@ -72,6 +72,8 @@ export interface PrescriptionItem {
   quantity: number;
   instructions: string;
   substitutes: PrescriptionItemSubstitute[];
+  /** The patient buys it at a pharmacy of their choice, so no pharmacy here is sent it. One the catalog doesn't list has no medicationId. */
+  boughtOutside?: boolean;
 }
 
 export interface Prescription {
@@ -79,8 +81,8 @@ export interface Prescription {
   patientId: string;
   encounterId: string;
   doctorId: string;
-  /** Where it is: written, with the pharmacy, held there, dispensed, or cancelled. */
-  status: 'draft' | 'sent_to_pharmacy' | 'on_hold' | 'dispensed' | 'cancelled';
+  /** Where it is: written, with the pharmacy, held there, dispensed, cancelled, or for the patient to buy elsewhere. */
+  status: 'draft' | 'sent_to_pharmacy' | 'on_hold' | 'dispensed' | 'cancelled' | 'outside_pharmacy';
   /** Why the pharmacy is holding it; empty unless it's on hold. */
   holdReason: string;
   createdAt: string;

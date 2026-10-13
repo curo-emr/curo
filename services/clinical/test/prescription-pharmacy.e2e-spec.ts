@@ -19,6 +19,7 @@ describe('Prescriptions by pharmacy', () => {
   const sentTo = async (
     performerOrganizationId: string | null,
     patientId: string = randomUUID(),
+    boughtOutside = false,
   ) =>
     (
       await svc.db.getRepository(MedicationRequest).save({
@@ -28,8 +29,13 @@ describe('Prescriptions by pharmacy', () => {
         medicationCode: 'med_0301',
         medicationDisplay: 'Amlodipine 5mg Tablet',
         performerOrganizationId,
+        boughtOutside,
       })
     ).id;
+
+  /** A prescription the patient buys outside; returns its id. */
+  const boughtOutside = (patientId: string = randomUUID()) =>
+    sentTo(null, patientId, true);
 
   describe('GET /prescriptions/pending', () => {
     /** The ids on the waiting list, for whoever `headers` sign in as. */
@@ -45,6 +51,7 @@ describe('Prescriptions by pharmacy', () => {
       const ours = await sentTo(pharmacy);
       const unnamed = await sentTo(null);
       const theirs = await sentTo(otherPharmacy);
+      const outside = await boughtOutside();
 
       const listed = await pendingFor(
         (await svc.as(UserRole.PHARMACIST, { organizationId: pharmacy }))
@@ -53,15 +60,17 @@ describe('Prescriptions by pharmacy', () => {
 
       expect(listed).toEqual(expect.arrayContaining([ours, unnamed]));
       expect(listed).not.toContain(theirs);
+      expect(listed).not.toContain(outside);
     });
 
-    it("shows a doctor every pharmacy's", async () => {
+    it("shows a doctor every pharmacy's, not what is bought outside", async () => {
       const ours = await sentTo(pharmacy);
       const theirs = await sentTo(otherPharmacy);
+      const outside = await boughtOutside();
 
-      expect(await pendingFor((await svc.as(UserRole.DOCTOR)).headers)).toEqual(
-        expect.arrayContaining([ours, theirs]),
-      );
+      const listed = await pendingFor((await svc.as(UserRole.DOCTOR)).headers);
+      expect(listed).toEqual(expect.arrayContaining([ours, theirs]));
+      expect(listed).not.toContain(outside);
     });
 
     it('turns away a pharmacist not yet assigned to a pharmacy', async () => {
@@ -88,11 +97,12 @@ describe('Prescriptions by pharmacy', () => {
       return (res.body as { pendingCount: number }[])[0]?.pendingCount;
     }
 
-    it("counts for a pharmacist only what their pharmacy handles, and every pharmacy's for a doctor", async () => {
+    it("counts for a pharmacist only what their pharmacy handles, and every pharmacy's for a doctor, but nothing bought outside", async () => {
       const patientId = randomUUID();
       await sentTo(pharmacy, patientId);
       await sentTo(null, patientId);
       await sentTo(otherPharmacy, patientId);
+      await boughtOutside(patientId);
 
       const pharmacist = await svc.as(UserRole.PHARMACIST, {
         organizationId: pharmacy,

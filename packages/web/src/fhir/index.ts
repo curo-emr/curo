@@ -75,3 +75,4 @@ export * from "./allergy";
 export * from "./patient";
 export * from "./lab-report";
 export * from "./condition";
+export * from "./medication-request";

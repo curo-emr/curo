@@ -21,6 +21,7 @@ export const MEDICINE_STATUS: Record<MedicineStatus, StatusWords> = {
   on_hold: { status: "on_hold", label: "On hold" },
   collected: { status: "dispensed", label: "Collected" },
   stopped: { status: "cancelled", label: "Stopped" },
+  buy_outside: { status: "outside_pharmacy", label: "Buy at any pharmacy" },
 };
 
 export const LAB_TEST_STATUS: Record<LabTestStatus, StatusWords> = {

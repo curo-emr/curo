@@ -233,6 +233,21 @@ describe('prescription holds', () => {
     expect(await stored(held)).toMatchObject({ status: 'on-hold' });
   });
 
+  it("can't hold a prescription the patient buys outside", async () => {
+    const rx = await svc.db.getRepository(MedicationRequest).save({
+      ...(await prescription(undefined, undefined, null)),
+      boughtOutside: true,
+    });
+
+    const res = await hold(rx).expect(403);
+
+    expect(res.body).toMatchObject({
+      message:
+        'The patient buys this prescription at a pharmacy of their choice',
+    });
+    expect(await stored(rx)).toMatchObject({ status: 'active' });
+  });
+
   it('holds a prescription that names no pharmacy', async () => {
     const rx = await prescription(undefined, undefined, null);
 

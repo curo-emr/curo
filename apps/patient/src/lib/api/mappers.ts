@@ -1,4 +1,4 @@
-import { mapFhirPatientDetails, type FhirPatientDetails } from '@curo/web/fhir';
+import { isBoughtOutside, mapFhirPatientDetails, type FhirPatientDetails } from '@curo/web/fhir';
 import type {
   Appointment, AppointmentStatus, Condition, LabTest, LabTestStatus, Medicine, MedicineStatus, Patient, Visit,
 } from '@/types';
@@ -65,6 +65,7 @@ export interface FhirMedicationRequest {
     expectedSupplyDuration?: { value?: number };
   };
   note?: Array<{ text?: string }>;
+  extension?: Array<{ url: string; valueBoolean?: boolean }>;
 }
 
 export interface FhirServiceRequest {
@@ -171,7 +172,7 @@ const MEDICINE_STATUS: Record<string, MedicineStatus> = {
 
 /** A prescribed medicine; undefined for a draft the doctor hasn't sent. */
 export function mapFhirMedicationRequest(fhir: FhirMedicationRequest): Medicine | undefined {
-  const status = MEDICINE_STATUS[fhir.status];
+  const status = isBoughtOutside(fhir) ? 'buy_outside' : MEDICINE_STATUS[fhir.status];
   if (!status) return undefined;
   const dosage = fhir.dosageInstruction?.[0];
   const quantity = fhir.dispenseRequest?.quantity;

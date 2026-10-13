@@ -418,17 +418,24 @@ describe('Patient records', () => {
       });
     });
 
-    it('shows a pharmacist the patients with a prescription sent to their pharmacy or to none', async () => {
+    it('shows a pharmacist the patients with a prescription sent to their pharmacy or to none, not one bought outside', async () => {
       const pharmacy = randomUUID();
       const { lastName, ids } = await family(
         'Sent',
         'Unsent',
         'Elsewhere',
+        'Outside',
         'None',
       );
       await prescribe(ids.Sent, pharmacy);
       await prescribe(ids.Unsent, null);
       await prescribe(ids.Elsewhere, randomUUID());
+      await svc.db.query(
+        `INSERT INTO medication_requests
+           ("patientId", "practitionerId", "boughtOutside", "medicationDisplay")
+         VALUES ($1, $2, true, 'Rosuvastatin 10mg Tablet')`,
+        [ids.Outside, randomUUID()],
+      );
       const pharmacist = await svc.as(UserRole.PHARMACIST, {
         organizationId: pharmacy,
       });

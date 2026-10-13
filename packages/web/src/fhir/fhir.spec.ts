@@ -1,5 +1,5 @@
 import {
-  mapFhirAllergy, mapFhirCondition, mapFhirPatient, mapFhirPatientDetails, mapFhirReport,
+  isBoughtOutside, mapFhirAllergy, mapFhirCondition, mapFhirPatient, mapFhirPatientDetails, mapFhirReport,
   type FhirAllergy, type FhirCondition, type FhirDiagnosticReport, type FhirPatient,
 } from "./index";
 
@@ -242,5 +242,16 @@ describe("mapFhirReport", () => {
     });
     expect(mapped).toMatchObject({ resultsText: text, pdfBase64: undefined });
     expect(mapFhirReport(report([])).resultsText).toBeUndefined();
+  });
+});
+
+describe("isBoughtOutside", () => {
+  it("reads the bought-outside extension", () => {
+    expect(isBoughtOutside({ extension: [{ url: "urn:curo:boughtOutside", valueBoolean: true }] })).toBe(true);
+  });
+
+  it("is false without it", () => {
+    expect(isBoughtOutside({})).toBe(false);
+    expect(isBoughtOutside({ extension: [{ url: "urn:curo:durationDays" }] })).toBe(false);
   });
 });

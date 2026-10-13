@@ -60,9 +60,11 @@ export function newVital(
 }
 
 /**
- * Saves prescriptions, each sent to the pharmacy it names, for a patient on
- * file, of a drug in the medication catalog and named as the catalog names it,
- * so the pharmacy can stock and dispense what was prescribed.
+ * Saves prescriptions for a patient on file. One sent to a pharmacy is of a
+ * drug in the medication catalog, named as the catalog names it, so the
+ * pharmacy can stock and dispense what was prescribed. One bought outside is
+ * sent to no pharmacy, and may be of a drug the catalog doesn't list, named as
+ * the doctor wrote it.
  */
 export async function savePrescriptions(
   em: EntityManager,
@@ -70,19 +72,24 @@ export async function savePrescriptions(
   practitionerId: string,
 ): Promise<MedicationRequest[]> {
   if (!dtos.length) return [];
-  for (const pharmacy of new Set(dtos.map((d) => d.performerOrganizationId)))
-    await assertActiveOrganization(em, pharmacy, 'pharmacy');
+  for (const pharmacy of new Set(dtos.map(sentTo)))
+    if (pharmacy) await assertActiveOrganization(em, pharmacy, 'pharmacy');
   for (const patientId of new Set(dtos.map((d) => d.patientId)))
     await assertPatientOnFile(em, patientId);
   const names = await catalogNames(
     em,
-    dtos.map((d) => d.medicationCode),
+    dtos.flatMap((d) => d.medicationCode ?? []),
   );
   return em.save(
     MedicationRequest,
     dtos.map((dto) => ({
       ...dto,
-      medicationDisplay: names.get(dto.medicationCode),
+      boughtOutside: !!dto.boughtOutside,
+      performerOrganizationId: sentTo(dto),
+      medicationCode: dto.medicationCode ?? null,
+      medicationDisplay: dto.medicationCode
+        ? names.get(dto.medicationCode)
+        : dto.medicationDisplay,
       practitionerId,
       status: MedicationRequestStatus.ACTIVE,
       intent: 'order',
@@ -90,6 +97,10 @@ export async function savePrescriptions(
     })),
   );
 }
+
+/** The pharmacy a prescription goes to; none when it is bought outside. */
+const sentTo = (dto: CreatePrescriptionDto): string | null =>
+  dto.boughtOutside ? null : (dto.performerOrganizationId ?? null);
 
 /** The catalog's name for each of `codes`; one it doesn't list (or no longer does) is a 400. */
 async function catalogNames(

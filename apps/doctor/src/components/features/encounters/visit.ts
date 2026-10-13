@@ -77,8 +77,10 @@ export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ 
     })),
     diagnoses: visit.diagnoses.map(d => ({ code: tidyIcd10Code(d.icdCode) || undefined, display: d.name, isPrimary: d.isPrimary })),
     prescriptions: visit.prescriptions.map(rx => ({
-      performerOrganizationId: visit.pharmacyId,
-      medicationCode: rx.medicationId,
+      boughtOutside: rx.boughtOutside || undefined,
+      performerOrganizationId: rx.boughtOutside ? undefined : visit.pharmacyId,
+      medicationCode: rx.medicationId || undefined,
+      medicationDisplay: rx.displayName,
       dosageText: rx.dose,
       route: rx.route,
       frequency: rx.frequency,
@@ -106,6 +108,14 @@ export async function signVisit(visit: VisitDraft, ctx: SignContext): Promise<{ 
 }
 
 // ─── Prescribing helpers ─────────────────────────────────────────────────────
+
+/** The visit's prescriptions sent to the pharmacy, and those the patient buys outside. */
+export function splitByPharmacy<T extends Pick<PrescriptionItem, "boughtOutside">>(items: T[]) {
+  return {
+    toPharmacy: items.filter(rx => !rx.boughtOutside),
+    outside: items.filter(rx => rx.boughtOutside),
+  };
+}
 
 /** The pharmacy a visit's prescriptions go to: the one chosen while it is still open, else the first. */
 export function pharmacyFor<P extends { id: string }>(visit: VisitDraft, pharmacies: P[]): P | undefined {
