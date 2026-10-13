@@ -65,11 +65,16 @@ describe('Lab specimens and results', () => {
   /**
    * An active two-test order with a QR label per test, as a signed visit leaves
    * it, sent to `performerOrganizationId` (by default the technician's lab).
-   * Ordered by `requesterId`: by default a practitioner with no account.
+   * Ordered by `requesterId`: by default a practitioner with no account. Its
+   * sample is not yet received, unless `received`.
    */
   async function orderLabs(
-    requesterId = randomUUID(),
-    { performerOrganizationId = lab, encounterId = randomUUID() } = {},
+    requesterId: string = randomUUID(),
+    {
+      performerOrganizationId = lab,
+      encounterId = randomUUID(),
+      received = false,
+    } = {},
   ) {
     const patient = await svc.db.getRepository(Patient).save({
       patientCode: `PT-${randomUUID()}`,
@@ -82,6 +87,7 @@ describe('Lab specimens and results', () => {
       encounterId,
       performerOrganizationId,
       status: ServiceRequestStatus.ACTIVE,
+      ...(received && { receivedAt: new Date() }),
       category: 'laboratory',
       code: 'PANEL',
       display: 'Full blood count + HbA1c',
@@ -102,6 +108,10 @@ describe('Lab specimens and results', () => {
     );
     return { order, labels };
   }
+
+  /** An order as `orderLabs` makes it, with its sample received at the lab. */
+  const receivedLabs = (requesterId?: string) =>
+    orderLabs(requesterId, { received: true });
 
   const savedOrder = (id: string) =>
     svc.db.getRepository(ServiceRequest).findOneByOrFail({ id });
@@ -256,7 +266,7 @@ describe('Lab specimens and results', () => {
 
   describe('POST /results', () => {
     it('records the results and a PDF report, and completes the order', async () => {
-      const { order } = await orderLabs();
+      const { order } = await receivedLabs();
 
       const res = await enterResults({
         serviceRequestId: order.id,
@@ -305,7 +315,7 @@ describe('Lab specimens and results', () => {
     });
 
     it('audits the report, and the order it completes', async () => {
-      const { order } = await orderLabs();
+      const { order } = await receivedLabs();
 
       const res = await enterResults({
         serviceRequestId: order.id,
@@ -336,7 +346,7 @@ describe('Lab specimens and results', () => {
 
     it("notifies the ordering doctor's account that the results are ready", async () => {
       const doctor = await doctorWithAccount();
-      const { order } = await orderLabs(doctor.practitionerId);
+      const { order } = await receivedLabs(doctor.practitionerId);
 
       const res = await enterResults({
         serviceRequestId: order.id,
@@ -356,7 +366,7 @@ describe('Lab specimens and results', () => {
     });
 
     it('records the results without a notification when the orderer has no account', async () => {
-      const { order } = await orderLabs();
+      const { order } = await receivedLabs();
 
       const res = await enterResults({
         serviceRequestId: order.id,
@@ -372,7 +382,7 @@ describe('Lab specimens and results', () => {
 
     it('records the results when the order carries a patient id that is not a uuid', async () => {
       const doctor = await doctorWithAccount();
-      const { order } = await orderLabs(doctor.practitionerId);
+      const { order } = await receivedLabs(doctor.practitionerId);
       await svc.db
         .getRepository(ServiceRequest)
         .update(order.id, { patientId: 'legacy-42' });
@@ -391,7 +401,7 @@ describe('Lab specimens and results', () => {
 
     it('saves nothing, and leaves the order open, when any result fails to save', async () => {
       const doctor = await doctorWithAccount();
-      const { order } = await orderLabs(doctor.practitionerId);
+      const { order } = await receivedLabs(doctor.practitionerId);
       // valueQuantity is numeric(10,2): this overflows inside the transaction.
       const overflow = { ...fbc, code: '4548-4', value: 1e9 };
 
@@ -413,7 +423,7 @@ describe('Lab specimens and results', () => {
 
     it('files one report, and one notification, when the same results are submitted twice at once', async () => {
       const doctor = await doctorWithAccount();
-      const { order } = await orderLabs(doctor.practitionerId);
+      const { order } = await receivedLabs(doctor.practitionerId);
       const body = { serviceRequestId: order.id, results: [fbc] };
 
       const results = await Promise.all([
@@ -430,7 +440,7 @@ describe('Lab specimens and results', () => {
     });
 
     it('refuses results for an order that is already reported', async () => {
-      const { order } = await orderLabs();
+      const { order } = await receivedLabs();
       const body = { serviceRequestId: order.id, results: [fbc] };
       await enterResults(body).expect(201);
 
@@ -443,7 +453,7 @@ describe('Lab specimens and results', () => {
     });
 
     it('completes the order with the report the lab uploaded, when no values are typed', async () => {
-      const { order } = await orderLabs();
+      const { order } = await receivedLabs();
       await uploadReport(order);
 
       const res = await enterResults({
@@ -467,7 +477,7 @@ describe('Lab specimens and results', () => {
     });
 
     it('rejects missing or malformed result items before writing anything', async () => {
-      const { order } = await orderLabs();
+      const { order } = await receivedLabs();
       const serviceRequestId = order.id;
 
       await enterResults({ serviceRequestId }).expect(400);
@@ -490,6 +500,31 @@ describe('Lab specimens and results', () => {
       });
     });
 
+    it('refuses results, typed or uploaded, until the sample is received', async () => {
+      const doctor = await doctorWithAccount();
+      const { order } = await orderLabs(doctor.practitionerId);
+      await uploadReport(order);
+
+      const res = await enterResults({
+        serviceRequestId: order.id,
+        results: [fbc],
+      }).expect(409);
+      expect(res.body).toMatchObject({
+        message: 'Receive the sample before entering its results',
+      });
+      await enterResults({ serviceRequestId: order.id }).expect(409);
+
+      expect(await recordsOf(order.id)).toEqual({
+        observations: 0,
+        reports: 0,
+      });
+      await expect(inboxOf(doctor.userId)).resolves.toEqual([]);
+      await expect(savedOrder(order.id)).resolves.toMatchObject({
+        status: ServiceRequestStatus.ACTIVE,
+        completedAt: null,
+      });
+    });
+
     it('refuses results for an order that does not exist', async () => {
       const serviceRequestId = randomUUID();
 
@@ -502,7 +537,7 @@ describe('Lab specimens and results', () => {
     });
 
     it('is refused to roles other than lab staff and admin', async () => {
-      const { order } = await orderLabs();
+      const { order } = await receivedLabs();
 
       await enterResults(
         { serviceRequestId: order.id, results: [fbc] },
@@ -678,10 +713,11 @@ describe('Lab specimens and results', () => {
     it("shows a technician only their own lab's orders and reports", async () => {
       const otherLab = await laboratory();
       const encounterId = randomUUID();
-      const ours = await orderLabs(undefined, { encounterId });
+      const ours = await orderLabs(undefined, { encounterId, received: true });
       const theirs = await orderLabs(undefined, {
         encounterId,
         performerOrganizationId: otherLab,
+        received: true,
       });
       for (const { order } of [ours, theirs])
         await enterResults(

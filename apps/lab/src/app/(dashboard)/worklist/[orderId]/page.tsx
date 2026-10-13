@@ -74,16 +74,11 @@ function OrderView({ order, patient, results }: { order: LabOrder; patient: Pati
         }
         description={`Ordered ${formatDate(order.createdAt)}`}
       >
-        {/* One primary action: the next step. Entering results also receives the sample. */}
+        {/* One action: the next step. Results follow the sample's receipt. */}
         {step === "receive" && (
-          <>
-            <Button asChild variant="outline">
-              <Link href={STEP_ACTION.results.href(order.id)}>{STEP_ACTION.results.label}</Link>
-            </Button>
-            <Button onClick={() => receive.mutate()} disabled={receive.isPending}>
-              {receive.isPending && <Loader2 className="animate-spin" />} {STEP_ACTION.receive.label}
-            </Button>
-          </>
+          <Button onClick={() => receive.mutate()} disabled={receive.isPending}>
+            {receive.isPending && <Loader2 className="animate-spin" />} {STEP_ACTION.receive.label}
+          </Button>
         )}
         {step === "results" && (
           <Button asChild>

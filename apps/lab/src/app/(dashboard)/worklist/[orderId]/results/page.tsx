@@ -10,7 +10,7 @@ import { ResultsEntryForm } from "@/components/features/worklist/ResultsEntryFor
 import { LabReportUpload } from "@/components/features/worklist/LabReportUpload";
 import { useMyCatalog } from "@/lib/catalog";
 import { ROUTES } from "@/lib/constants";
-import { orderNumber } from "@/lib/orders";
+import { nextStep, orderNumber } from "@/lib/orders";
 import { orderQueries, patientQueries } from "@/lib/queries";
 import type { LabOrder } from "@/types";
 
@@ -44,14 +44,12 @@ function ResultsEntry({ order }: { order: LabOrder }) {
               description={`${p.name.full} · ${p.mrn}`}
             />
 
-            {order.status === "sent_to_lab" ? (
+            {nextStep(order) === "results" ? (
               <ResultsEntryForm order={order} patient={p} catalog={tests} />
             ) : (
               <>
                 <p className="rounded-lg border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                  {order.status === "completed"
-                    ? "The results for this order are already in."
-                    : "The doctor hasn't sent this order to the lab, so results can't be entered."}{" "}
+                  {notReadyReason(order)}{" "}
                   <Link href={ROUTES.ORDER(order.id)} className="font-medium text-primary hover:underline">View the order</Link>
                 </p>
                 {/* A report file can still follow; the doctor sees it with the results. */}
@@ -65,4 +63,11 @@ function ResultsEntry({ order }: { order: LabOrder }) {
       }}
     </QueryContent>
   );
+}
+
+/** Why an order that isn't ready for results can't take them. */
+function notReadyReason(order: LabOrder) {
+  if (order.status === "completed") return "The results for this order are already in.";
+  if (order.status === "sent_to_lab") return "Receive the sample before entering its results.";
+  return "The doctor hasn't sent this order to the lab, so results can't be entered.";
 }
