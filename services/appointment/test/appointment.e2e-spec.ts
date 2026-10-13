@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { UserRole } from '@curo/shared/enums';
 import {
+  addPractitioner,
   auditOf,
+  registerPatient,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -10,29 +12,42 @@ import { AppModule } from '../src/app.module';
 import { Appointment } from '../src/entities/appointment.entity';
 import { Payment } from '../src/entities/payment.entity';
 import { AppointmentStatus, QueueStage, VisitType } from '../src/enums';
+import { doctorWithSessions } from './doctors';
 
 describe('Appointments and the patient queue', () => {
   let svc: ServiceUnderTest;
   let receptionist: TestActor;
   let nurse: TestActor;
   let doctor: TestActor;
+  let patientId: string;
 
   beforeAll(async () => {
     svc = await startService(AppModule);
     receptionist = await svc.as(UserRole.RECEPTIONIST);
     nurse = await svc.as(UserRole.NURSE);
     doctor = await svc.as(UserRole.DOCTOR);
+    await doctorWithSessions(svc, { id: doctor.practitionerId as string });
+    patientId = await registerPatient(svc.db);
   });
 
   afterAll(() => svc.close());
 
+  /** A time on a future day, read on the clinic's clock (Asia/Colombo by default). */
+  const clinicTime = (day: string, time: string) =>
+    new Date(`${day}T${time}:00+05:30`);
+
   /** Asks for an appointment with `practitionerId` from `start`, lasting `minutes`. */
-  const bookAt = (practitionerId: string, start: Date, minutes = 15) =>
+  const bookAt = (
+    practitionerId: string,
+    start: Date,
+    minutes = 15,
+    patient = patientId,
+  ) =>
     svc.api
       .post('/appointments')
       .set(receptionist.headers)
       .send({
-        patientId: randomUUID(),
+        patientId: patient,
         practitionerId,
         start: start.toISOString(),
         end: new Date(start.getTime() + minutes * 60_000).toISOString(),
@@ -45,7 +60,9 @@ describe('Appointments and the patient queue', () => {
 
   /** Books a 15-minute appointment with `doctor` and returns its id. */
   async function book(): Promise<string> {
-    const start = new Date(Date.now() + 3_600_000 + slotsTaken++ * 15 * 60_000);
+    const start = new Date(
+      clinicTime('2031-01-07', '08:00').getTime() + slotsTaken++ * 15 * 60_000,
+    );
     const res = await bookAt(doctor.practitionerId as string, start).expect(
       201,
     );
@@ -255,35 +272,32 @@ describe('Appointments and the patient queue', () => {
   });
 
   describe('double booking', () => {
-    const at = (hour: number, minute = 0) => new Date(2031, 0, 6, hour, minute);
+    const at = (time: string) => clinicTime('2031-01-06', time);
 
     it("refuses a time that overlaps the doctor's other appointment, not another doctor's or the next slot", async () => {
-      const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
-      await bookAt(dr, at(9), 30).expect(201);
+      const dr = await doctorWithSessions(svc);
+      await bookAt(dr, at('09:00'), 30).expect(201);
 
-      const clash = await bookAt(dr, at(9, 15), 30).expect(409);
+      const clash = await bookAt(dr, at('09:15'), 30).expect(409);
       expect((clash.body as { message: string }).message).toMatch(
         /already has an appointment/,
       );
-      await bookAt(
-        (await svc.as(UserRole.DOCTOR)).practitionerId as string,
-        at(9, 15),
-      ).expect(201);
-      await bookAt(dr, at(9, 30)).expect(201);
+      await bookAt(await doctorWithSessions(svc), at('09:15')).expect(201);
+      await bookAt(dr, at('09:30')).expect(201);
     });
 
     it('frees a cancelled slot for another booking', async () => {
-      const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
-      const first = await bookAt(dr, at(10)).expect(201);
+      const dr = await doctorWithSessions(svc);
+      const first = await bookAt(dr, at('10:00')).expect(201);
       const firstId = (first.body as { id: string }).id;
       await setStatus(firstId, AppointmentStatus.CANCELLED).expect(200);
 
-      await bookAt(dr, at(10)).expect(201);
+      await bookAt(dr, at('10:00')).expect(201);
     });
 
     it('refuses an appointment that ends before it starts', async () => {
-      const dr = (await svc.as(UserRole.DOCTOR)).practitionerId as string;
-      await bookAt(dr, at(11), -15).expect(400);
+      const dr = await doctorWithSessions(svc);
+      await bookAt(dr, at('11:00'), -15).expect(400);
     });
   });
 
@@ -293,9 +307,9 @@ describe('Appointments and the patient queue', () => {
       serviceType: VisitType.CONSULTATION,
     });
 
-    const start = new Date(Date.now() + 86_400_000);
+    const start = clinicTime('2031-01-08', '09:00');
     const body = {
-      patientId: randomUUID(),
+      patientId,
       practitionerId: doctor.practitionerId,
       start: start.toISOString(),
       end: new Date(start.getTime() + 15 * 60_000).toISOString(),
@@ -313,6 +327,63 @@ describe('Appointments and the patient queue', () => {
 
   it("doesn't let a nurse book an appointment", async () => {
     await svc.api.post('/appointments').set(nurse.headers).send({}).expect(403);
+  });
+
+  describe('refuses a booking that could never be kept', () => {
+    /** Expects `start` with `practitionerId` for `patient` to be refused, with `reason`, and nothing saved. */
+    async function expectRefused(
+      reason: RegExp,
+      practitionerId: string,
+      start: Date,
+      patient = patientId,
+    ) {
+      const res = await bookAt(practitionerId, start, 15, patient).expect(400);
+      expect(JSON.stringify(res.body)).toMatch(reason);
+      await expect(
+        svc.db.getRepository(Appointment).countBy({ practitionerId, start }),
+      ).resolves.toBe(0);
+    }
+
+    it('a time that is over', async () => {
+      await expectRefused(
+        /already passed/,
+        await doctorWithSessions(svc),
+        clinicTime('2021-03-01', '09:00'),
+      );
+    });
+
+    it("a time outside the doctor's sessions", async () => {
+      const dr = await doctorWithSessions(svc, {
+        hours: { startTime: '09:00', endTime: '12:00' },
+      });
+      await expectRefused(
+        /doesn't see patients at that time/,
+        dr,
+        clinicTime('2031-01-06', '02:00'),
+      );
+      await bookAt(dr, clinicTime('2031-01-06', '09:00')).expect(201);
+    });
+
+    it('anyone but a doctor', async () => {
+      const nurse = await addPractitioner(svc.db, UserRole.NURSE);
+      const start = clinicTime('2031-01-06', '09:00');
+      await expectRefused(/isn't a doctor/, nurse, start);
+      await expectRefused(/isn't a doctor/, randomUUID(), start);
+      await bookAt('not-even-a-uuid', start)
+        .expect(400)
+        .expect(({ body }) =>
+          expect(JSON.stringify(body)).toMatch(/practitionerId must be a UUID/),
+        );
+    });
+
+    it('a patient who is not on file', async () => {
+      await expectRefused(
+        /isn't on file/,
+        await doctorWithSessions(svc),
+        clinicTime('2031-01-06', '09:00'),
+        randomUUID(),
+      );
+    });
   });
 
   describe('GET /appointments', () => {

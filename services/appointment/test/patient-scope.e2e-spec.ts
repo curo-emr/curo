@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { UserRole } from '@curo/shared/enums';
 import {
+  registerPatient,
   startService,
   type ServiceUnderTest,
   type TestActor,
 } from '@curo/testing';
 import { AppModule } from '../src/app.module';
 import { VisitType } from '../src/enums';
+import { doctorWithSessions } from './doctors';
 
 // A patient signed in to the patient portal sees only their own appointments.
 describe('A patient sees only their own appointments', () => {
@@ -17,15 +19,15 @@ describe('A patient sees only their own appointments', () => {
   let ownAppointment: string;
   let otherAppointment: string;
 
-  /** Books `patientId` in with a new doctor tomorrow; returns the appointment id. */
+  /** Books `patientId` in with a new doctor; returns the appointment id. */
   async function book(patientId: string) {
-    const start = new Date(Date.now() + 24 * 3_600_000);
+    const start = new Date('2031-01-06T09:00:00+05:30');
     const res = await svc.api
       .post('/appointments')
       .set((await svc.as(UserRole.RECEPTIONIST)).headers)
       .send({
         patientId,
-        practitionerId: randomUUID(),
+        practitionerId: await doctorWithSessions(svc),
         start: start.toISOString(),
         end: new Date(start.getTime() + 15 * 60_000).toISOString(),
         serviceType: VisitType.CONSULTATION,
@@ -38,6 +40,9 @@ describe('A patient sees only their own appointments', () => {
   beforeAll(async () => {
     svc = await startService(AppModule);
     patient = await svc.as(UserRole.PATIENT, { patientId: ownId });
+    await Promise.all(
+      [ownId, otherId].map((id) => registerPatient(svc.db, id)),
+    );
     ownAppointment = await book(ownId);
     otherAppointment = await book(otherId);
   });

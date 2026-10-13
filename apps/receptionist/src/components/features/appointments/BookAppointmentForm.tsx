@@ -20,7 +20,7 @@ import {
 } from "@curo/web/ui/select";
 import { SearchInput } from "@curo/web/ui/search-input";
 import { User, Stethoscope, CalendarDays, FileText, Loader2, Check } from "lucide-react";
-import { WEEKDAYS, sessionsOn, slotsOn, weekdayOf, workingDays } from "@curo/web/schedule";
+import { WEEKDAYS, sessionsOn, slotIsOver, slotsOn, weekdayOf, workingDays } from "@curo/web/schedule";
 import Link from "next/link";
 import { cn, formatTime, getTodayString } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
@@ -74,9 +74,10 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
   const searchDone = !!search && !!matches.data;
   const filteredPatients = search ? matches.data ?? NO_PATIENTS : NO_PATIENTS;
 
-  // The doctor's sessions on the chosen day, and the appointment times they offer.
+  // The doctor's sessions on the chosen day, and the appointment times they offer that aren't over yet.
   const daySessions = selectedDoctor && selectedDate ? sessionsOn(selectedDoctor.sessions, selectedDate) : [];
-  const timeSlots = selectedDoctor && selectedDate ? slotsOn(selectedDoctor.sessions, selectedDate) : [];
+  const daySlots = selectedDoctor && selectedDate ? slotsOn(selectedDoctor.sessions, selectedDate) : [];
+  const timeSlots = daySlots.filter((slot) => !slotIsOver(slot, selectedDate));
   const selectedSlot = timeSlots.find((slot) => slot.time === selectedTime);
 
   // The doctor's booked slots that day, from their schedule.
@@ -263,10 +264,12 @@ export function BookAppointmentForm({ doctors }: BookAppointmentFormProps) {
               Dr. {selectedDoctor.name.full} has no sessions set up yet. An administrator can add them on the doctor&apos;s
               page in the admin portal.
             </Notice>
-          ) : selectedDate && timeSlots.length === 0 ? (
+          ) : selectedDate && daySlots.length === 0 ? (
             <Notice>
               Dr. {selectedDoctor.name.full} doesn&apos;t see patients on {WEEKDAYS[weekdayOf(selectedDate)]}s. Pick another date.
             </Notice>
+          ) : selectedDate && timeSlots.length === 0 ? (
+            <Notice>Dr. {selectedDoctor.name.full}&apos;s sessions are over for today. Pick another date.</Notice>
           ) : selectedDate ? (
             <Field>
               <FieldLabel>Time</FieldLabel>

@@ -1,3 +1,5 @@
+import { clinicClock, clinicTimeZone } from '@curo/shared/config';
+
 /** A weekly session as the API takes and gives it; times are "HH:MM". */
 export interface SessionTimes {
   weekday: number;
@@ -75,4 +77,35 @@ export function sessionProblem(sessions: SessionTimes[]): string | null {
     }
   }
   return null;
+}
+
+/**
+ * Why `start`–`end` can't be booked with a doctor who keeps `sessions`, or
+ * null when it can. It must end after it starts, not be over by `now` (a slot
+ * under way can still take a walk-in), and fall within one of the sessions on
+ * the clinic's clock.
+ */
+export function bookingProblem(
+  start: Date,
+  end: Date,
+  sessions: readonly SessionTimes[],
+  now = new Date(),
+  timeZone = clinicTimeZone(),
+): string | null {
+  if (end <= start) return 'An appointment must end after it starts';
+  if (end <= now) return 'That time has already passed. Pick a later one.';
+
+  const from = clinicClock(start, timeZone);
+  const to = clinicClock(end, timeZone);
+  const inSession =
+    from.date === to.date &&
+    sessions.some(
+      (s) =>
+        s.weekday === from.weekday &&
+        minutes(s.start) <= from.minutes &&
+        to.minutes <= minutes(s.end),
+    );
+  return inSession
+    ? null
+    : "The doctor doesn't see patients at that time. Pick a time in one of their sessions.";
 }

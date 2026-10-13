@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, QueryFailedError } from 'typeorm';
+import { Repository, Between, DataSource, QueryFailedError } from 'typeorm';
 import { Appointment, NO_DOUBLE_BOOKING } from '../entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
@@ -23,6 +23,9 @@ import { assertQueueTransition, queueStageForStatus } from './queue-stage';
 import { assertStatusTransition } from './appointment-status';
 import { patientScope, type AuthUser } from '@curo/shared/auth';
 import { AuditTrail, auditTarget, changeOf } from '@curo/shared/audit';
+import { patientIsOnFile } from '@curo/shared/database';
+import { ScheduleService } from '../schedule/schedule.service';
+import { bookingProblem } from '../schedule/sessions';
 
 function toFhirAppointment(a: Appointment) {
   return {
@@ -83,14 +86,14 @@ export class AppointmentService {
     @InjectRepository(Appointment)
     private appointmentsRepo: Repository<Appointment>,
     private auditTrail: AuditTrail,
+    private schedule: ScheduleService,
+    private dataSource: DataSource,
   ) {}
 
   async create(dto: CreateAppointmentDto, user: AuthUser) {
     const start = new Date(dto.start);
     const end = new Date(dto.end);
-    if (end <= start) {
-      throw new BadRequestException('An appointment must end after it starts');
-    }
+    await this.assertBookable(dto, start, end);
     const saved = await this.save(
       this.appointmentsRepo.create({ ...dto, start, end }),
     );
@@ -99,6 +102,42 @@ export class AppointmentService {
       ...auditTarget('Appointment', saved),
     });
     return toFhirAppointment(saved);
+  }
+
+  /**
+   * Refuses a booking for anyone but a patient on file, with anyone but a
+   * doctor, or at a time that's over or outside the doctor's sessions.
+   */
+  private async assertBookable(
+    { patientId, practitionerId }: CreateAppointmentDto,
+    start: Date,
+    end: Date,
+  ) {
+    const [isDoctor, onFile, sessions] = await Promise.all([
+      this.isDoctor(practitionerId),
+      patientIsOnFile(this.dataSource, patientId),
+      this.schedule.list([practitionerId]),
+    ]);
+    if (!isDoctor) {
+      throw new BadRequestException(
+        `Practitioner ${practitionerId} isn't a doctor at the clinic`,
+      );
+    }
+    if (!onFile) {
+      throw new BadRequestException(`Patient ${patientId} isn't on file`);
+    }
+    const problem = bookingProblem(start, end, sessions);
+    if (problem) throw new BadRequestException(problem);
+  }
+
+  /** Whether `practitionerId` is an active doctor. */
+  private async isDoctor(practitionerId: string) {
+    // practitioners is owned by the auth service, so it is read with raw SQL.
+    const rows = await this.dataSource.query<unknown[]>(
+      `SELECT 1 FROM practitioners WHERE id = $1 AND role = 'DOCTOR' AND active`,
+      [practitionerId],
+    );
+    return rows.length > 0;
   }
 
   /** Saves a booking, turning a clash with the doctor's other appointments into a 409. */

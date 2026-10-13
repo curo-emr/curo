@@ -50,6 +50,16 @@ export function slotsOn(sessions: readonly DoctorSession[], date: string): Slot[
   });
 }
 
+/** When `time` ("HH:MM") on `date` ("YYYY-MM-DD") is, on the local clock. */
+export function startOf(date: string, time: string): Date {
+  return new Date(`${date}T${time}`);
+}
+
+/** Whether `slot` on `date` has ended by `now`. One under way can still be booked, as on the server. */
+export function slotIsOver(slot: Slot, date: string, now: Date = new Date()): boolean {
+  return startOf(date, slot.time).getTime() + slot.minutes * 60_000 <= now.getTime();
+}
+
 /** The days a doctor works, in week order from Monday: "Mon, Wed, Fri". */
 export function workingDays(sessions: readonly DoctorSession[]): string {
   const days = new Set(sessions.map(s => s.weekday));

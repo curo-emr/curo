@@ -1,4 +1,4 @@
-import { clinicDate, clinicDayBounds } from './clinic-time';
+import { clinicClock, clinicDate, clinicDayBounds } from './clinic-time';
 
 describe('clinicDayBounds', () => {
   it("spans the clinic's day, not the UTC one", () => {
@@ -37,5 +37,26 @@ describe('clinicDate', () => {
     const evening = new Date('2026-10-11T19:00:00.000Z'); // 00:30 on the 12th in Colombo
     expect(clinicDate(evening, 'Asia/Colombo')).toBe('2026-10-12');
     expect(clinicDate(evening, 'UTC')).toBe('2026-10-11');
+  });
+});
+
+describe('clinicClock', () => {
+  it("reads the clinic's date, weekday and time of day, not UTC's", () => {
+    const evening = new Date('2026-10-11T19:00:00.000Z'); // Monday 00:30 on the 12th in Colombo
+    expect(clinicClock(evening, 'Asia/Colombo')).toEqual({
+      date: '2026-10-12',
+      weekday: 1,
+      minutes: 30,
+    });
+    expect(clinicClock(evening, 'UTC')).toEqual({
+      date: '2026-10-11',
+      weekday: 0,
+      minutes: 19 * 60,
+    });
+  });
+
+  it('follows a change of clocks', () => {
+    const afterChange = new Date('2026-03-29T09:00:00.000Z'); // 10:00 BST
+    expect(clinicClock(afterChange, 'Europe/London').minutes).toBe(10 * 60);
   });
 });
