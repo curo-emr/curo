@@ -11,7 +11,10 @@ import {
 import { UserRole } from '@curo/shared/enums';
 import { parseLabQr } from '@curo/shared/lab';
 import {
+  addCatalogDrug,
+  addOrganization,
   auditOf,
+  registerPatient,
   startService,
   type ServiceUnderTest,
   type TestActor,
@@ -44,29 +47,23 @@ describe('POST /encounters/visit', () => {
   let doctor: TestActor;
   let lab: string;
   let pharmacy: string;
-
-  /** An organization, as the auth service keeps them; returns its id. */
-  async function organization(type: string, active = true) {
-    const id = randomUUID();
-    await svc.db.query(
-      `INSERT INTO organizations (id, name, type, active) VALUES ($1, $2, $3, $4)`,
-      [id, `Curo ${type} ${id}`, type, active],
-    );
-    return id;
-  }
+  let patientId: string;
+  let drug: string;
 
   beforeAll(async () => {
     svc = await startService(AppModule);
     doctor = await svc.as(UserRole.DOCTOR);
-    lab = await organization('laboratory');
-    pharmacy = await organization('pharmacy');
+    lab = await addOrganization(svc.db, 'laboratory');
+    pharmacy = await addOrganization(svc.db, 'pharmacy');
+    patientId = await registerPatient(svc.db);
+    drug = await addCatalogDrug(svc.db);
   });
 
   afterAll(() => svc.close());
 
   const visit = (overrides: object = {}) => ({
     id: randomUUID(),
-    patientId: randomUUID(),
+    patientId,
     appointmentId: randomUUID(),
     reasonCode: 'Cough',
     note: { subjective: 'Cough for 3 days', assessment: 'Acute bronchitis' },
@@ -78,11 +75,7 @@ describe('POST /encounters/visit', () => {
       { code: 'R05', display: 'Cough' },
     ],
     prescriptions: [
-      {
-        medicationCode: 'AMOX500',
-        medicationDisplay: 'Amoxicillin 500mg',
-        performerOrganizationId: pharmacy,
-      },
+      { medicationCode: drug, performerOrganizationId: pharmacy },
     ],
     labOrders: [
       {
@@ -143,6 +136,17 @@ describe('POST /encounters/visit', () => {
     expect(encounter.periodEnd).toBeInstanceOf(Date);
   });
 
+  it('records a visit with no prescriptions', async () => {
+    const body = visit({ prescriptions: [] });
+
+    await sign(body).expect(201);
+
+    expect(await recordsOf(body.id)).toEqual({
+      ...WHOLE_VISIT,
+      medication_requests: 0,
+    });
+  });
+
   it('gives each lab order its QR label', async () => {
     const body = visit();
 
@@ -162,7 +166,7 @@ describe('POST /encounters/visit', () => {
   });
 
   it('sends each lab order to the lab the doctor chose', async () => {
-    const otherLab = await organization('laboratory');
+    const otherLab = await addOrganization(svc.db, 'laboratory');
     const body = visit({
       labOrders: [
         { code: '58410-2', display: 'FBC', performerOrganizationId: lab },
@@ -187,8 +191,8 @@ describe('POST /encounters/visit', () => {
     const elsewhere = [
       undefined,
       randomUUID(),
-      await organization('pharmacy'),
-      await organization('laboratory', false),
+      await addOrganization(svc.db, 'pharmacy'),
+      await addOrganization(svc.db, 'laboratory', false),
     ];
 
     for (const performerOrganizationId of elsewhere) {
@@ -213,12 +217,12 @@ describe('POST /encounters/visit', () => {
   });
 
   it('saves nothing when a prescription is sent to no pharmacy, or somewhere that is not an active pharmacy', async () => {
-    const rx = { medicationCode: 'AMOX500', medicationDisplay: 'Amoxicillin' };
+    const rx = { medicationCode: drug };
     const elsewhere = [
       undefined,
       randomUUID(),
       lab,
-      await organization('pharmacy', false),
+      await addOrganization(svc.db, 'pharmacy', false),
     ];
 
     for (const performerOrganizationId of elsewhere) {
@@ -228,6 +232,27 @@ describe('POST /encounters/visit', () => {
       await sign(body).expect(400);
       expect(await recordsOf(body.id)).toEqual(NOTHING);
     }
+  });
+
+  it('saves nothing when a prescription is for a drug the catalog does not list', async () => {
+    const body = visit({
+      prescriptions: [
+        { medicationCode: drug, performerOrganizationId: pharmacy },
+        { medicationCode: 'NOT-IN-CATALOG', performerOrganizationId: pharmacy },
+      ],
+    });
+
+    await sign(body).expect(400);
+
+    expect(await recordsOf(body.id)).toEqual(NOTHING);
+  });
+
+  it("saves nothing when the patient prescribed for isn't on file", async () => {
+    const body = visit({ patientId: randomUUID() });
+
+    await sign(body).expect(400);
+
+    expect(await recordsOf(body.id)).toEqual(NOTHING);
   });
 
   it("pulls the appointment's triage vitals into the encounter", async () => {
@@ -298,7 +323,9 @@ describe('POST /encounters/visit', () => {
     const first = visit();
     await sign(first).expect(201);
 
-    await sign(visit({ id: first.id })).expect(409);
+    await sign(
+      visit({ id: first.id, patientId: await registerPatient(svc.db) }),
+    ).expect(409);
 
     expect(await recordsOf(first.id)).toEqual(WHOLE_VISIT);
   });

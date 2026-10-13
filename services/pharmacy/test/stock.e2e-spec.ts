@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { UserRole } from '@curo/shared/enums';
 import {
+  addCatalogDrug,
   daysFromToday,
   startService,
   type ServiceUnderTest,
   type TestActor,
 } from '@curo/testing';
 import { AppModule } from '../src/app.module';
-import { MedicationCatalog } from '../src/entities/medication-catalog.entity';
 import { Stock } from '../src/entities/stock.entity';
 import type { StockGroup } from '../src/pharmacy/pharmacy.service';
 
@@ -182,24 +182,12 @@ describe('stock', () => {
       );
     });
 
-    /** A drug of its own in the prescribing catalog; returns its code. */
-    async function catalogDrug() {
-      const drug = await svc.db.getRepository(MedicationCatalog).save({
-        id: `TEST-${randomUUID()}`,
-        name: 'Amoxicillin 500mg Capsule',
-        genericName: 'Amoxicillin',
-        form: 'capsule',
-        strength: '500mg',
-      });
-      return drug.id;
-    }
-
     it("receives stock into the pharmacist's pharmacy, not the one the body names", async () => {
       const res = await svc.api
         .post('/stock')
         .set(pharmacist.headers)
         .send({
-          medicationCode: await catalogDrug(),
+          medicationCode: await addCatalogDrug(svc.db),
           quantity: 50,
           organizationId: otherPharmacy,
         })
@@ -217,7 +205,7 @@ describe('stock', () => {
         .post('/stock')
         .set(pharmacist.headers)
         .send({
-          medicationCode: await catalogDrug(),
+          medicationCode: await addCatalogDrug(svc.db),
           medicationName: 'Something else',
           quantity: 10,
         })
@@ -232,7 +220,7 @@ describe('stock', () => {
     });
 
     it('turns away an expired batch, and a quantity that is not a whole number above zero', async () => {
-      const medicationCode = await catalogDrug();
+      const medicationCode = await addCatalogDrug(svc.db);
       const receive = (body: object) =>
         svc.api
           .post('/stock')

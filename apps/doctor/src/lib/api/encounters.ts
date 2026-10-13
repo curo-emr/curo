@@ -25,8 +25,7 @@ export interface VisitPayload {
   diagnoses: { code: string; display: string; isPrimary: boolean }[];
   prescriptions: {
     performerOrganizationId?: string;
-    medicationCode: string;
-    medicationDisplay: string;
+    medicationCode: string; // a catalog drug; the backend names it as the catalog does
     dosageText?: string;
     route?: string;
     frequency?: string;

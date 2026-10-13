@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { IsNull, type DeepPartial, type EntityManager } from 'typeorm';
 import * as QRCode from 'qrcode';
 import {
@@ -6,6 +7,7 @@ import {
   Observation,
   QrCode,
   ServiceRequest,
+  patientIsOnFile,
 } from '@curo/shared/database';
 import {
   ConditionClinicalStatus,
@@ -57,24 +59,56 @@ export function newVital(
   };
 }
 
-/** Saves prescriptions, each sent to the pharmacy it names. */
+/**
+ * Saves prescriptions, each sent to the pharmacy it names, for a patient on
+ * file, of a drug in the medication catalog and named as the catalog names it,
+ * so the pharmacy can stock and dispense what was prescribed.
+ */
 export async function savePrescriptions(
   em: EntityManager,
   dtos: CreatePrescriptionDto[],
   practitionerId: string,
 ): Promise<MedicationRequest[]> {
+  if (!dtos.length) return [];
   for (const pharmacy of new Set(dtos.map((d) => d.performerOrganizationId)))
     await assertActiveOrganization(em, pharmacy, 'pharmacy');
+  for (const patientId of new Set(dtos.map((d) => d.patientId)))
+    if (!(await patientIsOnFile(em, patientId)))
+      throw new BadRequestException(`Patient ${patientId} isn't on file`);
+  const names = await catalogNames(
+    em,
+    dtos.map((d) => d.medicationCode),
+  );
   return em.save(
     MedicationRequest,
     dtos.map((dto) => ({
       ...dto,
+      medicationDisplay: names.get(dto.medicationCode),
       practitionerId,
       status: MedicationRequestStatus.ACTIVE,
       intent: 'order',
       authoredOn: new Date(),
     })),
   );
+}
+
+/** The catalog's name for each of `codes`; one it doesn't list (or no longer does) is a 400. */
+async function catalogNames(
+  em: EntityManager,
+  codes: string[],
+): Promise<Map<string, string>> {
+  // medication_catalog is owned by the pharmacy service, so it is read with raw SQL.
+  const rows = await em.query<{ id: string; name: string }[]>(
+    'SELECT id, name FROM medication_catalog WHERE id = ANY($1) AND active',
+    [codes],
+  );
+  const names = new Map(rows.map((r) => [r.id, r.name]));
+  const unknown = codes.find((code) => !names.has(code));
+  if (unknown)
+    throw new BadRequestException(
+      `${unknown} is not in the medication catalog. Prescribe a medicine from the catalog.`,
+    );
+  return names;
 }
 
 // Read back by the doctor portal: a visit's diagnoses are encounter-diagnosis
