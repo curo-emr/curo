@@ -23,7 +23,7 @@ import { assertQueueTransition, queueStageForStatus } from './queue-stage';
 import { assertStatusTransition } from './appointment-status';
 import { patientScope, type AuthUser } from '@curo/shared/auth';
 import { AuditTrail, auditTarget, changeOf } from '@curo/shared/audit';
-import { patientIsOnFile } from '@curo/shared/database';
+import { assertPatientOnFile } from '@curo/shared/database';
 import { ScheduleService } from '../schedule/schedule.service';
 import { bookingProblem } from '../schedule/sessions';
 
@@ -113,9 +113,8 @@ export class AppointmentService {
     start: Date,
     end: Date,
   ) {
-    const [isDoctor, onFile, sessions] = await Promise.all([
+    const [isDoctor, sessions] = await Promise.all([
       this.isDoctor(practitionerId),
-      patientIsOnFile(this.dataSource, patientId),
       this.schedule.list([practitionerId]),
     ]);
     if (!isDoctor) {
@@ -123,9 +122,7 @@ export class AppointmentService {
         `Practitioner ${practitionerId} isn't a doctor at the clinic`,
       );
     }
-    if (!onFile) {
-      throw new BadRequestException(`Patient ${patientId} isn't on file`);
-    }
+    await assertPatientOnFile(this.dataSource, patientId);
     const problem = bookingProblem(start, end, sessions);
     if (problem) throw new BadRequestException(problem);
   }

@@ -84,6 +84,13 @@ describe('Appointments and the patient queue', () => {
       .set(actor.headers)
       .send({ stage });
 
+  /** Records a payment as `desk` (reception by default); `body` adds to or overrides the defaults. */
+  const pay = (body: object = {}, desk: TestActor = receptionist) =>
+    svc.api
+      .post('/payments')
+      .set(desk.headers)
+      .send({ patientId, amount: 1500, ...body });
+
   it('books an appointment outside the queue until the patient arrives', async () => {
     const id = await book();
 
@@ -485,20 +492,72 @@ describe('Appointments and the patient queue', () => {
     });
   });
 
+  describe('POST /payments', () => {
+    const paymentsFor = (appointmentId: string) =>
+      svc.db.getRepository(Payment).countBy({ appointmentId });
+
+    it('records a payment for the visit, as cash for a consultation unless told otherwise', async () => {
+      const appointmentId = await book();
+
+      const res = await pay({ appointmentId }).expect(201);
+
+      expect(res.body).toMatchObject({
+        patientId,
+        appointmentId,
+        paymentMethod: 'cash',
+        type: 'consultation',
+      });
+    });
+
+    it("refuses a payment for another patient's appointment", async () => {
+      const appointmentId = await book();
+
+      const res = await pay({
+        appointmentId,
+        patientId: await registerPatient(svc.db),
+      }).expect(400);
+
+      expect(res.body).toMatchObject({
+        message: expect.stringMatching(/another patient's/) as unknown,
+      });
+      expect(await paymentsFor(appointmentId)).toBe(0);
+    });
+
+    it("refuses a patient who isn't on file, and an appointment that doesn't exist", async () => {
+      await pay({ patientId: randomUUID() }).expect(400);
+      await pay({ patientId: 'not-a-uuid' }).expect(400);
+      await pay({ appointmentId: randomUUID() }).expect(400);
+    });
+
+    it('refuses a payment for a visit that was cancelled or missed', async () => {
+      for (const status of [
+        AppointmentStatus.CANCELLED,
+        AppointmentStatus.NOSHOW,
+      ]) {
+        const appointmentId = await book();
+        await setStatus(appointmentId, status).expect(200);
+
+        await pay({ appointmentId }).expect(400);
+
+        expect(await paymentsFor(appointmentId)).toBe(0);
+      }
+    });
+
+    it('takes only the payment methods and types the clinic has', async () => {
+      await pay({ paymentMethod: 'bitcoin' }).expect(400);
+      await pay({ type: 'gift' }).expect(400);
+      await pay({ paymentMethod: 'card', type: 'lab' }).expect(201);
+    });
+  });
+
   describe('GET /payments/mine', () => {
     it('lists only the payments for the appointments asked about', async () => {
-      const pay = async (appointmentId: string) =>
-        (
-          await svc.api
-            .post('/payments')
-            .set(receptionist.headers)
-            .send({ patientId: randomUUID(), appointmentId, amount: 1500 })
-            .expect(201)
-        ).body as { id: string };
-      const [paidA, paidB] = [randomUUID(), randomUUID()];
-      const a = await pay(paidA);
-      const b = await pay(paidB);
-      await pay(randomUUID());
+      const paid = async (appointmentId: string) =>
+        ((await pay({ appointmentId }).expect(201)).body as { id: string }).id;
+      const [paidA, paidB] = [await book(), await book()];
+      const a = await paid(paidA);
+      const b = await paid(paidB);
+      await paid(await book());
 
       const res = await svc.api
         .get('/payments/mine')
@@ -508,18 +567,14 @@ describe('Appointments and the patient queue', () => {
       const ids = (res.body as { entry: { resource: { id: string } }[] }).entry
         .map((e) => e.resource.id)
         .sort();
-      expect(ids).toEqual([a.id, b.id].sort());
+      expect(ids).toEqual([a, b].sort());
     });
   });
 
   describe('GET /payments/summary', () => {
     it("buckets a payment by the clinic's day, even in the early morning", async () => {
       const desk = await svc.as(UserRole.RECEPTIONIST);
-      const res = await svc.api
-        .post('/payments')
-        .set(desk.headers)
-        .send({ patientId: randomUUID(), amount: 500 })
-        .expect(201);
+      const res = await pay({ amount: 500 }, desk).expect(201);
       // 01:00 in Colombo on 1 March is 19:30 UTC on 28 February.
       await svc.db
         .getRepository(Payment)
@@ -557,11 +612,7 @@ describe('Appointments and the patient queue', () => {
       const desk = await svc.as(UserRole.RECEPTIONIST);
       const before = await totals();
       for (const amount of [1000, 250.5])
-        await svc.api
-          .post('/payments')
-          .set(desk.headers)
-          .send({ patientId: randomUUID(), amount })
-          .expect(201);
+        await pay({ amount }, desk).expect(201);
 
       const after = await totals();
       expect(after.count).toBe(before.count + 2);
@@ -579,11 +630,7 @@ describe('Appointments and the patient queue', () => {
       const admin = await svc.as(UserRole.SUPER_ADMIN);
       const ids: string[] = [];
       for (const amount of [1000, 300, 200]) {
-        const res = await svc.api
-          .post('/payments')
-          .set(desk.headers)
-          .send({ patientId: randomUUID(), amount })
-          .expect(201);
+        const res = await pay({ amount }, desk).expect(201);
         ids.push((res.body as { id: string }).id);
       }
       for (const [id, status] of [
@@ -606,17 +653,18 @@ describe('Appointments and the patient queue', () => {
       expect(own.body).toMatchObject({ total: 1000, count: 1 });
     });
 
-    it('refuses a correction to a status payments do not have', async () => {
-      const res = await svc.api
-        .post('/payments')
-        .set(receptionist.headers)
-        .send({ patientId: randomUUID(), amount: 100 })
-        .expect(201);
-      await svc.api
-        .put(`/payments/${(res.body as { id: string }).id}`)
-        .set((await svc.as(UserRole.SUPER_ADMIN)).headers)
-        .send({ status: 'Paid' })
-        .expect(400);
+    it('refuses a correction to a status or method payments do not have', async () => {
+      const res = await pay({ amount: 100 }).expect(201);
+      const admin = await svc.as(UserRole.SUPER_ADMIN);
+      const correct = (body: object) =>
+        svc.api
+          .put(`/payments/${(res.body as { id: string }).id}`)
+          .set(admin.headers)
+          .send(body);
+
+      await correct({ status: 'Paid' }).expect(400);
+      await correct({ paymentMethod: 'bitcoin' }).expect(400);
+      await correct({ paymentMethod: 'card' }).expect(200);
     });
 
     it('is refused to receptionists', async () => {
