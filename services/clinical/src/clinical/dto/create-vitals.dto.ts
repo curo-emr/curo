@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsUUID,
 } from 'class-validator';
+import { IsPlausibleVital } from './plausible-vital';
 
 export class CreateVitalsDto {
   @IsNotEmpty()
@@ -33,6 +34,7 @@ export class CreateVitalsDto {
 
   @IsOptional()
   @IsNumber()
+  @IsPlausibleVital()
   valueQuantity?: number;
 
   @IsOptional()

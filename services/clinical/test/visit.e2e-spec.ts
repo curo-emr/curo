@@ -180,6 +180,16 @@ describe('POST /encounters/visit', () => {
     }
   });
 
+  it('saves nothing when a vital sign is impossible', async () => {
+    const body = visit({
+      vitals: [
+        { code: '8310-5', display: 'Body temperature', valueQuantity: 500 },
+      ],
+    });
+    await sign(body).expect(400);
+    expect(await recordsOf(body.id)).toEqual(NOTHING);
+  });
+
   it('gives each lab order its QR label', async () => {
     const body = visit();
 
