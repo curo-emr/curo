@@ -69,6 +69,7 @@ export async function savePrescriptions(
   dtos: CreatePrescriptionDto[],
   practitionerId: string,
 ): Promise<MedicationRequest[]> {
+  if (!dtos.length) return [];
   for (const pharmacy of new Set(dtos.map((d) => d.performerOrganizationId)))
     await assertActiveOrganization(em, pharmacy, 'pharmacy');
   for (const patientId of new Set(dtos.map((d) => d.patientId)))

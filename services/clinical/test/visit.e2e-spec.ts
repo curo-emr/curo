@@ -136,6 +136,17 @@ describe('POST /encounters/visit', () => {
     expect(encounter.periodEnd).toBeInstanceOf(Date);
   });
 
+  it('records a visit with no prescriptions', async () => {
+    const body = visit({ prescriptions: [] });
+
+    await sign(body).expect(201);
+
+    expect(await recordsOf(body.id)).toEqual({
+      ...WHOLE_VISIT,
+      medication_requests: 0,
+    });
+  });
+
   it('gives each lab order its QR label', async () => {
     const body = visit();
 
