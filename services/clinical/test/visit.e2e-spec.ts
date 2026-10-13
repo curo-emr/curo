@@ -172,6 +172,7 @@ describe('POST /encounters/visit', () => {
     for (const diagnosis of [
       { code: 'R51.9', display: ' ' },
       { code: 'headache', display: 'Headache' },
+      { code: 'cough', display: 'Cough' },
     ]) {
       const body = visit({ diagnoses: [diagnosis] });
       await sign(body).expect(400);

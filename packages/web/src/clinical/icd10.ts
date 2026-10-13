@@ -4,9 +4,10 @@
 // code is tidied as the API will save it and a malformed one is caught before
 // signing.
 
-// A category of a letter and two letters or digits (R51, M1A, QA0), then up
-// to four characters after the dot: R51.9, J45.909, S72.001A.
-const ICD10_CODE = /^[A-Z][\dA-Z]{2}(\.[\dA-Z]{1,4})?$/;
+// A category of a letter, then a digit in second or third place (R51, M1A,
+// QA0), so a word ("flu") is never taken for one. Then up to four characters
+// after the dot: R51.9, J45.909, S72.001A.
+const ICD10_CODE = /^[A-Z](\d[\dA-Z]|[A-Z]\d)(\.[\dA-Z]{1,4})?$/;
 
 /** A code as written, in capitals and dotted after the category ("r519" → "R51.9"); blank is "". */
 export function tidyIcd10Code(code: string): string {

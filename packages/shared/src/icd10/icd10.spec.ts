@@ -14,13 +14,22 @@ describe('tidyIcd10Code', () => {
 });
 
 describe('ICD10_CODE', () => {
-  it('matches codes whose category has letters after the first', () => {
+  it('matches codes, including those whose category has a letter after the first', () => {
     for (const code of ['I10', 'R51.9', 'M1A.0', 'QA0.0101', 'S72.001A'])
       expect(code).toMatch(ICD10_CODE);
   });
 
   it('turns away words and malformed codes', () => {
-    for (const code of ['headache', '51.9', 'R5', 'R51.12345', 'r51.9'])
+    for (const code of [
+      'COU.GH', // "cough", tidied
+      'FLU',
+      'ABC',
+      'HEADACHE',
+      '51.9',
+      'R5',
+      'R51.12345',
+      'r51.9',
+    ])
       expect(code).not.toMatch(ICD10_CODE);
   });
 });

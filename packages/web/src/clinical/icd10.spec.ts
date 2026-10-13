@@ -19,6 +19,6 @@ describe("isBlankOrIcd10Code", () => {
   });
 
   it("turns away words and malformed codes", () => {
-    for (const code of ["headache", "51.9", "R5", "R51.12345"]) expect(isBlankOrIcd10Code(code)).toBe(false);
+    for (const code of ["headache", "cough", "flu", "abc", "51.9", "R5", "R51.12345"]) expect(isBlankOrIcd10Code(code)).toBe(false);
   });
 });
