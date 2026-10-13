@@ -2,7 +2,7 @@ import { keepPreviousData, queryOptions, type QueryClient } from "@tanstack/reac
 import { POLL_INBOX_MS, POLL_QUEUE_MS } from "@curo/web/query";
 import { getAllergies, getConditions, getPatientById, getPatientsByIds, getPatientsPaginated } from "@/lib/api/patients";
 import { getAppointments } from "@/lib/api/appointments";
-import { getLabCatalog, getOrganizations, getPharmacyStock } from "@/lib/api/directory";
+import { getLabCatalog, getOrganization, getOrganizations, getPharmacyStock } from "@/lib/api/directory";
 import { getPractitioners } from "@curo/web/practitioners";
 import { getOpenTasks } from "@/lib/api/tasks";
 import { getEncounterById, getEncountersByPatient } from "@/lib/api/encounters";
@@ -190,6 +190,11 @@ export const directoryQueries = {
   organizations: (type: "pharmacy" | "laboratory") => queryOptions({
     queryKey: ["directory", type],
     queryFn: () => getOrganizations(type),
+    staleTime: CATALOG_STALE_MS,
+  }),
+  organization: (id: string) => queryOptions({
+    queryKey: ["directory", "organization", id],
+    queryFn: () => getOrganization(id),
     staleTime: CATALOG_STALE_MS,
   }),
   pharmacyStock: (organizationId: string) => queryOptions({

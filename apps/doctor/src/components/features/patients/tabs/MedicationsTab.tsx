@@ -12,6 +12,7 @@ import { EmptyState } from "@curo/web/ui/empty-state";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { HoldNote } from "@/components/features/prescriptions/HoldNote";
 import { RX_PRINT_ID, RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";
+import { usePrintIssuer } from "@/components/features/print/PrintIssuer";
 import { useAuth } from "@/contexts/AuthContext";
 import { printOnly } from "@curo/web/print";
 import { formatDate } from "@/lib/utils";
@@ -19,6 +20,8 @@ import { patientQueries } from "@/lib/queries";
 
 export function MedicationsTab({ patient }: { patient: Patient }) {
   const { user } = useAuth();
+  // Printed from here, the prescriptions are issued by whoever prints them.
+  const issuer = usePrintIssuer(user?.practitionerId);
   const prescriptions = useQuery(patientQueries.prescriptions(patient.id));
   // Every prescribed item, newest first, individually selectable for printing.
   const rows = useMemo(
@@ -70,7 +73,7 @@ export function MedicationsTab({ patient }: { patient: Patient }) {
           )}
         </QueryContent>
       </SectionCard>
-      <RxPrint patient={patient} items={printRows.map(r => r.item)} prescriber={user?.name} />
+      <RxPrint patient={patient} items={printRows.map(r => r.item)} issuer={issuer} />
     </>
   );
 }
