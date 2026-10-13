@@ -21,8 +21,8 @@ import { FREQUENCIES, routeForForm, suggestQuantity } from "../visit";
 interface PrescriptionFormProps {
   prescriptions: PrescriptionItem[];
   onChange: (items: PrescriptionItem[]) => void;
-  /** Where the prescriptions are sent; the doctor chooses when there is more than one. */
-  pharmacies: Pharmacy[];
+  /** Where the prescriptions are sent; the doctor chooses when there is more than one. Undefined until known. */
+  pharmacies: Pharmacy[] | undefined;
   pharmacyId: string | undefined;
   onPharmacyChange: (pharmacyId: string) => void;
   /** Shown before the doctor types; typing searches the whole catalog. */
@@ -69,18 +69,19 @@ export function PrescriptionForm({
       return next;
     }));
 
-  // With no pharmacy set up, the patient buys everything outside.
-  const noPharmacy = pharmacies.length === 0;
+  // With no pharmacy set up, the patient buys everything outside. Until the
+  // pharmacies are known, lines go to the pharmacy, and signing checks there is one.
+  const noPharmacy = pharmacies?.length === 0;
   const description = noPharmacy
     ? "No pharmacy is set up yet, so the patient buys these at a pharmacy of their choice"
-    : pharmacies.length === 1
+    : pharmacies?.length === 1
       ? `Sent to ${pharmacies[0].name} when you sign the visit, unless the patient buys them outside`
       : "Sent to the pharmacy you choose when you sign the visit, unless the patient buys them outside";
 
   return (
     <SectionCard id="prescriptions" icon={Pill} iconClassName="text-clinical-rx" title="Prescriptions" count={prescriptions.length}
       description={description}
-      headerRight={pharmacies.length > 1 && (
+      headerRight={pharmacies && pharmacies.length > 1 && (
         <Select value={pharmacyId ?? ""} onValueChange={onPharmacyChange}>
           <SelectTrigger size="sm" aria-label="Pharmacy" className="max-w-48 bg-card text-xs sm:max-w-60">
             <SelectValue placeholder="Choose a pharmacy" />

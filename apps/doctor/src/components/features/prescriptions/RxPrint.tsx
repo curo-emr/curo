@@ -14,7 +14,6 @@ export const RX_PRINT_ID = "rx-print";
 
 // Print-only e-prescription. Hidden on screen; printed with printOnly(RX_PRINT_ID).
 export function RxPrint({ patient, items, prescriber, date }: RxPrintProps) {
-  const { toPharmacy, outside } = splitByPharmacy(items);
   return (
     <div id={RX_PRINT_ID} className="hidden">
       <div style={{ padding: 24, fontFamily: "serif", color: "#111" }}>
@@ -27,11 +26,7 @@ export function RxPrint({ patient, items, prescriber, date }: RxPrintProps) {
           <p style={{ margin: "2px 0" }}><strong>MRN:</strong> {patient.mrn}{patient.phn ? `  ·  PHN: ${patient.phn}` : ""}</p>
           <p style={{ margin: 0 }}><strong>Age/Sex:</strong> {calculateAge(patient.dob) ?? "—"} / {formatStatus(patient.sex)}</p>
         </div>
-        {/* Dispensed here, then those the patient buys at a pharmacy of their choice. */}
-        {[
-          { title: "℞ Medications", rows: toPharmacy },
-          { title: "℞ Buy at any pharmacy", rows: outside },
-        ].filter(section => section.rows.length > 0).map(section => (
+        {rxSections(items).map(section => (
           <section key={section.title} style={{ marginBottom: 16 }}>
             <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px" }}>{section.title}</h2>
             <RxTable items={section.rows} />
@@ -52,6 +47,15 @@ export function rxDirections(item: PrescriptionItem): string {
   const main = [item.dose, item.route, item.frequency].filter(Boolean).join(" ");
   const days = item.durationDays ? ` × ${item.durationDays} days` : "";
   return `${main}${days}${item.instructions ? `. ${item.instructions}` : ""}`;
+}
+
+/** What the pharmacy here dispenses, then what the patient buys at a pharmacy of their choice; empty ones left out. */
+function rxSections(items: PrescriptionItem[]) {
+  const { toPharmacy, outside } = splitByPharmacy(items);
+  return [
+    { title: "℞ Medications", rows: toPharmacy },
+    { title: "℞ Buy at any pharmacy", rows: outside },
+  ].filter(section => section.rows.length > 0);
 }
 
 function RxTable({ items }: { items: PrescriptionItem[] }) {

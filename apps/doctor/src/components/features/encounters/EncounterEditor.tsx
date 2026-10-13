@@ -45,14 +45,16 @@ interface Props {
   medicationSuggestions: Medication[];
   labTestsCatalog: LabTestCatalogItem[];
   labs: Lab[];
-  pharmacies: Organization[];
+  /** Undefined while loading, or when they couldn't be loaded. */
+  pharmacies: Organization[] | undefined;
 }
 
 type StoredDraft = VisitDraft & { savedAt?: string };
 
 export function EncounterEditor({
-  patient, appointmentId, reason, medicationSuggestions, labTestsCatalog, labs, pharmacies,
+  patient, appointmentId, reason, medicationSuggestions, labTestsCatalog, labs, pharmacies: loadedPharmacies,
 }: Props) {
+  const pharmacies = loadedPharmacies ?? [];
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -251,7 +253,7 @@ export function EncounterEditor({
           <PrescriptionForm
             prescriptions={visit.prescriptions}
             onChange={v => update("prescriptions", v)}
-            pharmacies={pharmacies}
+            pharmacies={loadedPharmacies}
             pharmacyId={pharmacyFor(visit, pharmacies)?.id}
             onPharmacyChange={id => update("pharmacyId", id)}
             suggestions={medicationSuggestions}
@@ -294,7 +296,7 @@ export function EncounterEditor({
             <SummaryLine ok label="To pharmacy"
               value={rx.toPharmacy.length
                 ? `${rx.toPharmacy.map(p => p.displayName).join(", ")}${pharmacies.length > 1 ? ` → ${pharmacyFor(visit, pharmacies)?.name}` : ""}`
-                : "No prescriptions"} />
+                : rx.outside.length ? "None" : "No prescriptions"} />
             {rx.outside.length > 0 && (
               <SummaryLine ok label="Patient buys outside" value={rx.outside.map(p => p.displayName).join(", ")} />
             )}
