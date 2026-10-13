@@ -81,8 +81,11 @@ seed, delete only the database's volume:
 ```bash
 docker compose down
 docker volume rm "$(docker compose config --format json | jq -r .name)_postgres_data"
-docker compose up -d    # migrates the empty database, loads ICD-10-CM and seeds it
+make run    # rebuilds the images, then migrates the empty database, loads ICD-10-CM and seeds it
 ```
 
-This deletes every record in the database. Don't use `docker compose down -v`: it also deletes
+`make run` rather than `docker compose up -d`: the migrations and the seed run from their images,
+and an image older than the code can't seed the current schema. This deletes every record in the
+database (and any other database on the same server, such as `curo_test`, which the API tests
+recreate). Don't use `docker compose down -v`: it also deletes
 the MinIO volume holding uploaded documents.
