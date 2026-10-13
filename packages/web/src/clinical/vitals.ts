@@ -8,7 +8,8 @@ import { calculateAge } from "../format";
 // Ranges are adult triage guide values: `normal` is the reference band, values
 // outside it but inside `alert` are flagged for attention, values outside
 // `alert` are flagged critical. `scale` is the span drawn on a gauge;
-// `plausible` rejects obvious typos before anything is saved.
+// `plausible` rejects obvious typos before anything is saved; the clinical
+// service refuses the same ranges (PLAUSIBLE_VITALS), so keep the two in step.
 
 export type VitalKey =
   | "bpSystolic" | "bpDiastolic" | "pulseBpm" | "spo2Percent"
