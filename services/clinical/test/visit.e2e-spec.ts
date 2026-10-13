@@ -327,6 +327,16 @@ describe('POST /encounters/visit', () => {
     expect(await auditOf(svc, body.id)).toHaveLength(1);
   });
 
+  it('records the visit once when it is signed several times at once', async () => {
+    const body = visit();
+
+    const replies = await Promise.all([1, 2, 3].map(() => sign(body)));
+
+    expect(replies.map((r) => r.status)).toEqual([201, 201, 201]);
+    expect(await recordsOf(body.id)).toEqual(WHOLE_VISIT);
+    expect(await auditOf(svc, body.id)).toHaveLength(1);
+  });
+
   it('audits the signed visit as one entry on the encounter, listing what was signed with it', async () => {
     const body = visit();
 

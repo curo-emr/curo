@@ -28,11 +28,12 @@ export class VisitService {
    * Records a signed visit (the encounter with its note, vitals, diagnoses,
    * prescriptions and lab orders) in one transaction, so it is saved whole or
    * not at all. Signing the same visit again returns the visit already
-   * recorded and writes nothing. The visit is audited as one entry on the
-   * encounter, listing the records signed with it.
+   * recorded and writes nothing, also when the signs arrive at once. The visit
+   * is audited as one entry on the encounter, listing the records signed with it.
    */
   async complete(dto: CompleteVisitDto, user: AuthUser) {
     const encounter = await this.dataSource.transaction(async (em) => {
+      await lockVisit(em, dto.id);
       const existing = await em.findOneBy(Encounter, { id: dto.id });
       return existing ? sameVisit(existing, dto) : this.record(em, dto, user);
     });
@@ -105,6 +106,16 @@ export class VisitService {
     );
     return encounter;
   }
+}
+
+/**
+ * Makes signs of one visit take turns until the transaction ends. Without it,
+ * two signs at once both find no encounter and both write one: the second then
+ * fails on the encounter's key, or saves the visit's records twice. With it,
+ * the second waits, then finds the first one's encounter and replays it.
+ */
+async function lockVisit(em: EntityManager, id: string): Promise<void> {
+  await em.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`visit:${id}`]);
 }
 
 /** A replayed sign must be for the same patient; a reused id for another is refused. */
