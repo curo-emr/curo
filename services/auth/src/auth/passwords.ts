@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -8,7 +9,13 @@ import { LoginAttempts } from './login-attempts';
 
 export const MIN_PASSWORD_LENGTH = 8;
 
-/** Sets passwords, the same way for everyone who can give or reset one. */
+const BCRYPT_ROUNDS = 12;
+
+// Compared against when there is no account, so checking a password takes as
+// long for an email without one and the time taken doesn't give that away.
+const NO_ACCOUNT_HASH = bcrypt.hash(randomUUID(), BCRYPT_ROUNDS);
+
+/** Sets and checks passwords, the same way for everyone who can give or reset one. */
 @Injectable()
 export class Passwords {
   constructor(
@@ -18,7 +25,13 @@ export class Passwords {
   ) {}
 
   hash(password: string): Promise<string> {
-    return bcrypt.hash(password, 12);
+    return bcrypt.hash(password, BCRYPT_ROUNDS);
+  }
+
+  /** Whether `password` is `user`'s; false when there is no user, after as long a check. */
+  async matches(user: User | null, password: string): Promise<boolean> {
+    const hash = user?.passwordHash ?? (await NO_ACCOUNT_HASH);
+    return (await bcrypt.compare(password, hash)) && user !== null;
   }
 
   /**
