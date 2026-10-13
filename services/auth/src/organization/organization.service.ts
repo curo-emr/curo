@@ -75,14 +75,18 @@ export class OrganizationService {
   ): Promise<Organization> {
     const org = await this.get(id);
     const before = { ...org };
-    const saved = await this.orgRepo.save(Object.assign(org, dto));
+    // The validated DTO holds every field it declares; only those sent change.
+    const changes = Object.fromEntries(
+      Object.entries(dto).filter(([, value]) => value !== undefined),
+    );
+    const saved = await this.orgRepo.save(Object.assign(org, changes));
     await this.auditTrail.record(actor, {
       action: 'UPDATE',
       resourceType: 'Organization',
       resourceId: id,
       changes: {
-        before: pick(before, Object.keys(dto)),
-        after: { ...dto },
+        before: pick(before, Object.keys(changes)),
+        after: changes,
       },
       outcomeDescription: 'Admin updated an organization',
     });
