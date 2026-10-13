@@ -4,6 +4,7 @@ import type { Practitioner } from "@/lib/api/practitioners";
 import { Badge } from "@curo/web/ui/badge";
 import { InitialsAvatar } from "@curo/web/ui/initials-avatar";
 import { calculateAge } from "@curo/web/format";
+import { formatAllergySeverity } from "@curo/web/fhir";
 import { cn, formatPhn, formatTime } from "@/lib/utils";
 
 interface PatientBannerProps {
@@ -18,6 +19,7 @@ const ALLERGY_CLASSES: Record<Allergy["severity"], string> = {
   severe: "bg-status-error-bg text-status-error-text border-status-error-border",
   moderate: "bg-status-warning-bg text-status-warning-text border-status-warning-border",
   mild: "bg-status-warning-bg text-status-warning-text border-status-warning-border",
+  unknown: "bg-status-warning-bg text-status-warning-text border-status-warning-border",
 };
 
 // Who is being triaged, for which visit, and what to be careful about.
@@ -71,7 +73,7 @@ export function PatientBanner({ patient, appointment, doctor, allergies, conditi
             allergies.map(a => (
               <Badge key={a.id} variant="outline" className={ALLERGY_CLASSES[a.severity]} title={a.reaction || undefined}>
                 {a.substance}
-                <span className="opacity-70 font-normal">· {a.severity}</span>
+                <span className="opacity-70 font-normal">· {formatAllergySeverity(a.severity)}</span>
               </Badge>
             ))
           )}

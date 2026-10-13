@@ -56,9 +56,9 @@ describe("patientFormSchema", () => {
     expect(errorsFor({ maritalStatus: "M" as never })).toHaveProperty("maritalStatus");
   });
 
-  it("defaults an allergy's severity and optional fields", () => {
+  it("takes an allergy's severity as unknown until one is chosen, and defaults its optional fields", () => {
     const { allergies } = patientFormSchema.parse({ ...required, allergies: [{ substance: "Penicillin" }] });
-    expect(allergies).toEqual([{ substance: "Penicillin", reaction: "", severity: "mild", notes: "" }]);
+    expect(allergies).toEqual([{ substance: "Penicillin", reaction: "", severity: "unknown", notes: "" }]);
   });
 
   it("rejects an allergy without a substance", () => {

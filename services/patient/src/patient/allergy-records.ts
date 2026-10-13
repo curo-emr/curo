@@ -39,10 +39,11 @@ export function allergyColumns(
   if (dto.note !== undefined) columns.note = dto.note;
   if (dto.onsetDate !== undefined) columns.onsetDate = dto.onsetDate;
 
-  if (dto.reaction !== undefined || dto.severity) {
+  if (dto.reaction !== undefined || dto.severity !== undefined) {
     const [previous] = (existing?.reactions ?? []) as Reaction[];
     const text = dto.reaction ?? previous?.manifestation?.[0]?.text;
-    const severity = dto.severity ?? previous?.severity;
+    const severity =
+      dto.severity === undefined ? previous?.severity : dto.severity;
     const reaction: Reaction = {
       ...(text && { manifestation: [{ text }] }),
       ...(severity && { severity }),
@@ -50,12 +51,21 @@ export function allergyColumns(
     columns.reactions = text || severity ? [reaction] : [];
   }
 
-  const criticality =
-    dto.criticality ??
-    (dto.severity === 'severe'
-      ? AllergyIntoleranceCriticality.HIGH
-      : dto.severity && AllergyIntoleranceCriticality.LOW);
+  const criticality = dto.criticality ?? criticalityOf(dto.severity);
   if (criticality) columns.criticality = criticality;
 
   return columns;
+}
+
+/**
+ * The risk a reaction's severity points to: high for a severe one, low for
+ * any other, and unable-to-assess when it isn't known (null). A request that
+ * leaves the severity out says nothing about it.
+ */
+function criticalityOf(severity: ReactionSeverity | null | undefined) {
+  if (severity === undefined) return undefined;
+  if (severity === null) return AllergyIntoleranceCriticality.UNABLE_TO_ASSESS;
+  return severity === 'severe'
+    ? AllergyIntoleranceCriticality.HIGH
+    : AllergyIntoleranceCriticality.LOW;
 }

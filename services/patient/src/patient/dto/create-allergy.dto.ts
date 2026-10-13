@@ -25,7 +25,10 @@ export class CreateAllergyDto {
   @IsEnum(AllergyIntoleranceType)
   type?: AllergyIntoleranceType;
 
-  /** The risk of a future reaction. Without it, a severe reaction makes it high, any other low. */
+  /**
+   * The risk of a future reaction. Without it, a severe reaction makes it
+   * high, any other low, and one of unknown severity unable-to-assess.
+   */
   @IsOptional()
   @IsEnum(AllergyIntoleranceCriticality)
   criticality?: AllergyIntoleranceCriticality;
@@ -51,9 +54,10 @@ export class CreateAllergyDto {
   @IsString()
   reaction?: string;
 
+  /** Left out or null, it isn't known; on a change, null clears it. */
   @IsOptional()
   @IsIn(REACTION_SEVERITIES)
-  severity?: ReactionSeverity;
+  severity?: ReactionSeverity | null;
 
   @IsOptional()
   @IsString()

@@ -9,6 +9,7 @@ import { EmptyState } from "@curo/web/ui/empty-state";
 import { Button } from "@curo/web/ui/button";
 import { ROUTES } from "@/lib/constants";
 import { formatRelative } from "@curo/web/format";
+import { formatAllergySeverity } from "@curo/web/fhir";
 import { calculateBMI, formatDate } from "@/lib/utils";
 import { recentPrescriptionItems, uniqueActiveProblems } from "@/lib/clinical";
 import { patientQueries } from "@/lib/queries";
@@ -23,6 +24,7 @@ const SEVERITY_STYLES: Record<Allergy["severity"], string> = {
   severe: "bg-status-error-bg text-status-error-text",
   moderate: "bg-status-warning-bg text-status-warning-text",
   mild: "bg-status-info-bg text-status-info-text",
+  unknown: "bg-status-warning-bg text-status-warning-text",
 };
 
 const vitalTiles = (v: Partial<Vitals>) => [
@@ -79,7 +81,7 @@ export function SummaryTab({ patient, onShowTab }: SummaryTabProps) {
                     <p className="text-sm font-medium text-foreground">{a.substance}</p>
                     <p className="text-xs text-muted-foreground">{a.reaction || "Reaction not recorded"}</p>
                   </div>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${SEVERITY_STYLES[a.severity] ?? SEVERITY_STYLES.mild}`}>{a.severity}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SEVERITY_STYLES[a.severity]}`}>{formatAllergySeverity(a.severity)}</span>
                 </li>
               ))}
             </ul>

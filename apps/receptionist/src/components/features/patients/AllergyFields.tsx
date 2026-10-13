@@ -1,14 +1,13 @@
 "use client";
 
-import { useFieldArray, useWatch } from "react-hook-form";
+import { useFieldArray } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
-import { ALLERGY_SEVERITIES, type AllergySeverity } from "@curo/web/fhir";
-import { formatStatus } from "@curo/web/format";
+import { formatAllergySeverity } from "@curo/web/fhir";
 import { Button } from "@curo/web/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@curo/web/ui/card";
 import { Input } from "@curo/web/ui/input";
 import { Label } from "@curo/web/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
+import { AllergySeverityField } from "@curo/web/ui/allergy-severity-field";
 import type { PatientForm } from "@curo/web/patients";
 import type { Allergy } from "@/types";
 
@@ -20,9 +19,8 @@ interface AllergyFieldsProps {
 
 /** The patient forms' allergy list. Reception can add allergies the patient reports. */
 export function AllergyFields({ form, recorded = [] }: AllergyFieldsProps) {
-  const { control, register, setValue, formState: { errors } } = form;
+  const { control, register, formState: { errors } } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "allergies" });
-  const allergies = useWatch({ control, name: "allergies" }) ?? [];
 
   return (
     <Card className="shadow-sm border">
@@ -33,7 +31,7 @@ export function AllergyFields({ form, recorded = [] }: AllergyFieldsProps) {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => append({ substance: "", reaction: "", severity: "mild", notes: "" })}
+            onClick={() => append({ substance: "", reaction: "", severity: "unknown", notes: "" })}
           >
             <Plus className="h-3.5 w-3.5 mr-1" />
             Add Allergy
@@ -48,7 +46,7 @@ export function AllergyFields({ form, recorded = [] }: AllergyFieldsProps) {
                 <li key={a.id} className="px-3 py-2 text-sm">
                   <span className="font-medium">{a.substance}</span>
                   <span className="text-muted-foreground">
-                    {" · "}{[a.reaction, formatStatus(a.severity), a.notes].filter(Boolean).join(" · ")}
+                    {" · "}{[a.reaction, formatAllergySeverity(a.severity), a.notes].filter(Boolean).join(" · ")}
                   </span>
                 </li>
               ))}
@@ -81,22 +79,7 @@ export function AllergyFields({ form, recorded = [] }: AllergyFieldsProps) {
                 <Label>Reaction</Label>
                 <Input {...register(`allergies.${index}.reaction`)} placeholder="e.g. Rash, Anaphylaxis" />
               </div>
-              <div className="space-y-1.5">
-                <Label>Severity</Label>
-                <Select
-                  value={allergies[index]?.severity || "mild"}
-                  onValueChange={(val) => setValue(`allergies.${index}.severity`, val as AllergySeverity)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select severity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ALLERGY_SEVERITIES.map((s) => (
-                      <SelectItem key={s} value={s}>{formatStatus(s)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <AllergySeverityField form={form} index={index} />
               <div className="space-y-1.5">
                 <Label>Notes</Label>
                 <Input {...register(`allergies.${index}.notes`)} placeholder="Additional notes (optional)" />

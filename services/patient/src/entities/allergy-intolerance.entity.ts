@@ -33,7 +33,7 @@ export class AllergyIntolerance {
   @Column({
     type: 'enum',
     enum: AllergyIntoleranceCriticality,
-    default: AllergyIntoleranceCriticality.LOW,
+    default: AllergyIntoleranceCriticality.UNABLE_TO_ASSESS,
   })
   criticality: AllergyIntoleranceCriticality;
 

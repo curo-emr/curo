@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { HeartPulse, History, ShieldAlert, ShieldCheck } from "lucide-react";
-import type { AllergySeverity } from "@curo/web/fhir";
+import { formatAllergySeverity, type AllergySeverity } from "@curo/web/fhir";
 import { QueryContent, allOf } from "@curo/web/query";
 import { Badge } from "@curo/web/ui/badge";
 import { EmptyState } from "@curo/web/ui/empty-state";
@@ -42,7 +42,7 @@ function MyHealth({ patientId }: { patientId: string }) {
   );
 }
 
-const SEVERITY_TONE: Record<AllergySeverity, Tone> = { mild: "info", moderate: "warning", severe: "error" };
+const SEVERITY_TONE: Record<AllergySeverity, Tone> = { mild: "info", moderate: "warning", severe: "error", unknown: "warning" };
 
 function Allergies({ allergies }: { allergies: Allergy[] }) {
   return (
@@ -58,7 +58,7 @@ function Allergies({ allergies }: { allergies: Allergy[] }) {
                 {a.reaction && <p className="text-sm text-muted-foreground">Reaction: {a.reaction}</p>}
                 {a.notes && <p className="mt-1 text-sm text-muted-foreground">{a.notes}</p>}
               </div>
-              <Badge variant="outline" className={`shrink-0 capitalize ${toneClass(SEVERITY_TONE[a.severity])}`}>{a.severity}</Badge>
+              <Badge variant="outline" className={`shrink-0 ${toneClass(SEVERITY_TONE[a.severity])}`}>{formatAllergySeverity(a.severity)}</Badge>
             </li>
           ))}
         </ul>

@@ -10,7 +10,7 @@ const allergyEntrySchema = z.object({
   // Optional: patients often know what they react to but not how, and older
   // records have no reaction at all.
   reaction: z.string().optional().default(""),
-  severity: z.enum(ALLERGY_SEVERITIES).default("mild"),
+  severity: z.enum(ALLERGY_SEVERITIES).default("unknown"),
   notes: z.string().optional().default(""),
 });
 
