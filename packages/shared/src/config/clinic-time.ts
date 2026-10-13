@@ -46,12 +46,28 @@ function offsetAt(timeZone: string, instant: number): number {
   return wallClock - Math.floor(instant / 1000) * 1000;
 }
 
-/** The instant a calendar day begins in `timeZone`. */
-function midnight(year: number, month: number, day: number, timeZone: string) {
-  const asUtc = Date.UTC(year, month - 1, day);
+/** The instant `timeZone`'s clocks show `minutes` past midnight on a calendar day. */
+function instantAt(
+  year: number,
+  month: number,
+  day: number,
+  minutes: number,
+  timeZone: string,
+) {
+  const asUtc = Date.UTC(year, month - 1, day, 0, minutes);
   const guess = asUtc - offsetAt(timeZone, asUtc);
-  // Where the offset changes (summer time) that night, measure it again at the guess.
+  // Where the offset changes (summer time) that day, measure it again at the guess.
   return new Date(asUtc - offsetAt(timeZone, guess));
+}
+
+/** A "YYYY-MM-DD" date as [year, month, day], or null when it isn't a real one. */
+function parseDay(day: string): [number, number, number] | null {
+  const match = DAY.exec(day);
+  if (!match) return null;
+  const [year, month, date] = match.slice(1).map(Number);
+  // Date.UTC rolls an impossible date over (Feb 30 → Mar 2); refuse it instead.
+  const rolled = new Date(Date.UTC(year, month - 1, date));
+  return rolled.toISOString().slice(0, 10) === day ? [year, month, date] : null;
 }
 
 /**
@@ -62,14 +78,27 @@ export function clinicDayBounds(
   day: string,
   timeZone = clinicTimeZone(),
 ): { start: Date; end: Date } | null {
-  const match = DAY.exec(day);
-  if (!match) return null;
-  const [year, month, date] = match.slice(1).map(Number);
-  const start = midnight(year, month, date, timeZone);
-  // Date.UTC rolls an impossible date over (Feb 30 → Mar 2); refuse it instead.
-  if (clinicDate(start, timeZone) !== day) return null;
-  const next = midnight(year, month, date + 1, timeZone);
+  const parts = parseDay(day);
+  if (!parts) return null;
+  const [year, month, date] = parts;
+  const start = instantAt(year, month, date, 0, timeZone);
+  const next = instantAt(year, month, date + 1, 0, timeZone);
   return { start, end: new Date(next.getTime() - 1) };
+}
+
+/**
+ * The instant the clinic's clocks show `minutes` past midnight on `day`
+ * ("YYYY-MM-DD"): `atClinicTime('2026-10-13', 8 * 60)` is 08:00 that morning
+ * at the clinic. Throws a RangeError when `day` isn't a date.
+ */
+export function atClinicTime(
+  day: string,
+  minutes: number,
+  timeZone = clinicTimeZone(),
+): Date {
+  const parts = parseDay(day);
+  if (!parts) throw new RangeError(`Not a YYYY-MM-DD date: ${day}`);
+  return instantAt(...parts, minutes, timeZone);
 }
 
 /** The clinic's calendar date at `instant` (now by default), as "YYYY-MM-DD". */

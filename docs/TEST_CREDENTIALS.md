@@ -61,8 +61,9 @@ All patients share the password **`Patient@123`**.
 - **Appointments:** 20 seeded (10 past fulfilled/noshow, 10 future booked) across patients × doctors.
 - **Today's patient flow (fresh seed only):** 5 appointments for the seed day spread across queue
   stages — 2 waiting for the nurse, 1 ready for the doctor with nurse triage vitals (BP 152/96),
-  1 with the doctor, 1 done. Nurses are added to existing volumes automatically (seed top-ups);
-  on an existing volume, create today's queue by checking a patient in from reception.
+  1 with the doctor, 1 done. They take the first slots of that day's first session of each doctor
+  working, so a Sunday seed has none. Nurses are added to existing volumes automatically (seed
+  top-ups); on an existing volume, create today's queue by checking a patient in from reception.
 - **Encounters:** 10, each with a SOAP note + 5 vital observations.
 - **Prescriptions:** 8 (Metformin, Amlodipine, Atorvastatin, Omeprazole, Salbutamol, Losartan,
   Paracetamol, Amoxicillin) — first 5 completed, rest active (visible in the pharmacy pending queue).

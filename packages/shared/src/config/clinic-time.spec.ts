@@ -1,4 +1,9 @@
-import { clinicClock, clinicDate, clinicDayBounds } from './clinic-time';
+import {
+  atClinicTime,
+  clinicClock,
+  clinicDate,
+  clinicDayBounds,
+} from './clinic-time';
 
 describe('clinicDayBounds', () => {
   it("spans the clinic's day, not the UTC one", () => {
@@ -29,6 +34,39 @@ describe('clinicDayBounds', () => {
     ]) {
       expect(clinicDayBounds(day, 'Asia/Colombo')).toBeNull();
     }
+  });
+});
+
+describe('atClinicTime', () => {
+  it("is the instant the clinic's clocks show that time, not the server's", () => {
+    expect(atClinicTime('2026-10-13', 8 * 60, 'Asia/Colombo')).toEqual(
+      new Date('2026-10-13T02:30:00.000Z'),
+    );
+    expect(atClinicTime('2026-10-13', 8 * 60, 'UTC')).toEqual(
+      new Date('2026-10-13T08:00:00.000Z'),
+    );
+  });
+
+  it('follows a change of clocks', () => {
+    // 10:00 BST, the day summer time starts in London.
+    expect(atClinicTime('2026-03-29', 10 * 60, 'Europe/London')).toEqual(
+      new Date('2026-03-29T09:00:00.000Z'),
+    );
+  });
+
+  it('reads back as the same date and time on the clinic clock', () => {
+    const instant = atClinicTime('2026-10-12', 16 * 60 + 15, 'Asia/Colombo');
+    expect(clinicClock(instant, 'Asia/Colombo')).toMatchObject({
+      date: '2026-10-12',
+      minutes: 16 * 60 + 15,
+    });
+  });
+
+  it('throws for anything but a real YYYY-MM-DD date', () => {
+    expect(() => atClinicTime('2026-02-30', 0, 'Asia/Colombo')).toThrow(
+      RangeError,
+    );
+    expect(() => atClinicTime('today', 0, 'Asia/Colombo')).toThrow(RangeError);
   });
 });
 
