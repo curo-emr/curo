@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Pill, X } from "lucide-react";
 import type { Medication, PrescriptionItem } from "@/types";
-import type { Organization as Pharmacy } from "@/lib/api/directory";
-import { allergyAlerts, describeAllergyAlert } from "@curo/web/clinical";
+import type { Organization as Pharmacy, PharmacyStockItem } from "@/lib/api/directory";
+import { allergyAlerts, checkStock, describeAllergyAlert, outOfStock, type StockCheck } from "@curo/web/clinical";
 import { AllergyConfirmDialog } from "@curo/web/ui/allergy-confirm-dialog";
 import { Button } from "@curo/web/ui/button";
 import { Checkbox } from "@curo/web/ui/checkbox";
@@ -15,6 +16,7 @@ import { SearchCombobox } from "@curo/web/ui/search-combobox";
 import { StatusBadge } from "@curo/web/ui/status-badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@curo/web/ui/select";
 import { searchMedications } from "@/lib/api/medications";
+import { directoryQueries } from "@/lib/queries";
 import { usePatientAllergies } from "@/components/features/patients/AllergyChips";
 import { FREQUENCIES, routeForForm, suggestQuantity } from "../visit";
 
@@ -72,6 +74,21 @@ export function PrescriptionForm({
   // With no pharmacy set up, the patient buys everything outside. Until the
   // pharmacies are known, lines go to the pharmacy, and signing checks there is one.
   const noPharmacy = pharmacies?.length === 0;
+  const pharmacyName = pharmacies?.find(p => p.id === pharmacyId)?.name;
+  // The chosen pharmacy's stock by drug code. Undefined until it is known, so
+  // nothing is hinted or ticked on a guess.
+  const stock = useQuery({
+    ...directoryQueries.pharmacyStock(pharmacyId ?? ""),
+    enabled: !!pharmacyId,
+    select: toStockByCode,
+  }).data;
+  const stockCheck = (medicationId: string, quantity: number) =>
+    stock && medicationId ? checkStock(stock.get(medicationId), quantity) : undefined;
+  // A drug the pharmacy can't dispense starts as bought outside; the doctor can untick it.
+  const startsOutside = (med: Medication) => {
+    const check = stockCheck(med.id, 1);
+    return noPharmacy || (!!check && outOfStock(check));
+  };
   const description = noPharmacy
     ? "No pharmacy is set up yet, so the patient buys these at a pharmacy of their choice"
     : pharmacies?.length === 1
@@ -102,17 +119,25 @@ export function PrescriptionForm({
           search={searchMedications}
           suggestions={suggestions}
           getKey={m => m.id}
-          onSelect={m => add(newItem(m, noPharmacy))}
+          onSelect={m => add(newItem(m, startsOutside(m)))}
           onCustom={name => add(newItem({ name }, true))}
           customLabel={name => (
             <span>Prescribe <span className="font-medium text-foreground">“{name}”</span> as typed — bought outside</span>
           )}
-          renderItem={m => (
-            <div className="flex w-full items-center justify-between gap-3">
-              <span>{m.name}</span>
-              <span className="shrink-0 text-xs capitalize text-muted-foreground">{m.form}</span>
-            </div>
-          )}
+          renderItem={m => {
+            const check = stockCheck(m.id, 1);
+            return (
+              <div className="flex w-full items-center justify-between gap-3">
+                <span>{m.name}</span>
+                <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                  <span className="capitalize">{m.form}</span>
+                  {check && (outOfStock(check)
+                    ? <span className="font-medium text-status-error-text">Out of stock</span>
+                    : <span className="text-status-success-text">In stock</span>)}
+                </span>
+              </div>
+            );
+          }}
         />
         {prescriptions.map(rx => {
           const alerts = alertsFor(rx.displayName);
@@ -158,6 +183,7 @@ export function PrescriptionForm({
               <Field label="Instructions">
                 <Input value={rx.instructions} onChange={e => update(rx.id, { instructions: e.target.value })} placeholder="e.g. After meals" className="h-9" />
               </Field>
+              <StockHint check={stockCheck(rx.medicationId, rx.quantity)} quantity={rx.quantity} pharmacy={pharmacyName} />
               {/* Only a catalog drug, with a pharmacy to send it to, can go either way. */}
               {rx.medicationId && !noPharmacy && (
                 <div className="flex items-center gap-2">
@@ -178,6 +204,22 @@ export function PrescriptionForm({
       />
     </SectionCard>
   );
+}
+
+const toStockByCode = (drugs: PharmacyStockItem[]) => new Map(drugs.map(d => [d.id, d]));
+
+/** What the chosen pharmacy has of a line's drug, against the quantity prescribed. */
+function StockHint({ check, quantity, pharmacy = "the pharmacy" }: { check: StockCheck | undefined; quantity: number; pharmacy?: string }) {
+  if (!check) return null;
+  if (outOfStock(check))
+    return <p className="text-xs font-medium text-status-error-text">Out of stock at {pharmacy}</p>;
+  if (check.kind === "short")
+    return (
+      <p className="text-xs font-medium text-status-warning-text">
+        Only {[check.available, check.unit].filter(Boolean).join(" ")} at {pharmacy}; {quantity} prescribed
+      </p>
+    );
+  return <p className="text-xs text-status-success-text">In stock at {pharmacy}</p>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
