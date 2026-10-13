@@ -25,62 +25,45 @@ describe('Audit log', () => {
 
   afterAll(() => svc.close());
 
-  const entry = (patientId: string, overrides: object = {}) => ({
-    action: 'READ',
-    resourceType: 'Encounter',
-    resourceId: randomUUID(),
-    patientId,
-    ...overrides,
-  });
-
-  const record = (body: object) =>
-    svc.api.post('/audit').set(doctor.headers).send(body);
-
-  const savedFor = (patientId: string) =>
-    svc.db.getRepository(AuditLog).findBy({ patientId });
+  /** An entry on `patientId`, as a service records it. */
+  const record = (patientId: string, overrides: Partial<AuditLog> = {}) =>
+    svc.db.getRepository(AuditLog).save({
+      action: 'READ',
+      resourceType: 'Encounter',
+      resourceId: randomUUID(),
+      patientId,
+      userId: doctor.sub,
+      userRole: UserRole.DOCTOR,
+      ...overrides,
+    });
 
   describe('POST /audit', () => {
-    it('records who did it from the token, whatever the body claims', async () => {
+    it('is not a route: only the services write the log', async () => {
       const patientId = randomUUID();
-      const nurse = await svc.as(UserRole.NURSE);
+      for (const role of [UserRole.PATIENT, UserRole.SUPER_ADMIN])
+        await svc.api
+          .post('/audit')
+          .set((await svc.as(role)).headers)
+          .send({
+            action: 'delete',
+            resourceType: 'Patient',
+            resourceId: patientId,
+            patientId,
+          })
+          .expect(404);
 
-      await svc.api
-        .post('/audit')
-        .set(nurse.headers)
-        .send(
-          entry(patientId, { userId: 'someone-else', userRole: 'SUPER_ADMIN' }),
-        )
-        .expect(201);
-
-      await expect(savedFor(patientId)).resolves.toEqual([
-        expect.objectContaining({
-          action: 'READ',
-          userId: nurse.sub,
-          userRole: UserRole.NURSE,
-        }),
-      ]);
-    });
-
-    it('rejects an entry without an action or resource', async () => {
-      const patientId = randomUUID();
-
-      await record(entry(patientId, { action: '' })).expect(400);
-      await record(entry(patientId, { resourceId: undefined })).expect(400);
-
-      await expect(savedFor(patientId)).resolves.toEqual([]);
-    });
-
-    it('needs a signed-in user', async () => {
-      await svc.api.post('/audit').send(entry(randomUUID())).expect(401);
+      await expect(
+        svc.db.getRepository(AuditLog).findBy({ patientId }),
+      ).resolves.toEqual([]);
     });
   });
 
   describe('GET /audit', () => {
     it("lists a patient's entries, newest first, for the super admin", async () => {
       const patientId = randomUUID();
-      await record(entry(patientId, { action: 'CREATE' })).expect(201);
-      await record(entry(patientId, { action: 'UPDATE' })).expect(201);
-      await record(entry(randomUUID())).expect(201);
+      await record(patientId, { action: 'CREATE' });
+      await record(patientId, { action: 'UPDATE' });
+      await record(randomUUID());
 
       const res = await svc.api
         .get('/audit')
@@ -98,10 +81,8 @@ describe('Audit log', () => {
 
     it('filters by resource type', async () => {
       const patientId = randomUUID();
-      await record(entry(patientId, { resourceType: 'Encounter' })).expect(201);
-      await record(
-        entry(patientId, { resourceType: 'DocumentReference' }),
-      ).expect(201);
+      await record(patientId, { resourceType: 'Encounter' });
+      await record(patientId, { resourceType: 'DocumentReference' });
 
       const res = await svc.api
         .get('/audit')
@@ -120,6 +101,10 @@ describe('Audit log', () => {
           .get('/audit')
           .set((await svc.as(role)).headers)
           .expect(403);
+    });
+
+    it('needs a signed-in user', async () => {
+      await svc.api.get('/audit').expect(401);
     });
   });
 });
