@@ -27,10 +27,11 @@ describe("mapFhirAllergy", () => {
     });
   });
 
-  it("falls back to criticality for allergies recorded without a severity", () => {
+  it("reads an allergy recorded without a severity as severe if high risk, otherwise unknown", () => {
     expect(mapFhirAllergy(allergy({ criticality: "high" })).severity).toBe("severe");
-    expect(mapFhirAllergy(allergy({ criticality: "unable-to-assess" })).severity).toBe("mild");
-    expect(mapFhirAllergy(allergy()).severity).toBe("mild");
+    expect(mapFhirAllergy(allergy({ criticality: "low" })).severity).toBe("unknown");
+    expect(mapFhirAllergy(allergy({ criticality: "unable-to-assess" })).severity).toBe("unknown");
+    expect(mapFhirAllergy(allergy()).severity).toBe("unknown");
   });
 });
 

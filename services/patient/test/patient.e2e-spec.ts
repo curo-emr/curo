@@ -133,6 +133,36 @@ describe('Patient records', () => {
       ]);
     });
 
+    it('records an allergy given without a severity as unable to assess, not low risk', async () => {
+      const body = newPatient({
+        allergies: [
+          { code: 'latex', display: 'Latex', reaction: 'Anaphylaxis' },
+          { code: 'iodine', display: 'Iodine', severity: null },
+        ],
+      });
+
+      const res = await register(body).expect(201);
+
+      const { id } = res.body as { id: string };
+      const allergies = await svc.db
+        .getRepository(AllergyIntolerance)
+        .findBy({ patientId: id });
+      expect(allergies).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            display: 'Latex',
+            criticality: 'unable-to-assess',
+            reactions: [{ manifestation: [{ text: 'Anaphylaxis' }] }],
+          }),
+          expect.objectContaining({
+            display: 'Iodine',
+            criticality: 'unable-to-assess',
+            reactions: [],
+          }),
+        ]),
+      );
+    });
+
     it('registers no one when an allergy is invalid', async () => {
       const body = newPatient({ allergies: [{ display: 'No code' }] });
 
@@ -455,6 +485,19 @@ describe('Patient records', () => {
         practitionerId: receptionist.practitionerId,
       });
       expect(res.body).toMatchObject({ id: allergyId, criticality: 'high' });
+    });
+
+    it('lets a doctor clear a severity back to unknown', async () => {
+      const { patientId, allergyId } = await withAllergy();
+
+      await changeAllergy(patientId, allergyId, { severity: null }).expect(200);
+
+      await expect(
+        svc.db.getRepository(AllergyIntolerance).findOneBy({ id: allergyId }),
+      ).resolves.toMatchObject({
+        criticality: 'unable-to-assess',
+        reactions: [{ manifestation: [{ text: 'Hives' }] }],
+      });
     });
 
     it('retires an allergy: kept on record, no longer listed for the patient', async () => {

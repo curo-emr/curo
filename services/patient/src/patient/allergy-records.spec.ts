@@ -32,6 +32,17 @@ describe('allergyColumns', () => {
     );
   });
 
+  it('makes a severity cleared to unknown unable-to-assess, dropping it from the reaction', () => {
+    const existing = {
+      reactions: [{ manifestation: [{ text: 'Hives' }], severity: 'mild' }],
+    } as unknown as AllergyIntolerance;
+
+    expect(allergyColumns({ severity: null }, existing)).toEqual({
+      criticality: 'unable-to-assess',
+      reactions: [{ manifestation: [{ text: 'Hives' }] }],
+    });
+  });
+
   it('keeps the part of the reaction a change leaves out', () => {
     const existing = {
       reactions: [{ manifestation: [{ text: 'Hives' }], severity: 'mild' }],

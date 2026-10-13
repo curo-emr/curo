@@ -1,4 +1,4 @@
-import { maritalStatusCode, type Allergy, type AllergySeverity } from "../fhir";
+import { maritalStatusCode, reactionSeverity, type Allergy, type ReactionSeverity } from "../fhir";
 import type { AllergyEntry, PatientFormValues } from "./schema";
 
 export * from "./schema";
@@ -8,7 +8,7 @@ export interface NewAllergyBody {
   code: string;
   display: string;
   reaction?: string;
-  severity: AllergySeverity;
+  severity: ReactionSeverity;
   note?: string;
 }
 
@@ -73,7 +73,7 @@ export function newAllergy(entry: AllergyEntry): NewAllergyBody {
     code: display.toLowerCase(),
     display,
     reaction: entry.reaction.trim() || undefined,
-    severity: entry.severity,
+    severity: reactionSeverity(entry.severity),
     note: entry.notes.trim() || undefined,
   };
 }
@@ -92,7 +92,7 @@ function changedFields(recorded: Allergy, entry: AllergyEntry): Partial<NewAller
   const change: Partial<NewAllergyBody> = {};
   if (next.display !== recorded.substance) Object.assign(change, { code: next.code, display: next.display });
   if (reaction !== recorded.reaction) change.reaction = reaction;
-  if (next.severity !== recorded.severity) change.severity = next.severity;
+  if (entry.severity !== recorded.severity) change.severity = next.severity;
   if (note !== recorded.notes) change.note = note;
   return Object.keys(change).length ? change : null;
 }

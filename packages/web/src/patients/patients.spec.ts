@@ -126,6 +126,10 @@ describe("newAllergy", () => {
       note: undefined,
     });
   });
+
+  it("sends an unknown severity as null, which the API records as not known", () => {
+    expect(newAllergy({ substance: "Latex", reaction: "", severity: "unknown", notes: "" }).severity).toBeNull();
+  });
 });
 
 describe("registrationBody", () => {
@@ -163,6 +167,11 @@ describe("allergyChanges", () => {
     expect(allergyChanges([penicillin], [entry]).allergyUpdates).toEqual([
       { id: "a1", code: "amoxicillin", display: "Amoxicillin" },
     ]);
+  });
+
+  it("clears a severity changed back to unknown", () => {
+    const entry = { ...entryFor(penicillin), severity: "unknown" as const };
+    expect(allergyChanges([penicillin], [entry]).allergyUpdates).toEqual([{ id: "a1", severity: null }]);
   });
 
   it("clears a reaction that was removed", () => {
