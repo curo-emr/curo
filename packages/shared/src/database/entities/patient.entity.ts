@@ -8,6 +8,9 @@ import {
 } from 'typeorm';
 import { Gender, MaritalStatus } from '../../enums';
 
+/** No two patients share a NIC; Postgres lets any number have none. */
+export const UNIQUE_NIC = 'patients_nic_unique';
+
 @Entity('patients')
 export class Patient {
   @PrimaryGeneratedColumn('uuid')
@@ -44,8 +47,9 @@ export class Patient {
   })
   gender: Gender;
 
-  @Column({ nullable: true })
-  nic: string;
+  @Index(UNIQUE_NIC, { unique: true })
+  @Column({ type: 'varchar', nullable: true })
+  nic: string | null;
 
   @Column({ nullable: true })
   passportNumber: string;

@@ -12,6 +12,7 @@ import {
   type PatientFormValues, type PatientFormInput,
 } from "@curo/web/patients";
 import { updatePatientDemographics } from "@/lib/actions/patient-actions";
+import { getTodayString } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { patientQueries } from "@/lib/queries";
 import { Patient, Allergy } from "@/types";
@@ -148,7 +149,7 @@ export function PatientEditForm({ patient, existingAllergies }: PatientEditFormP
 
             <div className="space-y-1.5">
               <Label htmlFor="dob">Date of Birth *</Label>
-              <Input id="dob" type="date" {...register("dob")} />
+              <Input id="dob" type="date" max={getTodayString()} {...register("dob")} />
               {errors.dob && (
                 <p className="text-xs text-status-error-text">{errors.dob.message}</p>
               )}

@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
   ForbiddenException,
@@ -6,8 +7,19 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, In, Repository } from 'typeorm';
-import { Patient, Condition, Observation } from '@curo/shared/database';
+import {
+  DataSource,
+  EntityManager,
+  In,
+  QueryFailedError,
+  Repository,
+} from 'typeorm';
+import {
+  Patient,
+  Condition,
+  Observation,
+  UNIQUE_NIC,
+} from '@curo/shared/database';
 import { UserRole } from '@curo/shared/enums';
 import { generatePatientCode, generatePhn } from '@curo/shared/identifiers';
 import {
@@ -41,6 +53,11 @@ const ALLERGY_EDITORS = new Set<string>([
   UserRole.DOCTOR,
   UserRole.SUPER_ADMIN,
 ]);
+
+/** Whether a save failed because another patient already has the NIC. */
+const isNicTaken = (err: unknown) =>
+  err instanceof QueryFailedError &&
+  (err.driverError as { constraint?: string }).constraint === UNIQUE_NIC;
 
 /** A patient as an audit target: the record is the patient's own. */
 const patientRecord = (p: Patient) =>
@@ -111,18 +128,39 @@ export class PatientService implements OnModuleInit {
     const personalHealthNumber =
       dto.personalHealthNumber || (await this.generateUniquePhn());
 
-    return this.dataSource.transaction(async (em) => {
-      const saved = await em.save(
-        em.create(Patient, { ...fields, patientCode, personalHealthNumber }),
+    return this.withUniqueNic(dto.nic, () =>
+      this.dataSource.transaction(async (em) => {
+        const saved = await em.save(
+          em.create(Patient, { ...fields, patientCode, personalHealthNumber }),
+        );
+        await this.auditTrail.record(
+          recorder,
+          { action: 'CREATE', ...patientRecord(saved) },
+          em,
+        );
+        await this.addAllergies(em, saved.id, allergies, recorder);
+        return toFhirPatient(saved);
+      }),
+    );
+  }
+
+  /**
+   * Runs a save of a patient with `nic`, turning a clash with another
+   * patient's NIC into a 409 that names them, so reception can find the record.
+   */
+  private async withUniqueNic<T>(
+    nic: string | null | undefined,
+    save: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await save();
+    } catch (err) {
+      if (!nic || !isNicTaken(err)) throw err;
+      const holder = await this.patientsRepo.findOneBy({ nic });
+      throw new ConflictException(
+        `NIC ${nic} is already registered to patient ${holder?.patientCode ?? 'on file'}`,
       );
-      await this.auditTrail.record(
-        recorder,
-        { action: 'CREATE', ...patientRecord(saved) },
-        em,
-      );
-      await this.addAllergies(em, saved.id, allergies, recorder);
-      return toFhirPatient(saved);
-    });
+    }
   }
 
   async findAll(
@@ -213,21 +251,23 @@ export class PatientService implements OnModuleInit {
       );
     }
 
-    return this.dataSource.transaction(async (em) => {
-      const patient = await em.findOne(Patient, { where: { id } });
-      if (!patient) throw new NotFoundException(`Patient ${id} not found`);
-      const changes = changeOf(patient, fields);
-      Object.assign(patient, fields);
-      const saved = await em.save(patient);
-      await this.auditTrail.record(
-        requestingUser,
-        { action: 'UPDATE', ...patientRecord(saved), changes },
-        em,
-      );
-      await this.addAllergies(em, id, newAllergies, requestingUser);
-      await this.changeAllergies(em, id, allergyUpdates, requestingUser);
-      return toFhirPatient(saved);
-    });
+    return this.withUniqueNic(fields.nic, () =>
+      this.dataSource.transaction(async (em) => {
+        const patient = await em.findOne(Patient, { where: { id } });
+        if (!patient) throw new NotFoundException(`Patient ${id} not found`);
+        const changes = changeOf(patient, fields);
+        Object.assign(patient, fields);
+        const saved = await em.save(patient);
+        await this.auditTrail.record(
+          requestingUser,
+          { action: 'UPDATE', ...patientRecord(saved), changes },
+          em,
+        );
+        await this.addAllergies(em, id, newAllergies, requestingUser);
+        await this.changeAllergies(em, id, allergyUpdates, requestingUser);
+        return toFhirPatient(saved);
+      }),
+    );
   }
 
   async findByCode(code: string, user: AuthUser) {
