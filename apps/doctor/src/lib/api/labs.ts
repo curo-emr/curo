@@ -16,9 +16,9 @@ export async function getLabs(options: { includeInactive?: boolean } = {}): Prom
   return res.data.map(o => ({ id: o.id, name: o.name, city: o.city ?? null }));
 }
 
-/** The lab reports for a visit's orders, from every lab. */
-export async function getVisitLabReports(encounterId: string): Promise<LabReport[]> {
-  return (await getAllPages<FhirDiagnosticReport>('/reports', { encounterId })).map(mapFhirReport);
+/** The patient's lab reports, from every lab. */
+export async function getPatientLabReports(patientId: string): Promise<LabReport[]> {
+  return (await getAllPages<FhirDiagnosticReport>('/reports', { patientId })).map(mapFhirReport);
 }
 
 /** The QR for the patient's lab slip: any lab scanning it finds the visit's tests sent to it. */

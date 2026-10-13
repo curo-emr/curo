@@ -1,22 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { FileText, FlaskConical, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { FlaskConical } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { QueryContent } from "@curo/web/query";
-import type { LabOrder, LabReport } from "@/types";
-import { Button } from "@curo/web/ui/button";
+import type { LabOrder } from "@/types";
 import { EmptyState } from "@curo/web/ui/empty-state";
-import { LabResultList } from "@curo/web/ui/lab-results";
 import { SectionCard } from "@curo/web/ui/section-card";
-import { StatusBadge, type Status } from "@curo/web/ui/status-badge";
-import { openDocument, openPdf } from "@curo/web/api";
-import type { DocumentRef } from "@/lib/api/documents";
-import { formatDate } from "@/lib/utils";
-import { catalogQueries, patientQueries, visitQueries } from "@/lib/queries";
+import { patientQueries } from "@/lib/queries";
+import { LabOrderList } from "./LabOrderList";
 
-/** The visit's lab orders, each with its lab, its report and any files the lab uploaded. */
+/** The visit's lab orders. */
 export function useVisitLabOrders(patientId: string, encounterId: string) {
   return useQuery({
     ...patientQueries.labOrders(patientId),
@@ -26,95 +19,14 @@ export function useVisitLabOrders(patientId: string, encounterId: string) {
 
 export function VisitLabOrders({ patientId, encounterId }: { patientId: string; encounterId: string }) {
   const orders = useVisitLabOrders(patientId, encounterId);
-  const reports = useQuery(visitQueries.labReports(patientId, encounterId));
-  // Labs only name the orders and files only add downloads, so the orders show without them.
-  const labs = useQuery(catalogQueries.labs(true)).data ?? [];
-  const files = useQuery(patientQueries.documents(patientId)).data ?? [];
 
   return (
     <SectionCard icon={FlaskConical} iconClassName="text-clinical-lab" title="Lab orders" count={orders.data?.length} noPadding>
       <QueryContent query={orders} what="lab orders">
-        {list => list.length === 0 ? (
-          <EmptyState title="No lab orders" className="py-6" />
-        ) : (
-          <QueryContent query={reports} what="lab results">
-            {visitReports => (
-              <ul className="divide-y">
-                {list.map(order => (
-                  <LabOrderRow
-                    key={order.id}
-                    order={order}
-                    labName={labs.find(l => l.id === order.labId)?.name ?? "Lab not recorded"}
-                    report={visitReports.find(r => r.orderId === order.id)}
-                    files={files.filter(f => f.type === "lab-report" && f.relatedResourceId === order.id)}
-                  />
-                ))}
-              </ul>
-            )}
-          </QueryContent>
-        )}
+        {list => list.length === 0
+          ? <EmptyState title="No lab orders" className="py-6" />
+          : <LabOrderList patientId={patientId} orders={list} />}
       </QueryContent>
     </SectionCard>
-  );
-}
-
-function stageOf(order: LabOrder, report?: LabReport): Status {
-  if (report || order.status === "completed") return "results_ready";
-  return order.receivedAt ? "sample_received" : "sent_to_lab";
-}
-
-function LabOrderRow({ order, labName, report, files }: {
-  order: LabOrder;
-  labName: string;
-  report?: LabReport;
-  files: DocumentRef[];
-}) {
-  const [opening, setOpening] = useState<string | null>(null);
-
-  const open = async (key: string, action: () => Promise<void> | void) => {
-    setOpening(key);
-    try {
-      await action();
-    } catch {
-      toast.error("Could not open the report");
-    } finally {
-      setOpening(null);
-    }
-  };
-
-  return (
-    <li className="space-y-3 px-5 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground">{order.tests.map(t => t.display).join(", ")}</p>
-          <p className="text-xs text-muted-foreground">
-            {labName}
-            {order.priority !== "routine" && <span className="font-medium uppercase text-status-error-text"> · {order.priority}</span>}
-            {report?.issued && <> · Reported {formatDate(report.issued)}</>}
-          </p>
-        </div>
-        <StatusBadge status={stageOf(order, report)} />
-      </div>
-
-      {report && report.results.length > 0 && <LabResultList results={report.results} />}
-      {report?.conclusion && <p className="text-sm italic text-muted-foreground">{report.conclusion}</p>}
-
-      {(report?.pdfBase64 || files.length > 0) && (
-        <div className="flex flex-wrap gap-2">
-          {report?.pdfBase64 && (
-            <Button variant="outline" size="sm" disabled={opening === "pdf"}
-              onClick={() => open("pdf", () => openPdf(report.pdfBase64!))}>
-              {opening === "pdf" ? <Loader2 className="animate-spin" /> : <FileText />} Report PDF
-            </Button>
-          )}
-          {files.map(f => (
-            <Button key={f.id} variant="outline" size="sm" disabled={opening === f.id}
-              onClick={() => open(f.id, () => openDocument(f.id))}>
-              {opening === f.id ? <Loader2 className="animate-spin" /> : <FileText />} {f.fileName || "Report file"}
-            </Button>
-          ))}
-        </div>
-      )}
-    </li>
   );
 }

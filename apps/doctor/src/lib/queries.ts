@@ -13,7 +13,7 @@ import {
 import { getDocumentsByPatient } from "@/lib/api/documents";
 import { getLabTestCatalog } from "@/lib/api/catalog";
 import { getICD10Paginated } from "@/lib/api/icd";
-import { getLabSlipQr, getLabs, getVisitLabReports } from "@/lib/api/labs";
+import { getLabSlipQr, getLabs, getPatientLabReports } from "@/lib/api/labs";
 import { searchMedications } from "@/lib/api/medications";
 import { findTodaysAppointment } from "@/lib/visit";
 import type { Appointment } from "@/types";
@@ -64,6 +64,11 @@ export const patientQueries = {
     queryFn: () => getLabOrdersByPatient(patientId),
     select: byDate(o => o.createdAt),
   }),
+  /** Results of every lab order, matched to their orders by `orderId`. */
+  labReports: (patientId: string) => queryOptions({
+    queryKey: [...patientQueries.record(patientId), "lab-reports"],
+    queryFn: () => getPatientLabReports(patientId),
+  }),
   prescriptions: (patientId: string) => queryOptions({
     queryKey: [...patientQueries.record(patientId), "prescriptions"],
     queryFn: () => getPrescriptionsByPatient(patientId),
@@ -100,10 +105,6 @@ export const visitQueries = {
   vitals: (patientId: string, encounterId: string) => queryOptions({
     queryKey: [...visitQueries.key(patientId, encounterId), "vitals"],
     queryFn: () => getEncounterVitals(patientId, encounterId),
-  }),
-  labReports: (patientId: string, encounterId: string) => queryOptions({
-    queryKey: [...visitQueries.key(patientId, encounterId), "lab-reports"],
-    queryFn: () => getVisitLabReports(encounterId),
   }),
   labSlipQr: (patientId: string, encounterId: string) => queryOptions({
     queryKey: [...visitQueries.key(patientId, encounterId), "lab-slip-qr"],
