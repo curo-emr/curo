@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '@curo/shared/database';
@@ -26,11 +26,13 @@ export class NotificationService {
     return query.orderBy('n.createdAt', 'DESC').skip(skip).take(take).getMany();
   }
 
+  // Someone else's notification is not found, so the reply doesn't confirm it exists.
   async markRead(id: string, userId: string): Promise<void> {
-    await this.notificationsRepo.update(
+    const { affected } = await this.notificationsRepo.update(
       { id, recipientId: userId },
       { isRead: true, readAt: new Date() },
     );
+    if (!affected) throw new NotFoundException(`Notification ${id} not found`);
   }
 
   async markAllRead(userId: string): Promise<void> {

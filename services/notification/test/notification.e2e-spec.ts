@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Notification } from '@curo/shared/database';
 import { NotificationEventType, UserRole } from '@curo/shared/enums';
 import {
@@ -94,7 +95,7 @@ describe('Notifications', () => {
       await svc.api
         .put(`/notifications/${forNurse}/read`)
         .set(doctor.headers)
-        .expect(200);
+        .expect(404);
       await svc.api
         .put(`/notifications/${forDoctor}/read`)
         .set(doctor.headers)
@@ -106,6 +107,26 @@ describe('Notifications', () => {
       await expect(inboxOf(doctor)).resolves.toEqual([
         expect.objectContaining({ id: forDoctor, isRead: true }),
       ]);
+    });
+
+    it('answers 404 for a notification that does not exist', async () => {
+      const doctor = await svc.as(UserRole.DOCTOR);
+
+      await svc.api
+        .put(`/notifications/${randomUUID()}/read`)
+        .set(doctor.headers)
+        .expect(404);
+    });
+
+    it('lets a user mark their own notification read again', async () => {
+      const doctor = await svc.as(UserRole.DOCTOR);
+      const id = await notify(doctor);
+
+      for (let i = 0; i < 2; i++)
+        await svc.api
+          .put(`/notifications/${id}/read`)
+          .set(doctor.headers)
+          .expect(200);
     });
 
     it("marks all of a user's notifications read, and only theirs", async () => {
