@@ -1,24 +1,24 @@
 import type { Patient, PrescriptionItem } from "@/types";
 import { calculateAge, formatStatus } from "@curo/web/format";
-import { formatDate } from "@/lib/utils";
+import { DoctorCredentials, PrintLetterhead, type PrintIssuer } from "@/components/features/print/PrintIssuer";
 
 interface RxPrintProps {
   patient: Patient;
   items: PrescriptionItem[];
-  prescriber?: string;
+  /** The prescribing doctor and their clinic. */
+  issuer: PrintIssuer;
   date?: string;
 }
 
 export const RX_PRINT_ID = "rx-print";
 
 // Print-only e-prescription. Hidden on screen; printed with printOnly(RX_PRINT_ID).
-export function RxPrint({ patient, items, prescriber, date }: RxPrintProps) {
+export function RxPrint({ patient, items, issuer, date }: RxPrintProps) {
   return (
     <div id={RX_PRINT_ID} className="hidden">
       <div style={{ padding: 24, fontFamily: "serif", color: "#111" }}>
         <div style={{ borderBottom: "2px solid #1e3a8a", paddingBottom: 12, marginBottom: 16 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1e3a8a", margin: 0 }}>CuroMD — e-Prescription</h1>
-          <p style={{ fontSize: 12, color: "#555", margin: "4px 0 0" }}>{formatDate(date ?? new Date().toISOString())}</p>
+          <PrintLetterhead clinic={issuer.clinic} title="e-Prescription" date={date} />
         </div>
         <div style={{ marginBottom: 16, fontSize: 13 }}>
           <p style={{ margin: 0 }}><strong>Patient:</strong> {patient.name.full}</p>
@@ -46,7 +46,7 @@ export function RxPrint({ patient, items, prescriber, date }: RxPrintProps) {
         </table>
         <div style={{ marginTop: 48, textAlign: "right", fontSize: 13 }}>
           <div style={{ display: "inline-block", borderTop: "1px solid #111", paddingTop: 4, minWidth: 200 }}>
-            {prescriber ? `Dr. ${prescriber}` : "Prescriber signature"}
+            {issuer.doctor ? <DoctorCredentials doctor={issuer.doctor} /> : "Prescriber signature"}
           </div>
         </div>
       </div>

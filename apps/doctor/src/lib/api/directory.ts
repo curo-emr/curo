@@ -5,6 +5,7 @@ export interface Organization {
   id: string;
   name: string;
   type: string;
+  addressLine1?: string;
   city?: string;
   phone?: string;
 }
@@ -38,6 +39,11 @@ export interface LabCatalogTest {
 
 export async function getOrganizations(type?: "pharmacy" | "laboratory"): Promise<Organization[]> {
   const res = await apiClient.get<Organization[]>("/organizations", { params: type ? { type } : {} });
+  return res.data;
+}
+
+export async function getOrganization(id: string): Promise<Organization> {
+  const res = await apiClient.get<Organization>(`/organizations/${id}`);
   return res.data;
 }
 

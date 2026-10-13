@@ -96,6 +96,8 @@ export class AuthService {
       email: p.email,
       qualification: p.qualification ?? '',
       licenseNumber: p.licenseNumber ?? '',
+      // Where they work, e.g. the clinic a doctor's printouts are headed with.
+      organizationId: p.organizationId ?? null,
     }));
   }
 

@@ -11,6 +11,8 @@ export interface Practitioner {
   email: string;
   qualification: string;
   licenseNumber: string;
+  /** Where they work; null when not on file. */
+  organizationId: string | null;
 }
 
 /** Active practitioners, by surname; only those with `role` (e.g. "DOCTOR") when given. */

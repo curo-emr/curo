@@ -364,8 +364,12 @@ describe('Sign-in', () => {
   });
 
   describe('GET /auth/practitioners', () => {
-    it('lists a doctor with their specialization, under the name the admin gave it', async () => {
+    it('lists a doctor with their specialization, under the name the admin gave it, and their workplace', async () => {
       const doctor = await onboard({ specialization: 'Cardiology' });
+      const clinic = randomUUID();
+      await svc.db
+        .getRepository(Practitioner)
+        .update({ email: doctor.email }, { organizationId: clinic });
 
       const res = await svc.api
         .get('/auth/practitioners')
@@ -378,6 +382,7 @@ describe('Sign-in', () => {
           email: doctor.email,
           role: UserRole.DOCTOR,
           specialization: 'Cardiology',
+          organizationId: clinic,
         }),
       );
     });

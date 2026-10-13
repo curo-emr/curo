@@ -16,7 +16,7 @@ import { HoldNote } from "@/components/features/prescriptions/HoldNote";
 import { RX_PRINT_ID, RxPrint, rxDirections } from "@/components/features/prescriptions/RxPrint";
 import { LAB_SLIP_PRINT_ID, LabSlipPrint } from "@/components/features/labs/LabSlipPrint";
 import { VisitLabOrders, useVisitLabOrders } from "@/components/features/labs/VisitLabOrders";
-import { useAuth } from "@/contexts/AuthContext";
+import { usePrintIssuer } from "@/components/features/print/PrintIssuer";
 import { ROUTES } from "@/lib/constants";
 import { encounterDiagnoses } from "@/lib/clinical";
 import { catalogQueries, patientQueries, visitQueries } from "@/lib/queries";
@@ -44,7 +44,6 @@ const vitalRows = (v: Partial<Vitals>) => [
 // Each section loads its own part of the visit, so one failing shows as such.
 export default function VisitSummaryPage({ params }: { params: Promise<{ patientId: string; encounterId: string }> }) {
   const { patientId, encounterId } = use(params);
-  const { user } = useAuth();
   const encounter = useQuery(visitQueries.encounter(patientId, encounterId));
   const patient = useQuery(patientQueries.detail(patientId));
   const soap = useQuery(visitQueries.soap(patientId, encounterId));
@@ -58,6 +57,8 @@ export default function VisitSummaryPage({ params }: { params: Promise<{ patient
   const labOrders = useVisitLabOrders(patientId, encounterId).data ?? [];
   const labs = useQuery(catalogQueries.labs(true)).data ?? [];
   const labSlipQr = useQuery(visitQueries.labSlipQr(patientId, encounterId)).data ?? null;
+  // Whoever prints them, they are the visit doctor's prescriptions and tests.
+  const issuer = usePrintIssuer(encounter.data?.doctorId);
 
   if (encounter.data === undefined || patient.data === undefined) {
     const failed = encounter.isError ? encounter : patient.isError ? patient : null;
@@ -196,9 +197,9 @@ export default function VisitSummaryPage({ params }: { params: Promise<{ patient
         </div>
       </div>
 
-      <RxPrint patient={pt} items={rxItems} prescriber={user?.name} date={visit.startedAt} />
+      <RxPrint patient={pt} items={rxItems} issuer={issuer} date={visit.startedAt} />
       <LabSlipPrint patient={pt} orders={labOrders} labs={labs} qrBase64={labSlipQr}
-        doctor={user?.name} date={visit.startedAt} />
+        issuer={issuer} date={visit.startedAt} />
     </div>
   );
 }

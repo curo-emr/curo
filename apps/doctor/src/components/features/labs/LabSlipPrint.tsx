@@ -1,5 +1,5 @@
 import type { Lab, LabOrder, Patient } from "@/types";
-import { formatDate } from "@/lib/utils";
+import { DoctorCredentials, PrintLetterhead, type PrintIssuer } from "@/components/features/print/PrintIssuer";
 
 export const LAB_SLIP_PRINT_ID = "lab-slip-print";
 
@@ -9,7 +9,8 @@ interface LabSlipPrintProps {
   labs: Lab[];
   /** The visit's QR: each lab scans it to find the tests sent to it. */
   qrBase64: string | null;
-  doctor?: string;
+  /** The requesting doctor and their clinic. */
+  issuer: PrintIssuer;
   date?: string;
 }
 
@@ -21,14 +22,13 @@ function byLab(orders: LabOrder[], labs: Lab[]) {
 }
 
 // The patient's slip for the visit's lab tests. Hidden on screen; printed with printOnly(LAB_SLIP_PRINT_ID).
-export function LabSlipPrint({ patient, orders, labs, qrBase64, doctor, date }: LabSlipPrintProps) {
+export function LabSlipPrint({ patient, orders, labs, qrBase64, issuer, date }: LabSlipPrintProps) {
   return (
     <div id={LAB_SLIP_PRINT_ID} className="hidden">
       <div style={{ padding: 24, fontFamily: "sans-serif", color: "#111" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 24, borderBottom: "2px solid #1e3a8a", paddingBottom: 12, marginBottom: 16 }}>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1e3a8a", margin: 0 }}>CuroMD — Lab request</h1>
-            <p style={{ fontSize: 12, color: "#555", margin: "4px 0 0" }}>{formatDate(date ?? new Date().toISOString())}{doctor ? ` · Ordered by ${doctor}` : ""}</p>
+            <PrintLetterhead clinic={issuer.clinic} title="Lab request" date={date} />
             <div style={{ marginTop: 12, fontSize: 13 }}>
               <p style={{ margin: 0 }}><strong>Patient:</strong> {patient.name.full}</p>
               <p style={{ margin: "2px 0 0" }}><strong>MRN:</strong> {patient.mrn}{patient.phn ? `  ·  PHN: ${patient.phn}` : ""}</p>
@@ -58,6 +58,12 @@ export function LabSlipPrint({ patient, orders, labs, qrBase64, doctor, date }: 
             </ul>
           </div>
         ))}
+        {issuer.doctor && (
+          <div style={{ marginTop: 16, fontSize: 13 }}>
+            <p style={{ margin: 0, fontSize: 11, color: "#555" }}>Requested by</p>
+            <DoctorCredentials doctor={issuer.doctor} />
+          </div>
+        )}
         <p style={{ fontSize: 11, color: "#555", marginTop: 16 }}>
           Take this slip to the lab. Each lab scans the code to find the tests sent to it.
         </p>
