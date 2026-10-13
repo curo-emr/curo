@@ -39,8 +39,9 @@ export class Condition {
   @Column({ nullable: true })
   severity: string;
 
-  @Column()
-  code: string;
+  // ICD-10; a diagnosis may be recorded in words alone.
+  @Column({ type: 'varchar', nullable: true })
+  code: string | null;
 
   @Column()
   display: string;

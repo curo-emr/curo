@@ -176,13 +176,16 @@ export function toFhirCondition(c: Condition) {
     category: c.category ? [{ coding: [{ code: c.category }] }] : undefined,
     severity: c.severity ? { coding: [{ code: c.severity }] } : undefined,
     code: {
-      coding: [
-        {
-          system: 'http://hl7.org/fhir/sid/icd-10',
-          code: c.code,
-          display: c.display,
-        },
-      ],
+      coding: c.code
+        ? [
+            {
+              system: 'http://hl7.org/fhir/sid/icd-10',
+              code: c.code,
+              display: c.display,
+            },
+          ]
+        : undefined,
+      text: c.display,
     },
     onsetDateTime: c.onsetDate,
     abatementDateTime: c.abatementDate,

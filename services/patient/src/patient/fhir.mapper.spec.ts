@@ -1,6 +1,10 @@
-import { Observation, Patient } from '@curo/shared/database';
+import { Condition, Observation, Patient } from '@curo/shared/database';
 import { Gender, UserRole } from '@curo/shared/enums';
-import { toFhirObservation, toFhirPatient } from './fhir.mapper';
+import {
+  toFhirCondition,
+  toFhirObservation,
+  toFhirPatient,
+} from './fhir.mapper';
 
 /** A patient with every optional detail filled in. */
 const patient = Object.assign(new Patient(), {
@@ -132,6 +136,39 @@ describe('toFhirObservation', () => {
       performer: [{ reference: 'Practitioner/doctor-1' }],
       valueQuantity: { value: 13.5, unit: 'g/dL' },
       referenceRange: [{ low: { value: 12 }, high: { value: 16 } }],
+    });
+  });
+});
+
+describe('toFhirCondition', () => {
+  const condition = (code: string | null) =>
+    toFhirCondition(
+      Object.assign(new Condition(), {
+        id: 'condition-1',
+        patientId: 'patient-1',
+        practitionerId: 'doctor-1',
+        code,
+        display: 'Tension headache',
+      }),
+    );
+
+  it('names the diagnosis, and codes it when it has an ICD-10 code', () => {
+    expect(condition('G44.2').code).toEqual({
+      coding: [
+        {
+          system: 'http://hl7.org/fhir/sid/icd-10',
+          code: 'G44.2',
+          display: 'Tension headache',
+        },
+      ],
+      text: 'Tension headache',
+    });
+  });
+
+  it('gives a diagnosis without a code as text alone', () => {
+    expect(condition(null).code).toEqual({
+      coding: undefined,
+      text: 'Tension headache',
     });
   });
 });

@@ -606,6 +606,27 @@ describe('Patient records', () => {
         }),
       ]);
     });
+
+    it('records a condition in words alone, given back as FHIR text', async () => {
+      const patientId = await registered();
+
+      const res = await svc.api
+        .post(`/patients/${patientId}/conditions`)
+        .set((await svc.as(UserRole.DOCTOR)).headers)
+        .send({
+          clinicalStatus: ConditionClinicalStatus.ACTIVE,
+          code: ' ',
+          display: 'Tension headache',
+        })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        code: { text: 'Tension headache' },
+      });
+      await expect(
+        svc.db.getRepository(Condition).findOneByOrFail({ patientId }),
+      ).resolves.toMatchObject({ code: null, display: 'Tension headache' });
+    });
   });
 
   describe('GET /patients', () => {

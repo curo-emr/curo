@@ -1,17 +1,10 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { DiagnosisDto } from '@curo/shared/dto';
 import { ConditionClinicalStatus } from '@curo/shared/enums';
 
-export class CreateConditionDto {
+export class CreateConditionDto extends DiagnosisDto {
   @IsEnum(ConditionClinicalStatus)
   clinicalStatus: ConditionClinicalStatus;
-
-  @IsNotEmpty()
-  @IsString()
-  code: string; // ICD-10
-
-  @IsNotEmpty()
-  @IsString()
-  display: string;
 
   @IsOptional()
   @IsString()

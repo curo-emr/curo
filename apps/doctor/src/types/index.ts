@@ -15,9 +15,12 @@ export interface SOAP {
 }
 
 export interface Diagnosis {
+  /** ICD-10, or "" when the diagnosis is recorded in words alone. */
   icdCode: string;
   name: string;
   isPrimary: boolean;
+  /** Written by the doctor rather than picked from the ICD-10 list, so its code is theirs to give. */
+  typed?: boolean;
 }
 
 export interface Encounter {

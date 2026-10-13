@@ -26,3 +26,4 @@ export * from "./vitals";
 export * from "./allergy-check";
 export * from "./lab-results";
 export * from "./dosing";
+export * from "./icd10";
