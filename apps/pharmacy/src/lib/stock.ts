@@ -1,3 +1,4 @@
+import { checkStock, type StockCheck } from "@curo/web/clinical";
 import type { GroupedStock, StockBatch } from "@/lib/api/pharmacy";
 import type { PrescriptionItem } from "@/types";
 
@@ -43,18 +44,6 @@ const reorderShare = (drug: GroupedStock) => (drug.reorderLevel ? drug.usableQua
 
 export const byUrgency = (drugs: GroupedStock[]) => [...drugs].sort((a, b) => reorderShare(a) - reorderShare(b));
 
-export type StockCheck =
-  /** This pharmacy keeps no batches of the prescribed medication. */
-  | { kind: "unlisted" }
-  | { kind: "short" | "enough"; available: number; unit: string };
-
 /** Whether this pharmacy's usable stock covers a prescription item, matched by medication code as dispensing does. */
-export function checkStock(item: PrescriptionItem, drugs: GroupedStock[]): StockCheck {
-  const drug = drugs.find(d => d.medicationCode === item.medicationId);
-  if (!drug) return { kind: "unlisted" };
-  return {
-    kind: drug.usableQuantity >= item.quantity ? "enough" : "short",
-    available: drug.usableQuantity,
-    unit: drug.unit || item.quantityUnit,
-  };
-}
+export const checkItemStock = (item: PrescriptionItem, drugs: GroupedStock[]): StockCheck =>
+  checkStock(drugs.find(d => d.medicationCode === item.medicationId), item.quantity, item.quantityUnit);

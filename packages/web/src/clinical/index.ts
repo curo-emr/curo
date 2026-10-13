@@ -28,3 +28,4 @@ export * from "./lab-results";
 export * from "./lab-search";
 export * from "./dosing";
 export * from "./icd10";
+export * from "./stock-check";
