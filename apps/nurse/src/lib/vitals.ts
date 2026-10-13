@@ -5,7 +5,7 @@ import type { Vitals } from "@/types";
 // The vital-sign catalogue and its adult ranges live in @curo/web/clinical, so a
 // reading is flagged the same way here and in the doctor's visit.
 export {
-  VITAL_FIELDS, VITAL_FIELD, ADULT_FROM_AGE, adultRangesApply, assessVital, worstLevel, isPlausible,
+  VITAL_FIELDS, VITAL_FIELD, ADULT_FROM_AGE, adultRangesApply, assessVital, worstLevel, isPlausible, implausibleVitalsMessage,
   type VitalField, type VitalLevel, type VitalAssessment,
 } from "@curo/web/clinical";
 

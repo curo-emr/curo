@@ -108,6 +108,14 @@ export function isPlausible(field: VitalField, value: number): boolean {
   return value >= field.plausible[0] && value <= field.plausible[1];
 }
 
+/** The fields whose reading in `vitals` isn't plausible, in catalogue order. The API refuses these. */
+export const implausibleVitals = (vitals: Partial<Record<VitalKey, number>>): VitalField[] =>
+  VITAL_FIELDS.filter(f => vitals[f.key] !== undefined && !isPlausible(f, vitals[f.key]!));
+
+/** What to tell whoever entered implausible readings: "Temperature should be between 30 and 45 °C. Check the reading." */
+export const implausibleVitalsMessage = (fields: VitalField[]): string =>
+  `${fields.map(f => `${f.label} should be between ${f.plausible[0]} and ${f.plausible[1]} ${f.unit}`).join(". ")}. Check the reading.`;
+
 // ─── Who the ranges fit ─────────────────────────────────────────────────────
 
 /** The age from which the adult ranges above apply. */

@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Vitals } from "@/types";
 import { Badge } from "@curo/web/ui/badge";
 import { cn } from "@/lib/utils";
-import { LEVEL_STYLES, assessVital, formatReading, worstLevel, type VitalAssessment, type VitalField, type VitalsDraft } from "@/lib/vitals";
+import { LEVEL_STYLES, assessVital, formatReading, implausibleVitalsMessage, worstLevel, type VitalAssessment, type VitalField, type VitalsDraft } from "@/lib/vitals";
 import { VitalGauge } from "./VitalGauge";
 
 interface VitalTileProps {
@@ -105,9 +105,7 @@ export function VitalTile({
 
       {invalid.some(k => fields.some(f => f.key === k)) && (
         <p className="mt-1 text-xs text-status-error-text">
-          {fields.filter(f => invalid.includes(f.key)).map(f =>
-            `${f.label} should be between ${f.plausible[0]} and ${f.plausible[1]} ${f.unit}`).join(". ")}
-          . Check the reading.
+          {implausibleVitalsMessage(fields.filter(f => invalid.includes(f.key)))}
         </p>
       )}
 

@@ -3,7 +3,7 @@
 import { HeartPulse, UserCheck } from "lucide-react";
 import type { Vitals } from "@/types";
 import {
-  BMI_CATEGORY_LABELS, VITAL_FIELD, assessVital, bmiCategory, calculateBMI,
+  BMI_CATEGORY_LABELS, VITAL_FIELD, assessVital, bmiCategory, calculateBMI, implausibleVitals, implausibleVitalsMessage,
   type BMICategory, type VitalAssessment, type VitalKey, type VitalLevel,
 } from "@curo/web/clinical";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,9 @@ const LEVEL_INPUT: Record<Flag["level"], string> = {
 
 const isFlag = (a: VitalAssessment | null): a is Flag => !!a && a.level !== "normal";
 
+// A reading no body could have (a typo or the wrong unit): the visit can't be signed with it.
+const IMPLAUSIBLE_INPUT = "border-status-error-border font-medium text-status-error-text";
+
 export function VitalsPanel({ vitals, onChange, recorded, flagAbnormal = false }: VitalsPanelProps) {
   const bmi = calculateBMI(vitals.heightCm, vitals.weightKg);
   const category = bmi ? bmiCategory(bmi) : null;
@@ -65,8 +68,11 @@ export function VitalsPanel({ vitals, onChange, recorded, flagAbnormal = false }
     onChange(next);
   };
 
+  const implausible = implausibleVitals(vitals);
+  const isImplausible = (key: VitalKey) => implausible.some(f => f.key === key);
+
   const flagOf = (key: VitalKey): Flag | null => {
-    const assessment = flagAbnormal ? assessVital(VITAL_FIELD[key], vitals[key]) : null;
+    const assessment = flagAbnormal && !isImplausible(key) ? assessVital(VITAL_FIELD[key], vitals[key]) : null;
     return isFlag(assessment) ? assessment : null;
   };
   // Blood pressure is one reading: its tag is the worse of the two numbers.
@@ -83,12 +89,14 @@ export function VitalsPanel({ vitals, onChange, recorded, flagAbnormal = false }
         inputMode="decimal"
         step={step}
         aria-label={label ?? key}
+        aria-invalid={isImplausible(key) || undefined}
         value={vitals[key] ?? ""}
         onChange={e => set(key, e.target.value)}
         className={cn(
           "h-9 w-full rounded-md border border-input bg-background pl-2.5 pr-11 text-sm tabular-nums shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
           edited(key) && "border-status-info-border bg-status-info-bg/40",
           flagOf(key) && LEVEL_INPUT[flagOf(key)!.level],
+          isImplausible(key) && IMPLAUSIBLE_INPUT,
         )}
       />
       <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-muted-foreground">{unit}</span>
@@ -96,7 +104,7 @@ export function VitalsPanel({ vitals, onChange, recorded, flagAbnormal = false }
   );
 
   return (
-    <SectionCard icon={HeartPulse} iconClassName="text-clinical-vitals" title="Vitals">
+    <SectionCard id="vitals" icon={HeartPulse} iconClassName="text-clinical-vitals" title="Vitals">
       <div className="space-y-4">
         {recorded && (
           <div className="flex items-start gap-2 rounded-lg bg-status-teal-bg px-3 py-2 text-xs">
@@ -134,6 +142,9 @@ export function VitalsPanel({ vitals, onChange, recorded, flagAbnormal = false }
             </div>
           ))}
         </div>
+        {implausible.length > 0 && (
+          <p className="text-xs text-status-error-text">{implausibleVitalsMessage(implausible)}</p>
+        )}
         <div className="flex items-center justify-between border-t pt-3 text-sm">
           <span className="text-muted-foreground">BMI</span>
           {bmi && category ? (
