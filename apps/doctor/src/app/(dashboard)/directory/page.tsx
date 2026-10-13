@@ -37,11 +37,11 @@ export default function DirectoryPage() {
               { header: "Drug", cell: s => <span className="font-medium text-foreground">{s.medicationName}</span> },
               { header: "Strength", cell: s => s.strength },
               {
-                header: "Availability", cell: s => s.quantity > 0
-                  ? <span className="rounded-full bg-status-success-bg px-2 py-0.5 text-xs font-medium text-status-success-text">{s.quantity} {s.unit} in stock</span>
+                header: "Availability", cell: s => s.usableQuantity > 0
+                  ? <span className="rounded-full bg-status-success-bg px-2 py-0.5 text-xs font-medium text-status-success-text">{s.usableQuantity} {s.unit} in stock</span>
                   : <span className="rounded-full bg-status-error-bg px-2 py-0.5 text-xs font-medium text-status-error-text">Out of stock</span>,
               },
-              { header: "Expiry", cell: s => s.expiryDate ? new Date(s.expiryDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "—" },
+              { header: "Next expiry", cell: s => s.nextExpiry ? new Date(s.nextExpiry).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "—" },
             ]}
           />
         </TabsContent>

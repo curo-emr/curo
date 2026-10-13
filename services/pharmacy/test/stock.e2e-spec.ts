@@ -126,6 +126,27 @@ describe('stock', () => {
     ]);
   });
 
+  it('GET /stock/grouped gives the next usable expiry, past any expired batch', async () => {
+    const mixed = await stock([
+      { quantity: 8, expiryDate: daysFromToday(-30) },
+      { quantity: 20, expiryDate: daysFromToday(90) },
+    ]);
+    const expired = await stock([
+      { quantity: 8, expiryDate: daysFromToday(-30) },
+    ]);
+
+    const groups = await entriesFor('/stock/grouped', mixed, expired);
+
+    expect(groups[mixed]).toMatchObject({
+      usableQuantity: 20,
+      nextExpiry: daysFromToday(90),
+    });
+    expect(groups[expired]).toMatchObject({
+      usableQuantity: 0,
+      nextExpiry: null,
+    });
+  });
+
   describe("a pharmacy's own stock", () => {
     it('shows a pharmacist only their pharmacy, whatever they ask for', async () => {
       const drug = await stock([
