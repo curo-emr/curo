@@ -17,9 +17,8 @@ import { CreateDocumentDto } from './dto/create-document.dto';
 import { actorId, type AuthUser } from '@curo/shared/auth';
 import { UserRole } from '@curo/shared/enums';
 import { LAB_REPORT_DOCUMENT, labScope } from '@curo/shared/lab';
-
-const ALLOWED_CONTENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
-const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
+import { assertPatientOnFile } from '@curo/shared/database';
+import { assertAcceptedFile } from './accepted-file';
 
 /** What staff list documents by; at least one is required. */
 export interface DocumentFilter {
@@ -57,15 +56,8 @@ export class DocumentService {
     dto: CreateDocumentDto,
     user: AuthUser,
   ) {
-    if (!file) throw new BadRequestException('No file provided');
-    if (!ALLOWED_CONTENT_TYPES.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `Unsupported file type "${file.mimetype}". Allowed: ${ALLOWED_CONTENT_TYPES.join(', ')}`,
-      );
-    }
-    if (file.size > MAX_FILE_BYTES) {
-      throw new BadRequestException('File exceeds the 20 MB limit');
-    }
+    assertAcceptedFile(file);
+    await assertPatientOnFile(this.docRepo.manager, dto.patientId);
     const encounterId = await this.encounterOfUpload(dto, user);
 
     const objectKey = `${dto.patientId}/${randomUUID()}-${this.sanitize(file.originalname)}`;

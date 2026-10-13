@@ -10,7 +10,7 @@ import { Textarea } from "@curo/web/ui/textarea";
 import { FileInput, formatFileSize } from "@curo/web/ui/file-input";
 import { SectionCard } from "@curo/web/ui/section-card";
 import { formatDate } from "@/lib/utils";
-import { openDocument } from "@curo/web/api";
+import { apiErrorMessage, openDocument } from "@curo/web/api";
 import { uploadDocument } from "@/lib/api/documents";
 import { LAB_REPORT_DOCUMENT } from "@/lib/api/lab";
 import { orderQueries } from "@/lib/queries";
@@ -50,7 +50,7 @@ export function LabReportUpload({ orderId, patientId, encounterId }: Props) {
       void queryClient.invalidateQueries({ queryKey: orderQueries.reports(orderId).queryKey });
     } catch (err) {
       console.error(err);
-      toast.error("Upload failed. Please try again.");
+      toast.error(apiErrorMessage(err, "Upload failed. Please try again."));
     } finally {
       setIsUploading(false);
     }
