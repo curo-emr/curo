@@ -18,6 +18,6 @@
     "@nestjs/jwt": "^12.0.2",
     "@nestjs/testing": "^12.1.2",
     "supertest": "^7.0.0",
-    "typeorm": "^1.0.0"
+    "typeorm": "^1.1.2"
   }
 }
